@@ -1,5 +1,17 @@
 # micro T-Kernel 3.0 project for Raspberry Pi Pico W
 
+> **Group IS28 — RoboPico autonomous car.** Built on the course template.
+> Where to look:
+>
+> | What | Where |
+> |---|---|
+> | Who owns which pins, priorities, interfaces | [`TEAM.md`](TEAM.md) |
+> | Shared code: Navigation Coordinator, Safety Supervisor, shared HAL, bench helpers, and **each buddy's to-do list** | [`app_program/system/README.md`](app_program/system/README.md) |
+> | Subsystem 5: ultrasonic scanning and obstacle profiling | [`app_program/subsystem5/README.md`](app_program/subsystem5/README.md) |
+> | Tests that run on a PC | [`testing/host/README.md`](testing/host/README.md) |
+>
+> Subsystems 1–4 still hold the template example until each buddy replaces it.
+
 A starting point for your project: micro T-Kernel 3.0 running on **both cores**
 of the Pico W's RP2040, with a USB serial console and the WiFi driver built in.
 
@@ -136,8 +148,9 @@ subfolders, is compiled automatically.
 - **One folder per student:** `app_program/subsystem1/` … `subsystem5/`.
   Subsystems 1–4 hold a working example, one task each (LED, producer,
   consumer, monitor). Together they use the main micro T-Kernel APIs and
-  pass data between subsystems. Subsystem 5 is an empty template.
-  Replace the examples with your own subsystems.
+  pass data between subsystems. Replace the examples with your own
+  subsystems. (IS28: subsystem 5 is done; shared team code is in
+  `app_program/system/`, started by `system_init()` / `system_start()`.)
 - `subsystemN.h` is that subsystem's public interface: the object IDs and
   data formats the other subsystems may use.
 - `app.h` holds the definitions shared by the whole team.

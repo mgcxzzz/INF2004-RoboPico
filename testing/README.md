@@ -11,6 +11,7 @@ testing/
 │   └── logs/              saved console output, photos, scope captures
 ├── ...
 ├── subsystem5/
+├── host/                  tests that run on a PC, no Pico (see host/README.md)
 ├── integration/           tests across two or more subsystems (shared)
 └── system/                tests of the whole product against its requirements (shared)
 ```
