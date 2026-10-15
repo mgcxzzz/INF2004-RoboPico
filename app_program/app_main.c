@@ -22,7 +22,9 @@
  *	  subsystem2/  Producer  makes a "sample" every 300 ms     (core 1)
  *	  subsystem3/  Consumer  collects samples into statistics  (core 0)
  *	  subsystem4/  Monitor   prints reports, pauses/resumes the LED
- *	  subsystem5/  (empty template for the fifth student)
+ *	  subsystem5/  Obstacle Scan and Recovery (Buddy 5): HC-SR04+ on an
+ *	               SG90, profiles obstacles, plans the bypass
+ *	  system/      shared: Safety Supervisor, Navigation Coordinator
  *
  *	How they talk to each other (the interfaces, see TEAM.md section 5):
  *	  IF-01  S2 -> S3  mailbox mbx_samples      (owned by S3)
@@ -107,7 +109,10 @@ EXPORT INT usermain(void)
 	tm_printf((UB*)"single-core build\n");
 #endif
 
-	/* Phase 1: every subsystem creates its kernel objects */
+	/* Phase 1: every subsystem creates its kernel objects.  The shared
+	   system code goes first: the 1 us clock, the GPIO interrupt and the
+	   objects the subsystems post to (app_program/system/). */
+	CHECK(system_init(), "system_init");
 	CHECK(subsystem1_init(), "subsystem1_init");
 	CHECK(subsystem2_init(), "subsystem2_init");
 	CHECK(subsystem3_init(), "subsystem3_init");
@@ -115,6 +120,7 @@ EXPORT INT usermain(void)
 	CHECK(subsystem5_init(), "subsystem5_init");
 
 	/* Phase 2: every subsystem starts its tasks */
+	CHECK(system_start(), "system_start");
 	CHECK(subsystem1_start(), "subsystem1_start");
 	CHECK(subsystem2_start(), "subsystem2_start");
 	CHECK(subsystem3_start(), "subsystem3_start");

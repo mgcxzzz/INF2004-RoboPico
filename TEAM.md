@@ -21,7 +21,8 @@ subsystem, ask its owner or open a pull request for them to review.
 | 2 | *example:* Producer: makes a sample every 300 ms | | | `app_program/subsystem2/` | `testing/subsystem2/` |
 | 3 | *example:* Consumer: collects samples into statistics | | | `app_program/subsystem3/` | `testing/subsystem3/` |
 | 4 | *example:* Monitor: prints reports, pauses the LED | | | `app_program/subsystem4/` | `testing/subsystem4/` |
-| 5 | | | | `app_program/subsystem5/` | `testing/subsystem5/` |
+| 5 | Adaptive ultrasonic scanning and obstacle profiling (Obstacle Scan and Recovery) | 2500339 | | `app_program/subsystem5/` | `testing/subsystem5/` |
+| – | Shared: Navigation Coordinator, Safety Supervisor, shared HAL, bench helpers | whole team | | `app_program/system/` | `testing/host/`, `testing/integration/` |
 
 Shared files (`app_program/app_main.c`, `app_program/app.h`, this file)
 are changed only by agreement of the team. The exception is claiming an empty
@@ -60,16 +61,16 @@ fixed.
 | GP9 | | |
 | GP10 | | |
 | GP11 | | |
-| GP12 | | |
+| GP12 | S5 | SG90 scanning servo, PWM 6A (Robo Pico servo port 1) |
 | GP13 | | |
 | GP14 | | |
 | GP15 | | |
-| GP16 | | |
-| GP17 | | |
+| GP16 | S5 | HC-SR04+ TRIG (Grove 4) |
+| GP17 | S5 | HC-SR04+ ECHO, edge interrupt via `sys_gpio_irq_attach()` (Grove 4) |
 | GP18 | | |
 | GP19 | *example:* S1 | external LED (LED + 330 Ω to GND) |
-| GP20 | | |
-| GP21 | | |
+| GP20 | system (bench) | Robo Pico button: emergency stop. Only while `SYS_BENCH_BUTTONS` = 1 |
+| GP21 | system (bench) | Robo Pico button: reset and start. Only while `SYS_BENCH_BUTTONS` = 1 |
 | GP22 | | |
 | GP26 | | (ADC0 capable) |
 | GP27 | | (ADC1 capable) |
@@ -111,7 +112,9 @@ the drivers have no locking to stop it.
 | SPI0 | | | |
 | SPI1 | | | |
 | ADC | | | GP26–GP28 |
-| PWM slices (list) | | | |
+| PWM slices (list) | S5 | `obstacle_task` | slice 6 (GP12) |
+| GPIO interrupt (IO_IRQ_BANK0) | system | `sys_hal.c` dispatcher; each owner registers its own pins with `sys_gpio_irq_attach()` | any |
+| TIMER (µs counter) | system | read-only for everyone via `sys_time_us()` | – |
 | WiFi radio, TCP/IP, MQTT | *kernel* | `cyw43_utk_task` (built in) | GP23–25, GP29 |
 
 ### WiFi and MQTT are special
@@ -150,7 +153,8 @@ change it only by team agreement. Write down every task you create.
 | 2 | 14–15 | *example:* producer_task – 14 – core 1 |
 | 3 | 16–17 | *example:* consumer_task – 16 – core 0 |
 | 4 | 18–19 | *example:* monitor_task – 18 – any |
-| 5 | 20–21 | |
+| 5 | 20–21 | obstacle_task – 20 – any |
+| system | 5–11 | safety_task – 6 – any; nav_task – 10 – any; bench_task – 11 – any (bench only) |
 
 Core: `TP_PRC1` = core 0, `TP_PRC2` = core 1, or "any".
 
@@ -167,7 +171,17 @@ sends to it or waits on it. Agree on the data format before coding.
 | IF-03 | S3 → S4 | message buffer + event flag (owned by S4) | `mbf_summary`, `flg_events` | text line ≤ `S4_SUMMARY_MAX` bytes, then `FLG_BATCH` | *example* |
 | IF-04 | S4 → S3 | shared data under a mutex (owned by S3) | `app_stats`, `mtx_stats` | `APP_STATS`, read only while locked | *example* |
 | IF-05 | S4 → S1 | task control | `tid_led` | `tk_sus_tsk` / `tk_rsm_tsk` / `tk_chg_pri` | *example* |
-| IF-06 | | | | | |
+| IF-06 | S5 → Nav | function calls → Nav inbox (message buffer, owned by Nav) | `b5_nav_request_*()`, `b5_nav_release_motion()` | stop, bypass plan, rejoin, reverse requests (`b5_iface.h`) | S5 + team |
+| IF-07 | Nav → S5 | event flag (owned by S5) | `b5_post_event()` | `MISSION_START/STOP`, `STOP_ACCEPTED`, `PLAN_ACCEPTED/REJECTED`, `MOTION_DONE/FAILED`, `FAULT_RESET` (`b5_iface.h`) | S5 + team |
+| IF-08 | Nav → S2 | function calls | `mc_set_wheel_speeds`, `mc_drive_distance`, `mc_turn`, `mc_stop` | commands with an id; mm, mm/s, 0.1° (+ = right) (`nav_iface.h`) | to agree with S2 |
+| IF-09 | S2 → Nav | Nav inbox | `nav_post_motion_result()` | id + DONE / CANCELLED / FAILED | to agree with S2 |
+| IF-10 | S3 → Nav | Nav inbox | `nav_post_line_speeds/_event()`, `nav_post_barcode()` | wheel speeds each cycle; LOST/FOUND/JUNCTION; one barcode at turn point | to agree with S3 |
+| IF-11 | Nav → S3 | function call | `line_set_control(bool)` | S3 proposes speeds only while true | to agree with S3 |
+| IF-12 | S1 → Nav, Safety | Nav inbox / safety event flag | `nav_post_command()`, `safety_post_estop()`, `safety_request_reset()` | supervisory commands (`nav_iface.h`, `safety_iface.h`) | to agree with S1 |
+| IF-13 | Nav, Safety, S5 → S1 | function calls into S1's telemetry queue | `*_telemetry_publish()` | status structs | to agree with S1 |
+| IF-14 | Safety → S2 | function call + polled flag | `mc_inhibit(bool)`, `safety_drive_inhibited()`; S2 answers `safety_ack_drive_off()` | cut drive now (< 100 ms, NFR-SYS-04) | to agree with S2 |
+| IF-15 | any → Safety | safety event flag | `safety_report_fault()`, `safety_kick()` | fault source + code; health check-ins | team |
+| IF-16 | S2, S3 → S5 | function calls | `b5_motion_get_estimate()`, `b5_line_detected()` | distance + heading; line seen | to agree with S2, S3 |
 
 Each interface is tested by at least one integration test
 (`testing/integration/TEST_LOG.md`).
@@ -177,17 +191,17 @@ Each interface is tested by at least one integration test
 Limits are set in `config/config.h`. If the team needs more, raise the
 limit there. The numbers below are the example's usage.
 
-| Object | Limit | S1 | S2 | S3 | S4 | S5 |
-|---|---|---|---|---|---|---|
-| Task | 32 | 1 | 1 | 1 | 1 | |
-| Semaphore | 16 | | 1 | | | |
-| Event flag | 16 | | | | 1 | |
-| Mailbox | 12 | | | 1 | | |
-| Mutex | 12 | | | 1 | | |
-| Message buffer | 12 | | | | 1 | |
-| Fixed memory pool | 12 | | 1 | | | |
-| Variable memory pool | 12 | | | | | |
-| Cyclic handler | 12 | 1 | | | | |
-| Alarm handler | 12 | | | | 1 | |
+| Object | Limit | S1 | S2 | S3 | S4 | S5 | system |
+|---|---|---|---|---|---|---|---|
+| Task | 32 | 1 | 1 | 1 | 1 | 1 | 3 (safety, nav, bench) |
+| Semaphore | 16 | | 1 | | | | 1 (bench) |
+| Event flag | 16 | | | | 1 | 2 | 1 (safety) |
+| Mailbox | 12 | | | 1 | | | |
+| Mutex | 12 | | | 1 | | | |
+| Message buffer | 12 | | | | 1 | | 1 (nav inbox) |
+| Fixed memory pool | 12 | | 1 | | | | |
+| Variable memory pool | 12 | | | | | | |
+| Cyclic handler | 12 | 1 | | | | | |
+| Alarm handler | 12 | | | | 1 | | |
 
 (The kernel's USB and WiFi service tasks also use a few of these.)
