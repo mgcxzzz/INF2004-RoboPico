@@ -16,6 +16,9 @@ EXPORT ER system_init(void)
 
 	er = sys_hal_init();		/* 1 us clock; before any driver */
 	if (er == E_OK) {
+		er = sys_fault_init();	/* shared fault bitmask */
+	}
+	if (er == E_OK) {
 		er = safety_init();
 	}
 	if (er == E_OK) {

@@ -6,10 +6,17 @@
  * profile and a bypass plan. It has no hardware or kernel dependency, so
  * it is unit-tested on the host (see test/).
  *
- * Coordinate frame, seen from the sensor looking forward:
- *   angle  0 dd = right, 900 dd = straight ahead, 1800 dd = left
- *   x = r * cos(angle)  (positive to the RIGHT)
- *   y = r * sin(angle)  (positive AHEAD)
+ * Coordinate frame, seen from the sensor looking forward. Angles are
+ * signed tenths of a degree with the same sign rule as Motion Control's
+ * heading (+ = right):
+ *   angle  -900 dd = left, 0 dd = straight ahead, +900 dd = right
+ *   x = r * sin(angle)  (positive to the RIGHT)
+ *   y = r * cos(angle)  (positive AHEAD)
+ *
+ * Minimum-bit representation (Tribunal 1): samples, profiles and plans
+ * are C bit-field records sized to each value's valid range (b5_pack.h).
+ * They are written only by the obstacle task; anything another task
+ * reads is a copy. Values are clamped before they are stored.
  *
  * Group IS28, Buddy 5. Coding standard: Barr-C:2018.
  */
@@ -20,14 +27,16 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "b5_pack.h"
+
 #define B5_MAX_SAMPLES      (24U)   /* coarse (5) + refinement + spare */
 
-/** One range sample taken at one servo angle. */
+/** One range sample taken at one servo angle: 24 bits in one word. */
 typedef struct
 {
-    int16_t angle_dd;   /**< servo angle, tenths of a degree           */
-    int32_t range_mm;   /**< median range; B5_RANGE_FAR_MM if no target */
-    bool    b_valid;    /**< false if the sensor did not respond        */
+    int32_t  angle_dd : 11; /**< -900..+900, tenths of a degree       */
+    uint32_t range_mm : 12; /**< 0..4000; B5_RANGE_FAR_MM if no target */
+    uint32_t b_valid  : 1;  /**< 0 if the sensor did not respond       */
 } b5_sample_t;
 
 /** All samples of one scan, kept sorted by angle. */
@@ -60,26 +69,29 @@ typedef enum
     B5_SIDE_LEFT
 } b5_side_t;
 
-/** Result of Planning: what the obstacle looks like and what to do. */
+/**
+ * Result of Planning: what the obstacle looks like and what to do.
+ * Each field is sized to its valid range (b5_pack.h); 7 words in total.
+ */
 typedef struct
 {
-    bool      b_found;          /**< at least one near sample           */
-    int16_t   right_edge_dd;    /**< raw right edge (bracket middle)    */
-    int16_t   left_edge_dd;     /**< raw left edge (bracket middle)     */
-    bool      b_right_at_limit; /**< obstacle runs past the scan arc    */
-    bool      b_left_at_limit;
-    int32_t   closest_mm;       /**< closest range in the obstacle run  */
-    int16_t   closest_dd;
-    int32_t   width_raw_mm;     /**< width before beam-spread correction */
-    int32_t   width_mm;         /**< width after correction (NFR-USO-02) */
-    int32_t   x_right_mm;       /**< corrected right edge, lateral      */
-    int32_t   x_left_mm;        /**< corrected left edge, lateral       */
-    int32_t   clear_right_mm;   /**< free lateral space right of edge   */
-    int32_t   clear_left_mm;    /**< free lateral space left of edge    */
-    uint8_t   confidence_pct;   /**< share of samples that responded    */
-    b5_side_t side;             /**< chosen side, NONE = blocked        */
-    int32_t   lateral_mm;       /**< sideways shift needed for bypass   */
-    int32_t   forward_mm;       /**< forward travel to pass + margin    */
+    uint32_t b_found          : 1;  /**< at least one near sample        */
+    uint32_t b_right_at_limit : 1;  /**< obstacle runs past the scan arc */
+    uint32_t b_left_at_limit  : 1;
+    uint32_t side             : 2;  /**< b5_side_t, NONE = blocked       */
+    uint32_t confidence_pct   : 7;  /**< share of samples that responded */
+    uint32_t closest_mm       : 12; /**< closest range in the run        */
+    int32_t  right_edge_dd    : 11; /**< raw right edge (bracket middle) */
+    int32_t  left_edge_dd     : 11; /**< raw left edge (bracket middle)  */
+    int32_t  closest_dd       : 11;
+    int32_t  x_right_mm       : 12; /**< corrected right edge, lateral   */
+    int32_t  x_left_mm        : 12; /**< corrected left edge, lateral    */
+    uint32_t width_raw_mm     : 12; /**< width before beam correction    */
+    uint32_t width_mm         : 12; /**< width after correction          */
+    uint32_t clear_right_mm   : 12; /**< free lateral space right of it  */
+    uint32_t clear_left_mm    : 12; /**< free lateral space left of it   */
+    uint32_t lateral_mm       : 12; /**< sideways shift for the bypass   */
+    uint32_t forward_mm       : 12; /**< forward travel to pass + margin */
 } b5_profile_t;
 
 /* Trigonometry in Q15 fixed point (32768 = 1.0), angle in tenths of deg. */

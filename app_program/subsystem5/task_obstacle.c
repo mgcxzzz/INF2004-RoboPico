@@ -11,6 +11,12 @@
  * the SG90 and nothing else; every motion is requested from Navigation
  * Coordinator through b5_iface.h.
  *
+ * Minimum-bit data (Tribunal 1): the task context, scan table and status
+ * are bit-field records sized to each value's range (b5_pack.h). Only this
+ * task writes them, so the read-modify-write of a bit-field store can never
+ * race. Other tasks get either the state (one aligned word load), a copy of
+ * the status taken under a mutex, or the packed telemetry frame.
+ *
  * Group IS28, Buddy 5. Coding standard: Barr-C:2018.
  */
 
@@ -22,28 +28,31 @@
 #include "obstacle_profile.h"
 #include "drv_servo.h"
 #include "drv_ultrasonic.h"
+#include "../system/sys_fault.h"
 
 /* Everything the task remembers between states. Only the task touches it. */
 typedef struct
 {
-    b5_status_t     status;         /* published copy of the state      */
-    uint32_t        no_echo_run;    /* consecutive pings with no reply  */
-    uint8_t         confirm;        /* consecutive readings < D_stop    */
-    bool            b_slow;         /* slow request currently active    */
-    bool            b_off_line;     /* car has left the line to bypass  */
+    b5_status_t     status;             /* live status record           */
+    uint32_t        no_echo_run : 2;    /* 0..3 pings with no reply     */
+    uint32_t        confirm     : 2;    /* 0..3 readings < D_stop       */
+    uint32_t        b_slow      : 1;    /* slow request active          */
+    uint32_t        b_off_line  : 1;    /* car has left the line        */
+    int32_t         along_mm    : 14;   /* dead reckoning, line frame   */
+    int32_t         lateral_mm  : 14;   /* + = right of the line        */
+    b5_motion_est_t est_ref;            /* estimate when it left line   */
+    int16_t         last_dist_mm;       /* wrapping, like Buddy 2's     */
+    int16_t         guard_dist_mm;      /* distance at Guard entry      */
+    uint32_t        last_pub_us;        /* 32-bit us timer value        */
     b5_scan_t       scan;
     b5_plan_t       plan;
-    b5_motion_est_t est_ref;        /* estimate when the car left line  */
-    int32_t         last_dist_mm;
-    int32_t         along_mm;       /* dead reckoning in the line frame */
-    int32_t         lateral_mm;     /* positive = right of the line     */
-    int32_t         guard_dist_mm;  /* distance at Guard entry          */
-    uint32_t        last_pub_us;
 } b5_ctx_t;
 
-static b5_ctx_t g_ctx;
-static ID       g_event_flg = 0;
-static ID       g_task_id   = 0;
+static b5_ctx_t    g_ctx;
+static b5_status_t g_pub;               /* copy other tasks read        */
+static ID          g_event_flg  = 0;
+static ID          g_status_mtx = 0;    /* guards g_pub                 */
+static ID          g_task_id    = 0;
 
 static char const * const g_state_name[B5_ST_COUNT] =
 {
@@ -57,12 +66,68 @@ static char const * const g_state_name[B5_ST_COUNT] =
  * ------------------------------------------------------------------ */
 
 /**
- * @brief  Current state. A single word read, safe from any task.
+ * @brief  Current state. The state field shares an aligned word that only
+ *         this task writes, so one word load is a consistent read from any
+ *         task or core.
  */
 b5_state_t
 b5_get_state (void)
 {
-    return g_ctx.status.state;
+    return (b5_state_t)g_ctx.status.state;
+}
+
+/* Clamp helpers for storing into the bit-fields (b5_pack.h). */
+static uint32_t
+mm_u12 (int32_t mm)
+{
+    return (uint32_t)b5_clamp(mm, 0, B5_MM_MAX);
+}
+
+static int32_t
+pose_s14 (int32_t mm)
+{
+    return b5_clamp(mm, B5_POSE_MIN_MM, B5_POSE_MAX_MM);
+}
+
+/* Shared fault-mask bit for a Buddy 5 fault code. */
+static uint32_t
+fault_bit (b5_fault_t fault)
+{
+    switch (fault)
+    {
+        case B5_FAULT_ECHO_TIMEOUT: return SYS_FAULT_NO_ECHO;
+        case B5_FAULT_SERVO:        return SYS_FAULT_SERVO;
+        case B5_FAULT_NONE:         return 0U;
+        default:                    return SYS_FAULT_OBSTACLE;
+    }
+}
+
+/**
+ * @brief  Build the 16-byte binary telemetry frame from a status record.
+ */
+void
+b5_status_to_frame (b5_status_t const * p_st,
+                    uint8_t p_frame[B5_TLM_FRAME_BYTES])
+{
+    b5_tlm_t t;
+
+    t.version        = B5_TLM_VERSION;
+    t.state          = (uint8_t)p_st->state;
+    t.fault          = (uint8_t)p_st->fault;
+    t.side           = (uint8_t)p_st->profile.side;
+    t.blocked_tries  = (uint8_t)p_st->blocked_tries;
+    t.recover_tries  = (uint8_t)p_st->recover_tries;
+    t.servo_dd       = (int16_t)p_st->servo_dd;
+    t.b_found        = (p_st->profile.b_found != 0U);
+    t.range_mm       = (uint16_t)p_st->range_mm;
+    t.closest_mm     = (uint16_t)p_st->profile.closest_mm;
+    t.confidence_pct = (uint8_t)p_st->profile.confidence_pct;
+    t.width_mm       = (uint16_t)p_st->profile.width_mm;
+    t.lateral_mm     = (uint16_t)p_st->profile.lateral_mm;
+    t.pings          = (uint16_t)p_st->pings;
+    t.no_echo        = (uint16_t)p_st->no_echo;
+
+    b5_tlm_pack(&t, p_frame);
 }
 
 char const *
@@ -112,20 +177,31 @@ static void
 publish (bool b_force)
 {
     uint32_t now = sys_time_us();
+    uint8_t  frame[B5_TLM_FRAME_BYTES];
 
     if (b_force ||
         ((now - g_ctx.last_pub_us) >= (B5_STATUS_PERIOD_MS * 1000U)))
     {
         g_ctx.status.servo_dd = b5_servo_angle();
         g_ctx.last_pub_us     = now;
-        b5_telemetry_publish(&g_ctx.status);
+
+        /* The copy other tasks read is replaced under the mutex, so a
+         * reader never sees half of one update and half of the next. */
+        if (tk_loc_mtx(g_status_mtx, TMO_FEVR) == E_OK)
+        {
+            g_pub = g_ctx.status;
+            (void)tk_unl_mtx(g_status_mtx);
+        }
+
+        b5_status_to_frame(&g_ctx.status, frame);
+        b5_telemetry_publish(frame, B5_TLM_FRAME_BYTES);
     }
 }
 
 static b5_state_t
 to_fault (b5_fault_t fault)
 {
-    g_ctx.status.fault = fault;
+    g_ctx.status.fault = (uint32_t)fault;
     return B5_ST_FAULT;
 }
 
@@ -138,7 +214,7 @@ range_once (int32_t * p_mm, bool * p_fault)
 {
     ER er = b5_us_ping(p_mm);
 
-    g_ctx.status.pings++;
+    g_ctx.status.pings++;               /* 16-bit, wraps by design      */
 
     if (er == E_OK)
     {
@@ -147,7 +223,12 @@ range_once (int32_t * p_mm, bool * p_fault)
     }
 
     g_ctx.status.no_echo++;
-    g_ctx.no_echo_run++;
+
+    if (g_ctx.no_echo_run < B5_COUNT_MAX)
+    {
+        g_ctx.no_echo_run++;            /* saturate in its 2 bits       */
+    }
+
     *p_fault = (g_ctx.no_echo_run >= B5_ECHO_FAIL_LIMIT);
 
     return false;
@@ -190,20 +271,25 @@ sample_at (int16_t angle_dd, uint8_t n_pings, b5_sample_t * p_out)
         }
     }
 
-    p_out->angle_dd = angle_dd;
-    p_out->b_valid  = (got > 0U) && ((got * 2U) > n_pings);
+    {
+        int32_t mm;
 
-    if (got >= 3U)
-    {
-        p_out->range_mm = b5_median3(reading[0], reading[1], reading[2]);
-    }
-    else if (got == 2U)
-    {
-        p_out->range_mm = (reading[0] < reading[1]) ? reading[0] : reading[1];
-    }
-    else
-    {
-        p_out->range_mm = (got == 1U) ? reading[0] : B5_RANGE_FAR_MM;
+        if (got >= 3U)
+        {
+            mm = b5_median3(reading[0], reading[1], reading[2]);
+        }
+        else if (got == 2U)
+        {
+            mm = (reading[0] < reading[1]) ? reading[0] : reading[1];
+        }
+        else
+        {
+            mm = (got == 1U) ? reading[0] : B5_RANGE_FAR_MM;
+        }
+
+        p_out->angle_dd = angle_dd;
+        p_out->range_mm = mm_u12(mm);
+        p_out->b_valid  = ((got > 0U) && ((got * 2U) > n_pings)) ? 1U : 0U;
     }
 
     return B5_FAULT_NONE;
@@ -235,12 +321,17 @@ pose_update (void)
         return;
     }
 
-    step               = est.distance_mm - g_ctx.last_dist_mm;
+    /* Buddy 2's values are 16-bit and may wrap: only differences are
+     * used, so a wrap during a long run does not matter. */
+    step               = b5_wrap_diff16(est.distance_mm, g_ctx.last_dist_mm);
     g_ctx.last_dist_mm = est.distance_mm;
-    rel_heading        = est.heading_dd - g_ctx.est_ref.heading_dd;
+    rel_heading        = b5_wrap_diff16(est.heading_dd,
+                                        g_ctx.est_ref.heading_dd);
 
-    g_ctx.along_mm   += (step * b5_cos_q15(rel_heading)) / 32768;
-    g_ctx.lateral_mm += (step * b5_sin_q15(rel_heading)) / 32768;
+    g_ctx.along_mm   = pose_s14(g_ctx.along_mm +
+                                ((step * b5_cos_q15(rel_heading)) / 32768));
+    g_ctx.lateral_mm = pose_s14(g_ctx.lateral_mm +
+                                ((step * b5_sin_q15(rel_heading)) / 32768));
 }
 
 /* Reversing is safe if the car has just driven that stretch of line. */
@@ -254,7 +345,7 @@ reverse_is_safe (void)
         return false;
     }
 
-    return ((est.distance_mm - g_ctx.guard_dist_mm) >=
+    return (b5_wrap_diff16(est.distance_mm, g_ctx.guard_dist_mm) >=
             (B5_REVERSE_MM + B5_MARGIN_MM));
 }
 
@@ -281,7 +372,7 @@ profile_params (void)
  * States
  * ------------------------------------------------------------------ */
 
-/* Idle: entry / servo 90 deg, ranging off. */
+/* Idle: entry / servo straight ahead (0), ranging off. */
 static b5_state_t
 st_idle (void)
 {
@@ -309,7 +400,7 @@ st_idle (void)
     return B5_ST_GUARD;
 }
 
-/* Guard: entry / park servo at 90 deg; do / ping every 60 ms. */
+/* Guard: entry / park servo straight ahead; do / ping every 60 ms. */
 static b5_state_t
 st_guard (void)
 {
@@ -346,7 +437,7 @@ st_guard (void)
             continue;
         }
 
-        g_ctx.status.range_mm = mm;
+        g_ctx.status.range_mm = mm_u12(mm);
 
         /* FR-USO-02: slow down before stopping. */
         if (!g_ctx.b_slow && (mm < B5_D_SLOW_MM))
@@ -393,7 +484,7 @@ st_confirm (void)
             continue;
         }
 
-        g_ctx.status.range_mm = mm;
+        g_ctx.status.range_mm = mm_u12(mm);
 
         if (mm >= B5_D_STOP_MM)
         {
@@ -440,7 +531,7 @@ st_halting (void)
     return B5_ST_COARSE_SWEEP;              /* stop accepted */
 }
 
-/* Coarse Sweep: do / 30-150 deg in 30 deg steps. */
+/* Coarse Sweep: do / -60..+60 deg in 30 deg steps. */
 static b5_state_t
 st_coarse_sweep (void)
 {
@@ -466,7 +557,8 @@ st_coarse_sweep (void)
             return to_fault(fault);         /* servo or echo timeout */
         }
 
-        (void)b5_scan_add(&g_ctx.scan, s.angle_dd, s.range_mm, s.b_valid);
+        (void)b5_scan_add(&g_ctx.scan, (int16_t)s.angle_dd,
+                          (int32_t)s.range_mm, (s.b_valid != 0U));
     }
 
     return b5_scan_has_near(&g_ctx.scan, B5_NEAR_MM)
@@ -504,7 +596,8 @@ st_edge_refine (void)
             return to_fault(fault);
         }
 
-        (void)b5_scan_add(&g_ctx.scan, s.angle_dd, s.range_mm, s.b_valid);
+        (void)b5_scan_add(&g_ctx.scan, (int16_t)s.angle_dd,
+                          (int32_t)s.range_mm, (s.b_valid != 0U));
     }
 
     return B5_ST_PLANNING;                  /* scan complete */
@@ -520,7 +613,8 @@ st_planning (void)
     b5_build_profile(&g_ctx.scan, &par, p_p);
     publish(true);
 
-    if (!p_p->b_found || (p_p->confidence_pct < B5_MIN_CONFIDENCE_PCT))
+    if ((p_p->b_found == 0U) ||
+        (p_p->confidence_pct < B5_MIN_CONFIDENCE_PCT))
     {
         /* No obstacle, or confidence < 50 %: a false stop costs a second,
          * a wrong bypass costs the run. Resume line following. */
@@ -528,7 +622,7 @@ st_planning (void)
         return B5_ST_GUARD;
     }
 
-    if (p_p->side == B5_SIDE_NONE)
+    if (p_p->side == (uint32_t)B5_SIDE_NONE)
     {
         return B5_ST_BLOCKED;               /* no passable side */
     }
@@ -603,7 +697,7 @@ st_bypassing (void)
 
         if (range_once(&mm, &b_fault))
         {
-            g_ctx.status.range_mm = mm;
+            g_ctx.status.range_mm = mm_u12(mm);
             g_ctx.confirm = (mm < B5_D_STOP_MM) ? (g_ctx.confirm + 1U) : 0U;
 
             if (g_ctx.confirm >= B5_CONFIRM_COUNT)
@@ -632,13 +726,15 @@ request_rejoin (uint8_t attempt)
 
     req.lateral_mm = g_ctx.lateral_mm;
     req.heading_dd = 0;
-    req.search_mm  = B5_SEARCH_WIDTH_MM * (int32_t)(attempt + 1U);
-    req.attempt    = attempt;
+    req.search_mm  = mm_u12(B5_SEARCH_WIDTH_MM * (int32_t)(attempt + 1U));
+    req.attempt    = (attempt > B5_COUNT_MAX) ? B5_COUNT_MAX : attempt;
     clear_events(B5_EV_MOTION_DONE | B5_EV_MOTION_FAILED);
 
     if (b5_motion_get_estimate(&est))
     {
-        req.heading_dd = est.heading_dd - g_ctx.est_ref.heading_dd;
+        req.heading_dd = b5_clamp(b5_wrap_diff16(est.heading_dd,
+                                                 g_ctx.est_ref.heading_dd),
+                                  -1024, 1023);   /* 11 signed bits */
     }
 
     b5_nav_request_rejoin(&req);
@@ -693,7 +789,7 @@ st_recovering (void)
                 return to_fault(B5_FAULT_LINE_LOST);
             }
 
-            request_rejoin(g_ctx.status.recover_tries);
+            request_rejoin((uint8_t)g_ctx.status.recover_tries);
             leg_start_us = sys_time_us();
             publish(true);
         }
@@ -744,12 +840,17 @@ st_blocked (void)
 static b5_state_t
 st_fault (void)
 {
+    b5_fault_t fault = (b5_fault_t)g_ctx.status.fault;
+
     b5_nav_release_motion();
-    b5_report_fault(g_ctx.status.fault);
+    (void)sys_fault_set(fault_bit(fault));      /* shared fault bitmask */
+    b5_report_fault(fault);
     (void)b5_servo_move(B5_AHEAD_DD);
 
     (void)take_events(B5_EV_FAULT_RESET, TMO_FEVR);
 
+    (void)sys_fault_clear(SYS_FAULT_NO_ECHO | SYS_FAULT_SERVO |
+                          SYS_FAULT_OBSTACLE);
     g_ctx.status.fault = B5_FAULT_NONE;
     g_ctx.no_echo_run  = 0U;
     g_ctx.b_off_line   = false;
@@ -773,14 +874,14 @@ b5_task (INT stacd, void * p_exinf)
     (void)stacd;
     (void)p_exinf;
 
-    g_ctx.status.state = B5_ST_IDLE;
+    g_ctx.status.state = (uint32_t)B5_ST_IDLE;
     publish(true);
 
     for (;;)
     {
         b5_state_t next = g_state_fn[g_ctx.status.state]();
 
-        g_ctx.status.state = next;
+        g_ctx.status.state = (uint32_t)next;
         publish(true);
     }
 }
@@ -811,7 +912,19 @@ b5_init (void)
     cflg.iflgptn = 0U;
     g_event_flg  = tk_cre_flg(&cflg);
 
-    return (g_event_flg < E_OK) ? g_event_flg : E_OK;
+    if (g_event_flg < E_OK)
+    {
+        return g_event_flg;
+    }
+
+    {
+        T_CMTX cmtx = { 0 };
+
+        cmtx.mtxatr  = TA_INHERIT;      /* no priority inversion */
+        g_status_mtx = tk_cre_mtx(&cmtx);
+    }
+
+    return (g_status_mtx < E_OK) ? g_status_mtx : E_OK;
 }
 
 /**
@@ -837,11 +950,15 @@ b5_start (void)
 }
 
 /**
- * @brief  Copy of the latest status (for tests and telemetry readers).
- *         Not atomic: fields may come from two consecutive updates.
+ * @brief  Copy of the latest published status, taken under the mutex so
+ *         every field comes from the same update. Task context only.
  */
 void
 b5_get_status (b5_status_t * p_status)
 {
-    *p_status = g_ctx.status;
+    if (tk_loc_mtx(g_status_mtx, TMO_FEVR) == E_OK)
+    {
+        *p_status = g_pub;
+        (void)tk_unl_mtx(g_status_mtx);
+    }
 }

@@ -28,6 +28,7 @@ task interaction diagram.
 | `drv_servo.c` / `.h` | SG90 driver: GP12, 50 Hz PWM (slice 6A) |
 | `b5_config.h` | pins, timing and every tuning value |
 | `b5_iface.h` | events in, requests out: the contract with the other subsystems |
+| `b5_pack.h` / `.c` | minimum-bit representation: field widths, clamping, masks and shifts, the echo result word and the 16-byte binary telemetry frame |
 | `b5_stubs.c` | weak placeholders for the functions other subsystems provide |
 | `subsystem5_test.c` | on-target tests (`make TEST=1`) |
 
@@ -46,8 +47,10 @@ in `../system/sys_hal.c`.
 
 Do not connect a 5 V HC-SR04: its echo is 5 V and would damage GP17 (A5).
 
-Angles in the code are in tenths of a degree: **0 = right, 900 = straight
-ahead, 1800 = left**. If your servo is mounted the other way round, set
+Angles in the code are signed tenths of a degree, with the same sign rule
+as Motion Control's heading: **−900 = left, 0 = straight ahead, +900 =
+right** (Tribunal 1 decision; it was 0 = right … 1800 = left). If your
+servo is mounted the other way round, set
 `B5_SERVO_REVERSED` to 1 in `b5_config.h`.
 
 ---
@@ -59,8 +62,8 @@ ahead, 1800 = left**. If your servo is mounted the other way round, set
 | Idle | `st_idle` | servo 90°, ranging off | mission start → Guard |
 | Guard | `st_guard` | park at 90°, ping every 60 ms; ask Nav to slow below 500 mm | range < D_stop → Confirm |
 | Confirm | `st_confirm` | count consecutive readings < D_stop | 3 in a row → Halting; reading ≥ D_stop → Guard |
-| Halting | `st_halting` | request stop, swing servo to 30° straight away | stop accepted → Coarse Sweep |
-| Coarse Sweep | `st_coarse_sweep` | 30°–150° in 30° steps, median of 3 pings each | near points → Edge Refinement; none → Planning |
+| Halting | `st_halting` | request stop, swing servo to −60° (left) straight away | stop accepted → Coarse Sweep |
+| Coarse Sweep | `st_coarse_sweep` | −60° to +60° in 30° steps, median of 3 pings each | near points → Edge Refinement; none → Planning |
 | Edge Refinement | `st_edge_refine` | bisect each near/far edge (self-transition) | bracket closed → Planning |
 | Planning | `st_planning` + `b5_build_profile` (obstacle_profile.c) | profile, beam-spread width correction, score both sides | nothing / confidence < 50 % → Guard; a side passable → Bypassing; none → Blocked |
 | Bypassing | `st_bypassing` | record pose, send plan, keep pinging ahead | new obstacle confirmed → Halting; passed → Recovering |
@@ -112,7 +115,7 @@ decides which Buddy 5 faults stop the car.
 | `b5_nav_release_motion()` | Navigation Coordinator | Buddy 5 no longer needs motion; line following may resume |
 | `b5_motion_get_estimate(est)` | Motion Control (S2) | cumulative `distance_mm` and `heading_dd` (FR-MOT-03); **heading positive = turned right** |
 | `b5_line_detected()` | Line and Barcode (S3) | true while either front sensor sees the line |
-| `b5_telemetry_publish(status)` | WiFi and MQTT (S1) | copy the status into the telemetry queue; do not block |
+| `b5_telemetry_publish(frame, len)` | WiFi and MQTT (S1) | queue the 16-byte binary frame (layout in `b5_pack.h`) for MQTT; do not block |
 | `b5_report_fault(code)` | Safety Supervisor | Buddy 5 entered Fault |
 
 ---
@@ -149,12 +152,76 @@ With only the sensor and the servo connected, hold something closer than
 
 | Where | How | What |
 |---|---|---|
-| `testing/host/` | `make -C testing/host` on a PC | width accuracy over the NFR-USO-02 grid; side choice; the statechart in 4 scenarios against a simulated car |
-| `subsystem5_test.c` | `make TEST=1`, flash, read the console | S5-U01 … S5-U06: maths, a recorded 100 mm obstacle, task alive, sensor answering, 60 ms ping spacing |
+| `testing/host/` | `make -C testing/host` on a PC | packing (sizes, clamping, sign extension, 16-bit wrap, telemetry frame); width accuracy over the NFR-USO-02 grid; side choice; the statechart in 4 scenarios against a simulated car, including the shared fault-mask bit and decoding every telemetry frame |
+| `subsystem5_test.c` | `make TEST=1`, flash, read the console | S5-U01 … S5-U06: maths, a recorded 100 mm obstacle, task alive, sensor answering, 60 ms ping spacing; S5-U13 … S5-U15: telemetry frame round trip, scan sample in one word with clamping, 16-bit wrap |
 | `testing/subsystem5/TEST_LOG.md` | by hand | the manual tests (servo direction, bypass on the bench, stop timing) and every result |
 
 The host tests use an ideal beam. They check the logic, not the sensor.
 Assumptions A5–A8 still need the bench measurements.
+
+---
+
+## Minimum-bit data (Tribunal 1 requirement change)
+
+The requirement: every application value uses only the bits its valid
+range needs, faults go into a shared bitmask, MQTT payloads are compact
+binary, and packed data shared with another task or an interrupt is
+accessed safely. What changed in Buddy 5:
+
+| Data | Before | Now |
+|---|---|---|
+| State, fault, side, counters | `enum` / `uint8_t` / `uint32_t` | bit-fields: 4, 3, 2 and 2 bits |
+| Servo / edge angles | `int16_t`, 0 … 1800 | 11-bit signed, −900 … +900, + = right |
+| Ranges, widths, plan distances | `int32_t` | 12 bits (0 … 4095 mm); bypass plan 20 → 8 bytes, rejoin request 16 → 8 bytes |
+| Scan sample | 12 bytes | one 32-bit word (angle 11 + range 12 + valid 1) |
+| Obstacle profile | 56 bytes | 28 bytes |
+| Status record | 84 bytes | 40 bytes |
+| Ping counters | 32-bit | 16-bit, wrapping (differences only) |
+| Motion estimate from Buddy 2 | `int32_t` × 2 | `int16_t` × 2, signed, net distance, allowed to wrap |
+| Echo result from the interrupt | width + a phase variable written by both the task and the ISR | one packed 32-bit word: width 16 + ping sequence 8 + flags, written only by the ISR |
+| Faults | own variable | also one bit in the shared fault mask (`system/sys_fault.h`) |
+| Telemetry | the status struct | a 16-byte little-endian binary frame |
+
+**How it stays safe**
+
+- **Bit-fields only for data that one task owns** (scan, context, status).
+  A bit-field store is a read-modify-write of the whole word, which is only
+  safe when nothing else writes that word.
+- **Other tasks never touch the live record.** `b5_get_status()` copies a
+  snapshot that is replaced under a mutex (`TA_INHERIT`), and
+  `b5_get_state()` is one aligned word load.
+- **The interrupt has its own words.** The task writes only the ping
+  sequence number; the ISR writes only the result and "rise seen" words.
+  The result is packed and stored with one 32-bit write (atomic on the
+  M0+), then a barrier, then the event flag. An echo tagged with an old
+  sequence number is ignored, which also removes the old two-writer
+  `phase` variable.
+- **Masks and shifts, not bit-fields, wherever the layout matters**: the
+  echo word and the MQTT frame (`b5_pack.h`), so the PC decodes exactly
+  what the Pico packed, whatever the compiler.
+- **Clamp before packing.** 4396 mm in 12 bits would wrap to 300 mm, the
+  stop distance; every value is clamped first, so it reads 4095 instead.
+- **Wrap only where it is harmless.** Buddy 2's 16-bit distance and heading
+  may wrap during a long run. Buddy 5 only uses the change over one bypass
+  (about 1–2 m), computed with `b5_wrap_diff16()`, which stays correct
+  across a wrap because 2 m is far below half the ±32 m range.
+
+**What stayed full width, and why**
+
+- Raw µs timestamps and `last_pub_us`: the hardware timer is 32 bits.
+- Q15 trigonometry and intermediate maths: computation precision, not
+  stored data; each result is clamped when it is stored.
+
+**Telemetry frame for Buddy 1** (16 bytes, little-endian, version 1; bit
+map in `b5_pack.h`): state, fault, side, retries, servo angle, obstacle
+found, guard range, closest range, confidence, width, sideways shift, ping
+and no-echo counters. Decode with `b5_tlm_unpack()`; the bench console
+already does.
+
+**Cost**: a few extra shift and mask instructions per access (the M0+ has
+no bit-field instructions), well under 1 % CPU. Static RAM went down by
+about 190 bytes. The real gains are the 16-byte MQTT frame and the safer
+interrupt hand-over.
 
 ---
 
@@ -169,7 +236,7 @@ Assumptions A5–A8 still need the bench measurements.
 | `B5_SAMPLES_PER_ANGLE` | 3 | median of three (A6) |
 | `B5_ALPHA_DD` | 75 (7.5°) | beam half-angle; **fit it from the A6 bench data**, do not trust the datasheet |
 | `B5_REFINE_STOP_DD` | 10 (1°) | see below |
-| `B5_SERVO_MIN_US` / `MAX_US` | 500 / 2400 | calibrate on your SG90 so 900 really points straight ahead |
+| `B5_SERVO_MIN_US` / `MAX_US` | 500 / 2400 | calibrate on your SG90 so 0 really points straight ahead (MIN = full right, MAX = full left) |
 | `B5_SERVO_SETTLE_MS_30` | 40 | A8 |
 | `B5_CAR_WIDTH_MM` / `LENGTH_MM` | 150 / 200 | **placeholders: measure the PicoCar** |
 | `B5_MARGIN_MM` | 50 | clearance margin |
@@ -210,7 +277,7 @@ differences are recorded here rather than hidden:
 | Step | Estimate |
 |---|---|
 | Confirm (3 × 60 ms) | 0.18 s |
-| Halting (servo to 30°) | 0.08 s |
+| Halting (servo to −60°) | 0.08 s |
 | Coarse sweep: 5 × (3 pings + settle) | 1.1 s |
 | Edge refinement: ≤ 10 × (1 ping + settle) | ≤ 0.8 s |
 | **Scanning total** | **about 2.0 s** |

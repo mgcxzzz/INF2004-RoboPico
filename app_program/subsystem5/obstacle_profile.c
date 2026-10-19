@@ -12,10 +12,19 @@
  *
  * Integer only: the RP2040 has no FPU, so all trigonometry is Q15.
  *
+ * Angles are signed tenths of a degree, + = right (see the header). Each
+ * result is computed in a full-width local first and only clamped into
+ * its bit-field when it is stored, so no intermediate value is truncated.
+ *
  * Group IS28, Buddy 5. Coding standard: Barr-C:2018.
  */
 
 #include "obstacle_profile.h"
+
+/* The bit-field records must stay as small as designed, on every compiler
+ * this code is built with (arm-none-eabi-gcc on target, gcc on the host). */
+_Static_assert(sizeof(b5_sample_t) == 4U, "scan sample must fit one word");
+_Static_assert(sizeof(b5_profile_t) <= 28U, "profile must fit 7 words");
 
 #define Q15_ONE         (32768)
 #define DD_PER_DEG      (10)
@@ -132,6 +141,10 @@ b5_scan_add (b5_scan_t * p_scan, int16_t angle_dd, int32_t range_mm,
     uint8_t idx = 0U;
     uint8_t move;
 
+    /* Fit the 11-bit angle and 12-bit range fields before storing. */
+    angle_dd = (int16_t)b5_clamp(angle_dd, B5_ANGLE_MIN_DD, B5_ANGLE_MAX_DD);
+    range_mm = b5_clamp(range_mm, 0, B5_MM_MAX);
+
     while ((idx < p_scan->count) && (p_scan->sample[idx].angle_dd < angle_dd))
     {
         idx++;
@@ -139,8 +152,8 @@ b5_scan_add (b5_scan_t * p_scan, int16_t angle_dd, int32_t range_mm,
 
     if ((idx < p_scan->count) && (p_scan->sample[idx].angle_dd == angle_dd))
     {
-        p_scan->sample[idx].range_mm = range_mm;
-        p_scan->sample[idx].b_valid  = b_valid;
+        p_scan->sample[idx].range_mm = (uint32_t)range_mm;
+        p_scan->sample[idx].b_valid  = b_valid ? 1U : 0U;
         return true;
     }
 
@@ -155,8 +168,8 @@ b5_scan_add (b5_scan_t * p_scan, int16_t angle_dd, int32_t range_mm,
     }
 
     p_scan->sample[idx].angle_dd = angle_dd;
-    p_scan->sample[idx].range_mm = range_mm;
-    p_scan->sample[idx].b_valid  = b_valid;
+    p_scan->sample[idx].range_mm = (uint32_t)range_mm;
+    p_scan->sample[idx].b_valid  = b_valid ? 1U : 0U;
     p_scan->count++;
 
     return true;
@@ -183,10 +196,23 @@ b5_median3 (int32_t a, int32_t b, int32_t c)
     return ((a > b) ? a : b);
 }
 
+/*
+ * Midpoint of two angles, rounded up (towards +900). Rounding the same way
+ * everywhere keeps left and right edges treated alike; it matches the
+ * results validated before the switch to signed angles.
+ */
+static int16_t
+mid_up (int32_t a, int32_t b)
+{
+    int32_t sum = a + b + 1;
+
+    return (int16_t)((sum >= 0) ? (sum / 2) : -((-sum + 1) / 2));
+}
+
 static bool
 is_near (b5_sample_t const * p_s, int32_t near_mm)
 {
-    return (p_s->b_valid && (p_s->range_mm < near_mm));
+    return ((p_s->b_valid != 0U) && ((int32_t)p_s->range_mm < near_mm));
 }
 
 /**
@@ -232,7 +258,7 @@ b5_next_refine_angle (b5_scan_t const * p_scan, int32_t near_mm,
         b5_sample_t const * p_b = &p_scan->sample[i + 1U];
         int16_t gap = (int16_t)(p_b->angle_dd - p_a->angle_dd);
 
-        if (!p_a->b_valid || !p_b->b_valid)
+        if ((p_a->b_valid == 0U) || (p_b->b_valid == 0U))
         {
             continue;
         }
@@ -240,7 +266,7 @@ b5_next_refine_angle (b5_scan_t const * p_scan, int32_t near_mm,
         if ((is_near(p_a, near_mm) != is_near(p_b, near_mm)) &&
             (gap > alpha_dd) && (gap >= 2))
         {
-            *p_angle_dd = (int16_t)(p_a->angle_dd + (gap / 2));
+            *p_angle_dd = mid_up(p_a->angle_dd, p_b->angle_dd);
             return true;
         }
     }
@@ -263,7 +289,8 @@ closest_near (b5_scan_t const * p_scan, int32_t near_mm)
     {
         if (is_near(&p_scan->sample[i], near_mm) &&
             ((best < 0) ||
-             (p_scan->sample[i].range_mm < p_scan->sample[best].range_mm)))
+             (p_scan->sample[i].range_mm <
+              p_scan->sample[best].range_mm)))
         {
             best = (int)i;
         }
@@ -296,13 +323,14 @@ side_clearance (b5_scan_t const * p_scan, int lo, int hi, int dir,
             continue;                   /* part of the obstacle itself */
         }
 
-        if (!p_s->b_valid)
+        if (p_s->b_valid == 0U)
         {
             continue;
         }
 
-        x = mul_q15(p_s->range_mm, b5_cos_q15(p_s->angle_dd));
-        y = mul_q15(p_s->range_mm, b5_sin_q15(p_s->angle_dd));
+        /* + = right: x across (sin), y ahead (cos). */
+        x = mul_q15((int32_t)p_s->range_mm, b5_sin_q15(p_s->angle_dd));
+        y = mul_q15((int32_t)p_s->range_mm, b5_cos_q15(p_s->angle_dd));
 
         if ((y <= 0) || (y > corridor_y))
         {
@@ -320,48 +348,73 @@ side_clearance (b5_scan_t const * p_scan, int lo, int hi, int dir,
     return best;
 }
 
+/* Store helpers: clamp into the field width (b5_pack.h). */
+static uint32_t
+mm_u12 (int32_t mm)
+{
+    return (uint32_t)b5_clamp(mm, 0, B5_MM_MAX);
+}
+
+static int32_t
+mm_s12 (int32_t mm)
+{
+    return b5_clamp(mm, B5_SMM_MIN, B5_SMM_MAX);
+}
+
 /**
  * @brief  Planning: obstacle profile, width correction, side choice.
  *
  * The obstacle is the contiguous run of near samples around the closest
- * reading. Each raw edge is the middle of the bracket between the outermost
- * near sample and its far neighbour. Because a near
- * reading means the obstacle is somewhere inside the beam, each raw edge is
- * moved inward by alpha before computing the width; at range d this removes
- * about d*tan(alpha) per edge, the 2*d*tan(alpha) beam-spread error.
- * An edge that reaches the end of the scan arc is not corrected and that
- * side is treated as having no clearance, because its extent is unknown.
+ * reading. Samples are sorted by angle, so the low end of the run is the
+ * LEFT edge and the high end the RIGHT edge. Each raw edge is the middle
+ * of the bracket between the outermost near sample and its far neighbour.
+ * Because a near reading means the obstacle is somewhere inside the beam,
+ * each raw edge is moved inward by alpha before computing the width; at
+ * range d this removes about d*tan(alpha) per edge, the 2*d*tan(alpha)
+ * beam-spread error. An edge that reaches the end of the scan arc is not
+ * corrected and that side is treated as having no clearance, because its
+ * extent is unknown.
  */
 void
 b5_build_profile (b5_scan_t const * p_scan, b5_params_t const * p_param,
                   b5_profile_t * p_prof)
 {
-    int     centre;
-    int     lo;
-    int     hi;
-    int16_t right_dd;
-    int16_t left_dd;
-    int32_t r_right;
-    int32_t r_left;
-    int32_t corridor_y;
-    int32_t need_mm;
-    uint8_t valid = 0U;
-    uint8_t i;
-    bool    b_right_ok;
-    bool    b_left_ok;
+    int       centre;
+    int       lo;
+    int       hi;
+    int16_t   right_dd;
+    int16_t   left_dd;
+    int32_t   r_right;
+    int32_t   r_left;
+    int32_t   closest;
+    int32_t   x_right;
+    int32_t   x_left;
+    int32_t   width;
+    int32_t   clear_right;
+    int32_t   clear_left;
+    int32_t   lateral;
+    int32_t   corridor_y;
+    int32_t   need_mm;
+    uint8_t   valid = 0U;
+    uint8_t   i;
+    bool      b_right_lim;
+    bool      b_left_lim;
+    bool      b_right_ok;
+    bool      b_left_ok;
+    b5_side_t side;
 
     *p_prof = (b5_profile_t){ 0 };
 
     for (i = 0U; i < p_scan->count; i++)
     {
-        if (p_scan->sample[i].b_valid)
+        if (p_scan->sample[i].b_valid != 0U)
         {
             valid++;
         }
     }
 
     p_prof->confidence_pct = (p_scan->count == 0U) ? 0U :
-        (uint8_t)((valid * 100U) / p_scan->count);
+        (uint32_t)((valid * 100U) / p_scan->count);
 
     centre = closest_near(p_scan, p_param->near_mm);
 
@@ -371,8 +424,9 @@ b5_build_profile (b5_scan_t const * p_scan, b5_params_t const * p_param,
         return;                         /* no obstacle: back to Guard  */
     }
 
-    p_prof->b_found    = true;
-    p_prof->closest_mm = p_scan->sample[centre].range_mm;
+    closest            = (int32_t)p_scan->sample[centre].range_mm;
+    p_prof->b_found    = 1U;
+    p_prof->closest_mm = mm_u12(closest);
     p_prof->closest_dd = p_scan->sample[centre].angle_dd;
 
     /* Grow the run of near samples outwards from the closest one. */
@@ -392,126 +446,122 @@ b5_build_profile (b5_scan_t const * p_scan, b5_params_t const * p_param,
 
     /* Each edge lies inside the bracket between the outermost near sample
      * and its far neighbour; take the middle of that bracket. */
-    right_dd = p_scan->sample[lo].angle_dd;
-    left_dd  = p_scan->sample[hi].angle_dd;
-    r_right  = p_scan->sample[lo].range_mm;
-    r_left   = p_scan->sample[hi].range_mm;
+    left_dd  = (int16_t)p_scan->sample[lo].angle_dd;
+    right_dd = (int16_t)p_scan->sample[hi].angle_dd;
+    r_left   = (int32_t)p_scan->sample[lo].range_mm;
+    r_right  = (int32_t)p_scan->sample[hi].range_mm;
 
-    if ((lo > 0) && p_scan->sample[lo - 1].b_valid)
+    if ((lo > 0) && (p_scan->sample[lo - 1].b_valid != 0U))
     {
-        right_dd = (int16_t)((right_dd + p_scan->sample[lo - 1].angle_dd) / 2);
+        left_dd = mid_up(left_dd, p_scan->sample[lo - 1].angle_dd);
     }
 
-    if (((hi + 1) < (int)p_scan->count) && p_scan->sample[hi + 1].b_valid)
+    if (((hi + 1) < (int)p_scan->count) &&
+        (p_scan->sample[hi + 1].b_valid != 0U))
     {
-        left_dd = (int16_t)((left_dd + p_scan->sample[hi + 1].angle_dd) / 2);
+        right_dd = mid_up(right_dd, p_scan->sample[hi + 1].angle_dd);
     }
+
+    b_left_lim  = (lo == 0) ||
+        (p_scan->sample[lo].angle_dd <= p_param->scan_min_dd);
+    b_right_lim = (hi == ((int)p_scan->count - 1)) ||
+        (p_scan->sample[hi].angle_dd >= p_param->scan_max_dd);
 
     p_prof->right_edge_dd    = right_dd;
     p_prof->left_edge_dd     = left_dd;
-    p_prof->b_right_at_limit = (lo == 0) ||
-        (p_scan->sample[lo].angle_dd <= p_param->scan_min_dd);
-    p_prof->b_left_at_limit  = (hi == ((int)p_scan->count - 1)) ||
-        (p_scan->sample[hi].angle_dd >= p_param->scan_max_dd);
-
-    p_prof->width_raw_mm =
-        mul_q15(r_right, b5_cos_q15(right_dd)) -
-        mul_q15(r_left,  b5_cos_q15(left_dd));
+    p_prof->b_right_at_limit = b_right_lim ? 1U : 0U;
+    p_prof->b_left_at_limit  = b_left_lim ? 1U : 0U;
+    p_prof->width_raw_mm     = mm_u12(mul_q15(r_right, b5_sin_q15(right_dd)) -
+                                      mul_q15(r_left,  b5_sin_q15(left_dd)));
 
     /* Beam-spread correction: move each known edge inward by alpha. */
-    if (!p_prof->b_right_at_limit)
+    if (!b_right_lim)
     {
-        right_dd = (int16_t)(right_dd + p_param->alpha_dd);
+        right_dd = (int16_t)(right_dd - p_param->alpha_dd);
     }
 
-    if (!p_prof->b_left_at_limit)
+    if (!b_left_lim)
     {
-        left_dd = (int16_t)(left_dd - p_param->alpha_dd);
+        left_dd = (int16_t)(left_dd + p_param->alpha_dd);
     }
 
-    if (right_dd > left_dd)
+    if (left_dd > right_dd)
     {
         /* Narrower than the beam: treat it as a point at the middle. */
-        int16_t mid = (int16_t)((p_prof->right_edge_dd +
-                                 p_prof->left_edge_dd) / 2);
+        int16_t mid = mid_up(p_prof->right_edge_dd, p_prof->left_edge_dd);
         right_dd = mid;
         left_dd  = mid;
     }
 
-    p_prof->x_right_mm = mul_q15(r_right, b5_cos_q15(right_dd));
-    p_prof->x_left_mm  = mul_q15(r_left,  b5_cos_q15(left_dd));
-    p_prof->width_mm   = p_prof->x_right_mm - p_prof->x_left_mm;
+    x_right = mul_q15(r_right, b5_sin_q15(right_dd));
+    x_left  = mul_q15(r_left,  b5_sin_q15(left_dd));
+    width   = x_right - x_left;
 
-    if (p_prof->width_mm < 0)
-    {
-        p_prof->width_mm = 0;
-    }
+    p_prof->x_right_mm = mm_s12(x_right);
+    p_prof->x_left_mm  = mm_s12(x_left);
+    p_prof->width_mm   = mm_u12(width);     /* negative -> 0 */
 
     /* Anything closer than this, beside the obstacle, blocks the bypass. */
-    corridor_y = p_prof->closest_mm + p_param->obst_depth_mm +
-                 p_param->car_length_mm;
+    corridor_y = closest + p_param->obst_depth_mm + p_param->car_length_mm;
 
-    p_prof->clear_right_mm = p_prof->b_right_at_limit ? 0 :
-        side_clearance(p_scan, lo, hi, +1, p_prof->x_right_mm,
-                       corridor_y, p_param->open_clearance_mm);
+    clear_right = b_right_lim ? 0 :
+        side_clearance(p_scan, lo, hi, +1, x_right, corridor_y,
+                       p_param->open_clearance_mm);
 
-    p_prof->clear_left_mm = p_prof->b_left_at_limit ? 0 :
-        side_clearance(p_scan, lo, hi, -1, p_prof->x_left_mm,
-                       corridor_y, p_param->open_clearance_mm);
+    clear_left = b_left_lim ? 0 :
+        side_clearance(p_scan, lo, hi, -1, x_left, corridor_y,
+                       p_param->open_clearance_mm);
+
+    p_prof->clear_right_mm = mm_u12(clear_right);
+    p_prof->clear_left_mm  = mm_u12(clear_left);
 
     /* A side is passable if the car plus a margin each side fits. */
     need_mm    = p_param->car_width_mm + (2 * p_param->margin_mm);
-    b_right_ok = (p_prof->clear_right_mm >= need_mm);
-    b_left_ok  = (p_prof->clear_left_mm  >= need_mm);
+    b_right_ok = (clear_right >= need_mm);
+    b_left_ok  = (clear_left  >= need_mm);
 
     if (b_right_ok && b_left_ok)
     {
-        if (p_prof->clear_right_mm == p_prof->clear_left_mm)
+        if (clear_right == clear_left)
         {
-            p_prof->side = p_param->b_prefer_right ? B5_SIDE_RIGHT
-                                                   : B5_SIDE_LEFT;
+            side = p_param->b_prefer_right ? B5_SIDE_RIGHT : B5_SIDE_LEFT;
         }
         else
         {
-            p_prof->side = (p_prof->clear_right_mm > p_prof->clear_left_mm)
-                           ? B5_SIDE_RIGHT : B5_SIDE_LEFT;
+            side = (clear_right > clear_left) ? B5_SIDE_RIGHT : B5_SIDE_LEFT;
         }
     }
     else if (b_right_ok)
     {
-        p_prof->side = B5_SIDE_RIGHT;
+        side = B5_SIDE_RIGHT;
     }
     else if (b_left_ok)
     {
-        p_prof->side = B5_SIDE_LEFT;
+        side = B5_SIDE_LEFT;
     }
     else
     {
-        p_prof->side = B5_SIDE_NONE;    /* -> Blocked                  */
+        side = B5_SIDE_NONE;            /* -> Blocked                  */
     }
+
+    p_prof->side = (uint32_t)side;
 
     /* Sideways shift that puts the car's near flank margin_mm past the
      * corrected edge, and forward travel that clears the obstacle. */
-    if (p_prof->side == B5_SIDE_RIGHT)
+    if (side == B5_SIDE_RIGHT)
     {
-        p_prof->lateral_mm = p_prof->x_right_mm +
-                             (p_param->car_width_mm / 2) + p_param->margin_mm;
+        lateral = x_right + (p_param->car_width_mm / 2) + p_param->margin_mm;
     }
-    else if (p_prof->side == B5_SIDE_LEFT)
+    else if (side == B5_SIDE_LEFT)
     {
-        p_prof->lateral_mm = -p_prof->x_left_mm +
-                             (p_param->car_width_mm / 2) + p_param->margin_mm;
+        lateral = -x_left + (p_param->car_width_mm / 2) + p_param->margin_mm;
     }
     else
     {
-        p_prof->lateral_mm = 0;
+        lateral = 0;
     }
 
-    if (p_prof->lateral_mm < 0)
-    {
-        p_prof->lateral_mm = 0;         /* already clear on that side  */
-    }
-
-    p_prof->forward_mm = p_prof->closest_mm + p_param->obst_depth_mm +
-                         p_param->car_length_mm + p_param->margin_mm;
+    p_prof->lateral_mm = mm_u12(lateral);   /* already clear -> 0 */
+    p_prof->forward_mm = mm_u12(closest + p_param->obst_depth_mm +
+                                p_param->car_length_mm + p_param->margin_mm);
 }

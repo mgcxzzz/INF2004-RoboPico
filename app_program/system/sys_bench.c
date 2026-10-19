@@ -146,9 +146,10 @@ mc_stop (uint32_t cmd_id)
 bool
 b5_motion_get_estimate (b5_motion_est_t * p_est)
 {
+    /* 16-bit wrapping values, as agreed with Buddy 2 (b5_iface.h). */
     lock();
-    p_est->distance_mm = g_dist_mm1000 / 1000;
-    p_est->heading_dd  = g_heading_dd;
+    p_est->distance_mm = (int16_t)(uint16_t)(g_dist_mm1000 / 1000);
+    p_est->heading_dd  = (int16_t)(uint16_t)g_heading_dd;
     unlock();
     return true;
 }
@@ -281,24 +282,33 @@ nav_telemetry_publish (nav_status_t const * p_st)
     }
 }
 
+/* Buddy 5 now sends a 16-byte binary frame (b5_pack.h); decode it the
+ * same way the PC will, then print it. */
 void
-b5_telemetry_publish (b5_status_t const * p_st)
+b5_telemetry_publish (uint8_t const * p_frame, uint32_t len)
 {
-    b5_profile_t const * p_p = &p_st->profile;
+    b5_tlm_t t;
 
-    if (p_st->state != g_last_b5)
+    if ((len != B5_TLM_FRAME_BYTES) || !b5_tlm_unpack(p_frame, &t))
+    {
+        tm_printf((UB *)"[b5]  bad telemetry frame\n");
+        return;
+    }
+
+    if ((b5_state_t)t.state != g_last_b5)
     {
         tm_printf((UB *)"[b5]  %s  (range %d mm)\n",
-                  (UB *)b5_state_name(p_st->state), (INT)p_st->range_mm);
-        g_last_b5 = p_st->state;
+                  (UB *)b5_state_name((b5_state_t)t.state),
+                  (INT)t.range_mm);
+        g_last_b5 = (b5_state_t)t.state;
 
-        if ((p_st->state == B5_ST_PLANNING) && p_p->b_found)
+        if (((b5_state_t)t.state == B5_ST_PLANNING) && t.b_found)
         {
             tm_printf((UB *)"[b5]  obstacle %d mm wide at %d mm, "
-                            "go %s\n", (INT)p_p->width_mm,
-                      (INT)p_p->closest_mm,
-                      (p_p->side == B5_SIDE_RIGHT) ? "right" :
-                      (p_p->side == B5_SIDE_LEFT) ? "left" : "nowhere");
+                            "go %s\n", (INT)t.width_mm,
+                      (INT)t.closest_mm,
+                      (t.side == (uint8_t)B5_SIDE_RIGHT) ? "right" :
+                      (t.side == (uint8_t)B5_SIDE_LEFT) ? "left" : "nowhere");
         }
     }
 }

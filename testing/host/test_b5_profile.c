@@ -38,11 +38,13 @@ static int g_pass = 0;
                printf(__VA_ARGS__); printf("\n"); }                         \
     } while (0)
 
-/* Range the simulated sensor reports at a servo angle (tenths of a deg). */
+/* Range the simulated sensor reports at a servo angle (tenths of a deg,
+ * signed: -900 left, 0 ahead, +900 right). The geometry below measures
+ * angles from the right-hand x axis, so convert first. */
 static int32_t
 sim_range (face_t const * p_faces, int n_faces, int16_t angle_dd)
 {
-    double a     = (angle_dd / 10.0) * PI / 180.0;
+    double a     = ((900 - angle_dd) / 10.0) * PI / 180.0;
     double half  = ALPHA_TRUE_DEG * PI / 180.0;
     double best  = B5_RANGE_FAR_MM;
     int    f;
@@ -259,11 +261,11 @@ test_invalid_samples (void)
 
     printf("dead sensor -> low confidence\n");
     b5_scan_clear(&scan);
+    (void)b5_scan_add(&scan, -600, 0, false);
+    (void)b5_scan_add(&scan, -300, 0, false);
+    (void)b5_scan_add(&scan, 0, 250, true);
     (void)b5_scan_add(&scan, 300, 0, false);
     (void)b5_scan_add(&scan, 600, 0, false);
-    (void)b5_scan_add(&scan, 900, 250, true);
-    (void)b5_scan_add(&scan, 1200, 0, false);
-    (void)b5_scan_add(&scan, 1500, 0, false);
     b5_build_profile(&scan, &par, &prof);
     CHECK(prof.confidence_pct < B5_MIN_CONFIDENCE_PCT, "confidence %u",
           prof.confidence_pct);

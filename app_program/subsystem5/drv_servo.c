@@ -24,6 +24,7 @@
 #include "b5_config.h"
 #include "../system/sys_hal.h"
 #include "drv_servo.h"
+#include "b5_pack.h"
 
 #define PWM_SLICE               ((B5_PIN_SERVO_PWM >> 1) & 0x7U)
 #define PWM_SLICE_REG(off)      (PWM_BASE + (off) + (PWM_SLICE * 0x14U))
@@ -32,24 +33,28 @@
 #define PWM_TOP_20MS            (19999U)
 #define PWM_IS_CHAN_B           ((B5_PIN_SERVO_PWM & 1U) != 0U)
 
-#define ANGLE_MAX_DD            (1800)
+#define ANGLE_SPAN_DD           (1800)  /* -900 .. +900                  */
 #define ANGLE_STEP_REF_DD       (300)
 
 static int16_t g_angle_dd = B5_AHEAD_DD;
 
+/*
+ * Signed angle (-900 left .. +900 right) to pulse width. The horn turns
+ * towards smaller pulses for "right", so +900 maps to B5_SERVO_MIN_US.
+ */
 static uint32_t
 angle_to_pulse_us (int16_t angle_dd)
 {
-    int32_t a = angle_dd;
+    int32_t from_right = B5_ANGLE_MAX_DD - angle_dd;    /* 0 .. 1800 */
 
     if (B5_SERVO_REVERSED != 0)
     {
-        a = ANGLE_MAX_DD - a;
+        from_right = ANGLE_SPAN_DD - from_right;
     }
 
     return B5_SERVO_MIN_US +
-           (((B5_SERVO_MAX_US - B5_SERVO_MIN_US) * (uint32_t)a) /
-            (uint32_t)ANGLE_MAX_DD);
+           (((B5_SERVO_MAX_US - B5_SERVO_MIN_US) * (uint32_t)from_right) /
+            (uint32_t)ANGLE_SPAN_DD);
 }
 
 static uint32_t
@@ -95,7 +100,7 @@ b5_servo_init (void)
 
 /**
  * @brief  Move to an angle and sleep until it has settled.
- * @param  angle_dd  0 = right, 900 = ahead, 1800 = left (tenths of deg).
+ * @param  angle_dd  -900 = left, 0 = ahead, +900 = right (0.1 deg).
  * @return E_OK, or E_IO if the PWM slice is not holding the pulse.
  */
 ER
@@ -105,14 +110,7 @@ b5_servo_move (int16_t angle_dd)
     uint32_t delta;
     uint32_t settle_ms;
 
-    if (angle_dd < 0)
-    {
-        angle_dd = 0;
-    }
-    else if (angle_dd > ANGLE_MAX_DD)
-    {
-        angle_dd = ANGLE_MAX_DD;
-    }
+    angle_dd = (int16_t)b5_clamp(angle_dd, B5_ANGLE_MIN_DD, B5_ANGLE_MAX_DD);
 
     pulse = angle_to_pulse_us(angle_dd);
     (void)pwm_set_cc(B5_PIN_SERVO_PWM, pulse);

@@ -190,7 +190,9 @@ test_obstacle_bypass (void)
     CHECK(g_wheel_calls == calls, "line speeds ignored during obstacle");
 
     {
-        b5_plan_t plan = { B5_SIDE_RIGHT, 200, 600, 280, 100 };
+        b5_plan_t plan = { .side = B5_SIDE_RIGHT, .lateral_mm = 200,
+                           .forward_mm = 600, .closest_mm = 280,
+                           .width_mm = 100 };
         b5_nav_send_plan(&plan);
     }
     run();
@@ -210,7 +212,8 @@ test_obstacle_bypass (void)
     CHECK(take_event(B5_EV_MOTION_DONE), "bypass done to Buddy 5");
 
     {
-        b5_rejoin_t rj = { 200, 0, 100, 0 };
+        b5_rejoin_t rj = { .lateral_mm = 200, .heading_dd = 0,
+                           .attempt = 0, .search_mm = 100 };
         b5_nav_request_rejoin(&rj);
     }
     run();

@@ -24,6 +24,7 @@
 #include "b5_iface.h"
 #include "drv_servo.h"
 #include "drv_ultrasonic.h"
+#include "sys_fault.h"
 
 #define PI          (3.14159265358979)
 #define MAX_TRACE   (64)
@@ -64,6 +65,14 @@ ER tk_clr_flg (ID id, UINT ptn)  { g_flag[id - 1] &= ptn; return E_OK; }
 ID tk_cre_tsk (T_CTSK const * p) { g_task_fn = p->task; return 1; }
 ER tk_sta_tsk (ID id, INT s)     { (void)id; (void)s; return E_OK; }
 ER tk_dly_tsk (TMO ms)           { g_now_us += (uint32_t)ms * 1000U; return E_OK; }
+ID tk_cre_mtx (T_CMTX const * p) { (void)p; return 1; }
+ER tk_loc_mtx (ID id, TMO t)     { (void)id; (void)t; return E_OK; }
+ER tk_unl_mtx (ID id)            { (void)id; return E_OK; }
+
+/* Shared fault bitmask (system/sys_fault.c) */
+static uint32_t g_fault_mask;
+ER sys_fault_set (uint32_t b)    { g_fault_mask |= b; return E_OK; }
+ER sys_fault_clear (uint32_t b)  { g_fault_mask &= ~b; return E_OK; }
 
 ER
 tk_wai_flg (ID id, UINT ptn, UINT mode, UINT * p_ptn, TMO tmo)
@@ -118,7 +127,8 @@ b5_servo_move (int16_t angle_dd)
 ER
 b5_us_ping (int32_t * p_mm)
 {
-    double a    = (g_servo_dd / 10.0) * PI / 180.0;
+    /* Signed servo angle (+ = right) -> angle from the right-hand x axis. */
+    double a    = ((900 - g_servo_dd) / 10.0) * PI / 180.0;
     double half = 7.5 * PI / 180.0;
     double best = B5_RANGE_FAR_MM;
     int    f;
@@ -192,7 +202,9 @@ b5_nav_request_reverse (int32_t mm)
 bool
 b5_motion_get_estimate (b5_motion_est_t * p)
 {
-    p->distance_mm = g_odometer_mm;
+    /* 16-bit and wrapping, like Buddy 2's real estimate. The odometer
+     * starts near the wrap point so every scenario crosses it. */
+    p->distance_mm = (int16_t)(uint16_t)(uint32_t)g_odometer_mm;
     p->heading_dd  = 0;
     g_odometer_mm += g_odo_step;        /* car creeps forward */
     return true;
@@ -210,19 +222,33 @@ b5_report_fault (b5_fault_t f)
     g_fault_reported = f;
 }
 
+/* Telemetry arrives as the packed binary frame; decode it like the PC. */
+static int g_bad_frames;
+
 void
-b5_telemetry_publish (b5_status_t const * p)
+b5_telemetry_publish (uint8_t const * p_frame, uint32_t len)
 {
-    if ((g_trace_len == 0) || (g_trace[g_trace_len - 1] != p->state))
+    b5_tlm_t   t;
+    b5_state_t state;
+
+    if ((len != B5_TLM_FRAME_BYTES) || !b5_tlm_unpack(p_frame, &t))
+    {
+        g_bad_frames++;
+        return;
+    }
+
+    state = (b5_state_t)t.state;
+
+    if ((g_trace_len == 0) || (g_trace[g_trace_len - 1] != state))
     {
         if (g_trace_len < MAX_TRACE)
         {
-            g_trace[g_trace_len++] = p->state;
+            g_trace[g_trace_len++] = state;
         }
     }
 
     /* After one full lap through Guard, stop the run. */
-    if ((p->state == B5_ST_GUARD) && (g_trace_len > 3) &&
+    if ((state == B5_ST_GUARD) && (g_trace_len > 3) &&
         (g_trace[g_trace_len - 2] == B5_ST_RECOVERING))
     {
         (void)b5_post_event(B5_EV_MISSION_STOP);
@@ -233,17 +259,17 @@ b5_telemetry_publish (b5_status_t const * p)
  * Scenarios
  * ------------------------------------------------------------------ */
 static int
-expect (b5_state_t const * p_want, int n, b5_fault_t fault)
+expect (b5_state_t const * p_want, int n, b5_fault_t fault, uint32_t mask)
 {
     int i;
-    int ok = (g_trace_len >= n);
+    int ok = (g_trace_len >= n) && (g_fault_mask == mask);
 
     for (i = 0; ok && (i < n); i++)
     {
         ok = (g_trace[i] == p_want[i]);
     }
 
-    ok = ok && (g_fault_reported == fault);
+    ok = ok && (g_fault_reported == fault) && (g_bad_frames == 0);
 
     printf("  states:");
     for (i = 0; i < g_trace_len; i++)
@@ -251,7 +277,9 @@ expect (b5_state_t const * p_want, int n, b5_fault_t fault)
         printf(" %s%s", b5_state_name(g_trace[i]),
                (i + 1 < g_trace_len) ? " ->" : "");
     }
-    printf("\n  fault reported: %d (expected %d)\n", g_fault_reported, fault);
+    printf("\n  fault reported: %d (expected %d), shared fault mask 0x%02X,"
+           " bad frames %d\n", g_fault_reported, fault,
+           (unsigned)g_fault_mask, g_bad_frames);
     printf("  %s\n", ok ? "PASS" : "FAIL");
 
     return ok ? EXIT_SUCCESS : EXIT_FAILURE;
@@ -262,6 +290,7 @@ main (int argc, char ** argv)
 {
     int scenario = (argc > 1) ? atoi(argv[1]) : 1;
 
+    g_odometer_mm          = 32000;     /* crosses the 16-bit wrap */
     g_line_found_leg       = 0;
     g_pings_until_obstacle = 5;
     g_faces                = 1;
@@ -306,7 +335,7 @@ main (int argc, char ** argv)
         {
             static b5_state_t const want[] =
             { B5_ST_IDLE, B5_ST_GUARD, B5_ST_FAULT };
-            return expect(want, 3, B5_FAULT_ECHO_TIMEOUT);
+            return expect(want, 3, B5_FAULT_ECHO_TIMEOUT, SYS_FAULT_NO_ECHO);
         }
         case 3:
         {
@@ -317,7 +346,7 @@ main (int argc, char ** argv)
               B5_ST_EDGE_REFINE, B5_ST_PLANNING, B5_ST_BLOCKED,
               B5_ST_HALTING, B5_ST_COARSE_SWEEP, B5_ST_EDGE_REFINE,
               B5_ST_PLANNING, B5_ST_BLOCKED, B5_ST_FAULT };
-            int r = expect(want, 19, B5_FAULT_BLOCKED);
+            int r = expect(want, 19, B5_FAULT_BLOCKED, SYS_FAULT_OBSTACLE);
             printf("  reverses: %d (expected %u)\n", g_reverses,
                    B5_BLOCKED_RETRIES);
             return ((r == EXIT_SUCCESS) &&
@@ -330,7 +359,7 @@ main (int argc, char ** argv)
             { B5_ST_IDLE, B5_ST_GUARD, B5_ST_CONFIRM, B5_ST_HALTING,
               B5_ST_COARSE_SWEEP, B5_ST_EDGE_REFINE, B5_ST_PLANNING,
               B5_ST_BYPASSING, B5_ST_RECOVERING, B5_ST_FAULT };
-            return expect(want, 10, B5_FAULT_LINE_LOST);
+            return expect(want, 10, B5_FAULT_LINE_LOST, SYS_FAULT_OBSTACLE);
         }
         default:
         {
@@ -339,7 +368,7 @@ main (int argc, char ** argv)
               B5_ST_COARSE_SWEEP, B5_ST_EDGE_REFINE, B5_ST_PLANNING,
               B5_ST_BYPASSING, B5_ST_RECOVERING, B5_ST_GUARD,
               B5_ST_IDLE };
-            return expect(want, 11, B5_FAULT_NONE);
+            return expect(want, 11, B5_FAULT_NONE, 0U);
         }
     }
 }

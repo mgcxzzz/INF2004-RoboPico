@@ -29,15 +29,17 @@ b5_nav_request_stop (void)
 void
 b5_nav_send_plan (b5_plan_t const * p_plan)
 {
+    /* The plan is a bit-field record; widen each field for the inbox. */
     (void)nav_post_msg(NAV_MSG_B5_PLAN, (int32_t)p_plan->side,
-                       p_plan->lateral_mm, p_plan->forward_mm);
+                       (int32_t)p_plan->lateral_mm,
+                       (int32_t)p_plan->forward_mm);
 }
 
 void
 b5_nav_request_rejoin (b5_rejoin_t const * p_req)
 {
-    (void)nav_post_msg(NAV_MSG_B5_REJOIN, p_req->lateral_mm,
-                       p_req->heading_dd, p_req->search_mm);
+    (void)nav_post_msg(NAV_MSG_B5_REJOIN, (int32_t)p_req->lateral_mm,
+                       (int32_t)p_req->heading_dd, (int32_t)p_req->search_mm);
 }
 
 void

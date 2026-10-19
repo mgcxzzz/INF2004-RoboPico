@@ -157,8 +157,10 @@ degree. **Positive angles are to the right.**
 - Reset: call `safety_request_reset()` **and**
   `nav_post_command(NAV_CMD_RESET)`.
 - Write `nav_telemetry_publish()`, `safety_telemetry_publish()` and
-  `b5_telemetry_publish()`: copy the status into the telemetry queue that
-  the MQTT code reads (TEAM.md section 3, "WiFi and MQTT are special").
+  `b5_telemetry_publish(frame, len)`. Buddy 5 already hands over a packed
+  16-byte binary frame (bit map in `../subsystem5/b5_pack.h`); just queue
+  the bytes. Nav and Safety still pass a status struct. Either way, copy
+  the data into the telemetry queue that the MQTT code reads (TEAM.md section 3, "WiFi and MQTT are special").
   Then set `SYS_CONSOLE_STATUS` to 0.
 - Optional: `wifi_notify_state(nav_state_t)`;
   `safety_watch(SAFETY_SRC_WIFI, 3000)` + `safety_kick()` per heartbeat.
@@ -239,7 +241,37 @@ written the real version of a helper. Set the matching switch to 0.
 
 ---
 
-## 5. Shared HAL (`sys_hal.*`)
+## 5. Shared fault bitmask (`sys_fault.*`)
+
+Tribunal 1 decision: fault conditions are single bits in one shared mask,
+not separate integer variables. The mask is a µT-Kernel **event flag**, so
+the kernel sets and clears bits as one operation: safe from any task or
+interrupt on either core. A plain `faults |= bit` is not, because the
+Cortex-M0+ has no atomic read-modify-write instruction.
+
+| Bit | Name | Owner |
+| --- | --- | --- |
+| 0 | `SYS_FAULT_MOTOR_STALL` | S2 |
+| 1 | `SYS_FAULT_ENCODER` | S2 |
+| 2 | `SYS_FAULT_IMU` | S4 |
+| 3 | `SYS_FAULT_NO_ECHO` | S5 (done) |
+| 4 | `SYS_FAULT_WIFI_LOSS` | S1 |
+| 5 | `SYS_FAULT_SERVO` | S5 (done) |
+| 6 | `SYS_FAULT_LINE_SENSOR` | S3 |
+| 7 | `SYS_FAULT_OBSTACLE` | S5 (done): stop timeout, motion failure, line lost, blocked |
+
+```c
+#include "../system/sys_fault.h"
+
+sys_fault_set(SYS_FAULT_MOTOR_STALL);     /* only your own bits */
+sys_fault_clear(SYS_FAULT_MOTOR_STALL);
+uint32_t active = sys_fault_get();        /* e.g. for telemetry */
+```
+
+Severity (what stops the car) is still decided by the Safety Supervisor
+through `safety_report_fault()`; the mask is the compact shared record.
+
+## 6. Shared HAL (`sys_hal.*`)
 
 The RP2040 has **one** GPIO interrupt for all pins. Only one handler can
 own it, so it lives here and passes each edge on to whoever registered
@@ -262,7 +294,7 @@ Also: `sys_time_us()` (free-running microsecond timer) and
 
 ---
 
-## 6. Try it on the bench
+## 7. Try it on the bench
 
 ```sh
 cd build_make
@@ -283,7 +315,7 @@ sensor to watch:
 Press GP20 for an emergency stop; the console shows how many ms the drive
 took to switch off. GP21 resets and starts again.
 
-## 7. Host tests
+## 8. Host tests
 
 No Pico needed (see [`../../testing/host/README.md`](../../testing/host/README.md)):
 
@@ -295,8 +327,9 @@ make -C testing/host
 |---|---|---|
 | `test_nav` | start and line following, a full bypass, late results ignored, barcode turns, line search, pause/resume/reset, e-stop latching, S5 fault, motion timeout, inhibit not treated as a motion fault | 48 passed |
 | `test_safety` | e-stop and timing, reset order, slow stop flagged, e-stop during a fault, warnings, silent task caught only while Running | 25 passed |
+| `test_b5_pack` | minimum-bit packing: record sizes, clamping, sign extension, 16-bit wrap, echo word, telemetry frame | 36 passed |
 
-## 8. To agree as a team
+## 9. To agree as a team
 
 - **Priorities.** The template bands put S1–S4 above S5, while the report
   (Section 3) has obstacle handling above line following. See

@@ -72,9 +72,10 @@ b5_line_detected (void)
 }
 
 B5_WEAK void
-b5_telemetry_publish (b5_status_t const * p_status)
+b5_telemetry_publish (uint8_t const * p_frame, uint32_t len)
 {
-    (void)p_status;
+    (void)p_frame;
+    (void)len;
 }
 
 B5_WEAK void

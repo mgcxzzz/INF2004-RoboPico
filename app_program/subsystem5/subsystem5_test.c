@@ -12,16 +12,18 @@
 #include "../test_report.h"
 #include "obstacle_profile.h"
 #include "b5_config.h"
+#include "b5_pack.h"
 
 #if APP_TEST
 
 /* A scan recorded from the host simulation (testing/host): a 100 mm wide
-   flat obstacle 300 mm straight ahead, 7.5 deg beam half-angle. */
+   flat obstacle 300 mm straight ahead, 7.5 deg beam half-angle.
+   Angles are signed, -900 = left, 0 = ahead, +900 = right. */
 LOCAL const struct { INT angle_dd; INT range_mm; } s5_scan_100mm[] = {
-	{  300, 4000 }, {  600, 4000 }, {  675, 4000 }, {  712, 4000 },
-	{  721, 4000 }, {  731,  304 }, {  750,  303 }, {  900,  300 },
-	{ 1050,  303 }, { 1068,  304 }, { 1077, 4000 }, { 1087, 4000 },
-	{ 1125, 4000 }, { 1200, 4000 }, { 1500, 4000 },
+	{ -600, 4000 }, { -300, 4000 }, { -225, 4000 }, { -187, 4000 },
+	{ -177, 4000 }, { -168,  304 }, { -150,  303 }, {    0,  300 },
+	{  150,  303 }, {  169,  304 }, {  179, 4000 }, {  188, 4000 },
+	{  225, 4000 }, {  300, 4000 }, {  600, 4000 },
 };
 
 LOCAL b5_params_t s5_params(void)
@@ -49,6 +51,9 @@ EXPORT void subsystem5_test(void)
 	b5_status_t	st0, st1;
 	UINT		i;
 	UW		pings;
+	UW		misses;
+	b5_tlm_t	tin, tout;
+	uint8_t		frame[B5_TLM_FRAME_BYTES];
 
 	TEST_INIT();
 
@@ -69,6 +74,31 @@ EXPORT void subsystem5_test(void)
 	TEST_CHECK("S5-U03", prof.side != B5_SIDE_NONE,
 		   "open both sides: a bypass side is chosen");
 
+	/* --- minimum-bit representation (Tribunal 1) ---------------------- */
+	tin = (b5_tlm_t){ 0 };
+	tin.state = B5_ST_BYPASSING;  tin.fault = B5_FAULT_MOTION;
+	tin.side = B5_SIDE_LEFT;      tin.servo_dd = -600;
+	tin.range_mm = 5000;          tin.width_mm = 104;
+	tin.pings = 65535U;           tin.b_found = true;
+	b5_tlm_pack(&tin, frame);
+	TEST_CHECK("S5-U13", b5_tlm_unpack(frame, &tout)
+			  && (tout.state == B5_ST_BYPASSING)
+			  && (tout.servo_dd == -600) && (tout.side == B5_SIDE_LEFT)
+			  && (tout.range_mm == B5_MM_MAX) && (tout.width_mm == 104)
+			  && (tout.pings == 65535U) && tout.b_found,
+		   "telemetry frame round trip: negative angle, clamped range");
+
+	b5_scan_clear(&scan);
+	(void)b5_scan_add(&scan, -900, 4396, true);
+	TEST_CHECK("S5-U14", (sizeof(b5_sample_t) == 4U)
+			  && (scan.sample[0].range_mm == B5_MM_MAX)
+			  && (scan.sample[0].angle_dd == -900),
+		   "scan sample in one word; 4396 mm clamps, never wraps to 300");
+
+	TEST_CHECK("S5-U15", (b5_wrap_diff16((int16_t)-32700, 32700) == 136)
+			  && (b5_wrap_diff16(100, 250) == -150),
+		   "16-bit distance difference correct across a wrap");
+
 	/* --- the running task ------------------------------------------- */
 	b5_get_status(&st0);
 	TEST_CHECK("S5-U04", st0.state < B5_ST_COUNT,
@@ -85,14 +115,15 @@ EXPORT void subsystem5_test(void)
 	   pings; the count shows the sensor answers and the spacing holds. */
 	tk_dly_tsk(1200);
 	b5_get_status(&st1);
-	pings = st1.pings - st0.pings;
+	pings  = (UW)(uint16_t)(st1.pings - st0.pings);	  /* 16-bit, wraps */
+	misses = (UW)(uint16_t)(st1.no_echo - st0.no_echo);
 
 	if (pings == 0U) {
 		tm_printf((UB*)"[TEST] S5-U05 SKIP  task not pinging (state %s)"
 			  " - start a run to test the sensor\n",
 			  b5_state_name(st1.state));
 	} else {
-		TEST_CHECK("S5-U05", (st1.no_echo - st0.no_echo) < pings,
+		TEST_CHECK("S5-U05", misses < pings,
 			   "HC-SR04+ answers pings");
 		TEST_CHECK("S5-U06", pings <= (1200U / B5_PING_PERIOD_MS) + 1U,
 			   "pings at least 60 ms apart (NFR-USO-06)");

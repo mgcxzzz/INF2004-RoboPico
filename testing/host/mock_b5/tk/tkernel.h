@@ -43,9 +43,12 @@ typedef void (*FP)(INT, void *);
 #define TWF_ORW     0x00000001U
 #define TWF_CLR     0x00000010U
 #define TWF_BITCLR  0x00000020U
+#define TA_INHERIT  0x00000002U
+#define TA_WMUL     0x00000008U
 
 typedef struct { void *exinf; ATR flgatr; UINT iflgptn; } T_CFLG;
 typedef struct { void *exinf; ATR tskatr; FP task; PRI itskpri; SZ stksz; } T_CTSK;
+typedef struct { void *exinf; ATR mtxatr; PRI ceilpri; } T_CMTX;
 
 ID tk_cre_flg(T_CFLG const *p);
 ER tk_set_flg(ID id, UINT ptn);
@@ -54,5 +57,8 @@ ER tk_wai_flg(ID id, UINT ptn, UINT mode, UINT *p_ptn, TMO tmo);
 ID tk_cre_tsk(T_CTSK const *p);
 ER tk_sta_tsk(ID id, INT stacd);
 ER tk_dly_tsk(TMO ms);
+ID tk_cre_mtx(T_CMTX const *p);
+ER tk_loc_mtx(ID id, TMO tmo);
+ER tk_unl_mtx(ID id);
 
 #endif

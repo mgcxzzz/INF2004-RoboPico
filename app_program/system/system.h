@@ -17,6 +17,7 @@
 #include "../app.h"
 #include "sys_config.h"
 #include "sys_hal.h"
+#include "sys_fault.h"
 #include "safety_iface.h"
 #include "nav_iface.h"
 

@@ -39,7 +39,7 @@
 #define B5_ECHO_MAX_US          (23300U) /* beyond this = no target (4 m) */
 #define B5_RANGE_FAR_MM         (4000)  /* value reported for no target  */
 #define B5_SAMPLES_PER_ANGLE    (3U)    /* median-of-three (A6)          */
-#define B5_ECHO_FAIL_LIMIT      (3U)    /* no-response pings before Fault */
+#define B5_ECHO_FAIL_LIMIT      (3U)    /* no-response pings before Fault (fits 2 bits) */
 
 /* ------------------------------------------------------------------------
  * Guard and Confirm (statechart 6.5)
@@ -52,18 +52,20 @@
 /* ------------------------------------------------------------------------
  * SG90 servo
  * --------------------------------------------------------------------- */
-#define B5_SERVO_MIN_US         (500U)  /* TUNE: pulse at   0.0 deg      */
-#define B5_SERVO_MAX_US         (2400U) /* TUNE: pulse at 180.0 deg      */
-#define B5_SERVO_REVERSED       (0)     /* 1 if 0 deg points left        */
+#define B5_SERVO_MIN_US         (500U)  /* TUNE: pulse at full right (+900) */
+#define B5_SERVO_MAX_US         (2400U) /* TUNE: pulse at full left  (-900) */
+#define B5_SERVO_REVERSED       (0)     /* 1 if +900 points left         */
 #define B5_SERVO_SETTLE_MS_30   (40U)   /* A8: settle time per 30 deg    */
 #define B5_SERVO_SETTLE_MIN_MS  (20U)   /* settle time for tiny moves    */
 
 /* ------------------------------------------------------------------------
- * Scanning (angles in tenths of a degree; 0 = right, 900 = ahead)
+ * Scanning. Angles are signed tenths of a degree, 11 bits, with the same
+ * sign rule as Motion Control's heading: -900 = left, 0 = straight ahead,
+ * +900 = right (Tribunal 1 decision; was 0 = right .. 1800 = left).
  * --------------------------------------------------------------------- */
-#define B5_AHEAD_DD             (900)
-#define B5_SCAN_START_DD        (300)   /* coarse sweep 30 deg ...       */
-#define B5_SCAN_END_DD          (1500)  /* ... to 150 deg ...            */
+#define B5_AHEAD_DD             (0)
+#define B5_SCAN_START_DD        (-600)  /* coarse sweep 60 deg left ...  */
+#define B5_SCAN_END_DD          (600)   /* ... to 60 deg right ...       */
 #define B5_SCAN_STEP_DD         (300)   /* ... in 30 deg steps           */
 #define B5_NEAR_MM              (B5_D_STOP_MM + 250) /* near/far split   */
 #define B5_ALPHA_DD             (75)    /* TUNE: beam half-angle, fit on bench */
