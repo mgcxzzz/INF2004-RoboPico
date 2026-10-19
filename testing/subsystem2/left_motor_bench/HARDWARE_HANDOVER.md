@@ -41,8 +41,8 @@ operated by Codex. They are limited to the wired LEFT motor on M1.
    viewed from an unspecified side.
 4. **Right wheel hardware.** Repeat encoder, direction and stop checks on the
    right wheel. Final intended wiring is M2 GP10/GP11 and encoder GP4/GP5. The
-   current v2 firmware drives only M1 and reads only GP0/GP1; it CANNOT verify M2
-   by changing the physical connections to M2 alone. If one motor cable is
+   current v3 firmware can select M1/GP0/GP1 with `L` or M2/GP4/GP5 with `R`.
+   It drives one motor at a time. If one motor cable is
    reused with the M1 test, label the result as right motor on M1; that still
    does not verify the M2 driver or final right encoder GPIO path.
 5. **Geometry.** Measure effective left/right wheel rolling circumference with
@@ -53,10 +53,11 @@ operated by Codex. They are limited to the wired LEFT motor on M1.
    established motor/supply ratings, collect startup, steady rotation, both
    directions, invalid counts and coast-down data for both motors. Check for
    supply resets and loose connections. No intentional stall tests. Current
-   firmware is fixed at 25% for at most three seconds; higher-duty or dual-wheel
-   tests require an appropriate firmware revision first.
+   v3 firmware supports 15%, 25% and 40% for at most three seconds; use higher
+   duty only after rating/supply checks. Dual-wheel tests require another
+   firmware revision and simultaneous wiring.
 
-## Remaining v2 safeguards (wheels raised)
+## Safeguards to check on v3 for each wheel (wheels raised)
 
 - No GP21 held: send `f`; expect rejection and no movement.
 - Hold GP21, send `f`, leave GP20 released and keep holding for three seconds:

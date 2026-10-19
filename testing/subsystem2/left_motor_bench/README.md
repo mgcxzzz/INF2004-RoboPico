@@ -1,205 +1,177 @@
-# Buddy 2: left motor and integrated encoder bench test
+# Buddy 2: single-wheel hardware test v3
 
-**Only the left motor needs wiring.** This standalone C firmware boots with motor
-drive off, displays left encoder readings over USB, and offers short manual motor
-pulses. The right motor is held off on GP10/GP11. It never runs automatically.
+Test **one motor at a time**, using the same six-wire cable if needed. Firmware
+starts with drive off, LEFT selected, and 25% PWM. Selecting a wheel never starts
+movement. The unselected driver is held at zero PWM on both inputs.
 
-This is a separate Pico SDK project for the **RP2040 Pico W/WH on Robo Pico**.
-It replaces the current firmware when flashed. It does not run the micro T-Kernel
-examples, other buddies' tasks, Wi-Fi, PID, navigation or MQTT. Do not add this
-`main.c` to `app_program/`; the normal course build is unchanged. After the bench
-checks, integrate the verified pin mapping and encoder logic into the motion task
-using the kernel's interrupt and synchronization APIs.
+The folder and UF2 retain the original `left_motor_bench` name so download links
+remain usable. The current CMake source is **`single_wheel_v3.c`**, not `main.c`.
+`main.c` and `VERSION2.md` preserve the previous left-only version for reference.
+This is standalone Pico SDK firmware: flashing it replaces the Pico program. It
+does not run the course micro T-Kernel application, PID, Wi-Fi or other tasks.
 
-## 1. Wiring to check with ALL power disconnected
+## Wiring and power
 
-Use the professor's numbered PH2.0-6P connector diagram, not wire colours or a
-guess about which end is pin 1. The loose cable connector can appear mirrored.
+Disconnect **all power, including USB**, before moving wires or the motor plug.
+Follow the professor's PH2.0-6P numbering rather than cable colours or an assumed
+connector orientation. Never wire motor power leads directly to GPIO.
 
-| Left motor connector | Function | Robo Pico connection |
-|---|---|---|
-| 01 | Encoder ground | GND |
-| 02 | Encoder channel A | GP0 |
-| 03 | Encoder channel B | GP1 |
-| 04 | Encoder supply | Verified compatible encoder supply; planned 3V3, see below |
-| 05 | Motor winding + | M1A **motor output terminal** |
-| 06 | Motor winding - | M1B **motor output terminal** |
+| Motor connector | Function | LEFT setup | RIGHT setup |
+|---|---|---|---|
+| 01 | Encoder ground | GND | GND |
+| 02 | Encoder A | GP0 | GP4 |
+| 03 | Encoder B | GP1 | GP5 |
+| 04 | Encoder supply | Verified encoder supply | Same verified supply |
+| 05 | Motor winding + | M1A motor terminal | M2A motor terminal |
+| 06 | Motor winding - | M1B motor terminal | M2B motor terminal |
 
-The encoder's supply range and output voltage must be confirmed for the actual
-motor. This program uses 3.3 V GPIO inputs with weak pull-ups. **Never apply a
-5 V encoder output directly to GP0/GP1.** If the encoder requires 5 V, establish
-its output type and use appropriate level conversion where needed. A lack of
-counts cannot establish whether its supply voltage is correct.
+M1 uses GP8/GP9 internally; M2 uses GP10/GP11. GPIO numbers are not physical pin
+numbers. Encoder outputs must be compatible with 3.3 V GPIO; never apply 5 V
+directly to them. Weak internal pull-ups are enabled. Electrical supply/output
+ratings remain to be established from the actual motor documentation. Successful
+operation at a bench setting does not establish those ratings.
 
-GP8/GP9 already connect internally to the M1 driver: do not wire the motor winding
-to the GP8/GP9 header. GPIO numbers are not physical Pico pin numbers.
+Keep both wheels raised for powered tests. Use the intended rated motor supply
+and Robo Pico power input. The user's supply label is 5 V/2.1 A; that does not
+measure motor startup/stall current. Do not improvise connections between USB,
+VIN and 3V3. Do not intentionally stall the motor, or use the onboard M1/M2
+hardware test buttons while this program controls the driver.
 
-Keep the right motor disconnected for this test. Keep the robot supported with
-**both drive wheels off the table**. Use the motor's rated supply and the Robo
-Pico's specified power input. Your 5 V/2.1 A power bank is a supply limit, not proof
-that it can meet the motor's startup/stall current. Use one intended board supply
-arrangement; do not improvise connections between USB, VIN and 3V3. Avoid the
-onboard M1 hardware test buttons while running this firmware; they are not the
-GP20/GP21 software buttons.
+## Load and connect
 
-## 2. Load the firmware
+1. Download `firmware/buddy2_left_motor_bench.uf2` (GitHub: Download raw file).
+2. Close PuTTY. Disconnect motor power. Hold BOOTSEL while plugging a USB data
+   cable into the **Pico's micro-USB port**. Release BOOTSEL and copy the UF2 to
+   `RPI-RP2`. Its disappearance is the normal reboot.
+3. Open the Pico's USB serial COM port, 115200, 8 data bits, 1 stop bit, parity
+   None, flow control None. The user's laptop previously assigned COM13; check
+   Device Manager if that changes. No debug probe is required. Do not connect
+   the probe's U/UART port to encoder GP0/GP1.
+4. Confirm banner **`Buddy 2 SINGLE WHEEL bench v3`**. Start with `L` then `2`.
 
-1. Use the supplied `firmware/buddy2_left_motor_bench.uf2` if present, or build below.
-2. Disconnect external motor power. Connect a USB **data cable directly to the
-   Pico W's micro-USB port**, holding BOOTSEL as you connect.
-3. Release BOOTSEL when the `RPI-RP2` drive appears. Copy the UF2 onto that drive.
-   The drive disappears and the Pico reboots. This overwrites its existing program.
-4. Open the new USB serial COM port with PuTTY (Serial, 115200 baud) or your serial
-   monitor. Only one program can open the COM port at a time. Enable terminal
-   logging to save evidence. Send `h` to show help again.
-5. Confirm the banner says `Buddy 2 LEFT M1 bench v2` and `RIGHT M2 disabled`.
+## Commands (case sensitive; no Enter needed)
 
-No debug probe is needed. Do not connect the probe's **U/UART** wires to GP0/GP1;
-those pins are the encoder inputs. USB serial uses the Pico's USB interface and
-does not claim GP0/GP1. A probe's separate SWD debug connection is different.
-
-## 3. Test encoder wiring first
-
-With drive off and the encoder supplied correctly, turn the wheel gently by hand.
-Do not force the gearbox. Observe several turns in each direction; one snapshot
-of A/B alone is insufficient.
-
-| Serial field | Meaning / expected observation |
+| Key | Action |
 |---|---|
-| `drive` | `0` off, `1` A-side PWM, `2` B-side PWM |
-| `held`, `stop` | 1 when GP21 / GP20 is pressed respectively |
-| `A`, `B` | Last observed encoder logic levels, 0 or 1 |
-| `A_edges`, `B_edges` | Both should increase when the wheel turns |
-| `invalid` | Both channels changed between samples; normally 0 in a slow hand test |
-| `net` | Signed quadrature count; opposite rotations should change it in opposite directions |
-| `delta` | Change in net count since the previous log line |
-| `cps` | Signed quadrature counts per second over the actual logging interval |
+| `L` | Select LEFT: M1 and encoder GP0/GP1 |
+| `R` | Select RIGHT: M2 and encoder GP4/GP5 |
+| `1` | Select 15% PWM |
+| `2` | Select 25% PWM (default) |
+| `3` | Select 40% PWM; only use after wiring, ratings and supply checks |
+| `f` / `r` | Opposite electrical directions; requires GP21 held and GP20 released |
+| `s` | Remove drive |
+| `z` | Reset selected encoder while stopped |
+| `p` | Print a labelled snapshot of selected encoder counts |
+| `h` | Show help |
 
-The decoder counts all four valid transitions of each A/B cycle (x4). Its positive
-sequence is `00 -> 01 -> 11 -> 10 -> 00`; this does not establish chassis-forward.
-Counts are not millimetres or wheel revolutions yet. Motor encoder pulses per
-revolution, gearbox ratio and effective wheel diameter still need calibration.
-Counters saturate instead of wrapping; send `z` while stopped to reset them.
+Change wheel/duty only while stopped with GP21 released. Reboot always defaults
+to LEFT, even if the cable is on the right: send `R` explicitly for right tests.
+Release GP21 once after boot and after every pulse; wait at least one second
+between runs. Keep GP21 held during a run; releasing it removes drive. GP20 and
+serial `s` also remove drive. Every run has a **3-second maximum**, checked by a
+nominal 1 ms interrupt timer. No automatic sequence or two-motor mode exists.
+USB disconnection is checked in the main loop; it is not the hard timeout path.
+These are software safeguards, not a certified emergency stop. A halted CPU or
+disabled interrupts can defeat them. Never pause in a debugger during a run.
 
-Logs are CSV rows every approximately 250 ms, mixed with help/command messages.
-`ms` is time since boot. A/B fields describe the encoder snapshot, not supply
-voltage. Example format (illustrative, **not a measured result**):
+## Test order
+
+### A. Finish LEFT measurements before moving the cable
+
+1. Select `L`, `2`. Repeat one run each with `f` and `r` while the wheels are
+   raised. Record which command would propel the chassis **forward**, and the
+   encoder sign in that direction. Clockwise without a viewing direction is
+   ambiguous. Reconfirm stop controls for the new firmware.
+2. **Counts per wheel revolution:** leave drive off. Mark the wheel against a
+   fixed reference. Send `z`. Turn gently for **exactly five full wheel turns**
+   in one direction, stopping at the mark. Do not force the gearbox. Send `p`.
+   Record `abs(net)/5` as x4 counts per wheel revolution. Repeat twice in each
+   direction, resetting before each trial. Count physical wheel turns, not motor
+   shaft turns. `p` itself never drives the motor.
+3. **Repeatability:** at 25%, collect three full-timeout runs with `f` and three
+   with `r`, releasing GP21 and waiting at least one second between runs.
+   Keep the entire logs and annotate the direction. A fixed duty is not a fixed
+   speed. Stop if it hums without moving, binds or the supply resets.
+4. **Low drive:** select `1` (15%) and check whether each direction starts from
+   rest. Return to `2`. If rating and supply checks permit, use `3` (40%) for
+   further speed data. No automatic duty increase. Do not infer that a motor is
+   faulty solely because it fails to start at low duty.
+5. Check no-hold rejection, 3-second timeout, no retrigger on the same hold,
+   GP21 release, GP20 stop, and serial `s`. A button stop should report a run
+   clearly shorter than 3000 ms. Release GP21 to rearm after every stop.
+
+### B. Move the cable and test RIGHT
+
+Power everything off. Move the motor plug to the physical right motor and route
+the board ends as in the RIGHT column above. Check the routing before reconnecting
+power. Open PuTTY, send **`R`**, and confirm `CONFIG: wheel=R pwm=25 | drive=0`.
+Repeat A1-A5. This checks M2 and GP4/GP5, not just the second motor on M1.
+
+If you keep the board ends on M1/GP0/GP1 instead, keep the firmware in `L` and
+label results **physical right motor tested on M1**. This alternative does not
+verify the final M2/GP4/GP5 wiring path. Never select `R` and expect M1 to move.
+
+### C. Geometry with a ruler
+
+Record left/right rolling circumference in mm under normal chassis load, ideally
+from a straight rollout over several marked wheel revolutions. Also measure the
+lateral distance between the centres of the two tyre contact patches. Record
+the measurement method and uncertainty. Photos with the ruler help. These
+measurements convert ticks into distance and differential wheel travel into an
+approximate chassis turn; tyre slip still needs physical calibration later.
+
+Use `HARDWARE_HANDOVER.md` for result tables and previously supplied observations.
+Do not call all tests passed until actual results have been recorded. Testing
+both motors together under load, closed-loop tuning, distance/turn accuracy,
+course behaviour and final RTOS integration remain for later robot access.
+
+## Output
+
+The first **12 CSV columns are unchanged**. Two labels are appended:
 
 ```text
-ms,drive,held,stop,A,B,A_edges,B_edges,invalid,net,delta,cps
-2500,0,0,0,1,1,20,20,0,40,8,32
+ms,drive,held,stop,A,B,A_edges,B_edges,invalid,net,delta,cps,wheel,pwm
 ```
 
-## 4. Test M1 with a short pulse
+`wheel` is L or R. `pwm` is the selected duty, including when stopped; use `drive`
+to determine whether drive is applied. A/B are latest logic levels; edge totals
+count both rising and falling changes. `net` is signed x4 quadrature position;
+`delta` is its change since the last line; `cps` is signed counts/s over the
+actual interval (about 250 ms). Counts are not mm or RPM before calibration.
+Counters saturate instead of wrapping. Invalid transitions can mean noise or
+missed transitions; zero invalid transitions does not prove no lost pulses.
 
-After the encoder check, apply the intended motor power and keep the wheels raised.
+Stop text reports reason, elapsed drive time, selected wheel/duty, signed
+`ticks_at_cutoff` and `invalid_delta` during the run. Cutoff ticks **exclude later
+coasting**; a settled snapshot includes coast. Times are software timestamps,
+not measured electrical/mechanical response latency. GP20 has precedence over
+GP21 release, then timeout, if detected in the same timer check. Only the latest
+unreported stop is retained if the main loop is delayed.
 
-1. Release GP20 and GP21 once after boot.
-2. Hold the onboard **GP21** button. While holding it, send lowercase `f` over
-   USB serial (no Enter required). M1 receives **25% PWM at 10 kHz for 3000 ms**.
-3. Releasing GP21, pressing **GP20**, or sending `s` removes drive. After any
-   pulse, release GP21 and wait at least one second before another pulse.
-4. Repeat with `r` to energise the opposite side. Record the actual wheel direction.
-   `f`/`r` are electrical test directions, not a guarantee of chassis-forward/backward.
+## Build / verification
 
-One button hold permits only one accepted pulse. There is no automatic sequence,
-no continuous-run command and no instant direction reversal. A 1 ms interrupt
-timer checks the stop/hold buttons and pulse deadline independently of USB logging.
-This is a software bench safeguard, not a certified emergency stop: a wedged CPU
-or disabled interrupts can defeat it. Disconnect motor power if necessary.
-Removing drive does not guarantee the wheel stops rotating immediately.
+Requires Pico SDK 2.2.0 plus its TinyUSB submodule, Arm GNU compiler, CMake and
+Ninja. From repo root, with `PICO_SDK_PATH` set and toolchain on PATH:
 
-USB disconnection removes drive when the main loop detects it; physical button
-and pulse timeout checks continue in the interrupt timer. A reconnect is not a
-start command. Do not press and hold a hardware motor-test button to substitute
-for GP21.
-
-## 5. Interpret the result
-
-| Observation | What to check next |
-|---|---|
-| No USB output | Data-capable cable, correct COM port, correct UF2, serial port not open elsewhere; send `h` |
-| Pulse rejected | GP21 held, GP20 released, release/repress GP21 between pulses, one-second rest elapsed |
-| Encoder works but wheel does not run | M1 terminal wiring and motor power first; 25% may be below starting torque |
-| Motor hums but does not turn | Send `s`/release GP21 and disconnect power; check mechanical binding and supply; do not hold it stalled |
-| Wheel runs but both edge counters stay still | Encoder supply/GND, GP0/GP1 routing, connector numbering and voltage compatibility |
-| Only one channel changes | Missing/wrong channel connection; do not trust signed position |
-| High invalid count or stationary counts | Loose connections, noise, inadequate grounding; ISR overload is also possible |
-| Reverse direction changes count sign | Expected; record which sign corresponds to chassis-forward |
-| No invalid counts | Encouraging, but does not prove no missed pulses at higher speeds |
-
-Low duty is deliberately a first check; failure to start at 25% does not alone mean
-the motor is broken. Do not increase duty until wiring, motor rating and supply are
-checked. If needed, change `DUTY_PERCENT` in `main.c` and rebuild deliberately.
-This test cannot establish stall current, motor voltage, distance accuracy, or
-production control performance. Do not intentionally stall the motor.
-
-### Version 2: checking the stop buttons without rushing
-
-Version 2 increases the maximum run from 0.5 to **3 seconds**, at the same 25%
-duty. It also reports the first software stop cause and elapsed run time. Keep
-both wheels raised and fingers clear of the wheel and gearbox.
-
-- **GP21 release:** hold GP21, send `f`, then let go after about one second.
-  Expect `STOP: GP21 released | run_ms=... | drive=0`.
-- **GP20 stop:** release both buttons, wait at least one second, hold GP21 and
-  send `f`. After about one second, press GP20 while keeping GP21 held.
-  Expect `STOP: GP20 pressed | run_ms=... | drive=0`.
-- **Timeout:** release both buttons, wait at least one second, hold GP21 and send
-  `f`. Keep holding GP21 and leave GP20 released. Expect
-  `STOP: 3000 ms timeout | run_ms=... | drive=0` at about 3000 ms.
-
-For a button-stop check, `run_ms` should be clearly **less than 3000**. If it says
-timeout, the pulse ended before the button action was detected. These are
-software timestamps, not an external measurement of electrical or mechanical
-stop latency. The wheel may coast after drive is removed. If more than one stop
-condition occurs on the same timer check, GP20 takes precedence, then GP21, then
-timeout; the elapsed time helps identify a boundary case.
-
-After a stop, releasing **GP20 alone** does not rearm the test: also release GP21
-before starting again. The existing CSV columns stay unchanged; `STOP:` messages
-are additional text lines outside the CSV. Only the latest unreported stop is
-retained if the main loop is delayed, rather than an unbounded event queue.
-
-## 6. Build and logic tests
-
-Requires CMake, Ninja, Arm GNU `arm-none-eabi` tools, and official Pico SDK **2.2.0**
-with its `lib/tinyusb` submodule. No CYW43/Wi-Fi library is linked.
-
-From the repository root (PowerShell):
-
-```powershell
-$env:PICO_SDK_PATH = 'C:/path/to/pico-sdk'
-$env:Path = 'C:/path/to/arm-toolchain/bin;' + $env:Path
+```text
 cmake -S testing/subsystem2/left_motor_bench -B testing/subsystem2/left_motor_bench/build -G Ninja -DPICO_BOARD=pico_w
 cmake --build testing/subsystem2/left_motor_bench/build
 ```
 
-Output: `build/buddy2_left_motor_bench.uf2`. USB stdio is explicitly enabled;
-UART stdio is explicitly disabled. Core 1 is never launched. Main/ISR access to
-shared control and encoder snapshots uses short interrupt-disabled sections;
-`volatile` is not used as a substitute for synchronization.
-
-Host test from this directory, using a native C compiler (not Arm GCC):
+UF2 is in `build/`. Rebuild/update the checked-in firmware when source changes.
+Run native helper tests from this folder:
 
 ```text
 gcc -std=c11 -Wall -Wextra -Werror -pedantic test_logic.c -o test_logic
 ./test_logic
 ```
 
-On Windows use `-o test_logic.exe` and `./test_logic.exe`. These tests exercise
-the actual shared control/decoder helpers, including stop, timeout, rearm,
-direction reversal decoding and counter limits. They do not simulate the motor,
-GPIO electronics, USB, IRQ latency or the PWM hardware.
+On Windows use `.exe`. Tests cover actual stop/decoder helpers, not electronics
+or PWM routing. IRQ-disabled sections protect main/ISR access; core 1 is not
+launched. UART stdio is disabled; USB enabled. No wireless library is linked.
+`firmware/BUILD.md` records the current binary and build checks. No production
+minimum-bit compliance, PID accuracy or RTOS timing is claimed for this bench code.
 
-## 7. Record real evidence
-
-Fill `TEST_RESULTS.md` during testing. Keep the original serial log; distinguish
-the host tests and firmware build from real robot results. This firmware is
-diagnostic instrumentation, not the final minimum-bit application representation.
-
-## Sources
-
-- [Cytron official Robo Pico DC motor example](https://github.com/CytronTechnologies/Cytron-ROBO-PICO/blob/main/Getting_Started_Guide/CircuitPython/DC_Motor/code.py): M1 GP8/GP9, M2 GP10/GP11, 10 kHz PWM.
-- [Raspberry Pi Pico SDK hardware APIs](https://www.raspberrypi.com/documentation/pico-sdk/hardware.html): GPIO, PWM, timers and synchronization.
-- Encoder connector numbering: professor's supplied PH2.0-6P wiring diagram; electrical supply/output ratings remain to be confirmed for the actual motors.
+Sources: [Cytron motor example](https://github.com/CytronTechnologies/Cytron-ROBO-PICO/blob/main/Getting_Started_Guide/CircuitPython/DC_Motor/code.py),
+[Pico SDK hardware APIs](https://www.raspberrypi.com/documentation/pico-sdk/hardware.html),
+and the professor's supplied six-pin connector diagram.

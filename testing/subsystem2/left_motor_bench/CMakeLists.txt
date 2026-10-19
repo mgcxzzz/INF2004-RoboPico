@@ -7,7 +7,7 @@ include(${PICO_SDK_PATH}/external/pico_sdk_import.cmake)
 project(buddy2_left_motor_bench C CXX ASM)
 set(CMAKE_C_STANDARD 11)
 pico_sdk_init()
-add_executable(buddy2_left_motor_bench main.c)
+add_executable(buddy2_left_motor_bench single_wheel_v3.c)
 target_link_libraries(buddy2_left_motor_bench pico_stdlib hardware_pwm hardware_clocks hardware_sync)
 target_compile_options(buddy2_left_motor_bench PRIVATE -Wall -Wextra -Werror)
 # GP0/GP1 belong to the left encoder. Never enable UART stdio here.

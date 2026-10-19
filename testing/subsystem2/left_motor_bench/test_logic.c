@@ -2,6 +2,20 @@
 #include <stdio.h>
 #include "bench_logic.h"
 int main(void) {
+    for (uint8_t selected=0; selected<2; ++selected) {
+        for (uint8_t drive=0; drive<3; ++drive) {
+            BenchLevels v = bench_levels(selected, selected, drive, 25);
+            assert(v.a == (drive == DRIVE_A ? 250 : 0));
+            assert(v.b == (drive == DRIVE_B ? 250 : 0));
+            v = bench_levels(selected, selected ^ 1u, drive, 25);
+            assert(v.a == 0 && v.b == 0); /* Other motor always off. */
+        }
+    }
+    BenchLevels v = bench_levels(0, 0, DRIVE_A, 15); assert(v.a == 150 && v.b == 0);
+    v = bench_levels(1, 1, DRIVE_B, 40); assert(v.a == 0 && v.b == 400);
+    v = bench_levels(1, 1, DRIVE_B, 41); assert(v.a == 0 && v.b == 0);
+    v = bench_levels(2, 0, DRIVE_A, 25); assert(v.a == 0 && v.b == 0);
+    v = bench_levels(0, 0, 3, 25); assert(v.a == 0 && v.b == 0);
     BenchControl c = {.consumed = true};
     assert(!bench_start(&c, 0, true, false, DRIVE_A));
     bench_tick(&c, 0, false, false);
@@ -51,6 +65,6 @@ int main(void) {
     assert(e.position == INT32_MAX && e.b_edges == UINT32_MAX);
     e = (BenchEncoder){.position=INT32_MIN}; bench_encoder_update(&e, 2);
     assert(e.position == INT32_MIN);
-    puts("PASS: quadrature, invalid edges, saturation, boot inhibit, hold, stop, timeout, rearm, cooldown");
+    puts("PASS: one-wheel output selection, duty bounds, quadrature, invalid edges, saturation, boot inhibit, hold, stop, timeout, rearm, cooldown");
     return 0;
 }

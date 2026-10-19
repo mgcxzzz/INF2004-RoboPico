@@ -9,6 +9,17 @@ enum { DRIVE_OFF = 0, DRIVE_A = 1, DRIVE_B = 2 };
 enum { PULSE_US = 3000000, REST_US = 1000000 };
 enum { STOP_NONE, STOP_GP20, STOP_GP21_RELEASE, STOP_TIMEOUT,
        STOP_SERIAL, STOP_USB };
+typedef struct { uint16_t a, b; } BenchLevels;
+static inline BenchLevels bench_levels(uint8_t selected, uint8_t wheel,
+                                       uint8_t drive, uint8_t duty) {
+    BenchLevels v = {0, 0};
+    if (selected > 1 || wheel > 1 || selected != wheel || duty > 40) return v;
+    /* Current bench uses a 1000-count PWM period. */
+    uint16_t level = (uint16_t)(10u * duty);
+    if (drive == DRIVE_A) v.a = level;
+    else if (drive == DRIVE_B) v.b = level;
+    return v;
+}
 typedef struct {
     uint8_t drive;
     bool consumed;
