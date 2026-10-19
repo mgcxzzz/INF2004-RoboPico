@@ -21,7 +21,7 @@ Hardware results: **NOT RUN by Codex. Complete on the robot.**
 | r pulse: actual direction, counts | | |
 | GP21 release removes drive | | |
 | GP20 removes drive | | |
-| 500 ms timeout removes drive while GP21 held | | |
+| 3000 ms timeout removes drive while GP21 held | | |
 | Same held press cannot trigger another pulse | | |
 | Right motor remains off (currently unwired) | | |
 

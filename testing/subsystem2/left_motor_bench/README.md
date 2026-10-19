@@ -52,7 +52,7 @@ GP20/GP21 software buttons.
 4. Open the new USB serial COM port with PuTTY (Serial, 115200 baud) or your serial
    monitor. Only one program can open the COM port at a time. Enable terminal
    logging to save evidence. Send `h` to show help again.
-5. Confirm the banner says `Buddy 2 LEFT M1 bench v1` and `RIGHT M2 disabled`.
+5. Confirm the banner says `Buddy 2 LEFT M1 bench v2` and `RIGHT M2 disabled`.
 
 No debug probe is needed. Do not connect the probe's **U/UART** wires to GP0/GP1;
 those pins are the encoder inputs. USB serial uses the Pico's USB interface and
@@ -96,7 +96,7 @@ After the encoder check, apply the intended motor power and keep the wheels rais
 
 1. Release GP20 and GP21 once after boot.
 2. Hold the onboard **GP21** button. While holding it, send lowercase `f` over
-   USB serial (no Enter required). M1 receives **25% PWM at 10 kHz for 500 ms**.
+   USB serial (no Enter required). M1 receives **25% PWM at 10 kHz for 3000 ms**.
 3. Releasing GP21, pressing **GP20**, or sending `s` removes drive. After any
    pulse, release GP21 and wait at least one second before another pulse.
 4. Repeat with `r` to energise the opposite side. Record the actual wheel direction.
@@ -133,6 +133,33 @@ the motor is broken. Do not increase duty until wiring, motor rating and supply 
 checked. If needed, change `DUTY_PERCENT` in `main.c` and rebuild deliberately.
 This test cannot establish stall current, motor voltage, distance accuracy, or
 production control performance. Do not intentionally stall the motor.
+
+### Version 2: checking the stop buttons without rushing
+
+Version 2 increases the maximum run from 0.5 to **3 seconds**, at the same 25%
+duty. It also reports the first software stop cause and elapsed run time. Keep
+both wheels raised and fingers clear of the wheel and gearbox.
+
+- **GP21 release:** hold GP21, send `f`, then let go after about one second.
+  Expect `STOP: GP21 released | run_ms=... | drive=0`.
+- **GP20 stop:** release both buttons, wait at least one second, hold GP21 and
+  send `f`. After about one second, press GP20 while keeping GP21 held.
+  Expect `STOP: GP20 pressed | run_ms=... | drive=0`.
+- **Timeout:** release both buttons, wait at least one second, hold GP21 and send
+  `f`. Keep holding GP21 and leave GP20 released. Expect
+  `STOP: 3000 ms timeout | run_ms=... | drive=0` at about 3000 ms.
+
+For a button-stop check, `run_ms` should be clearly **less than 3000**. If it says
+timeout, the pulse ended before the button action was detected. These are
+software timestamps, not an external measurement of electrical or mechanical
+stop latency. The wheel may coast after drive is removed. If more than one stop
+condition occurs on the same timer check, GP20 takes precedence, then GP21, then
+timeout; the elapsed time helps identify a boundary case.
+
+After a stop, releasing **GP20 alone** does not rearm the test: also release GP21
+before starting again. The existing CSV columns stay unchanged; `STOP:` messages
+are additional text lines outside the CSV. Only the latest unreported stop is
+retained if the main loop is delayed, rather than an unbounded event queue.
 
 ## 6. Build and logic tests
 

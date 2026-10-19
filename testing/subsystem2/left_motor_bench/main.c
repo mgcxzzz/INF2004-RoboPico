@@ -42,11 +42,11 @@ static bool safety_timer(struct repeating_timer *timer) {
     return true;
 }
 static void help(void) {
-    puts("\nBuddy 2 LEFT M1 bench v1 | RIGHT M2 disabled | USB only");
+    puts("\nBuddy 2 LEFT M1 bench v2 | RIGHT M2 disabled | USB only");
     puts("Encoder A=GP0 B=GP1. Rotate gently by hand: watch A_edges/B_edges/net.");
     puts("Raise both wheels. Hold GP21, then send f or r (no Enter required).");
     puts("f = A-side PWM; r = B-side PWM. Chassis direction must be observed.");
-    puts("Each pulse: 25% PWM, 500 ms maximum (+ ~1 ms timer response).");
+    puts("Each pulse: 25% PWM, 3000 ms maximum (nominal 1 ms stop checks).");
     puts("Release GP21 / press GP20 / send s to stop. Release GP21 to rearm.");
     puts("Wait 1 second between pulses. z resets stopped encoder counters; h help.");
     puts("CSV: ms,drive,held,stop,A,B,A_edges,B_edges,invalid,net,delta,cps");
@@ -85,12 +85,13 @@ int main(void) {
     bool connected_before = false;
     uint64_t last_report = time_us_64();
     int32_t last_position = 0;
+    uint32_t reported_stop = 0;
     while (true) {
         bool connected = stdio_usb_connected();
         if (connected && !connected_before) help();
         if (!connected) {
             uint32_t irq = save_and_disable_interrupts();
-            bench_stop(&control, time_us_64()); drive_output(DRIVE_OFF);
+            bench_stop(&control, time_us_64(), STOP_USB); drive_output(DRIVE_OFF);
             restore_interrupts(irq);
         }
         connected_before = connected;
@@ -99,7 +100,7 @@ int main(void) {
         if (ch == 'f' || ch == 'r' || ch == 's' || ch == 'z') {
             uint32_t irq = save_and_disable_interrupts();
             uint64_t now = time_us_64();
-            if (ch == 's') bench_stop(&control, now);
+            if (ch == 's') bench_stop(&control, now, STOP_SERIAL);
             else if (ch == 'z' && control.drive == DRIVE_OFF) {
                 encoder = (BenchEncoder){.ab = read_ab()};
                 last_position = 0;
@@ -112,6 +113,18 @@ int main(void) {
             if (ch == 'f' || ch == 'r') puts(accepted ? "PULSE accepted" :
                 "PULSE rejected: release/repress GP21, hold it, release GP20, wait 1 s.");
         } else if (ch == 'h') help();
+        /* Capture stop evidence from the IRQ; never print inside an ISR. */
+        uint32_t irq = save_and_disable_interrupts();
+        uint32_t stop_count = control.stop_count;
+        uint8_t reason = control.stop_reason;
+        uint64_t run_us = control.last_run_us;
+        restore_interrupts(irq);
+        if (connected && stop_count != reported_stop) {
+            static const char *const names[] = {"none", "GP20 pressed",
+                "GP21 released", "3000 ms timeout", "serial s", "USB disconnected"};
+            printf("STOP: %s | run_ms=%" PRIu64 " | drive=0\n", names[reason], run_us / 1000);
+            reported_stop = stop_count;
+        }
         uint64_t now = time_us_64();
         if (connected && now - last_report >= 250000) {
             uint32_t irq = save_and_disable_interrupts();

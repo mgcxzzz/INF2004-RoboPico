@@ -11,15 +11,32 @@ int main(void) {
     assert(bench_start(&c, 0, true, false, DRIVE_A));
     bench_tick(&c, PULSE_US-1, true, false); assert(c.drive == DRIVE_A);
     bench_tick(&c, PULSE_US, true, false); assert(c.drive == DRIVE_OFF);
-    assert(!bench_start(&c, 2000000, true, false, DRIVE_B)); /* Held: no retrigger. */
-    bench_tick(&c, 500001, false, false);
-    assert(!bench_start(&c, 600000, true, false, DRIVE_B)); /* Rest interval. */
-    assert(bench_start(&c, 1500000, true, false, DRIVE_B));
-    bench_tick(&c, 1500001, true, true); assert(c.drive == DRIVE_OFF);
-    assert(!bench_start(&c, 3000000, true, false, DRIVE_A)); /* Stop consumes hold. */
-    bench_tick(&c, 3000000, false, false);
-    assert(bench_start(&c, 3000001, true, false, DRIVE_A));
-    bench_tick(&c, 3000002, false, false); assert(c.drive == DRIVE_OFF);
+    assert(c.stop_reason == STOP_TIMEOUT && c.last_run_us == PULSE_US && c.stop_count == 1);
+    uint64_t t = PULSE_US + REST_US;
+    assert(!bench_start(&c, t, true, false, DRIVE_B)); /* Held: no retrigger. */
+    bench_tick(&c, PULSE_US+1, false, false);
+    assert(!bench_start(&c, t-1, true, false, DRIVE_B)); /* Rest interval. */
+    assert(bench_start(&c, t, true, false, DRIVE_B));
+    bench_tick(&c, t+1000000, true, true); assert(c.drive == DRIVE_OFF);
+    assert(c.stop_reason == STOP_GP20 && c.last_run_us == 1000000 && c.stop_count == 2);
+    bench_tick(&c, t+1000001, true, false);
+    assert(c.stop_reason == STOP_GP20 && c.stop_count == 2); /* Preserve first cause. */
+    t += 2 * REST_US;
+    assert(!bench_start(&c, t, true, false, DRIVE_A)); /* Stop consumes hold. */
+    bench_tick(&c, t, false, false);
+    assert(bench_start(&c, t+1, true, false, DRIVE_A));
+    bench_tick(&c, t+1000001, false, false); assert(c.drive == DRIVE_OFF);
+    assert(c.stop_reason == STOP_GP21_RELEASE && c.last_run_us == 1000000);
+    t += 2 * REST_US + 1;
+    bench_tick(&c, t, false, false);
+    assert(bench_start(&c, t, true, false, DRIVE_A));
+    bench_stop(&c, t+50000, STOP_SERIAL);
+    assert(c.drive == DRIVE_OFF && c.stop_reason == STOP_SERIAL && c.last_run_us == 50000);
+    t += REST_US + 50000;
+    bench_tick(&c, t, false, false);
+    assert(bench_start(&c, t, true, false, DRIVE_B));
+    bench_stop(&c, t+100000, STOP_USB);
+    assert(c.drive == DRIVE_OFF && c.stop_reason == STOP_USB && c.last_run_us == 100000);
     BenchEncoder e = {0};
     const uint8_t forward[] = {1,3,2,0};
     const uint8_t reverse[] = {2,3,1,0};

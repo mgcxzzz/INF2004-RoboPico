@@ -8,18 +8,22 @@ Built on 19 October 2026 for RP2040 Pico W/WH.
 - CMake 4.4.4; Ninja 1.13.2.
 - Official picotool: 2.2.0-a4 Windows package.
 - Target: `pico_w`; release build; USB stdio only; no wireless library linked.
-- Full CMake compile and UF2 generation: **PASS** (88 build steps).
+- Initial full CMake compile: **PASS** (88 build steps). Version 2 rebuild and
+  UF2 generation: **PASS** (2 incremental steps).
 - Application compiler checks: `-Wall -Wextra -Werror`.
 - Native logic tests: **PASS**, MinGW GCC 9.2.0, C11, warnings treated as errors.
+  Version 2 includes elapsed-time/first-stop-cause assertions for GP20, GP21
+  release, timeout, serial stop and USB disconnection.
 - `picotool info -a`: confirms family `rp2040`, board `pico_w`, USB stdin/stdout.
-- ELF size report: text 40,728 bytes; data 0 bytes; BSS 4,088 bytes. This is
+- ELF size report: text 41,064 bytes; data 0 bytes; BSS 4,112 bytes. This is
   firmware build information, not a before/after minimum-bit RAM comparison.
-- UF2 file length: **73,728 bytes** (includes UF2 framing).
+- Version: `Buddy 2 LEFT M1 bench v2`; 3-second maximum pulse, 25% PWM.
+- UF2 file length: **74,240 bytes** (includes UF2 framing).
 
 SHA-256 of `buddy2_left_motor_bench.uf2`:
 
 ```text
-4ac98d3b7ee67397e4655a2442414c9d0711af743848605118c88df32cfe5e44
+d960c1f0c3c7a27931d2a39994da6cdd7fd92d1cde31109bce8085856dd1b840
 ```
 
 The UF2 was copied from the build of the adjacent `main.c`, `bench_logic.h` and
@@ -27,6 +31,9 @@ The UF2 was copied from the build of the adjacent `main.c`, `bench_logic.h` and
 checked-in UF2 does not update itself. SDK configure warnings about absent BLE,
 CYW43 and lwIP submodules are expected for this USB-only diagnostic.
 
-**No robot was flashed or actuated by Codex. Hardware timing, voltage, wiring,
-motor operation and encoder behaviour remain unverified.** Record those results
-in `../TEST_RESULTS.md` with actual serial logs.
+**Version 2 has not been tested on the physical robot.** The user supplied
+version 1 serial logs showing both encoder channels responding after correcting
+the GP0 connection, opposite count directions for the two drive directions, and
+drive returning off. Those logs do not verify version 2, electrical ratings or
+precise stop latency. No robot was flashed or actuated by Codex. Record real
+results in `../TEST_RESULTS.md` with actual serial logs.
