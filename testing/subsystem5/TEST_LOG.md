@@ -58,6 +58,7 @@ Add a new row for every run. Never edit or delete old rows.
 | Date | Test ID | Commit | Tester | Result | Log / evidence | Notes |
 |---|---|---|---|---|---|---|
 | YYYY-MM-DD | S5-U01 | `abc1234` | | PASS / FAIL | `logs/YYYY-MM-DD_….txt` | |
+| 2026-10-20 | S5-U08 | – (standalone `servo_us_test_55`) | n1sh0 | PASS | `logs/2026-10-20_u08_ranging.txt` | 100 mm → 106, 300 → 303, 500 → 498 (spread 0 / 4 / 9 mm). Tape from the front of the cylinders, flat box face-on. 1 m: two groups (≈ 900 and ≈ 990 mm, box smaller than the beam, table reflection), not needed. Before this run TRIG / ECHO were swapped at the sensor (NO ECHO); fixed. |
 
 ### Calibration record
 
@@ -66,3 +67,4 @@ Add a row for every value you measure or change. Never edit old rows.
 | Date | ID | Commit | Who | Measured | Value set (file) | Evidence |
 |---|---|---|---|---|---|---|
 | YYYY-MM-DD | S5-C04 | `abc1234` | | 100 mm box read 124 mm at 300 mm | `B5_ALPHA_DD` 75 → 98 (`b5_config.h`) | `logs/…` |
+| 2026-10-20 | S5-C03 | – (standalone tool) | n1sh0 | errors +6 / +3 / −2 mm at 100 / 300 / 500 mm: no common percentage | none: `SOUND_NUM` stays 343 | `logs/2026-10-20_u08_ranging.txt` |
