@@ -1,3 +1,51 @@
+# V7: turn breakaway assist and gentler final turn approach
+
+Current source builds `firmware/buddy2_dual_wheel_v7.uf2`. Previous UF2 files
+are retained as historical artifacts. Offline selection and log recovery use
+the same button sequence as V6 (documented below).
+
+## Turn adjustment
+
+V6 floor right pivot stopped after 2.149 s with only L +2.06 / R -1.50 mm
+(no-movement guard). The suspended repeat reached its target at 1.271 s,
+then settled at encoder-equivalent +46.60 degrees, invalid L/R=0. This suggests
+load/friction sensitivity; it does not establish motor ratings or floor angle.
+
+V7 adds turn-only breakaway assistance once the demand ramp reaches 20 mm/s:
+when estimated speed along the command is below 8 mm/s (and not wrong-way
+below -8), output is boosted to at least 20% for at most 100 ms. The pulse ends
+early once speed reaches 20 mm/s. There is a 100 ms cooldown before another
+pulse. The existing global 25% cap is retained; no reverse corrections occur.
+These settings are provisional, not measured loaded motor constants.
+
+Turns no longer get V6's unconditional 15% output in the last 12 mm. Instead,
+normal PI speed control tapers toward an 18 mm/s minimum until the existing
+2 mm wheel cutoff threshold. A stopped wheel can still request the bounded
+breakaway assist, so smoothness/overshoot must be measured physically.
+Straight d/g approach remains as in V6. Selection, deadlines, flash save,
+button/serial/USB stops, wrong-way, invalid transitions and stale-loop guards
+remain. The turn no-movement timer now measures lack of movement throughout
+pulse cooldowns, stopping after 500 ms once the ramp is at least 20 mm/s.
+
+## Next test: right pivot, wheels raised
+
+1. With bank disconnected, flash V7 through computer USB; check bench v7 banner.
+2. Disconnect computer USB, then connect bank. Securely support chassis clear
+   of both wheels. Wait 2 s.
+3. Hold BOTH buttons 3 s, release BOTH, wait 1 s.
+4. Tap GP20 THREE times, with 0.5 s between taps.
+5. Tap/release GP21; after 2 s, left should spin forward and right backward.
+6. Either button stops early. The turn deadline remains 3 s.
+7. After stop wait 3 s; disconnect bank, reconnect computer normally, press p.
+8. Share log key e, observed directions and any jerking. Review before floor.
+
+No power-source overlap. Physical V7 behaviour is unverified. Raised-wheel
+heading is only an encoder-equivalent angle; actual floor turn needs a video
+and external angle measurement. Flash logs keep the same V5-compatible format.
+
+---
+## Historical V6 reference (turn-control details superseded above)
+
 # V6: selectable offline tests and final approach adjustment
 
 Current UF2: `firmware/buddy2_dual_wheel_v6.uf2`. Adjacent source builds V6.

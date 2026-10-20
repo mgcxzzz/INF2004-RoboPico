@@ -132,7 +132,8 @@ static inline float position_demand(const DualCommand *c, unsigned w, float whee
     if (!c->bounded) return c->speed[w];
     float remaining = c->target_mm[w] - wheel_mm*c->sign[w];
     if (remaining <= 2.0f) return 0;
-    return fminf(c->speed[w], fmaxf(25.0f, remaining*3.0f));
+    float minimum=c->sign[0]!=c->sign[1] ? 18.0f : 25.0f;
+    return fminf(c->speed[w], fmaxf(minimum, remaining*3.0f));
 }
 
 /* Bench-only terminal approach: 15% was physically tested on both wheels.
@@ -140,9 +141,32 @@ static inline float position_demand(const DualCommand *c, unsigned w, float whee
    Cut at the existing 2 mm threshold, then measure coasting/overshoot physically. */
 static inline int32_t finish_output(const DualCommand *c,unsigned w,float pos,int32_t u) {
     float remaining=c->target_mm[w]-pos*c->sign[w];
-    if(c->bounded && remaining>2 && remaining<=12 && u*c->sign[w]<150)
+    if(c->bounded && c->sign[0]==c->sign[1] && remaining>2 && remaining<=12 && u*c->sign[w]<150)
         return c->sign[w]*150;
     return u;
+}
+/* Turn-only breakaway assistance. 20% is below the existing 25% cap.
+   A pulse lasts at most 100 ms, ends early once speed reaches 20 mm/s,
+   and cannot repeat for 100 ms. No unconditional boost near the target. */
+typedef struct { uint32_t pulse_us, cooldown_us; } TurnAssist;
+static inline uint32_t subtract_us(uint32_t a,uint32_t b) { return a>b ? a-b : 0; }
+static inline int32_t turn_assist_step(TurnAssist *t,const DualCommand *c,unsigned w,
+                                      float ramp,float along,int32_t u,uint32_t elapsed,bool done) {
+    if(done || c->sign[0]==c->sign[1]) { *t=(TurnAssist){0}; return done ? 0 : u; }
+    t->cooldown_us=subtract_us(t->cooldown_us,elapsed);
+    if(t->pulse_us) {
+        t->pulse_us=subtract_us(t->pulse_us,elapsed);
+        if(along>=20 || !t->pulse_us) {
+            t->pulse_us=0; t->cooldown_us=100000;
+        }
+    }
+    if(!t->pulse_us && !t->cooldown_us && ramp>=20 && along>=-8 && along<8)
+        t->pulse_us=100000;
+    int32_t magnitude=u*c->sign[w];
+    if(t->pulse_us && magnitude<200) magnitude=200;
+    if(magnitude<0) magnitude=0;
+    if(magnitude>PWM_LIMIT) magnitude=PWM_LIMIT;
+    return magnitude*c->sign[w];
 }
 static inline uint32_t command_limit_us(char key) { return key=='g' ? 6000000u : MAX_RUN_US; }
 typedef struct { bool selecting, last_stop, ready; uint8_t index; } ProfileSelect;

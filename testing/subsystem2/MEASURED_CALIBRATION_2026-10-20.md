@@ -74,3 +74,30 @@ traction, rated current, stall current, or achieved robot distance/angle.
 Run durations are NOT measured button-to-drive-off response times. Firmware
 messages are software evidence; external timing has not been measured. These
 results do not validate v4's new controller, offline mode or the final RTOS path.
+
+
+## Later V4–V6 dual-wheel reports (user-supplied logs and observations)
+
+- V4 raised forward/backward directions confirmed physically; timeout, GP20
+  and GP21-release stops reported with both PWM outputs zero, invalid L/R=0.
+- V5 offline short run restored from CRC-checked flash after switching power
+  sources: timeout at 3 s, cutoff L96.19/R95.40 mm. No dropped rows or invalid
+  transitions. RAM-only continuity assumption was corrected: user must use one
+  power source at a time, and switching causes reset.
+- V6 short raised: target stop 1.897 s, settled L101.98/R100.54 mm, heading+0.75.
+- V6 short floor: target stop 2.543 s, settled L98.65/R99.12 mm, heading-0.24.
+  User clarified external distance was approximate 90–95 mm, not exact 90 mm.
+- V6 long floor #1: target stop 3.956 s, settled L299.60/R299.17 mm;
+  external 320 mm, slight left veer reported, measurement uncertainty unknown.
+- V6 long floor repeat: target stop 4.057 s, settled L298.73/R299.17 mm,
+  heading-0.23; external 306 mm. Supplied video shows mild drift and no obvious
+  prolonged post-stop slide; camera movement precludes precise angle measurement.
+  Do not refit circumference from these mixed/uncertain distances yet.
+- V6 floor right turn: no-movement stop 2.149 s, cutoff L+2.06/R-1.50 mm,
+  heading+1.86. This was on the floor, not suspended (user clarification).
+- V6 suspended right turn: target stop 1.271 s, cutoff L44.85/R-42.08 mm,
+  settled L44.69/R-44.77 mm, equivalent heading+46.60. Actual chassis did not
+  rotate in suspension; not evidence of a 46.60-degree physical floor turn.
+- All above supplied dual logs reported invalid_L=invalid_R=0 and dropped=0.
+  These summaries are transcriptions of user evidence, not instrumented timing
+  validation or original raw log files. No V7 physical result yet.

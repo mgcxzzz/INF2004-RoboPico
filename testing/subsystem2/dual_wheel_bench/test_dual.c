@@ -120,7 +120,7 @@ int main(void) {
     assert(finish_output(&long_run,0,98,0)==0);
     assert(finish_output(&long_run,0,50,80)==80);
     assert(command_make('q',60,&long_run));
-    assert(finish_output(&long_run,0,-40,-80)==-150);
+    assert(finish_output(&long_run,0,-40,-80)==-80);
     ProfileSelect sel={.selecting=true};
     assert(!profile_step(&sel,false,true,true));
     assert(!profile_step(&sel,false,true,false));
@@ -136,6 +136,28 @@ int main(void) {
     sel=(ProfileSelect){.selecting=true};
     assert(!profile_step(&sel,true,true,false) && !sel.selecting);
     assert(6000000/100000+1000000/100000+3<100); /* Long trace fits saved sector. */
+    TurnAssist ta={0};
+    assert(command_make('e',80,&long_run));
+    assert(turn_assist_step(&ta,&long_run,0,10,0,80,10000,false)==80);
+    assert(turn_assist_step(&ta,&long_run,0,20,0,80,10000,false)==200);
+    assert(turn_assist_step(&ta,&long_run,0,40,25,80,10000,false)==80);
+    assert(!ta.pulse_us && ta.cooldown_us==100000);
+    assert(turn_assist_step(&ta,&long_run,0,40,0,80,50000,false)==80);
+    assert(turn_assist_step(&ta,&long_run,0,40,0,80,50000,false)==200);
+    assert(turn_assist_step(&ta,&long_run,0,40,0,80,100000,false)==80);
+    assert(turn_assist_step(&ta,&long_run,1,40,0,-80,100000,false)==-200);
+    assert(turn_assist_step(&ta,&long_run,1,40,0,-80,10000,true)==0);
+    assert(!ta.pulse_us && !ta.cooldown_us);
+    assert(turn_assist_step(&ta,&long_run,1,40,-30,-80,10000,false)==-80);
+    near(position_demand(&long_run,0,40),18,0.001f);
+    for(unsigned w=0;w<2;++w) {
+        ta=(TurnAssist){0};
+        int32_t u=turn_assist_step(&ta,&long_run,w,40,0,999*long_run.sign[w],10000,false);
+        assert(u*long_run.sign[w]==PWM_LIMIT);
+    }
+    assert(command_make('g',80,&long_run));
+    ta=(TurnAssist){.pulse_us=100000};
+    assert(turn_assist_step(&ta,&long_run,0,100,0,190,10000,false)==190 && !ta.pulse_us);
     test_geometry_and_outputs(); test_stops(); test_offline(); test_pi_model();
     puts("PASS: calibration/signs, PWM cap, command geometry, timer/hold/stop guards, offline one-shot/cancellation, PI model");
     return 0;

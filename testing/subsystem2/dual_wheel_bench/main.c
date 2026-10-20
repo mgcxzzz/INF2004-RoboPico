@@ -24,6 +24,7 @@ static volatile int32_t origin[2], cut_ticks[2];
 static volatile uint32_t initial_invalid[2], cut_invalid[2];
 static DualCommand command;
 static WheelPI pi[2];
+static TurnAssist turn_assist[2];
 static int32_t previous[2], output[2];
 static float velocity[2];
 static uint64_t bad_direction_us[2], no_motion_us[2];
@@ -149,7 +150,7 @@ static const char *reason_name(uint8_t r) {
     return r<sizeof(names)/sizeof(names[0]) ? names[r] : "unknown";
 }
 static void help(void) {
-    puts("\nBuddy 2 DUAL FEEDBACK bench v6 | USB only | BOOTS WITH DRIVE OFF");
+    puts("\nBuddy 2 DUAL FEEDBACK bench v7 | USB only | BOOTS WITH DRIVE OFF");
     puts("Calibration: L=2524.05 R=2528.30 counts/rev; circumference=200 mm; track=110 mm.");
     puts("Both wheels use positive=chassis-forward. PWM cap=25%; PI gains provisional.");
     puts("WIRED raised tests: hold GP21 then f=both forward, b=both backward;");
@@ -167,7 +168,8 @@ static void help(void) {
     puts("Completed logs auto-save to flash after 1 s settling. Wait 3 s after stop before power-off.");
     puts("p=dump RAM/restored flash log; h=help. Latest saved run replaces previous run.");
     puts("Use ONE power source at a time. Flash save occurs only with both motor outputs off.");
-    puts("Finish raised f/b direction and stop checks BEFORE floor tests.");
+    puts("Turns: at most 100 ms of 20% breakaway assist when slow; no constant final boost.");
+    puts("Finish raised direction and stop checks BEFORE floor tests.");
 }
 static void add_trace(uint64_t now) {
     if(!guard.generation) return;
@@ -227,6 +229,7 @@ static bool start_run(char key,float speed,bool offline) {
             initial_invalid[w]=enc[w].invalid;
             velocity[w]=0; output[w]=0;
             pi[w]=(WheelPI){0};
+            turn_assist[w]=(TurnAssist){0};
             bad_direction_us[w]=no_motion_us[w]=0;
             wheel_done[w]=false;
         }
@@ -268,9 +271,14 @@ static void control_step(uint64_t now) {
         float along=velocity[w]*command.sign[w];
         next_output[w]=pi_step(&pi[w],w,command.sign[w],wanted,along,dt);
         if(!wheel_done[w]) next_output[w]=finish_output(&command,w,pos,next_output[w]);
+        next_output[w]=turn_assist_step(&turn_assist[w],&command,w,pi[w].ramp,along,
+                                       next_output[w],(uint32_t)elapsed,wheel_done[w]);
         bad_direction_us[w]=along < -20.0f ? bad_direction_us[w]+elapsed : 0;
         if(bad_direction_us[w]>=50000) failure=WHY_DIRECTION;
-        bool driven=abs(next_output[w])>=150;
+        /* Count a stopped turning wheel throughout pulse cooldowns as well.
+           Otherwise pulsed drive could repeatedly reset the no-movement guard. */
+        bool turning=command.sign[0]!=command.sign[1];
+        bool driven=turning ? wanted>0 && pi[w].ramp>=20 : abs(next_output[w])>=150;
         no_motion_us[w]=driven && llabs(deltas[w])<2 ? no_motion_us[w]+elapsed : 0;
         if(no_motion_us[w]>=500000) failure=WHY_FEEDBACK;
         if(e[w].invalid-initial_invalid[w]>=8) failure=WHY_ENCODER;
