@@ -50,8 +50,8 @@ fixed.
 | GP23, GP24, GP25, GP29 | *reserved* | Pico W radio |
 | GP0 | | (taken whenever the team builds with `CRASH_REPORT=1`) |
 | GP1 | | (taken whenever the team builds with `CRASH_REPORT=1`) |
-| GP2 | | |
-| GP3 | | |
+| GP2 | S4 | GY-511 SDA, I2C1 (Grove 2 / Maker port) |
+| GP3 | S4 | GY-511 SCL, I2C1 (Grove 2 / Maker port) |
 | GP4 | | |
 | GP5 | | |
 | GP6 | | |
