@@ -27,6 +27,12 @@
  * Units: mm, mm/s, tenths of a degree ("dd"). Heading and turn angles are
  * POSITIVE to the RIGHT (clockwise seen from above).
  *
+ * Minimum-bit data (Tribunal 1): the coordinator's own records and its
+ * inbox messages are bit-fields sized to each value's range, and its
+ * telemetry is a binary frame in the team schema (sys_tlm.h). Function
+ * parameters keep ordinary C types: they travel in 32-bit registers, so
+ * narrowing them saves nothing; values are clamped where they are stored.
+ *
  * Group IS28 (team task). Coding standard: Barr-C:2018.
  */
 
@@ -36,6 +42,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <tk/tkernel.h>
+
+#include "sys_tlm.h"
 
 /* ------------------------------------------------------------------------
  * Operating state (system-level statechart, Section 5)
@@ -112,16 +120,12 @@ typedef enum
     NAV_SAFETY_CLEARED          /* cause cleared; a reset may follow  */
 } nav_safety_t;
 
-/* Status snapshot for telemetry. */
-typedef struct
-{
-    nav_state_t state;
-    nav_owner_t owner;
-    bool        b_slow;         /* Buddy 5 asked for reduced speed    */
-    uint32_t    commands_sent;  /* commands sent to Motion Control    */
-    uint32_t    dropped;        /* messages lost to a full inbox      */
-    uint8_t     search_step;    /* progress of a line search          */
-} nav_status_t;
+/* Motion Control command ids are 15 bits: 1..NAV_CMD_ID_MAX, then they
+ * wrap back to 1 (0 means "no command"). An id above this can never be
+ * one of ours, so its result is ignored. */
+#define NAV_CMD_ID_MAX      (0x7FFFU)
+
+/* Status for telemetry: see the frame layout and nav_tlm_t in sys_tlm.h. */
 
 /* ------------------------------------------------------------------------
  * Provided by Navigation Coordinator
@@ -164,9 +168,13 @@ void line_notify_state(nav_state_t state);
 void imu_notify_state(nav_state_t state);
 void wifi_notify_state(nav_state_t state);
 
-/* WiFi and MQTT (Buddy 1) and Safety Supervisor (team). */
-void nav_telemetry_publish(nav_status_t const * p_status);
-void nav_report_fault(uint32_t code);
+/* WiFi and MQTT (Buddy 1): queue the NAV_TLM_FRAME_BYTES-byte binary
+ * frame (bit map in sys_tlm.h) for MQTT. Called from the coordinator
+ * task; copy the bytes and return, do not block. */
+void nav_telemetry_publish(uint8_t const * p_frame, uint32_t len);
+
+/* Safety Supervisor (team): code is one of NAV_FAULT_* (8 bits). */
+void nav_report_fault(uint8_t code);
 
 /* Called on reset from Fault so the team's start-up code can re-run
  * initialisation and recalibration before the car is Ready again. */

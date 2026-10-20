@@ -20,7 +20,8 @@ mc_inhibit (bool b_inhibit)
 }
 
 SAFETY_WEAK void
-safety_telemetry_publish (safety_status_t const * p_status)
+safety_telemetry_publish (uint8_t const * p_frame, uint32_t len)
 {
-    (void)p_status;
+    (void)p_frame;
+    (void)len;
 }

@@ -149,8 +149,9 @@ ER          b5_post_event(UINT events);     /* any task or handler        */
 b5_state_t  b5_get_state(void);             /* current state, any task    */
 char const * b5_state_name(b5_state_t state);
 
-/* Status -> 16-byte binary telemetry frame (layout in b5_pack.h). */
-void        b5_status_to_frame(b5_status_t const * p_status,
+/* Status -> binary telemetry frame: 3-byte common header (source 5,
+ * sequence number seq) + 16-byte payload. Schema in system/sys_tlm.h. */
+void        b5_status_to_frame(b5_status_t const * p_status, uint8_t seq,
                                uint8_t p_frame[B5_TLM_FRAME_BYTES]);
 
 /* ------------------------------------------------------------------------
@@ -171,7 +172,8 @@ bool b5_motion_get_estimate(b5_motion_est_t * p_est);
 bool b5_line_detected(void);
 
 /* WiFi and MQTT (Buddy 1): queue a packed binary frame for MQTT. It is
- * B5_TLM_FRAME_BYTES long, little-endian; decode with b5_tlm_unpack(). */
+ * B5_TLM_FRAME_BYTES long (common header + payload, schema in
+ * system/sys_tlm.h); decode with b5_tlm_unpack(). */
 void b5_telemetry_publish(uint8_t const * p_frame, uint32_t len);
 
 /* Safety Supervisor (team). The matching bit is also set in the shared

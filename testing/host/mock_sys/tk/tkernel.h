@@ -1,6 +1,7 @@
 /*
  * Minimal host stand-in for <tk/tkernel.h>, just enough for the
- * Safety Supervisor host test. Not used on the target.
+ * Navigation Coordinator and Safety Supervisor host tests. Not used on
+ * the target.
  */
 #ifndef MOCK_TKERNEL_H
 #define MOCK_TKERNEL_H
@@ -31,6 +32,7 @@ typedef void (*FP)(INT, void *);
 #define E_OK        (0)
 #define E_PAR       (-17)
 #define E_NOEXS     (-42)
+#define E_QOVR      (-43)
 #define E_TMOUT     (-50)
 #define TMO_POL     (0)
 #define TMO_FEVR    (-1)
@@ -50,6 +52,8 @@ typedef struct { W hi; UW lo; } SYSTIM;
 typedef struct { void *exinf; ATR tskatr; FP task; PRI itskpri; SZ stksz; } T_CTSK;
 typedef struct { void *exinf; ATR flgatr; UINT iflgptn; } T_CFLG;
 typedef struct { void *exinf; ATR mbfatr; SZ bufsz; INT maxmsz; void *bufptr; } T_CMBF;
+typedef struct { void *exinf; ATR sematr; INT isemcnt; INT maxsem; } T_CSEM;
+typedef struct { void *exinf; ID wtsk; INT semcnt; } T_RSEM;
 
 ID  tk_cre_tsk(T_CTSK const *p);
 ER  tk_sta_tsk(ID id, INT stacd);
@@ -61,5 +65,8 @@ ID  tk_cre_flg(T_CFLG const *p);
 ER  tk_set_flg(ID id, UINT ptn);
 ER  tk_clr_flg(ID id, UINT ptn);
 ER  tk_wai_flg(ID id, UINT ptn, UINT mode, UINT *p_ptn, TMO tmo);
+ID  tk_cre_sem(T_CSEM const *p);
+ER  tk_sig_sem(ID id, INT cnt);
+ER  tk_ref_sem(ID id, T_RSEM *p);
 
 #endif

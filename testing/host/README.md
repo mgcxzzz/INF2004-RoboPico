@@ -22,11 +22,11 @@ Needs `gcc` and `make` (Linux, macOS, or WSL on Windows). The build uses
 
 | Program | Code under test | What it checks | Last result |
 |---|---|---|---|
-| `test_b5_pack` | `subsystem5/b5_pack.c`, `obstacle_profile.c` | minimum-bit representation: record sizes, clamping (never wrapping), sign extension, 16-bit wrap, echo result word, binary telemetry frame layout | 36 passed |
+| `test_b5_pack` | `subsystem5/b5_pack.c`, `obstacle_profile.c` | minimum-bit representation: record sizes, clamping (never wrapping), sign extension, 16-bit wrap, echo result word, binary telemetry frame layout with the common header (wrong version, source or length rejected) | 43 passed |
 | `test_b5_profile` | `subsystem5/obstacle_profile.c` | width accuracy over many obstacle sizes, distances and offsets; the side choice; the trig and median helpers | 95 passed |
 | `test_b5_task 1..4` | `subsystem5/task_obstacle.c` | S5 statechart against a simulated car: bypass, sensor dead, blocked both sides, line not found; also checks the shared fault-mask bit, decodes every telemetry frame, and runs the 16-bit odometer across its wrap | 4 scenarios PASS |
-| `test_nav` | `system/nav_coordinator.c`, `nav_b5.c` | Navigation Coordinator (see `app_program/system/README.md` section 8) | 48 passed |
-| `test_safety` | `system/safety_supervisor.c`, `safety_glue.c` | Safety Supervisor (same README) | 25 passed |
+| `test_nav` | `system/nav_coordinator.c`, `nav_b5.c`, `sys_tlm.c` | Navigation Coordinator (see `app_program/system/README.md` section 9), plus its 8-byte inbox messages, value clamping, 15-bit command ids, the saturating dropped-message count and every telemetry frame (header sequence never skips) | 63 passed |
+| `test_safety` | `system/safety_supervisor.c`, `safety_glue.c`, `sys_tlm.c` | Safety Supervisor (same README), plus every telemetry frame: stop time saturating at 1023 ms, 8-bit counters wrapping, the shared fault mask carried, header sequence never skips | 36 passed |
 
 ## Recording results
 

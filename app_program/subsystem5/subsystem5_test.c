@@ -81,7 +81,7 @@ EXPORT void subsystem5_test(void)
 	tin.range_mm = 5000;          tin.width_mm = 104;
 	tin.pings = 65535U;           tin.b_found = true;
 	b5_tlm_pack(&tin, frame);
-	TEST_CHECK("S5-U13", b5_tlm_unpack(frame, &tout)
+	TEST_CHECK("S5-U13", b5_tlm_unpack(frame, B5_TLM_FRAME_BYTES, &tout)
 			  && (tout.state == B5_ST_BYPASSING)
 			  && (tout.servo_dd == -600) && (tout.side == B5_SIDE_LEFT)
 			  && (tout.range_mm == B5_MM_MAX) && (tout.width_mm == 104)

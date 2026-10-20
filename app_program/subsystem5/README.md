@@ -28,7 +28,7 @@ task interaction diagram.
 | `drv_servo.c` / `.h` | SG90 driver: GP12, 50 Hz PWM (slice 6A) |
 | `b5_config.h` | pins, timing and every tuning value |
 | `b5_iface.h` | events in, requests out: the contract with the other subsystems |
-| `b5_pack.h` / `.c` | minimum-bit representation: field widths, clamping, masks and shifts, the echo result word and the 16-byte binary telemetry frame |
+| `b5_pack.h` / `.c` | minimum-bit representation: field widths, clamping, masks and shifts, the echo result word, and packing of the binary telemetry frame (its layout is in the shared schema `../system/sys_tlm.h`) |
 | `b5_stubs.c` | weak placeholders for the functions other subsystems provide |
 | `subsystem5_test.c` | on-target tests (`make TEST=1`) |
 
@@ -62,8 +62,8 @@ servo is mounted the other way round, set
 | Idle | `st_idle` | servo 90°, ranging off | mission start → Guard |
 | Guard | `st_guard` | park at 90°, ping every 60 ms; ask Nav to slow below 500 mm | range < D_stop → Confirm |
 | Confirm | `st_confirm` | count consecutive readings < D_stop | 3 in a row → Halting; reading ≥ D_stop → Guard |
-| Halting | `st_halting` | request stop, swing servo to −60° (left) straight away | stop accepted → Coarse Sweep |
-| Coarse Sweep | `st_coarse_sweep` | −60° to +60° in 30° steps, median of 3 pings each | near points → Edge Refinement; none → Planning |
+| Halting | `st_halting` | request stop, swing servo to −55° (left) straight away | stop accepted → Coarse Sweep |
+| Coarse Sweep | `st_coarse_sweep` | −55° to +55° in 27.5° steps (5 angles), median of 3 pings each. 55° is the car's mechanical limit: at 60° the sensor hits the casing | near points → Edge Refinement; none → Planning |
 | Edge Refinement | `st_edge_refine` | bisect each near/far edge (self-transition) | bracket closed → Planning |
 | Planning | `st_planning` + `b5_build_profile` (obstacle_profile.c) | profile, beam-spread width correction, score both sides | nothing / confidence < 50 % → Guard; a side passable → Bypassing; none → Blocked |
 | Bypassing | `st_bypassing` | record pose, send plan, keep pinging ahead | new obstacle confirmed → Halting; passed → Recovering |
@@ -115,7 +115,7 @@ decides which Buddy 5 faults stop the car.
 | `b5_nav_release_motion()` | Navigation Coordinator | Buddy 5 no longer needs motion; line following may resume |
 | `b5_motion_get_estimate(est)` | Motion Control (S2) | cumulative `distance_mm` and `heading_dd` (FR-MOT-03); **heading positive = turned right** |
 | `b5_line_detected()` | Line and Barcode (S3) | true while either front sensor sees the line |
-| `b5_telemetry_publish(frame, len)` | WiFi and MQTT (S1) | queue the 16-byte binary frame (layout in `b5_pack.h`) for MQTT; do not block |
+| `b5_telemetry_publish(frame, len)` | WiFi and MQTT (S1) | queue the 19-byte binary frame (team schema `../system/sys_tlm.h`) for MQTT; do not block |
 | `b5_report_fault(code)` | Safety Supervisor | Buddy 5 entered Fault |
 
 ---
@@ -180,7 +180,7 @@ accessed safely. What changed in Buddy 5:
 | Motion estimate from Buddy 2 | `int32_t` × 2 | `int16_t` × 2, signed, net distance, allowed to wrap |
 | Echo result from the interrupt | width + a phase variable written by both the task and the ISR | one packed 32-bit word: width 16 + ping sequence 8 + flags, written only by the ISR |
 | Faults | own variable | also one bit in the shared fault mask (`system/sys_fault.h`) |
-| Telemetry | the status struct | a 16-byte little-endian binary frame |
+| Telemetry | the status struct | a 19-byte little-endian binary frame in the team schema: 3-byte common header (version, source 5, length, sequence) + 16-byte payload |
 
 **How it stays safe**
 
@@ -197,8 +197,9 @@ accessed safely. What changed in Buddy 5:
   sequence number is ignored, which also removes the old two-writer
   `phase` variable.
 - **Masks and shifts, not bit-fields, wherever the layout matters**: the
-  echo word and the MQTT frame (`b5_pack.h`), so the PC decodes exactly
-  what the Pico packed, whatever the compiler.
+  echo word (`b5_pack.h`) and the MQTT frame (the team schema,
+  `../system/sys_tlm.h`), so the PC decodes exactly what the Pico packed,
+  whatever the compiler.
 - **Clamp before packing.** 4396 mm in 12 bits would wrap to 300 mm, the
   stop distance; every value is clamped first, so it reads 4095 instead.
 - **Wrap only where it is harmless.** Buddy 2's 16-bit distance and heading
@@ -212,15 +213,17 @@ accessed safely. What changed in Buddy 5:
 - Q15 trigonometry and intermediate maths: computation precision, not
   stored data; each result is clamped when it is stored.
 
-**Telemetry frame for Buddy 1** (16 bytes, little-endian, version 1; bit
-map in `b5_pack.h`): state, fault, side, retries, servo angle, obstacle
-found, guard range, closest range, confidence, width, sideways shift, ping
-and no-echo counters. Decode with `b5_tlm_unpack()`; the bench console
-already does.
+**Telemetry frame for Buddy 1** (19 bytes, little-endian; defined in the
+team's one shared schema header `../system/sys_tlm.h`, source 5): the
+3-byte common header every subsystem uses (schema version, source, payload
+length, sequence number), then state, fault, side, retries, servo angle,
+obstacle found, guard range, closest range, confidence, width, sideways
+shift, ping and no-echo counters. Decode with `b5_tlm_unpack()`; the bench
+console already does.
 
 **Cost**: a few extra shift and mask instructions per access (the M0+ has
 no bit-field instructions), well under 1 % CPU. Static RAM went down by
-about 190 bytes. The real gains are the 16-byte MQTT frame and the safer
+about 190 bytes. The real gains are the compact MQTT frame and the safer
 interrupt hand-over.
 
 ---
@@ -253,8 +256,9 @@ differences are recorded here rather than hidden:
 
 1. **Edge Refinement stops below 1°, not at the beam half-angle.** The host
    test compares the two. With an ideal beam, stopping at α leaves the
-   width up to **48 %** off. That fails NFR-USO-02 for small or distant
-   obstacles. Stopping below 1° keeps the whole grid within **8 %**.
+   width up to **42 %** off. That fails NFR-USO-02 for small or distant
+   obstacles. Stopping below 1° keeps the whole grid within **6 %**
+   (±55° sweep; it was 48 % and 8 % with the earlier ±60° sweep).
    Refinement samples use one ping each (`B5_REFINE_PINGS`) to save time.
    If the A6 bench test shows the real beam edge is too soft for this to
    help, set `B5_REFINE_STOP_DD` back to `B5_ALPHA_DD`.
@@ -277,7 +281,7 @@ differences are recorded here rather than hidden:
 | Step | Estimate |
 |---|---|
 | Confirm (3 × 60 ms) | 0.18 s |
-| Halting (servo to −60°) | 0.08 s |
+| Halting (servo to −55°) | 0.07 s |
 | Coarse sweep: 5 × (3 pings + settle) | 1.1 s |
 | Edge refinement: ≤ 10 × (1 ping + settle) | ≤ 0.8 s |
 | **Scanning total** | **about 2.0 s** |

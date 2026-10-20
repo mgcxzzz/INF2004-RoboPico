@@ -16,6 +16,11 @@
  * safety_*() call below is safe from a task OR an interrupt handler and
  * never blocks.
  *
+ * Minimum-bit data (Tribunal 1): fault codes are 8 bits (each source
+ * numbers its own), counters 8 bits, stop times 10 bits (ms, saturating),
+ * and the telemetry is a binary frame in the team schema (sys_tlm.h) that
+ * also carries the shared fault mask.
+ *
  * Group IS28 (team task). Coding standard: Barr-C:2018.
  */
 
@@ -25,6 +30,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <tk/tkernel.h>
+
+#include "sys_tlm.h"
 
 /* Who is reporting (also the slot used for health monitoring). */
 typedef enum
@@ -48,26 +55,16 @@ typedef enum
     SAFETY_ST_COUNT
 } safety_state_t;
 
-/* Fault codes raised by the supervisor itself. */
-#define SAFETY_CODE_TASK_SILENT     (0x0601U)   /* missed check-ins  */
-#define SAFETY_CODE_STOP_SLOW       (0x0602U)   /* drive-off > 100 ms */
+/* Fault codes raised by the supervisor itself (8 bits, like every
+ * source's codes; the source is recorded separately). */
+#define SAFETY_CODE_TASK_SILENT     (0x01U)     /* missed check-ins   */
+#define SAFETY_CODE_STOP_SLOW       (0x02U)     /* drive-off > 100 ms */
 
-/* Status snapshot for telemetry. */
-typedef struct
-{
-    safety_state_t state;
-    bool           b_inhibit;       /* motor drive inhibited          */
-    safety_src_t   fault_src;       /* last critical fault            */
-    uint32_t       fault_code;
-    safety_src_t   warn_src;        /* last warning                   */
-    uint32_t       warn_code;
-    uint32_t       estops;          /* counters since boot            */
-    uint32_t       faults;
-    uint32_t       warnings;
-    uint32_t       last_stop_ms;    /* accept -> drive off, last stop */
-    uint32_t       max_stop_ms;     /* worst seen (NFR-SYS-04: < 100) */
-    uint32_t       slow_stops;      /* stops that took >= 100 ms      */
-} safety_status_t;
+/* Longest health-check timeout (stored in 16 bits, ms). */
+#define SAFETY_WATCH_MAX_MS         (65535U)
+
+/* Status for telemetry: see the frame layout and safety_tlm_t in
+ * sys_tlm.h. */
 
 /* ------------------------------------------------------------------------
  * Provided by the Safety Supervisor
@@ -83,11 +80,13 @@ ER   safety_post_estop(void);           /* validated emergency stop     */
 ER   safety_request_reset(void);        /* on a reset command, see README */
 
 /* Any task. critical = unrecoverable (FR-SYS-03); otherwise a warning
- * that is logged and published but does not stop the car. */
-ER   safety_report_fault(safety_src_t src, uint32_t code, bool b_critical);
+ * that is logged and published but does not stop the car. code is 8 bits,
+ * numbered by the reporting source. */
+ER   safety_report_fault(safety_src_t src, uint8_t code, bool b_critical);
 
 /* Health monitoring for periodic tasks: declare once, then check in at
- * least every timeout_ms while the car is running. */
+ * least every timeout_ms (at most SAFETY_WATCH_MAX_MS) while the car is
+ * running. */
 ER   safety_watch(safety_src_t src, uint32_t timeout_ms);
 void safety_kick(safety_src_t src);
 
@@ -104,7 +103,9 @@ void safety_ack_drive_off(void);
  * Then call safety_ack_drive_off(). */
 void mc_inhibit(bool b_inhibit);
 
-/* WiFi and MQTT (Buddy 1): copy the status into the telemetry queue. */
-void safety_telemetry_publish(safety_status_t const * p_status);
+/* WiFi and MQTT (Buddy 1): queue the SAFETY_TLM_FRAME_BYTES-byte binary
+ * frame (bit map in sys_tlm.h) for MQTT. Called from the supervisor task:
+ * copy the bytes and return, never block. */
+void safety_telemetry_publish(uint8_t const * p_frame, uint32_t len);
 
 #endif /* SAFETY_IFACE_H */

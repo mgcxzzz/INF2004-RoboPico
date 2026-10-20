@@ -22,10 +22,10 @@ Define a test here before running it. Test IDs never change.
 | S5-U10 | full bypass on the bench (simulated car) | FR-USO-04, FR-USO-06, NFR-USO-05 | manual | 1. `SYS_SIM_CAR` = 1, flash. 2. Hold box < 300 mm. 3. Save console + video | Guard → Stopping → Scanning → Bypassing → Recovering → Guard; line regained < 3 s after confirmation |
 | S5-U11 | emergency stop time while S5 owns motion | NFR-SYS-04 | manual | 1. During a bypass press GP20. 2. Read stop time on console | drive off < 100 ms, state ESTOP |
 | S5-U12 | host tests: profile + 4 statechart scenarios | NFR-USO-02, FR-USO-04 | auto (PC) | `make -C testing/host` | 95 passed; scenarios 1–4 PASS |
-| S5-U13 | binary telemetry frame round trip (negative servo angle, range clamped to 4095) | IF-13, minimum-bit change | auto | `subsystem5_test.c` | `[TEST] S5-U13 PASS` |
+| S5-U13 | binary telemetry frame round trip in the team schema (common header + payload; negative servo angle, range clamped to 4095) | IF-13, minimum-bit change | auto | `subsystem5_test.c` | `[TEST] S5-U13 PASS` |
 | S5-U14 | scan sample packs to 4 bytes; 4396 mm clamps to 4095 (never wraps to 300) | minimum-bit change | auto | `subsystem5_test.c` | `[TEST] S5-U14 PASS` |
 | S5-U15 | 16-bit wrap difference on Buddy 2's distance (−32700 → 32700 = 136; 100 → −150) | IF-16, minimum-bit change | auto | `subsystem5_test.c` | `[TEST] S5-U15 PASS` |
-| S5-U16 | host packing tests: record sizes, clamping, sign extension, echo word, frame layout; statechart checks fault-mask bits and decodes every frame | minimum-bit change, shared fault mask | auto (PC) | `make -C testing/host` | `test_b5_pack` 36 passed; scenarios 1–4 PASS with 0 bad frames |
+| S5-U16 | host packing tests: record sizes, clamping, sign extension, echo word, frame layout; statechart checks fault-mask bits and decodes every frame | minimum-bit change, shared fault mask | auto (PC) | `make -C testing/host` | `test_b5_pack` 43 passed (incl. common header: wrong version, source or length rejected); scenarios 1–4 PASS with 0 bad frames |
 
 *Method:* **auto** = `TEST_CHECK` in code, result printed on the console;
 **manual** = a person observes the result (LED, scope, meter, phone app…).

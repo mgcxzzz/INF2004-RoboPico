@@ -5,7 +5,8 @@
  * nav_coordinator.c is compiled unchanged against a mock kernel. The test
  * posts messages the way the other buddies would, runs the coordinator
  * until its inbox is empty, and checks what it sent to Motion Control,
- * to Line and Barcode, and back to Buddy 5.
+ * to Line and Barcode, and back to Buddy 5. Every telemetry frame it
+ * publishes is decoded and checked too (minimum-bit requirement).
  *
  * Build and run:  make -C testing/host
  */
@@ -32,16 +33,44 @@ static int       g_qh, g_qt;
 static FP        g_task;
 static jmp_buf   g_idle;
 static uint32_t  g_ms;
+static bool      g_inbox_full;          /* make tk_snd_mbf fail       */
+static INT       g_sem_cnt, g_sem_max;  /* dropped-message semaphore  */
 
 ID tk_cre_tsk (T_CTSK const * p) { g_task = p->task; return 2; }
 ER tk_sta_tsk (ID id, INT s)     { (void)id; (void)s; return E_OK; }
 ID tk_cre_mbf (T_CMBF const * p) { (void)p; return 1; }
 ER tk_get_otm (SYSTIM * p)       { p->hi = 0; p->lo = g_ms; return E_OK; }
 
+ID tk_cre_sem (T_CSEM const * p)
+{ g_sem_cnt = p->isemcnt; g_sem_max = p->maxsem; return 4; }
+
+ER
+tk_sig_sem (ID id, INT cnt)
+{
+    (void)id;
+
+    if ((g_sem_cnt + cnt) > g_sem_max)
+    {
+        return E_QOVR;                  /* like the kernel: refuse */
+    }
+
+    g_sem_cnt += cnt;
+    return E_OK;
+}
+
+ER tk_ref_sem (ID id, T_RSEM * p)
+{ (void)id; p->semcnt = g_sem_cnt; p->wtsk = 0; return E_OK; }
+
 ER
 tk_snd_mbf (ID id, void const * msg, INT size, TMO tmo)
 {
     (void)id; (void)size; (void)tmo;
+
+    if (g_inbox_full)
+    {
+        return E_TMOUT;
+    }
+
     memcpy(&g_q[g_qt], msg, sizeof(nav_msg_t));
     g_qt = (g_qt + 1) % QSIZE;
     return E_OK;
@@ -86,6 +115,8 @@ static UINT       g_b5_events;
 static uint32_t   g_fault;
 static b5_state_t g_b5_state = B5_ST_GUARD;
 static int        g_reinit;
+static nav_tlm_t  g_tlm;                /* last decoded telemetry frame */
+static int        g_frames, g_bad_frames, g_seq_gaps;
 
 ER mc_set_wheel_speeds (int16_t l, int16_t r)
 { g_wheel_l = l; g_wheel_r = r; g_wheel_calls++; return E_OK; }
@@ -100,8 +131,27 @@ void line_set_control (bool b)              { g_line_ctl = b; }
 void line_notify_state (nav_state_t s)      { (void)s; }
 void imu_notify_state (nav_state_t s)       { (void)s; }
 void wifi_notify_state (nav_state_t s)      { (void)s; }
-void nav_telemetry_publish (nav_status_t const * p) { (void)p; }
-void nav_report_fault (uint32_t code)       { g_fault = code; }
+void nav_report_fault (uint8_t code)        { g_fault = code; }
+
+void
+nav_telemetry_publish (uint8_t const * p_frame, uint32_t len)
+{
+    uint8_t prev = g_tlm.seq;
+
+    if (!nav_tlm_unpack(p_frame, len, &g_tlm))
+    {
+        g_bad_frames++;
+        return;
+    }
+
+    /* Sequence numbers run 0, 1, 2 ... with no gap (header byte 2). */
+    if ((g_frames > 0) && (g_tlm.seq != (uint8_t)(prev + 1U)))
+    {
+        g_seq_gaps++;
+    }
+
+    g_frames++;
+}
 void nav_reinitialise (void)                { g_reinit++; }
 ER   b5_post_event (UINT ev)                { g_b5_events |= ev; return E_OK; }
 b5_state_t b5_get_state (void)              { return g_b5_state; }
@@ -324,7 +374,8 @@ test_states (void)
     b5_nav_release_motion();            /* Buddy 5 went to Fault */
     run();
     CHECK(nav_get_state() == NAV_ST_SAFE_STOP, "b5 fault -> safe stop");
-    CHECK(g_fault == 0x0103U, "fault reported 0x%x", (unsigned)g_fault);
+    CHECK(g_fault == NAV_FAULT_OBSTACLE, "fault reported 0x%x",
+          (unsigned)g_fault);
 
     g_b5_state = B5_ST_GUARD;
     (void)nav_post_command(NAV_CMD_RESET);
@@ -347,6 +398,90 @@ test_states (void)
           "fault -> reinitialise -> ready");
 }
 
+static void
+test_min_bits (void)
+{
+    int      i;
+    uint16_t sent;
+
+    printf("minimum bits: packed inbox, telemetry frame, dropped count\n");
+    CHECK(sizeof(nav_msg_t) == 8U, "inbox message %u bytes (was 16)",
+          (unsigned)sizeof(nav_msg_t));
+    CHECK(g_frames > 0, "frames published");
+    CHECK(g_bad_frames == 0, "%d bad frames", g_bad_frames);
+    CHECK(NAV_TLM_FRAME_BYTES == 9U, "frame %u bytes (3 + 6)",
+          NAV_TLM_FRAME_BYTES);
+
+    (void)nav_post_command(NAV_CMD_RESET);
+    run();
+    start_running();
+    CHECK((g_tlm.state == (uint8_t)NAV_ST_RUNNING) &&
+          (g_tlm.owner == (uint8_t)NAV_OWNER_LINE),
+          "frame says running / line (%u/%u)", g_tlm.state, g_tlm.owner);
+
+    /* Commands sent: the frame counter moves with each command (16-bit,
+     * wrapping, so compare with a uint16_t difference). */
+    sent = g_tlm.commands_sent;
+    b5_nav_request_slow(true);          /* publishes nothing by itself  */
+    b5_nav_request_stop();
+    run();
+    CHECK(g_tlm.b_slow, "slow flag in frame");
+    (void)reply_last(NAV_MOTION_DONE);
+    (void)take_event(B5_EV_STOP_ACCEPTED);
+
+    /* Out-of-range values are clamped into their field, never wrapped:
+     * a 100 m reverse becomes the longest step the field holds. */
+    b5_nav_request_reverse(100000);
+    run();
+    CHECK((g_mc[g_mc_n - 1].kind == 'D') &&
+          (g_mc[g_mc_n - 1].value == -NAV_STEP_VALUE_MAX),
+          "reverse clamped to %d (%d)", -NAV_STEP_VALUE_MAX,
+          (int)g_mc[g_mc_n - 1].value);
+
+    /* A result whose id we never issued (above 15 bits) is ignored, even
+     * if its low bits match the command in progress. */
+    (void)nav_post_motion_result(g_mc[g_mc_n - 1].id + 0x8000U,
+                                 NAV_MOTION_DONE);
+    run();
+    CHECK(!take_event(B5_EV_MOTION_DONE), "foreign id ignored");
+    (void)reply_last(NAV_MOTION_DONE);
+    CHECK(take_event(B5_EV_MOTION_DONE), "real id accepted");
+    g_b5_state = B5_ST_GUARD;
+    b5_nav_release_motion();            /* owner change publishes */
+    run();
+    CHECK((uint16_t)(g_tlm.commands_sent - sent) == 2U,
+          "commands_sent +2 for stop and reverse (%u -> %u)", sent,
+          g_tlm.commands_sent);
+
+    /* Dropped messages are counted by the kernel semaphore and saturate
+     * at 255 (8 bits) instead of wrapping to a small number. */
+    g_inbox_full = true;
+
+    for (i = 0; i < 300; i++)
+    {
+        (void)nav_post_line_speeds(100, 100);
+    }
+
+    g_inbox_full = false;
+    (void)nav_post_command(NAV_CMD_PAUSE);  /* publishes a frame */
+    run();
+    CHECK(g_tlm.dropped == NAV_DROPPED_MAX, "dropped saturates at 255 (%u)",
+          g_tlm.dropped);
+    CHECK(g_tlm.state == (uint8_t)NAV_ST_PAUSED, "frame says paused");
+
+    for (i = 0; i < 150; i++)           /* push the 8-bit sequence round */
+    {
+        (void)nav_post_command(NAV_CMD_RESUME);
+        (void)nav_post_command(NAV_CMD_PAUSE);
+        run();
+    }
+
+    CHECK(g_frames > 256, "%d frames: sequence has wrapped", g_frames);
+    CHECK(g_bad_frames == 0, "%d bad frames", g_bad_frames);
+    CHECK(g_seq_gaps == 0, "%d sequence gaps (incl. across the wrap)",
+          g_seq_gaps);
+}
+
 int
 main (void)
 {
@@ -362,6 +497,7 @@ main (void)
     test_barcode();
     test_line_search();
     test_states();
+    test_min_bits();
 
     printf("\n%d passed, %d failed\n", g_pass, g_fail);
     return (g_fail == 0) ? EXIT_SUCCESS : EXIT_FAILURE;

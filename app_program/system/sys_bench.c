@@ -268,28 +268,39 @@ sim_step (void)
  * ================================================================== */
 #if SYS_CONSOLE_STATUS
 
+/* Every subsystem sends binary frames in the team schema (sys_tlm.h);
+ * decode them the same way the PC will, then print. */
 void
-nav_telemetry_publish (nav_status_t const * p_st)
+nav_telemetry_publish (uint8_t const * p_frame, uint32_t len)
 {
-    if ((p_st->state != g_last_nav) || (p_st->owner != g_last_owner))
+    nav_tlm_t t;
+
+    if (!nav_tlm_unpack(p_frame, len, &t))
+    {
+        tm_printf((UB *)"[nav] bad telemetry frame\n");
+        return;
+    }
+
+    if (((nav_state_t)t.state != g_last_nav) ||
+        ((nav_owner_t)t.owner != g_last_owner))
     {
         tm_printf((UB *)"[nav] %s, motion owner: %s%s\n",
-                  (UB *)nav_state_name(p_st->state),
-                  (UB *)nav_owner_name(p_st->owner),
-                  p_st->b_slow ? " (slow)" : "");
-        g_last_nav   = p_st->state;
-        g_last_owner = p_st->owner;
+                  (UB *)nav_state_name((nav_state_t)t.state),
+                  (UB *)nav_owner_name((nav_owner_t)t.owner),
+                  t.b_slow ? " (slow)" : "");
+        g_last_nav   = (nav_state_t)t.state;
+        g_last_owner = (nav_owner_t)t.owner;
     }
 }
 
-/* Buddy 5 now sends a 16-byte binary frame (b5_pack.h); decode it the
- * same way the PC will, then print it. */
+/* Buddy 5's frame (schema in sys_tlm.h, source 5); decode it the same
+ * way the PC will, then print it. */
 void
 b5_telemetry_publish (uint8_t const * p_frame, uint32_t len)
 {
     b5_tlm_t t;
 
-    if ((len != B5_TLM_FRAME_BYTES) || !b5_tlm_unpack(p_frame, &t))
+    if (!b5_tlm_unpack(p_frame, len, &t))
     {
         tm_printf((UB *)"[b5]  bad telemetry frame\n");
         return;
@@ -314,41 +325,57 @@ b5_telemetry_publish (uint8_t const * p_frame, uint32_t len)
 }
 
 void
-safety_telemetry_publish (safety_status_t const * p_st)
+safety_telemetry_publish (uint8_t const * p_frame, uint32_t len)
 {
     static safety_state_t last = SAFETY_ST_COUNT;
-    static uint32_t       faults = 0U;
-    static uint32_t       warnings = 0U;
-    static uint32_t       stop_ms = 0xFFFFFFFFU;
+    static uint8_t        faults = 0U;
+    static uint8_t        warnings = 0U;
+    static uint16_t       stop_ms = 0xFFFFU;
+    static uint8_t        mask = 0U;
+    safety_tlm_t          t;
 
-    if (p_st->state != last)
+    if (!safety_tlm_unpack(p_frame, len, &t))
+    {
+        tm_printf((UB *)"[safety] bad telemetry frame\n");
+        return;
+    }
+
+    if ((safety_state_t)t.state != last)
     {
         tm_printf((UB *)"[safety] %s%s\n",
-                  (UB *)safety_state_name(p_st->state),
-                  p_st->b_inhibit ? ", motor drive inhibited" : "");
-        last = p_st->state;
+                  (UB *)safety_state_name((safety_state_t)t.state),
+                  t.b_inhibit ? ", motor drive inhibited" : "");
+        last = (safety_state_t)t.state;
     }
 
-    if (p_st->faults != faults)
+    /* 8-bit counters wrap: a change, not a size, means "new event". */
+    if (t.faults != faults)
     {
         tm_printf((UB *)"[safety] fault from source %d, code 0x%x\n",
-                  (INT)p_st->fault_src, (UINT)p_st->fault_code);
-        faults = p_st->faults;
+                  (INT)t.fault_src, (UINT)t.fault_code);
+        faults = t.faults;
     }
 
-    if (p_st->warnings != warnings)
+    if (t.warnings != warnings)
     {
         tm_printf((UB *)"[safety] warning from source %d, code 0x%x\n",
-                  (INT)p_st->warn_src, (UINT)p_st->warn_code);
-        warnings = p_st->warnings;
+                  (INT)t.warn_src, (UINT)t.warn_code);
+        warnings = t.warnings;
     }
 
-    if (p_st->last_stop_ms != stop_ms)
+    if (t.last_stop_ms != stop_ms)
     {
         tm_printf((UB *)"[safety] drive off %u ms after the stop "
                         "(worst %u ms, limit 100)\n",
-                  (UINT)p_st->last_stop_ms, (UINT)p_st->max_stop_ms);
-        stop_ms = p_st->last_stop_ms;
+                  (UINT)t.last_stop_ms, (UINT)t.max_stop_ms);
+        stop_ms = t.last_stop_ms;
+    }
+
+    if (t.fault_mask != mask)
+    {
+        tm_printf((UB *)"[safety] shared fault mask 0x%02x\n",
+                  (UINT)t.fault_mask);
+        mask = t.fault_mask;
     }
 }
 

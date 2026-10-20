@@ -25,11 +25,12 @@
  *    tasks only see a copy taken under a mutex, so the read-modify-write
  *    a bit-field store does can never race.
  *
- *  - Explicit masks and shifts (this file) for data that crosses a
- *    boundary where bit-field layout or a race would matter: the word the
- *    echo interrupt publishes, and the binary telemetry frame that goes
- *    to MQTT and is decoded on a PC. The layout here is fixed by the code,
- *    not by the compiler, and the frame is little-endian.
+ *  - Explicit masks and shifts for data that crosses a boundary where
+ *    bit-field layout or a race would matter: the word the echo interrupt
+ *    publishes (this file), and the binary telemetry frame that goes to
+ *    MQTT and is decoded on a PC (layout in the shared schema header
+ *    ../system/sys_tlm.h). The layout is fixed by the code, not by the
+ *    compiler, and the frame is little-endian.
  *
  * Values are always clamped before packing, so an out-of-range value can
  * never wrap round to a small, believable one (e.g. 4396 mm in 12 bits
@@ -43,6 +44,8 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+
+#include "../system/sys_tlm.h"     /* shared telemetry schema */
 
 /* ------------------------------------------------------------------------
  * Field widths and limits
@@ -168,51 +171,10 @@ b5_echo_seq(uint32_t word)
 /* ------------------------------------------------------------------------
  * Binary telemetry frame (Buddy 5 -> Buddy 1 -> MQTT -> PC)
  *
- * 16 bytes, little-endian, four 32-bit words:
- *
- *   word 0  bits  0..3   format version (B5_TLM_VERSION)
- *           bits  4..7   state
- *           bits  8..10  fault code
- *           bits 11..12  bypass side
- *           bits 13..14  blocked tries
- *           bits 15..16  recovery tries
- *           bits 17..27  servo angle, signed 0.1 deg (+ = right)
- *           bit  28      obstacle found in the last Planning
- *   word 1  bits  0..11  last guard range, mm
- *           bits 12..23  closest obstacle range, mm
- *           bits 24..30  confidence, %
- *   word 2  bits  0..11  corrected obstacle width, mm
- *           bits 12..23  bypass sideways shift, mm
- *   word 3  bits  0..15  pings sent (wrapping)
- *           bits 16..31  pings with no echo (wrapping)
- *
- * The text the same data needed before was several times larger.
+ * The layout, B5_TLM_FRAME_BYTES, b5_tlm_t and the b5_tlm_pack() /
+ * b5_tlm_unpack() prototypes live in the team's one shared schema header,
+ * ../system/sys_tlm.h (source 5), so every buddy and the PC decoder use
+ * the same definition. b5_pack.c implements them.
  * --------------------------------------------------------------------- */
-#define B5_TLM_VERSION      (1U)
-#define B5_TLM_FRAME_BYTES  (16U)
-
-/** Unpacked view of the frame (what a decoder on the PC rebuilds). */
-typedef struct
-{
-    uint8_t  version;
-    uint8_t  state;
-    uint8_t  fault;
-    uint8_t  side;
-    uint8_t  blocked_tries;
-    uint8_t  recover_tries;
-    int16_t  servo_dd;
-    bool     b_found;
-    uint16_t range_mm;
-    uint16_t closest_mm;
-    uint8_t  confidence_pct;
-    uint16_t width_mm;
-    uint16_t lateral_mm;
-    uint16_t pings;
-    uint16_t no_echo;
-} b5_tlm_t;
-
-void b5_tlm_pack(b5_tlm_t const * p_in, uint8_t p_frame[B5_TLM_FRAME_BYTES]);
-bool b5_tlm_unpack(uint8_t const p_frame[B5_TLM_FRAME_BYTES],
-                   b5_tlm_t * p_out);
 
 #endif /* B5_PACK_H */

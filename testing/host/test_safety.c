@@ -5,7 +5,9 @@
  * Both files are compiled unchanged against a mock kernel with a fake
  * millisecond clock. The test reports faults and stops the way the other
  * buddies would, lets the supervisor run for a set time, and checks what
- * it told Motion Control and the Navigation Coordinator.
+ * it told Motion Control and the Navigation Coordinator. Its telemetry is
+ * a binary frame in the team schema (sys_tlm.h); every frame is decoded
+ * and checked.
  *
  * Build and run:  make -C testing/host
  */
@@ -85,11 +87,33 @@ static int             g_nav_safety_n;
 static nav_cmd_t       g_nav_cmd;
 static int             g_order_ok;      /* CLEARED seen before RESET */
 static nav_state_t     g_nav_state = NAV_ST_READY;
-static safety_status_t g_last;
+static safety_tlm_t    g_last;          /* last decoded telemetry frame */
+static int             g_bad_frames;
+static int             g_frames, g_seq_gaps;
+static uint32_t        g_mask;          /* shared fault mask (mocked)   */
 
 void mc_inhibit (bool b) { g_mc_inhibited = b; g_inhibit_calls++; }
-void safety_telemetry_publish (safety_status_t const * p) { g_last = *p; }
 nav_state_t nav_get_state (void) { return g_nav_state; }
+uint32_t sys_fault_get (void) { return g_mask; }
+
+void
+safety_telemetry_publish (uint8_t const * p_frame, uint32_t len)
+{
+    uint8_t prev = g_last.seq;
+
+    if (!safety_tlm_unpack(p_frame, len, &g_last))
+    {
+        g_bad_frames++;
+        return;
+    }
+
+    if ((g_frames > 0) && (g_last.seq != (uint8_t)(prev + 1U)))
+    {
+        g_seq_gaps++;                   /* header sequence must not skip */
+    }
+
+    g_frames++;
+}
 
 ER
 nav_post_safety (nav_safety_t e)
@@ -137,6 +161,8 @@ main (void)
         return EXIT_FAILURE;
     }
     run_for(40);
+    CHECK((g_last.fault_src == SAFETY_SRC_NONE) &&
+          (g_last.warn_src == SAFETY_SRC_NONE), "no fault source at start");
 
     printf("emergency stop, fast drive-off\n");
     (void)safety_post_estop();
@@ -224,6 +250,52 @@ main (void)
     CHECK((g_last.fault_src == SAFETY_SRC_LINE) &&
           (g_last.fault_code == SAFETY_CODE_TASK_SILENT),
           "silent task identified");
+    g_nav_state = NAV_ST_READY;
+    (void)safety_watch(SAFETY_SRC_LINE, 0U);    /* stop watching it */
+    nav_heartbeat();
+    reset_all();
+    CHECK(safety_get_state() == SAFETY_ST_NORMAL, "reset after the fault");
+
+    printf("minimum bits: frame, saturation, wrapping, fault mask\n");
+    {
+        uint8_t before;
+        int     i;
+
+        g_mask = 0x28U;                 /* NO_ECHO | SERVO set somewhere */
+        (void)safety_post_estop();
+        run_for(20);
+        CHECK(g_last.fault_mask == 0x28U, "fault mask in frame 0x%02x",
+              g_last.fault_mask);
+        g_ms += 5000U;                  /* drive-off confirmed very late */
+        safety_ack_drive_off();
+        run_for(20);
+        CHECK(g_last.last_stop_ms == SAFETY_STOP_MS_MAX,
+              "5 s stop saturates at %u ms (%u)", SAFETY_STOP_MS_MAX,
+              g_last.last_stop_ms);
+        CHECK(g_last.max_stop_ms == SAFETY_STOP_MS_MAX, "worst saturates");
+        reset_all();
+        g_mask = 0U;
+
+        before = g_last.warnings;
+
+        for (i = 0; i < 256; i++)       /* 256 warnings: 8-bit counter wraps */
+        {
+            (void)safety_report_fault(SAFETY_SRC_IMU, (uint8_t)i, false);
+            run_for(20);
+        }
+
+        CHECK(g_last.warnings == before, "warnings wrap modulo 256 (%u/%u)",
+              g_last.warnings, before);
+        CHECK((g_last.warn_src == SAFETY_SRC_IMU) && (g_last.warn_code == 255U),
+              "last warning recorded");
+        CHECK(safety_get_state() == SAFETY_ST_NORMAL, "warnings never stop");
+    }
+    CHECK(g_bad_frames == 0, "%d bad frames", g_bad_frames);
+    CHECK(SAFETY_TLM_FRAME_BYTES == 15U, "frame %u bytes (3 + 12)",
+          SAFETY_TLM_FRAME_BYTES);
+    CHECK((g_frames > 256) && (g_seq_gaps == 0),
+          "%d frames, %d sequence gaps (incl. across the wrap)", g_frames,
+          g_seq_gaps);
 
     printf("\n%d passed, %d failed\n", g_pass, g_fail);
     return (g_fail == 0) ? EXIT_SUCCESS : EXIT_FAILURE;

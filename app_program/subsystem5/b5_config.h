@@ -64,9 +64,12 @@
  * +900 = right (Tribunal 1 decision; was 0 = right .. 1800 = left).
  * --------------------------------------------------------------------- */
 #define B5_AHEAD_DD             (0)
-#define B5_SCAN_START_DD        (-600)  /* coarse sweep 60 deg left ...  */
-#define B5_SCAN_END_DD          (600)   /* ... to 60 deg right ...       */
-#define B5_SCAN_STEP_DD         (300)   /* ... in 30 deg steps           */
+#define B5_SCAN_START_DD        (-550)  /* coarse sweep 55 deg left ...  */
+#define B5_SCAN_END_DD          (550)   /* ... to 55 deg right ...       */
+#define B5_SCAN_STEP_DD         (275)   /* ... in 27.5 deg steps (5 pts) */
+/* 55 deg is the mechanical limit on our car: at 60 deg the sensor bracket
+ * hits the casing. Keep END - START a multiple of STEP so the sweep
+ * includes both ends and 0 (straight ahead). */
 #define B5_NEAR_MM              (B5_D_STOP_MM + 250) /* near/far split   */
 #define B5_ALPHA_DD             (75)    /* TUNE: beam half-angle, fit on bench */
 #define B5_REFINE_STOP_DD       (10)    /* stop bisecting below 1 deg, see README */

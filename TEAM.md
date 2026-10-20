@@ -178,11 +178,11 @@ sends to it or waits on it. Agree on the data format before coding.
 | IF-10 | S3 → Nav | Nav inbox | `nav_post_line_speeds/_event()`, `nav_post_barcode()` | wheel speeds each cycle; LOST/FOUND/JUNCTION; one barcode at turn point | to agree with S3 |
 | IF-11 | Nav → S3 | function call | `line_set_control(bool)` | S3 proposes speeds only while true | to agree with S3 |
 | IF-12 | S1 → Nav, Safety | Nav inbox / safety event flag | `nav_post_command()`, `safety_post_estop()`, `safety_request_reset()` | supervisory commands (`nav_iface.h`, `safety_iface.h`) | to agree with S1 |
-| IF-13 | Nav, Safety, S5 → S1 | function calls into S1's telemetry queue | `*_telemetry_publish()` | Nav, Safety: status structs. S5: 16-byte packed binary frame `b5_telemetry_publish(frame, len)` (bit map in `subsystem5/b5_pack.h`) | to agree with S1 |
+| IF-13 | Nav, Safety, S5 → S1 | function calls into S1's telemetry queue | `nav_telemetry_publish(frame, len)`, `safety_telemetry_publish(frame, len)`, `b5_telemetry_publish(frame, len)` | binary frames in the **one team schema** `system/sys_tlm.h`: 3-byte common header (version, source, length, sequence) + payload. Nav 9 bytes, Safety 15 (incl. the shared fault mask), S5 19. S1 queues the bytes unchanged; Buddies 1–4 add their payloads to the same file | to agree with S1 |
 | IF-14 | Safety → S2 | function call + polled flag | `mc_inhibit(bool)`, `safety_drive_inhibited()`; S2 answers `safety_ack_drive_off()` | cut drive now (< 100 ms, NFR-SYS-04) | to agree with S2 |
-| IF-15 | any → Safety | safety event flag | `safety_report_fault()`, `safety_kick()` | fault source + code; health check-ins | team |
+| IF-15 | any → Safety | safety event flag | `safety_report_fault()`, `safety_kick()` | fault source + 8-bit code (each source numbers its own); health check-ins (timeout ≤ 65535 ms) | team |
 | IF-16 | S2, S3 → S5 | function calls | `b5_motion_get_estimate()`, `b5_line_detected()` | distance + heading as `int16_t` (net signed distance in mm, goes negative on reverse, may wrap; S5 only uses differences); line seen | to agree with S2, S3 |
-| IF-17 | any → all | shared fault event flag | `sys_fault_set()`, `sys_fault_clear()`, `sys_fault_get()` (`system/sys_fault.h`) | one bit per fault (motor stall, encoder, IMU, no echo, WiFi loss, servo, line sensor, obstacle); set/clear are atomic | team |
+| IF-17 | any → all | shared fault event flag | `sys_fault_set()`, `sys_fault_clear()`, `sys_fault_get()` (`system/sys_fault.h`) | one bit per fault (motor stall, encoder, IMU, no echo, WiFi loss, servo, line sensor, obstacle); set/clear are atomic. Only a bit's owner sets or clears it; bits latch until the owner clears them after the fault is gone and a reset was accepted; nobody waits on the flag with a clear option | Safety Supervisor (mask); each buddy (own bits) |
 
 Each interface is tested by at least one integration test
 (`testing/integration/TEST_LOG.md`).
@@ -195,7 +195,7 @@ limit there. The numbers below are the example's usage.
 | Object | Limit | S1 | S2 | S3 | S4 | S5 | system |
 |---|---|---|---|---|---|---|---|
 | Task | 32 | 1 | 1 | 1 | 1 | 1 | 3 (safety, nav, bench) |
-| Semaphore | 16 | | 1 | | | | 1 (bench) |
+| Semaphore | 16 | | 1 | | | | 2 (bench, nav dropped-message counter) |
 | Event flag | 16 | | | | 1 | 2 | 2 (safety, fault mask) |
 | Mailbox | 12 | | | 1 | | | |
 | Mutex | 12 | | | 1 | | 1 | |

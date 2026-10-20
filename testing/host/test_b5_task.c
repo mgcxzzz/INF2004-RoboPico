@@ -231,7 +231,7 @@ b5_telemetry_publish (uint8_t const * p_frame, uint32_t len)
     b5_tlm_t   t;
     b5_state_t state;
 
-    if ((len != B5_TLM_FRAME_BYTES) || !b5_tlm_unpack(p_frame, &t))
+    if (!b5_tlm_unpack(p_frame, len, &t))
     {
         g_bad_frames++;
         return;

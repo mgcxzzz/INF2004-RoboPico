@@ -44,9 +44,15 @@
  * treated as failed. */
 #define NAV_MOTION_TMO_MS       (8000)
 
-/* Fault codes passed to nav_report_fault(). */
-#define NAV_FAULT_MOTION        (0x0101U)
-#define NAV_FAULT_LINE_LOST     (0x0102U)
-#define NAV_FAULT_OBSTACLE      (0x0103U)   /* Buddy 5 released from Fault */
+/* Longest single drive or turn a manoeuvre step can hold: steps store
+ * the value in 13 signed bits (+/-4095 mm or dd). The longest real step
+ * is a bypass leg, at most the 12-bit obstacle distance (4095 mm). */
+#define NAV_STEP_VALUE_MAX      (4095)
+
+/* Fault codes passed to nav_report_fault(): 8 bits, the coordinator's own
+ * numbering (the Safety Supervisor records the source separately). */
+#define NAV_FAULT_MOTION        (0x01U)
+#define NAV_FAULT_LINE_LOST     (0x02U)
+#define NAV_FAULT_OBSTACLE      (0x03U)     /* Buddy 5 released from Fault */
 
 #endif /* NAV_CONFIG_H */

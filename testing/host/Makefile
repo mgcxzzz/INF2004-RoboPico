@@ -8,8 +8,9 @@
 #                    sign extension, 16-bit wrap, telemetry frame
 #   test_b5_profile  S5 obstacle profiling: width accuracy, side choice
 #   test_b5_task     S5 statechart against a simulated car (4 scenarios)
-#   test_nav         Navigation Coordinator
-#   test_safety      Safety Supervisor
+#   test_nav         Navigation Coordinator, incl. its packed inbox and
+#                    telemetry frames (team schema, sys_tlm.h)
+#   test_safety      Safety Supervisor, incl. its telemetry frames
 CC      ?= gcc
 APP     := ../../app_program
 S5      := $(APP)/subsystem5
@@ -32,13 +33,14 @@ test_b5_task: test_b5_task.c $(S5)/task_obstacle.c $(S5)/obstacle_profile.c $(S5
 	    test_b5_task.c $(S5)/task_obstacle.c $(S5)/obstacle_profile.c \
 	    $(S5)/b5_pack.c -lm
 
-test_nav: test_nav.c $(SYS)/nav_coordinator.c $(SYS)/nav_b5.c $(HDRS)
+test_nav: test_nav.c $(SYS)/nav_coordinator.c $(SYS)/nav_b5.c $(SYS)/sys_tlm.c $(HDRS)
 	$(CC) $(CFLAGS) -Imock_sys -I$(SYS) -I$(S5) -o $@ \
-	    test_nav.c $(SYS)/nav_coordinator.c $(SYS)/nav_b5.c
+	    test_nav.c $(SYS)/nav_coordinator.c $(SYS)/nav_b5.c $(SYS)/sys_tlm.c
 
-test_safety: test_safety.c $(SYS)/safety_supervisor.c $(SYS)/safety_glue.c $(HDRS)
+test_safety: test_safety.c $(SYS)/safety_supervisor.c $(SYS)/safety_glue.c $(SYS)/sys_tlm.c $(HDRS)
 	$(CC) $(CFLAGS) -Imock_sys -I$(SYS) -I$(S5) -o $@ \
-	    test_safety.c $(SYS)/safety_supervisor.c $(SYS)/safety_glue.c
+	    test_safety.c $(SYS)/safety_supervisor.c $(SYS)/safety_glue.c \
+	    $(SYS)/sys_tlm.c
 
 run: test_b5_pack test_b5_profile test_b5_task test_nav test_safety
 	./test_b5_pack

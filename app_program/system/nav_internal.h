@@ -32,13 +32,27 @@ typedef enum
     NAV_MSG_B5_RELEASE      /* a = 1 if Buddy 5 is in Fault               */
 } nav_msg_type_t;
 
+/* One inbox message: 8 bytes instead of 16 (Tribunal 1, minimum bits).
+ *   type  4 bits      13 message types
+ *   a    16 bits      cmd id (1..0x7FFF), wheel speed, lateral mm,
+ *                     reverse distance, side, flags
+ *   b    16 bits      result, wheel speed, lateral or heading
+ *   c    12 bits      forward or search distance, 0..4095 mm
+ * nav_post_msg() clamps every value to its field before storing it.
+ * The message is copied into the kernel message buffer and out again, so
+ * sender and coordinator never share it: bit-fields are safe here, and it
+ * never leaves the chip, so their compiler-chosen layout does not matter. */
 typedef struct
 {
-    int32_t type;
-    int32_t a;
-    int32_t b;
-    int32_t c;
+    uint32_t type : 4;
+    uint32_t c    : 12;
+    int32_t  a    : 16;
+    int32_t  b    : 16;
 } nav_msg_t;
+
+#define NAV_MSG_A_MIN       (-32768)
+#define NAV_MSG_A_MAX       (32767)
+#define NAV_MSG_C_MAX       (4095)
 
 ER nav_post_msg(int32_t type, int32_t a, int32_t b, int32_t c);
 

@@ -100,7 +100,8 @@ b5_servo_init (void)
 
 /**
  * @brief  Move to an angle and sleep until it has settled.
- * @param  angle_dd  -900 = left, 0 = ahead, +900 = right (0.1 deg).
+ * @param  angle_dd  -900 = left, 0 = ahead, +900 = right (0.1 deg);
+ *                   clamped to B5_SCAN_START_DD .. B5_SCAN_END_DD.
  * @return E_OK, or E_IO if the PWM slice is not holding the pulse.
  */
 ER
@@ -110,7 +111,9 @@ b5_servo_move (int16_t angle_dd)
     uint32_t delta;
     uint32_t settle_ms;
 
-    angle_dd = (int16_t)b5_clamp(angle_dd, B5_ANGLE_MIN_DD, B5_ANGLE_MAX_DD);
+    /* Never past the sweep ends: beyond about 55 deg the sensor bracket
+     * hits the car's casing (mechanical limit, see b5_config.h). */
+    angle_dd = (int16_t)b5_clamp(angle_dd, B5_SCAN_START_DD, B5_SCAN_END_DD);
 
     pulse = angle_to_pulse_us(angle_dd);
     (void)pwm_set_cc(B5_PIN_SERVO_PWM, pulse);

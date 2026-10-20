@@ -103,15 +103,16 @@ fault_bit (b5_fault_t fault)
 }
 
 /**
- * @brief  Build the 16-byte binary telemetry frame from a status record.
+ * @brief  Build the binary telemetry frame (3-byte common header + 16-byte
+ *         payload, schema in ../system/sys_tlm.h) from a status record.
  */
 void
-b5_status_to_frame (b5_status_t const * p_st,
+b5_status_to_frame (b5_status_t const * p_st, uint8_t seq,
                     uint8_t p_frame[B5_TLM_FRAME_BYTES])
 {
     b5_tlm_t t;
 
-    t.version        = B5_TLM_VERSION;
+    t.seq            = seq;
     t.state          = (uint8_t)p_st->state;
     t.fault          = (uint8_t)p_st->fault;
     t.side           = (uint8_t)p_st->profile.side;
@@ -176,8 +177,9 @@ mission_stopped (void)
 static void
 publish (bool b_force)
 {
-    uint32_t now = sys_time_us();
-    uint8_t  frame[B5_TLM_FRAME_BYTES];
+    static uint8_t seq = 0U;            /* this task only: wraps 0..255 */
+    uint32_t       now = sys_time_us();
+    uint8_t        frame[B5_TLM_FRAME_BYTES];
 
     if (b_force ||
         ((now - g_ctx.last_pub_us) >= (B5_STATUS_PERIOD_MS * 1000U)))
@@ -193,7 +195,8 @@ publish (bool b_force)
             (void)tk_unl_mtx(g_status_mtx);
         }
 
-        b5_status_to_frame(&g_ctx.status, frame);
+        b5_status_to_frame(&g_ctx.status, seq, frame);
+        seq++;
         b5_telemetry_publish(frame, B5_TLM_FRAME_BYTES);
     }
 }
@@ -531,7 +534,7 @@ st_halting (void)
     return B5_ST_COARSE_SWEEP;              /* stop accepted */
 }
 
-/* Coarse Sweep: do / -60..+60 deg in 30 deg steps. */
+/* Coarse Sweep: do / -55..+55 deg in 27.5 deg steps (B5_SCAN_*). */
 static b5_state_t
 st_coarse_sweep (void)
 {

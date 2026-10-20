@@ -109,14 +109,17 @@ test_frame (void)
     b5_tlm_t out;
     uint8_t  f[B5_TLM_FRAME_BYTES];
 
-    printf("binary telemetry frame (16 bytes, little-endian)\n");
+    printf("binary telemetry frame (3-byte common header + 16-byte payload)\n");
+    CHECK(B5_TLM_FRAME_BYTES == 19U, "frame %u bytes", B5_TLM_FRAME_BYTES);
+    in.seq = 200U;
     in.state = 7U; in.fault = 6U; in.side = 2U; in.blocked_tries = 2U;
     in.recover_tries = 3U; in.servo_dd = -900; in.b_found = true;
     in.range_mm = 4000U; in.closest_mm = 287U; in.confidence_pct = 100U;
     in.width_mm = 104U; in.lateral_mm = 230U; in.pings = 65535U;
     in.no_echo = 12U;
     b5_tlm_pack(&in, f);
-    CHECK(b5_tlm_unpack(f, &out), "version accepted");
+    CHECK(b5_tlm_unpack(f, sizeof(f), &out), "header accepted");
+    CHECK(out.seq == 200U, "sequence number %u", out.seq);
     CHECK((out.state == 7U) && (out.fault == 6U) && (out.side == 2U),
           "state/fault/side");
     CHECK((out.blocked_tries == 2U) && (out.recover_tries == 3U), "counters");
@@ -127,17 +130,31 @@ test_frame (void)
           (out.lateral_mm == 230U), "profile");
     CHECK((out.pings == 65535U) && (out.no_echo == 12U), "ping counters");
 
-    /* Byte 0: version 1 in bits 0..3, state 7 in bits 4..7 -> 0x71. */
-    CHECK(f[0] == 0x71U, "byte 0 = 0x%02X", f[0]);
+    /* Header: version 2 | source 5 << 4 = 0x52, payload length 16, seq. */
+    CHECK((f[0] == 0x52U) && (f[1] == 16U) && (f[2] == 200U),
+          "header %02X %02X %02X", f[0], f[1], f[2]);
+    /* Payload byte 0: state 7 in bits 0..3, fault 6 in bits 4..6 -> 0x67. */
+    CHECK(f[3] == 0x67U, "payload byte 0 = 0x%02X", f[3]);
 
     in.range_mm = 9999U; in.recover_tries = 9U; in.servo_dd = 1500;
     b5_tlm_pack(&in, f);
-    (void)b5_tlm_unpack(f, &out);
+    (void)b5_tlm_unpack(f, sizeof(f), &out);
     CHECK((out.range_mm == B5_MM_MAX) && (out.recover_tries == 3U) &&
           (out.servo_dd == 900), "out-of-range values clamp");
 
-    f[0] = (uint8_t)((f[0] & 0xF0U) | 0x02U);    /* unknown version */
-    CHECK(!b5_tlm_unpack(f, &out), "unknown version rejected");
+    CHECK(!b5_tlm_unpack(f, sizeof(f) - 1U, &out), "short frame rejected");
+    f[0] = (uint8_t)((TLM_SRC_NAV << 4) | TLM_VERSION);  /* wrong source */
+    CHECK(!b5_tlm_unpack(f, sizeof(f), &out), "wrong source rejected");
+    f[0] = (uint8_t)((TLM_SRC_OBSTACLE << 4) | 1U);      /* old version */
+    CHECK(!b5_tlm_unpack(f, sizeof(f), &out), "version 1 frame rejected");
+    f[0] = (uint8_t)((TLM_SRC_OBSTACLE << 4) | TLM_VERSION);
+    f[1] = 15U;                                         /* wrong length */
+    CHECK(!b5_tlm_unpack(f, sizeof(f), &out), "wrong length byte rejected");
+
+    /* The shared schema's own sign extension matches Buddy 5's. */
+    CHECK((sys_get_s(sys_put_s(0U, 13U, 11U, -900), 13U, 11U) == -900) &&
+          (sys_get_s(sys_put_s(0U, 0U, 16U, -32768), 0U, 16U) == -32768),
+          "sys_get_s sign extension");
 }
 
 int

@@ -9,9 +9,25 @@
  * not be: the Cortex-M0+ has no atomic read-modify-write instruction, so a
  * second writer could overwrite the first and a fault would be lost.
  *
- * Each subsystem sets only its own bits. The Safety Supervisor still
- * decides what is critical (safety_glue.c); this mask is the shared,
- * compact record of which faults are active, e.g. for telemetry.
+ * Owner: the Safety Supervisor owns the mask (Tribunal 1 change log);
+ * each buddy owns its own bits.
+ *
+ * Rules (IS28_ImmTri1: "define set, clear and latch rules"):
+ *  - SET: only the bit's owner, with sys_fault_set(), from a task or an
+ *    interrupt, as soon as it detects the fault (tk_set_flg: the kernel
+ *    ORs the bit in as one operation).
+ *  - LATCH: the event flag keeps a bit set until it is cleared on
+ *    purpose. Nobody waits on this flag with TWF_CLR or TWF_BITCLR (that
+ *    would erase other buddies' bits), so this module has no wait call:
+ *    read it only with sys_fault_get() (tk_ref_flg, never blocks). A
+ *    fault that comes and goes therefore stays visible until a reset.
+ *  - CLEAR: only the bit's owner, with sys_fault_clear() (tk_clr_flg),
+ *    and only when BOTH its fault condition is gone AND a reset has been
+ *    accepted (e.g. Buddy 5 clears its bits on B5_EV_FAULT_RESET).
+ *  - SEVERITY is separate: whether a fault stops the car is still decided
+ *    by the Safety Supervisor through safety_report_fault()
+ *    (safety_glue.c). The supervisor reads the mask and publishes it in
+ *    its telemetry frame; it never sets or clears another buddy's bit.
  *
  * Group IS28 (team). Coding standard: Barr-C:2018.
  */

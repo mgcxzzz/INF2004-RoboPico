@@ -51,8 +51,14 @@ NAV_WEAK void line_set_control (bool b_granted)      { (void)b_granted; }
 NAV_WEAK void line_notify_state (nav_state_t state)  { (void)state; }
 NAV_WEAK void imu_notify_state (nav_state_t state)   { (void)state; }
 NAV_WEAK void wifi_notify_state (nav_state_t state)  { (void)state; }
-NAV_WEAK void nav_telemetry_publish (nav_status_t const * p) { (void)p; }
-NAV_WEAK void nav_report_fault (uint32_t code)       { (void)code; }
+NAV_WEAK void nav_report_fault (uint8_t code)        { (void)code; }
+
+NAV_WEAK void
+nav_telemetry_publish (uint8_t const * p_frame, uint32_t len)
+{
+    (void)p_frame;
+    (void)len;
+}
 NAV_WEAK void nav_reinitialise (void)                { }
 NAV_WEAK bool nav_start_allowed (void)              { return true; }
 NAV_WEAK void nav_heartbeat (void)                  { }

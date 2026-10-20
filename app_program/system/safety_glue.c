@@ -41,12 +41,12 @@ b5_report_fault (b5_fault_t fault)
             break;
     }
 
-    (void)safety_report_fault(SAFETY_SRC_OBSTACLE, (uint32_t)fault,
+    (void)safety_report_fault(SAFETY_SRC_OBSTACLE, (uint8_t)fault,
                               b_critical);
 }
 
 void
-nav_report_fault (uint32_t code)
+nav_report_fault (uint8_t code)
 {
     /* A failed Motion Control command is hardware trouble; a lost line
      * or Buddy 5 stopping is not (Buddy 5 reports its own cause). */
