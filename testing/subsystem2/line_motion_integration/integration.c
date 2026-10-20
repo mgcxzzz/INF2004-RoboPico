@@ -166,7 +166,7 @@ static void trace_row(uint32_t now) {
 static void dump(void) {
     if(active || settling) { tm_putstring((UB *)"Wait until stopped and log saved.\n");return; }
     if(!log_data.count) { tm_putstring((UB *)"No integration run saved yet.\n");return; }
-    tm_printf((UB *)"B23 LINE v1: restored=%u save_ok=%u rows=%u dropped=%u accepted=%u\n",
+    tm_printf((UB *)"B23 LINE v2: restored=%u save_ok=%u rows=%u dropped=%u accepted=%u\n",
         stored,save_ok,log_data.count,log_data.dropped,log_data.accepted);
     tm_putstring((UB *)"ms,active,rawL,rawR,blackL,blackR,nav,owner,s3,L_mm10,R_mm10,L_speed10,R_speed10,requestL,requestR,targetL,targetR,PWM_L,PWM_R\n");
     uint32_t tx_before=tm_usb_dropped;
@@ -283,7 +283,7 @@ static void motion_task(INT stacd,void *exinf) {
     }
 }
 static void info(void) {
-    tm_putstring((UB *)"\nBUDDY 2 + NAV + BUDDY 3 LINE integration v1 | real RTOS, real sensors/encoders\n");
+    tm_putstring((UB *)"\nBUDDY 2 + NAV + BUDDY 3 LINE integration v2 | real RTOS, real sensors/encoders\n");
     tm_putstring((UB *)"DRIVE OFF on boot. First verify raw GP6 L / GP7 R on white and black. Black assumed HIGH.\n");
     tm_putstring((UB *)"IR diagnostics stream while idle. h=help p=saved log s=stop f=USB hold-GP21 test.\n");
     tm_putstring((UB *)"Bank: hold BOTH 3s, release BOTH, then tap/release GP21; 2s countdown. Either button stops.\n");
@@ -359,7 +359,11 @@ EXPORT INT usermain(void) {
     (void)safety_watch(SAFETY_SRC_MOTION,100);
     if(safety_start()!=E_OK || nav_start()!=E_OK || s3_start()!=E_OK ||
        task_start((FP)motion_task,12)!=E_OK || task_start((FP)console_task,18)!=E_OK) goto failed;
-    return 0;
+    /* Returning from usermain makes init_task_main call shutdown_system(),
+       which disables interrupts and kills USB. Keep this initial task asleep. */
+    for(;;) (void)tk_slp_tsk(TMO_FEVR);
 failed:
-    stop_now(R_INHIBIT);tm_putstring((UB *)"B23 INIT FAILED: drive disabled.\n");return 0;
+    stop_now(R_INHIBIT);tm_putstring((UB *)"B23 INIT FAILED: drive disabled.\n");
+    /* Preserve the USB service for diagnosis even if app init fails. */
+    for(;;) (void)tk_slp_tsk(TMO_FEVR);
 }

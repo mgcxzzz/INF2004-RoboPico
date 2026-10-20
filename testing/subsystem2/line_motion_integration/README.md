@@ -1,8 +1,24 @@
-# Buddy 2 + Navigation Coordinator + Buddy 3: isolated line-motion test v1
+# Buddy 2 + Navigation Coordinator + Buddy 3: isolated line-motion test v2
 
 This folder is separate from `dual_wheel_bench`. Flash
-`firmware/buddy23_line_motion_v1.uf2` for this experiment; flash the V7 dual
+`firmware/buddy23_line_motion_v2.uf2` for this experiment; flash the V7 dual
 bench UF2 to return to the turning experiment. Only one program runs at a time.
+
+## V2 startup fix / current status
+
+V1 was reported not to enumerate a COM port, while V6 standalone firmware did.
+Source inspection found that returning from usermain calls shutdown_system in
+this kernel, which disables interrupts. V2 keeps the initial task asleep on
+both success and init failure. A source regression gate in prepare.py checks
+this lifecycle. Compile/link passed; USB enumeration on hardware awaits retest.
+Do not use the retained V1 UF2 for testing. No sensor/steering changes in V2.
+
+Current S3 code straddles the line: both white can mean centred OR off-track.
+It reports LOST after 250 mm without black; the bench limit is only 150 mm.
+This can also falsely report LOST on a long centred straight, so this is not
+an adequate final line-end detector. Both-black-centred operation is a valid
+alternative but requires changed sensor placement, steering and junction rules.
+Moving tests remain pending sensor-polarity checks and agreement on that logic.
 
 ## What is real
 
@@ -33,7 +49,7 @@ Check these before any moving test:
 2. Keep both wheels raised. Open PuTTY Serial on the Pico's current COM port,
    115200, 8 data bits, 1 stop, no parity, flow None.
 3. Do NOT press onboard buttons or send f. Boot has DRIVE OFF, no autostart.
-4. Wait for `BUDDY 2 + NAV + BUDDY 3 LINE integration v1` and repeated IR lines.
+4. Wait for `BUDDY 2 + NAV + BUDDY 3 LINE integration v2` and repeated IR lines.
 5. Present white under both sensors at their normal working height. Record
    `rawL/rawR` and `blackL/blackR`.
 6. Put black tape under LEFT only; then RIGHT only; then BOTH. Record each pair.

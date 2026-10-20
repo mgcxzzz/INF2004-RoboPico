@@ -58,3 +58,12 @@ glue=BUILD/"lib/libtm/sysdepend/pico_rp2040/usb/usb_tinyusb_glue.c"
 s=glue.read_text().replace("while (tud_cdc_available()) (void)tud_cdc_read_char();",
  "extern void bench_rx_char(int ch);\n    while (tud_cdc_available()) bench_rx_char((int)tud_cdc_read_char());")
 glue.write_text(s)
+
+# Regression gate: this kernel shuts down if usermain returns. Check the
+# adapter lifecycle against the actual pinned initial-task implementation.
+entry=(app/"integration.c").read_text().split("EXPORT INT usermain(void)",1)[1]
+assert "return 0;" not in entry
+assert entry.count("for(;;) (void)tk_slp_tsk(TMO_FEVR);")==2
+initial=(BUILD/"kernel/inittask/inittask.c").read_text()
+assert "fin = usermain();" in initial and "shutdown_system(fin);" in initial
+print("PASS startup lifecycle: success/failure keep USB task alive, no return to kernel shutdown")
