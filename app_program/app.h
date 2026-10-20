@@ -39,6 +39,12 @@ IMPORT ID app_start_task(FP entry, PRI pri, UW prc, const char *name);
  *    subsystemN_start()  create and start this subsystem's tasks
  *    subsystemN_test()   on-target tests, only in test builds (make TEST=1)
  * --------------------------------------------------------------------- */
+/* Shared system tasks (app_program/system/): Safety Supervisor,
+   Navigation Coordinator and bench helpers.  Called before every
+   subsystem's _init() and _start(), so the subsystems can post to them. */
+IMPORT ER system_init(void);
+IMPORT ER system_start(void);
+
 IMPORT ER subsystem1_init(void);
 IMPORT ER subsystem2_init(void);
 IMPORT ER subsystem3_init(void);
