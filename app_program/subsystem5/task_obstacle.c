@@ -603,7 +603,15 @@ st_edge_refine (void)
                           (int32_t)s.range_mm, (s.b_valid != 0U));
     }
 
-    return B5_ST_PLANNING;                  /* scan complete */
+    /* Scan complete: back to straight ahead, so the sensor faces the way
+     * the car goes next whatever Planning decides (bypass, blocked,
+     * resume). */
+    if (b5_servo_move(B5_AHEAD_DD) != E_OK)
+    {
+        return to_fault(B5_FAULT_SERVO);
+    }
+
+    return B5_ST_PLANNING;
 }
 
 /* Planning: entry / profile, correct width, score both sides. */

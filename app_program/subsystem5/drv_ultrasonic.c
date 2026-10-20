@@ -90,12 +90,18 @@ echo_edge (uint32_t gpio, uint32_t edges, uint32_t t_us)
     if (((edges & SYS_GPIO_EDGE_FALL) != 0U) && g_isr_high)
     {
         /* A fall is only accepted after a matching rise. */
-        uint32_t word = b5_echo_pack(t_us - g_isr_rise_us, g_isr_rise_seq);
+        uint32_t width_us = t_us - g_isr_rise_us;
 
         g_isr_high = FALSE;
-        g_result   = word;              /* one aligned 32-bit store */
-        B5_DMB();
-        (void)tk_set_flg(g_echo_flg, FLG_ECHO_DONE);
+
+        /* A pulse shorter than any real echo is noise: drop it and wait
+         * for the real echo of the same ping. */
+        if (width_us >= B5_ECHO_MIN_US)
+        {
+            g_result = b5_echo_pack(width_us, g_isr_rise_seq);
+            B5_DMB();                   /* one aligned 32-bit store above */
+            (void)tk_set_flg(g_echo_flg, FLG_ECHO_DONE);
+        }
     }
 }
 

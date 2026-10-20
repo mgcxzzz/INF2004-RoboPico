@@ -393,19 +393,31 @@ b5_telemetry_publish (uint8_t const * p_frame, uint32_t len)
 
     if ((b5_state_t)t.state != g_last_b5)
     {
+        /* Leaving Planning: this frame carries the profile of the scan
+         * just finished (the frame sent on entering Planning still had
+         * the previous one). */
+        if (g_last_b5 == B5_ST_PLANNING)
+        {
+            if (t.b_found)
+            {
+                tm_printf((UB *)"[b5]  obstacle %d mm wide at %d mm, "
+                                "confidence %d %%, go %s\n",
+                          (INT)t.width_mm, (INT)t.closest_mm,
+                          (INT)t.confidence_pct,
+                          (t.side == (uint8_t)B5_SIDE_RIGHT) ? "right" :
+                          (t.side == (uint8_t)B5_SIDE_LEFT) ? "left" :
+                          "nowhere (no side wide enough)");
+            }
+            else
+            {
+                tm_printf((UB *)"[b5]  scan: no obstacle found\n");
+            }
+        }
+
         tm_printf((UB *)"[b5]  %s  (range %d mm)\n",
                   (UB *)b5_state_name((b5_state_t)t.state),
                   (INT)t.range_mm);
         g_last_b5 = (b5_state_t)t.state;
-
-        if (((b5_state_t)t.state == B5_ST_PLANNING) && t.b_found)
-        {
-            tm_printf((UB *)"[b5]  obstacle %d mm wide at %d mm, "
-                            "go %s\n", (INT)t.width_mm,
-                      (INT)t.closest_mm,
-                      (t.side == (uint8_t)B5_SIDE_RIGHT) ? "right" :
-                      (t.side == (uint8_t)B5_SIDE_LEFT) ? "left" : "nowhere");
-        }
     }
 }
 

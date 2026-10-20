@@ -1,0 +1,13 @@
+S5-C04  Beam half-angle B5_ALPHA_DD (calibration)
+Date: 2026-10-20   Tester: n1sh0
+Data: the S5-U09 box width scans (2026-10-20_S5-U09_box_width.txt).
+
+  box     measured extent   true extent at ~247 mm   implied half-angle
+  100 mm  62.4-65.5 deg     22.8-23.2 deg            19.8-21.4 deg
+  230 mm  50.0-51.0 deg     49.8 deg                 0.1-0.6 deg
+
+No single correction fits both: the spread is not a fixed angle for flat faces.
+Decision: B5_ALPHA_DD 75 -> 0. With 0, wide obstacles are measured right and narrow
+ones too wide (the car keeps extra clearance); 75 would make the 230 mm box read about
+25 % too narrow (the car could clip it). NFR-USO-02 (10 %) is met only for wide
+obstacles: a measured limitation, to report.

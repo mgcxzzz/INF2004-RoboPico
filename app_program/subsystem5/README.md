@@ -237,10 +237,10 @@ interrupt hand-over.
 | `B5_PING_PERIOD_MS` | 60 | NFR-USO-06 |
 | `B5_CONFIRM_COUNT` | 3 | Confirm state |
 | `B5_SAMPLES_PER_ANGLE` | 3 | median of three (A6) |
-| `B5_ALPHA_DD` | 75 (7.5°) | beam half-angle; **fit it from the A6 bench data**, do not trust the datasheet |
+| `B5_ALPHA_DD` | 0 | beam-spread correction. Measured (S5-C04, 1° scans): a 230 mm box read its true width uncorrected, a 100 mm box about 3× too wide, because a flat face echoes from wherever it is within the beam (±25–35°). No single correction fits both; 0 never makes an obstacle look narrower than it is |
 | `B5_REFINE_STOP_DD` | 10 (1°) | see below |
-| `B5_SERVO_MIN_US` / `MAX_US` | 500 / 2400 | calibrate on your SG90 so 0 really points straight ahead (MIN = full right, MAX = full left) |
-| `B5_SERVO_SPEED_DD_S` | 600 (60°/s) | how fast the servo turns; unlimited, the SG90 snapped the bracket into the wiring |
+| `B5_SERVO_MIN_US` / `MAX_US` | 500 / 2400 | 0 (1450 µs) faces straight ahead on our car (S5-C01). MIN = full right, MAX = full left |
+| `B5_SERVO_SPEED_DD_S` | 6000 (600°/s, the SG90's own speed) | how fast the servo turns; 600 (60°/s) if the bracket hits the wiring (it did before the cables were re-routed); slower costs about 3 s of scanning |
 | `B5_SERVO_SETTLE_MS` | 40 | rest after each move before the next ping (A8, S5-C02) |
 | `B5_CAR_WIDTH_MM` / `LENGTH_MM` | 150 / 200 | **placeholders: measure the PicoCar** |
 | `B5_MARGIN_MM` | 50 | clearance margin |

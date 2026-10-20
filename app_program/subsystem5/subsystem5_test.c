@@ -55,6 +55,10 @@ EXPORT void subsystem5_test(void)
 	b5_tlm_t	tin, tout;
 	uint8_t		frame[B5_TLM_FRAME_BYTES];
 
+	/* S5-U02 checks the algorithm on a scan recorded with a 7.5 deg beam,
+	   so it uses that beam's correction, not the car's B5_ALPHA_DD. */
+	par.alpha_dd = 75;
+
 	TEST_INIT();
 
 	/* --- pure logic ------------------------------------------------- */

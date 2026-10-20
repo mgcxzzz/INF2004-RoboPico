@@ -37,6 +37,11 @@
 #define B5_TRIG_PULSE_US        (12U)   /* datasheet minimum is 10 us    */
 #define B5_ECHO_WAIT_MS         (50)    /* longest echo (~38 ms) + slack */
 #define B5_ECHO_MAX_US          (23300U) /* beyond this = no target (4 m) */
+#define B5_ECHO_MIN_US          (200U)  /* shorter echo pulses (34 mm) are
+                                         * glitches (the sensor's minimum is
+                                         * about 2 cm), e.g. the trigger pulse
+                                         * coupling onto ECHO in the cable;
+                                         * ignored, the real echo follows */
 #define B5_RANGE_FAR_MM         (4000)  /* value reported for no target  */
 #define B5_SAMPLES_PER_ANGLE    (3U)    /* median-of-three (A6)          */
 #define B5_ECHO_FAIL_LIMIT      (3U)    /* no-response pings before Fault (fits 2 bits) */
@@ -52,13 +57,19 @@
 /* ------------------------------------------------------------------------
  * SG90 servo
  * --------------------------------------------------------------------- */
-#define B5_SERVO_MIN_US         (500U)  /* TUNE: pulse at full right (+900) */
-#define B5_SERVO_MAX_US         (2400U) /* TUNE: pulse at full left  (-900) */
+#define B5_SERVO_MIN_US         (500U)  /* pulse at full right (+900)     */
+#define B5_SERVO_MAX_US         (2400U) /* pulse at full left  (-900); 0 =
+                                         * 1450 us faces straight ahead
+                                         * (S5-C01, checked by eye twice;
+                                         * the scans vary +/-4 deg with the
+                                         * box placement)                */
 #define B5_SERVO_REVERSED       (0)     /* 1 if +900 points left         */
-#define B5_SERVO_SPEED_DD_S     (600U)  /* TUNE: horn speed, 0.1 deg/s:
-                                         * 60 deg/s. Unlimited, the SG90
-                                         * swings ~600 deg/s and snaps the
-                                         * bracket into the wiring.      */
+#define B5_SERVO_SPEED_DD_S     (6000U) /* TUNE: horn speed, 0.1 deg/s:
+                                         * 600 deg/s, about the SG90's own
+                                         * full speed (the original
+                                         * behaviour). Lower it (e.g. 600 =
+                                         * 60 deg/s) if the bracket hits
+                                         * the wiring.                   */
 #define B5_SERVO_STEP_MS        (20U)   /* one small step per PWM period */
 #define B5_SERVO_SETTLE_MS      (40U)   /* TUNE (A8, S5-C02): rest after
                                          * a move, before the next ping  */
@@ -80,7 +91,13 @@
  * hits the casing. Keep END - START a multiple of STEP so the sweep
  * includes both ends and 0 (straight ahead). */
 #define B5_NEAR_MM              (B5_D_STOP_MM + 250) /* near/far split   */
-#define B5_ALPHA_DD             (75)    /* TUNE: beam half-angle, fit on bench */
+#define B5_ALPHA_DD             (0)     /* beam-spread correction, measured
+                                         * (S5-C04): a 230 mm box read its
+                                         * true width uncorrected, a 100 mm
+                                         * box ~3x too wide (a flat face
+                                         * echoes from wherever it is in the
+                                         * beam). 0 never makes an obstacle
+                                         * look narrower than it is.     */
 #define B5_REFINE_STOP_DD       (10)    /* stop bisecting below 1 deg, see README */
 #define B5_REFINE_PINGS         (1U)    /* pings per refinement sample   */
 #define B5_MAX_REFINE_SAMPLES   (12U)   /* bound on Edge Refinement      */
