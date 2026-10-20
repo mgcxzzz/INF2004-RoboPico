@@ -120,12 +120,24 @@ static int        g_frames, g_bad_frames, g_seq_gaps;
 
 ER mc_set_wheel_speeds (int16_t l, int16_t r)
 { g_wheel_l = l; g_wheel_r = r; g_wheel_calls++; return E_OK; }
+/* Record a Motion Control command; never write past the log. */
+static ER
+log_mc (char kind, int32_t value, uint32_t id)
+{
+    if (g_mc_n < (int)(sizeof(g_mc) / sizeof(g_mc[0])))
+    {
+        g_mc[g_mc_n++] = (mc_cmd_t){ kind, value, id };
+    }
+
+    return E_OK;
+}
+
 ER mc_drive_distance (int32_t mm, int16_t v, uint32_t id)
-{ (void)v; g_mc[g_mc_n++] = (mc_cmd_t){ 'D', mm, id }; return E_OK; }
+{ (void)v; return log_mc('D', mm, id); }
 ER mc_turn (int32_t dd, int16_t v, uint32_t id)
-{ (void)v; g_mc[g_mc_n++] = (mc_cmd_t){ 'T', dd, id }; return E_OK; }
+{ (void)v; return log_mc('T', dd, id); }
 ER mc_stop (uint32_t id)
-{ g_mc[g_mc_n++] = (mc_cmd_t){ 'S', 0, id }; return E_OK; }
+{ return log_mc('S', 0, id); }
 
 void line_set_control (bool b)              { g_line_ctl = b; }
 void line_notify_state (nav_state_t s)      { (void)s; }
@@ -471,6 +483,7 @@ test_min_bits (void)
 
     for (i = 0; i < 150; i++)           /* push the 8-bit sequence round */
     {
+        g_mc_n = 0;                     /* keep the command log in range */
         (void)nav_post_command(NAV_CMD_RESUME);
         (void)nav_post_command(NAV_CMD_PAUSE);
         run();
