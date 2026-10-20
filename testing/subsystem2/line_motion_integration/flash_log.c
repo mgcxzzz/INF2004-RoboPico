@@ -37,7 +37,7 @@ static void write_sector(const Rom *r,const uint8_t *bytes) {
     r->flush(); r->boot();
 }
 static bool valid(const BenchLog *l) {
-    return l->magic==BENCH_MAGIC && l->version==BENCH_VERSION && l->count>0 && l->count<=BENCH_ROWS
+    return l->magic==BENCH_MAGIC && l->version==BENCH_VERSION && l->count>0 && l->count<=BENCH_ROWS && l->arm_count<=32
         && l->crc==log_crc((const uint8_t *)l+offsetof(BenchLog,count),sizeof(*l)-offsetof(BenchLog,count));
 }
 bool bench_flash_load(BenchLog *l) {

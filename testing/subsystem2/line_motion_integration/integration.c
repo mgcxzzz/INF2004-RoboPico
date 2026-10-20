@@ -43,12 +43,16 @@ static BenchLog log_data;
 static bool settling,stored,save_ok,used,seen_active;
 static uint32_t trace_at;
 static int16_t distance_mm;
+static BenchArmEvent arm_events[32];
+static uint32_t arm_count;
+static uint8_t start_reject;
 enum { R_NONE,R_GP20,R_GP21,R_DEADLINE,R_TARGET_STALE,R_LOOP_STALE,R_TRAVEL,
-       R_INHIBIT,R_UNSUPPORTED,R_ENCODER,R_WRONG,R_NO_MOTION,R_SERIAL,R_NAV_STOP,R_USB };
+       R_INHIBIT,R_UNSUPPORTED,R_ENCODER,R_WRONG,R_NO_MOTION,R_SERIAL,R_NAV_STOP,R_USB,R_ARM_REPORT };
 static const char * const why[]={"none","GP20 stop","GP21 stop/release","5 s limit",
  "line target older than 50 ms","motion loop late","150 mm test limit",
  "safety inhibit","bounded manoeuvre blocked in line-only test","encoder invalid",
- "encoder wrong direction","no encoder movement","serial stop","coordinator stop","USB connected/disconnected"};
+ "encoder wrong direction","no encoder movement","serial stop","coordinator stop","USB connected/disconnected",
+ "offline arming diagnostic - no accepted run"};
 static uint32_t pins(void) { return REG(SIO_IN_I); }
 static bool pressed(unsigned n) { return (pins()&(1u<<n))==0; }
 static void drive_off(void) { REG(PWM_CC(0))=0; REG(PWM_CC(1))=0; }
@@ -169,8 +173,15 @@ static void trace_row(uint32_t now) {
 static void dump(void) {
     if(active || settling) { tm_putstring((UB *)"Wait until stopped and log saved.\n");return; }
     if(!log_data.count) { tm_putstring((UB *)"No integration run saved yet.\n");return; }
-    tm_printf((UB *)"B23 LINE v3: restored=%u save_ok=%u rows=%u dropped=%u accepted=%u\n",
+    tm_printf((UB *)"B23 LINE v4: restored=%u save_ok=%u rows=%u dropped=%u accepted=%u\n",
         stored,save_ok,log_data.count,log_data.dropped,log_data.accepted);
+    tm_putstring((UB *)"ARM: states 0=idle 1=holding-both 2=release-both 3=wait-tap 4=release-tap 5=countdown; buttons bit0=GP21 bit1=GP20\n");
+    tm_putstring((UB *)"ARM: reject bits 1=used 2=settling 4=active 8=GP20 16=safety 32=nav-not-ready 64=s3-not-idle\n");
+    for(unsigned i=0;i<log_data.arm_count && i<32;++i) {
+        BenchArmEvent *a=&log_data.arm[i];
+        if(i%4==0) (void)tk_dly_tsk(20);
+        tm_printf((UB *)"ARM ms=%u state=%u buttons=%u usb=%u reject=%u\n",a->ms,a->state,a->buttons,a->usb,a->reject);
+    }
     tm_putstring((UB *)"ms,active,rawL,rawR,blackL,blackR,nav,owner,s3,L_mm10,R_mm10,L_speed10,R_speed10,requestL,requestR,targetL,targetR,PWM_L,PWM_R\n");
     uint32_t tx_before=tm_usb_dropped;
     for(unsigned i=0;i<log_data.count;++i) {
@@ -187,9 +198,11 @@ static void dump(void) {
         log_data.invalid[0],log_data.invalid[1],(uint32_t)tm_usb_dropped-tx_before);
 }
 static bool start_run(bool bank) {
-    if(used || settling || active || pressed(STOP) || safety_drive_inhibited() ||
-       nav_get_state()!=NAV_ST_READY || s3_get_state()!=S3_ST_IDLE) return false;
+    start_reject=(used?1:0)|(settling?2:0)|(active?4:0)|(pressed(STOP)?8:0)|
+       (safety_drive_inhibited()?16:0)|(nav_get_state()!=NAV_ST_READY?32:0)|(s3_get_state()!=S3_ST_IDLE?64:0);
+    if(start_reject) return false;
     memset(&log_data,0,sizeof(log_data));
+    log_data.arm_count=arm_count;memcpy(log_data.arm,arm_events,sizeof(arm_events));
     UINT imask;DI(imask);
     drive_off();++generation;
     started=last_command=last_control=sys_time_us();
@@ -286,7 +299,7 @@ static void motion_task(INT stacd,void *exinf) {
     }
 }
 static void info(void) {
-    tm_putstring((UB *)"\nBUDDY 2 + NAV + BUDDY 3 LINE integration v3 | real RTOS, real sensors/encoders\n");
+    tm_putstring((UB *)"\nBUDDY 2 + NAV + BUDDY 3 LINE integration v4 | real RTOS, real sensors/encoders\n");
     tm_putstring((UB *)"DRIVE OFF on boot. First verify raw GP6 L / GP7 R on white and black. Black assumed HIGH.\n");
     tm_putstring((UB *)"IR diagnostics stream while idle. h=help p=saved log s=stop f=USB hold-GP21 test.\n");
     tm_putstring((UB *)"Bank: hold BOTH 3s, release BOTH, then tap/release GP21; 2s countdown. Either button stops.\n");
@@ -296,21 +309,36 @@ static void info(void) {
 }
 static void console_task(INT stacd,void *exinf) {
     (void)stacd;(void)exinf;
-    BootArm boot={0}; OfflineArm arm={0};
-    bool prior_usb=false,raw=false,button=false;
-    uint32_t changed=0,last_print=0,seq=0;
+    BenchArm arm={0};
+    bool prior_usb=false,report_saved=false,ever_button=false;
+    uint8_t raw=0,buttons=0,previous_buttons=255,previous_state=255,previous_reject=255;
+    uint32_t changed=0,last_event=0,last_print=0,seq=0;
     for(;;) {
         uint32_t now=sys_time_us();bool usb=tm_usb_link_state>=2;
         bool hold=pressed(HOLD),stop=pressed(STOP);
-        if(raw!=hold) { raw=hold;changed=now; }
-        if(now-changed>=20000) button=raw;
-        if(usb && !prior_usb) { arm.state=OFF_NONE;info();if(log_data.count) dump(); }
+        uint8_t input=(hold?1:0)|(stop?2:0);
+        if(raw!=input) { raw=input;changed=now; }
+        if(now-changed>=20000) buttons=raw;
+        if(usb && !prior_usb) { arm.state=ARM_IDLE;info();if(log_data.count) dump(); }
         prior_usb=usb;
-        if(boot_arm_step(&boot,now,usb,used || active || settling,hold,stop)) arm.state=OFF_BASE_RELEASE;
-        if(offline_step(&arm,now,usb,button,stop)) (void)start_run(true);
+        bool launch=bench_arm_step(&arm,now,usb,used || active || settling,buttons&1,buttons&2);
+        if(!usb && !used && (buttons!=previous_buttons || arm.state!=previous_state || start_reject!=previous_reject)) {
+            last_event=now;ever_button|=buttons!=0;
+            if(arm_count<32) arm_events[arm_count++]=(BenchArmEvent){now/1000,arm.state,buttons,(uint8_t)tm_usb_link_state,start_reject};
+            previous_buttons=buttons;previous_state=arm.state;previous_reject=start_reject;
+        }
+        if(launch) (void)start_run(true);
+        /* One diagnostic flash write per boot, only idle and fully released.
+           A successful later run replaces it with the full motion log. */
+        if(!usb && !used && !active && !settling && !buttons && !input && !report_saved &&
+           arm.state!=ARM_COUNTDOWN && now-last_event>=5000000u && (ever_button || now>=30000000u)) {
+            memset(&log_data,0,sizeof(log_data));log_data.reason=R_ARM_REPORT;
+            log_data.arm_count=arm_count;memcpy(log_data.arm,arm_events,sizeof(arm_events));
+            started=now;trace_row(now);drive_off();save_ok=bench_flash_save(&log_data);report_saved=true;
+        }
         int ch=rx_poll();
         if(ch=='p') dump(); else if(ch=='h') info();
-        else if(ch=='s') { arm.state=OFF_NONE;stop_now(R_SERIAL); }
+        else if(ch=='s') { arm.state=ARM_IDLE;stop_now(R_SERIAL); }
         else if(ch=='f' && usb && hold && !stop) {
             if(!start_run(false)) tm_putstring((UB *)"Start rejected: one run/boot; wait Ready/Idle; check safety.\n");
         }

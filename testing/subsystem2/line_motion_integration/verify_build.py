@@ -26,7 +26,7 @@ for path in ["system/nav_coordinator.c","subsystem3/task_line.c","subsystem3/s3_
  assert norm(original)==norm((R/"build/app_program"/path).read_bytes()),path
 for name in ["integration.c","integration.h","logic.h","flash_log.c"]:
  assert norm((R/name).read_bytes())==norm((R/"build/app_program/integration"/name).read_bytes()),name
-uf2=R/"firmware/buddy23_line_motion_v3.uf2"
+uf2=R/"firmware/buddy23_line_motion_v4.uf2"
 data=uf2.read_bytes()
 for i in range(0,len(data),512):
  a,b,flags,address,n,block,total,family=struct.unpack_from("<8I",data,i)

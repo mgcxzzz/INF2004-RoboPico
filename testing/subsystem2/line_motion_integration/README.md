@@ -1,8 +1,42 @@
-# Buddy 2 + Navigation Coordinator + Buddy 3: isolated line-motion test v3
+# Buddy 2 + Navigation Coordinator + Buddy 3: isolated line-motion test v4
 
 This folder is separate from `dual_wheel_bench`. Flash
-`firmware/buddy23_line_motion_v3.uf2` for this experiment; flash the V7 dual
+`firmware/buddy23_line_motion_v4.uf2` for this experiment; flash the V7 dual
 bench UF2 to return to the turning experiment. Only one program runs at a time.
+
+## V4: retryable offline arming and saved diagnostics
+
+V3 passed USB idle streaming, GP21 release stop, GP20 stop, left steering and
+right steering on raised wheels. The offline sequence did not start and p
+restored the previous GP20 test: no new saved run. Exact physical cause unknown.
+
+V4 replaces the split one-shot arming helpers with one retryable state machine.
+Both GP20 and GP21 are debounced together for 20 ms. Hold both 3 seconds, release
+both fully, wait 1 second, then press GP21 for half a second and RELEASE it.
+Two seconds after release, one run is requested. Either button cancels countdown;
+a cancelled/rejected attempt can be armed again until a run is actually accepted.
+Computer USB blocks offline arming. One accepted run per boot still applies.
+Do the first V4 offline retry with wheels raised, power bank ONLY.
+
+If nothing starts, release both, wait 10 seconds, then switch power sources
+(bank off before computer USB on), open PuTTY 115200/flow None and press p.
+V4 saves up to 32 button/state events after 5 seconds idle following an attempt,
+or after 30 seconds without any observed button input. At most one diagnostic
+flash write per boot; a subsequent successful run replaces it with the full log.
+A failed diagnostic flash write still requires hardware investigation.
+No overlapping power sources. No need to reflash to retrieve.
+
+ARM states: 0 idle, 1 holding both, 2 waiting both released, 3 waiting separate
+tap, 4 waiting tap released, 5 countdown. Buttons bit0=GP21, bit1=GP20.
+Start rejection bits: 1 used, 2 settling, 4 active, 8 GP20 held, 16 safety
+inhibit, 32 nav not Ready, 64 S3 not Idle. usb is raw console link state
+(0/1 not mounted, 2/3 mounted). Saved report has reason "offline arming diagnostic
+- no accepted run" and one motor-off row. Its timestamps are since boot.
+
+Flash format is now version 2; old V1-V3 integration records are rejected.
+New diagnostics replace the previous integration record in the reserved sector.
+Steering/motor control, independent cutoff, no autostart, speed/25% PWM caps,
+150 mm / 5 s limits and original upstream S3/nav are unchanged.
 
 ## V3 stability check � first, motors OFF
 
