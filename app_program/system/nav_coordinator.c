@@ -22,9 +22,10 @@
  * Minimum-bit data (Tribunal 1):
  *  - the coordinator's records (manoeuvre steps, context, inbox messages)
  *    are bit-fields sized to each value. Only this task writes them.
- *  - state and owner, which other tasks read through nav_get_state() and
- *    nav_get_owner(), share ONE byte (3 + 3 bits) written with a single
- *    store by this task only, so a reader always sees a matching pair.
+ *  - state, owner and the slow flag, which other tasks read through
+ *    nav_get_state() and nav_get_owner(), share ONE byte (3 + 3 + 1 bits)
+ *    written with a single store by this task only, under a mutex that
+ *    Buddy 3's direct steering path (nav_line_drive) also takes.
  *  - the dropped-message count is incremented by OTHER tasks (a poster
  *    whose message did not fit). A plain `count++` from several tasks is
  *    a read-modify-write race, so the count is a kernel semaphore:
@@ -48,6 +49,7 @@
 #define MODE_STATE_SHIFT    (0U)        /* g_mode: bits 0..2 state */
 #define MODE_OWNER_SHIFT    (3U)        /*         bits 3..5 owner */
 #define MODE_FIELD_MASK     (0x7U)
+#define MODE_SLOW           (1U << 6)   /*         bit 6 slow      */
 
 typedef enum
 {
@@ -89,7 +91,6 @@ typedef struct
 /* Everything else only this task reads and writes. */
 typedef struct
 {
-    uint32_t b_slow        : 1;     /* Buddy 5 asked for reduced speed */
     uint32_t b_cleared     : 1;     /* Safety Supervisor cleared       */
     uint32_t search_step   : 3;     /* line-search progress, 0 = none  */
     uint32_t next_id       : 15;    /* last command id, 1..0x7FFF      */
@@ -104,6 +105,10 @@ _Static_assert(MAX_STEPS <= 7U, "step counters are 3 bits");
 /* State (bits 0..2) and owner (bits 3..5). Written ONLY by this task, as
  * one byte store; read by any task. */
 static volatile uint8_t     g_mode = 0U;    /* Ready, no owner          */
+static ID                   g_line_mtx = 0; /* orders g_mode changes
+                                             * against nav_line_drive() */
+static volatile uint16_t    g_line_cmds = 0U; /* nav_line_drive() calls,
+                                             * written under g_line_mtx */
 static nav_ctx_t            g_ctx;
 static manoeuvre_t          g_man;
 static ID                   g_drop_sem = 0; /* dropped-message counter  */
@@ -140,14 +145,89 @@ nav_get_owner (void)
     return (nav_owner_t)((g_mode >> MODE_OWNER_SHIFT) & MODE_FIELD_MASK);
 }
 
-/* Coordinator task only: update state and owner with one byte store. */
+static bool
+slow_requested (void)
+{
+    return ((g_mode & MODE_SLOW) != 0U);
+}
+
+/* Coordinator task only: update state, owner and the slow flag with one
+ * byte store, under g_line_mtx. Holding the mutex here is what makes the
+ * direct steering path safe: nav_line_drive() checks the owner and calls
+ * Motion Control while holding the same mutex, so a wheel-speed target
+ * either lands BEFORE an owner change (and the coordinator's next command
+ * replaces it) or sees the new owner and is dropped. It can never land
+ * after the coordinator's stop or turn. */
+static void
+write_mode (nav_state_t state, nav_owner_t owner, bool b_slow)
+{
+    uint8_t m = (uint8_t)((((uint32_t)state & MODE_FIELD_MASK) <<
+                           MODE_STATE_SHIFT) |
+                          (((uint32_t)owner & MODE_FIELD_MASK) <<
+                           MODE_OWNER_SHIFT) |
+                          (b_slow ? MODE_SLOW : 0U));
+
+    if (g_line_mtx > 0)
+    {
+        (void)tk_loc_mtx(g_line_mtx, TMO_FEVR);
+        g_mode = m;
+        (void)tk_unl_mtx(g_line_mtx);
+    }
+    else
+    {
+        g_mode = m;
+    }
+}
+
 static void
 set_mode (nav_state_t state, nav_owner_t owner)
 {
-    g_mode = (uint8_t)((((uint32_t)state & MODE_FIELD_MASK) <<
-                        MODE_STATE_SHIFT) |
-                       (((uint32_t)owner & MODE_FIELD_MASK) <<
-                        MODE_OWNER_SHIFT));
+    write_mode(state, owner, slow_requested());
+}
+
+static void
+set_slow (bool b_slow)
+{
+    write_mode(nav_get_state(), nav_get_owner(), b_slow);
+}
+
+/**
+ * @brief  Line and Barcode (Buddy 3) steers DIRECTLY while it holds line
+ *         control: the wheel speeds go straight to Motion Control instead
+ *         of through the inbox (Week 6 feedback: no queueing latency or
+ *         jitter in the steering loop). Task context.
+ * @return E_OK if forwarded; E_OBJ if line control is not granted now
+ *         (the speeds are dropped, as a stale proposal must be).
+ */
+ER
+nav_line_drive (int16_t left_mm_s, int16_t right_mm_s)
+{
+    ER      er = E_OBJ;
+    int32_t left  = left_mm_s;
+    int32_t right = right_mm_s;
+
+    if (g_line_mtx <= 0)
+    {
+        return E_NOEXS;
+    }
+
+    (void)tk_loc_mtx(g_line_mtx, TMO_FEVR);
+
+    if ((nav_get_state() == NAV_ST_RUNNING) &&
+        (nav_get_owner() == NAV_OWNER_LINE))
+    {
+        if (slow_requested())
+        {
+            left  = (left  * NAV_SLOW_PERCENT) / 100;
+            right = (right * NAV_SLOW_PERCENT) / 100;
+        }
+
+        er = mc_set_wheel_speeds((int16_t)left, (int16_t)right);
+        g_line_cmds = (uint16_t)(g_line_cmds + 1U);
+    }
+
+    (void)tk_unl_mtx(g_line_mtx);
+    return er;
 }
 
 /* Count one dropped message. Safe from any task: the kernel does the
@@ -252,9 +332,9 @@ publish (void)
     t.seq           = (uint8_t)g_ctx.tlm_seq;
     t.state         = (uint8_t)nav_get_state();
     t.owner         = (uint8_t)nav_get_owner();
-    t.b_slow        = (g_ctx.b_slow != 0U);
+    t.b_slow        = slow_requested();
     t.search_step   = (uint8_t)g_ctx.search_step;
-    t.commands_sent = (uint16_t)g_ctx.commands_sent;
+    t.commands_sent = (uint16_t)(g_ctx.commands_sent + g_line_cmds);
     t.dropped       = 0U;
 
     if ((g_drop_sem > 0) && (tk_ref_sem(g_drop_sem, &rsem) == E_OK))
@@ -441,7 +521,7 @@ stop_everything (void)
     set_owner(NAV_OWNER_NONE);
     start_manoeuvre(PURPOSE_HALT, &halt, 1U);
     (void)b5_post_event(B5_EV_MISSION_STOP);
-    g_ctx.b_slow = 0U;
+    set_slow(false);
 }
 
 static void
@@ -585,7 +665,7 @@ on_line_speeds (int32_t left, int32_t right)
         return;                         /* proposal not authorised now */
     }
 
-    if (g_ctx.b_slow != 0U)
+    if (slow_requested())
     {
         left  = (left  * NAV_SLOW_PERCENT) / 100;
         right = (right * NAV_SLOW_PERCENT) / 100;
@@ -850,7 +930,7 @@ dispatch (nav_msg_t const * p_m)
         case NAV_MSG_LINE_SPEEDS: on_line_speeds(p_m->a, p_m->b);          break;
         case NAV_MSG_LINE_EVENT:  on_line_event((nav_line_event_t)p_m->a); break;
         case NAV_MSG_BARCODE:     on_barcode((nav_barcode_t)p_m->a);       break;
-        case NAV_MSG_B5_SLOW:     g_ctx.b_slow = (p_m->a != 0) ? 1U : 0U;  break;
+        case NAV_MSG_B5_SLOW:     set_slow(p_m->a != 0);                   break;
         case NAV_MSG_B5_STOP:     on_b5_stop();                            break;
         case NAV_MSG_B5_PLAN:     on_b5_plan(p_m->a, p_m->b, p_m->c);      break;
         case NAV_MSG_B5_REJOIN:   on_b5_rejoin(p_m->a, p_m->b, p_m->c);    break;
@@ -900,6 +980,17 @@ nav_init (void)
 {
     T_CMBF cmbf = { 0 };
     T_CSEM csem = { 0 };
+    T_CMTX cmtx = { 0 };
+
+    /* Orders state/owner changes against Buddy 3's direct steering;
+     * priority inheritance, since the line task runs lower than this. */
+    cmtx.mtxatr = TA_INHERIT;
+    g_line_mtx  = tk_cre_mtx(&cmtx);
+
+    if (g_line_mtx < E_OK)
+    {
+        return g_line_mtx;
+    }
 
     /* Dropped-message counter: a semaphore used only as an atomic,
      * saturating counter (0..255). Nobody ever waits on it. */

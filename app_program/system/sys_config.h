@@ -14,12 +14,19 @@
 #ifndef SYS_CONFIG_H
 #define SYS_CONFIG_H
 
-/* 1 = simulate Motion Control (S2) and Line and Barcode (S3): a virtual
- *     car follows a line, so the real Buddy 5 sensor and servo, the
- *     Navigation Coordinator and the Safety Supervisor can run together.
- *     Set to 0 once S2 and S3 provide mc_*(), line_set_control(),
- *     b5_motion_get_estimate() and b5_line_detected(). */
+/* 1 = simulate Motion Control (S2): a virtual car drives, so the real
+ *     Buddy 5 sensor and servo, the Navigation Coordinator and the Safety
+ *     Supervisor can run together. Set to 0 once S2 provides mc_*() and
+ *     b5_motion_get_estimate(). */
 #define SYS_SIM_CAR             (1)
+
+/* 1 = simulate Line and Barcode (S3) too: the virtual car follows a
+ *     virtual line, and the real Buddy 3 task is NOT started. Use it for
+ *     the Buddy 5 bench demo with no line under the car.
+ * 0 = the real Buddy 3 task runs on the real IR sensors (default).
+ *     With SYS_SIM_CAR = 1 the wheels do not turn, so hold the car over
+ *     the line and pass barcodes under the side sensor by hand. */
+#define SYS_SIM_LINE            (0)
 
 /* 1 = print the Navigation Coordinator, Safety Supervisor and Buddy 5
  *     status on the console. Set to 0 once WiFi and MQTT (S1) provides

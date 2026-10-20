@@ -2,14 +2,17 @@
  * @file    sys_bench.c
  * @brief   Bench helpers until every subsystem is written (sys_config.h).
  *
- * SYS_SIM_CAR         simulated Motion Control (S2) and Line and Barcode
- *                     (S3): each motion command "drives" a virtual car,
- *                     integrating x (mm right of the line), distance and
- *                     heading every 20 ms, and answers the coordinator.
- *                     The line follower proposes 150 mm/s while it has line
- *                     control and sees the line within 15 mm of it.
- * SYS_CONSOLE_STATUS  prints coordinator, safety and Buddy 5 status
- *                     (stands in for S1's telemetry).
+ * SYS_SIM_CAR         simulated Motion Control (S2): each motion command
+ *                     "drives" a virtual car, integrating x (mm right of
+ *                     the line), distance and heading every 20 ms, and
+ *                     answers the coordinator. A wheel-speed target older
+ *                     than NAV_LINE_STALE_MS stops the car, as the real
+ *                     Motion Control must.
+ * SYS_SIM_LINE        simulated Line and Barcode (S3) instead of the real
+ *                     Buddy 3 task: proposes 150 mm/s while it has line
+ *                     control, and sees the line within 15 mm of it.
+ * SYS_CONSOLE_STATUS  prints coordinator, safety, Buddy 3 and Buddy 5
+ *                     status (stands in for S1's telemetry).
  * SYS_BENCH_BUTTONS   Robo Pico buttons: GP20 emergency stop, GP21 reset
  *                     and start.
  *
@@ -25,6 +28,8 @@
 #include <tm/tmonitor.h>
 #include <bsp/libbsp.h>
 
+#include "../subsystem3/s3_iface.h"
+#include "../subsystem3/s3_barcode.h"
 #include "../subsystem5/b5_iface.h"
 #include "../subsystem5/obstacle_profile.h"
 #include "nav_iface.h"
@@ -62,7 +67,10 @@ static int32_t    g_speed = 0;
 static int32_t    g_x_mm1000 = 0;       /* lateral offset, um          */
 static int32_t    g_dist_mm1000 = 0;
 static int32_t    g_heading_dd = 0;
+static uint32_t   g_wheels_ms = 0U;     /* when the last target came  */
+#if SYS_SIM_LINE
 static bool       g_b_line_ctl = false;
+#endif
 
 #endif /* SYS_SIM_CAR */
 
@@ -112,10 +120,20 @@ start (sim_kind_t kind, int32_t amount, int32_t speed, uint32_t id)
     unlock();
 }
 
+static uint32_t
+now_ms (void)
+{
+    SYSTIM t;
+
+    (void)tk_get_otm(&t);
+    return (uint32_t)t.lo;
+}
+
 ER
 mc_set_wheel_speeds (int16_t left_mm_s, int16_t right_mm_s)
 {
     start(SIM_WHEELS, 0, (left_mm_s + right_mm_s) / 2, 0U);
+    g_wheels_ms = now_ms();
     return E_OK;
 }
 
@@ -154,6 +172,7 @@ b5_motion_get_estimate (b5_motion_est_t * p_est)
     return true;
 }
 
+#if SYS_SIM_LINE
 void
 line_set_control (bool b_granted)
 {
@@ -171,6 +190,7 @@ b5_line_detected (void)
 
     return ((x > -SIM_ON_LINE_MM) && (x < SIM_ON_LINE_MM));
 }
+#endif /* SYS_SIM_LINE */
 
 /* Simulated Motion Control obeys the inhibit at once. */
 void
@@ -193,6 +213,14 @@ sim_step (void)
     int32_t step;
 
     lock();
+
+    /* Stale-target timeout: wheel speeds not renewed -> stop. */
+    if ((g_kind == SIM_WHEELS) &&
+        ((now_ms() - g_wheels_ms) > NAV_LINE_STALE_MS))
+    {
+        g_kind  = SIM_IDLE;
+        g_speed = 0;
+    }
 
     switch (g_kind)
     {
@@ -290,6 +318,45 @@ nav_telemetry_publish (uint8_t const * p_frame, uint32_t len)
                   t.b_slow ? " (slow)" : "");
         g_last_nav   = (nav_state_t)t.state;
         g_last_owner = (nav_owner_t)t.owner;
+    }
+}
+
+/* Buddy 3's frame (schema in sys_tlm.h, source 3). */
+void
+line_telemetry_publish (uint8_t const * p_frame, uint32_t len)
+{
+    static uint8_t last_state = 0xFFU;
+    static uint8_t last_ok = 0U;
+    static uint8_t last_bad = 0U;
+    static uint8_t last_back = 0U;
+    s3_tlm_t       t;
+
+    if (!s3_tlm_unpack(p_frame, len, &t))
+    {
+        tm_printf((UB *)"[line] bad telemetry frame\n");
+        return;
+    }
+
+    if (t.state != last_state)
+    {
+        tm_printf((UB *)"[line] %s  (sensors L%u R%u B%u)\n",
+                  (UB *)s3_state_name((s3_state_t)t.state),
+                  (UINT)(t.sensors & 1U), (UINT)((t.sensors >> 1) & 1U),
+                  (UINT)((t.sensors >> 2) & 1U));
+        last_state = t.state;
+    }
+
+    if ((t.barcodes_ok != last_ok) || (t.bad_reads != last_bad) ||
+        (t.backwards != last_back))
+    {
+        tm_printf((UB *)"[line] barcode '%c': result %u, command %u "
+                        "(ok %u, bad %u, backwards %u)\n",
+                  (INT)s3_c39_at(t.last_char), (UINT)t.last_result,
+                  (UINT)t.last_cmd, (UINT)t.barcodes_ok, (UINT)t.bad_reads,
+                  (UINT)t.backwards);
+        last_ok   = t.barcodes_ok;
+        last_bad  = t.bad_reads;
+        last_back = t.backwards;
     }
 }
 
@@ -462,15 +529,18 @@ bench_task (INT stacd, void * p_exinf)
             (void)nav_post_command(NAV_CMD_START);
         }
 
-        /* Line follower: propose speeds every 100 ms while it has control,
-         * and straighten up along the line when it gets control back. */
-        if (g_b_line_ctl && ((tick % 5U) == 0U))
+#if SYS_SIM_LINE
+        /* Line follower: propose speeds every tick while it has control
+         * (faster than the stale-target timeout), and straighten up along
+         * the line when it gets control back. */
+        if (g_b_line_ctl)
         {
             lock();
             g_heading_dd = 0;
             unlock();
-            (void)nav_post_line_speeds(SIM_LINE_MM_S, SIM_LINE_MM_S);
+            (void)nav_line_drive(SIM_LINE_MM_S, SIM_LINE_MM_S);
         }
+#endif
 #endif
 
 #if SYS_BENCH_BUTTONS

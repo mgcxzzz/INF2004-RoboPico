@@ -31,6 +31,7 @@ typedef void (*FP)(INT, void *);
 
 #define E_OK        (0)
 #define E_PAR       (-17)
+#define E_OBJ       (-41)
 #define E_NOEXS     (-42)
 #define E_QOVR      (-43)
 #define E_TMOUT     (-50)
@@ -43,6 +44,7 @@ typedef void (*FP)(INT, void *);
 #define TA_MFIFO    0x00000000U
 #define TA_USERBUF  0x00000020U
 #define TA_WMUL     0x00000008U
+#define TA_INHERIT  0x00000002U
 #define TA_WSGL     0x00000000U
 #define TWF_ORW     0x00000001U
 #define TWF_CLR     0x00000010U
@@ -54,6 +56,7 @@ typedef struct { void *exinf; ATR flgatr; UINT iflgptn; } T_CFLG;
 typedef struct { void *exinf; ATR mbfatr; SZ bufsz; INT maxmsz; void *bufptr; } T_CMBF;
 typedef struct { void *exinf; ATR sematr; INT isemcnt; INT maxsem; } T_CSEM;
 typedef struct { void *exinf; ID wtsk; INT semcnt; } T_RSEM;
+typedef struct { void *exinf; ATR mtxatr; PRI ceilpri; } T_CMTX;
 
 ID  tk_cre_tsk(T_CTSK const *p);
 ER  tk_sta_tsk(ID id, INT stacd);
@@ -68,5 +71,9 @@ ER  tk_wai_flg(ID id, UINT ptn, UINT mode, UINT *p_ptn, TMO tmo);
 ID  tk_cre_sem(T_CSEM const *p);
 ER  tk_sig_sem(ID id, INT cnt);
 ER  tk_ref_sem(ID id, T_RSEM *p);
+ID  tk_cre_mtx(T_CMTX const *p);
+ER  tk_loc_mtx(ID id, TMO tmo);
+ER  tk_unl_mtx(ID id);
+ER  tk_dly_tsk(TMO ms);
 
 #endif

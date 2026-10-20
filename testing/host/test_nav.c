@@ -61,6 +61,14 @@ tk_sig_sem (ID id, INT cnt)
 ER tk_ref_sem (ID id, T_RSEM * p)
 { (void)id; p->semcnt = g_sem_cnt; p->wtsk = 0; return E_OK; }
 
+/* Mutex: one task in the host test, so only check it is used in pairs. */
+static int g_mtx_depth, g_mtx_errors;
+ID tk_cre_mtx (T_CMTX const * p) { (void)p; return 5; }
+ER tk_loc_mtx (ID id, TMO t)
+{ (void)id; (void)t; if (g_mtx_depth++ != 0) { g_mtx_errors++; } return E_OK; }
+ER tk_unl_mtx (ID id)
+{ (void)id; if (--g_mtx_depth != 0) { g_mtx_errors++; } return E_OK; }
+
 ER
 tk_snd_mbf (ID id, void const * msg, INT size, TMO tmo)
 {
@@ -411,6 +419,46 @@ test_states (void)
 }
 
 static void
+test_line_drive (void)
+{
+    int calls;
+
+    printf("Buddy 3 direct steering: only while line control is granted\n");
+    (void)nav_post_command(NAV_CMD_RESET);
+    run();
+    calls = g_wheel_calls;
+    CHECK(nav_line_drive(150, 150) == E_OBJ, "refused when not running");
+    CHECK(g_wheel_calls == calls, "nothing reached Motion Control");
+
+    start_running();
+    CHECK(nav_line_drive(120, 180) == E_OK, "forwarded while line owns");
+    CHECK((g_wheel_l == 120) && (g_wheel_r == 180),
+          "speeds reach Motion Control directly (%d, %d)", g_wheel_l,
+          g_wheel_r);
+
+    b5_nav_request_slow(true);
+    run();
+    (void)nav_line_drive(160, 160);
+    CHECK(g_wheel_l == 80, "slow request applied on the direct path (%d)",
+          g_wheel_l);
+    b5_nav_request_slow(false);
+    run();
+
+    b5_nav_request_stop();              /* Buddy 5 takes over */
+    run();
+    calls = g_wheel_calls;
+    CHECK(nav_line_drive(150, 150) == E_OBJ, "refused while obstacle owns");
+    CHECK(g_wheel_calls == calls, "stale proposal never reaches Motion Control");
+    (void)reply_last(NAV_MOTION_DONE);
+    (void)take_event(B5_EV_STOP_ACCEPTED);
+    g_b5_state = B5_ST_PLANNING;
+    b5_nav_release_motion();
+    run();
+    CHECK(nav_line_drive(150, 150) == E_OK, "allowed again after release");
+    CHECK(g_mtx_errors == 0, "mode lock always taken and released in pairs");
+}
+
+static void
 test_min_bits (void)
 {
     int      i;
@@ -510,6 +558,7 @@ main (void)
     test_barcode();
     test_line_search();
     test_states();
+    test_line_drive();
     test_min_bits();
 
     printf("\n%d passed, %d failed\n", g_pass, g_fail);

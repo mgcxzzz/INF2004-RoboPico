@@ -60,6 +60,16 @@ a lower one:
 | 3 | **Line search** | the line is lost during normal following | the line is found again |
 | 4 | **Line following** | default while Running | — |
 
+**Line following steers directly** (Week 6 feedback: no inbox in the
+steering loop). While the line owns motion, S3 calls `nav_line_drive()`
+every 10 ms and the speeds go straight to Motion Control. That call and
+every change of state or owner take the same mutex (`TA_INHERIT`), so a
+proposal either arrives before an owner change (and the coordinator's
+next command replaces it) or sees the new owner and is dropped; it can
+never land after the coordinator's own stop or turn. Motion Control stops
+if no wheel-speed target arrives for `NAV_LINE_STALE_MS` = 50 ms
+(stale-target timeout). The queued `nav_post_line_speeds()` still works.
+
 While another behaviour owns motion, S3's wheel speeds are not forwarded.
 A barcode that arrives while S5 is handling an obstacle is dropped, so
 there is still one event per barcode (FR-LINE-05).
@@ -162,8 +172,9 @@ degree. **Positive angles are to the right.**
 - Reset: call `safety_request_reset()` **and**
   `nav_post_command(NAV_CMD_RESET)`.
 - Write `nav_telemetry_publish(frame, len)`,
-  `safety_telemetry_publish(frame, len)` and
-  `b5_telemetry_publish(frame, len)`. All three hand over a packed binary
+  `safety_telemetry_publish(frame, len)`,
+  `line_telemetry_publish(frame, len)` and
+  `b5_telemetry_publish(frame, len)`. All four hand over a packed binary
   frame in the **team schema** [`sys_tlm.h`](sys_tlm.h) (summary in
   section 6): a 3-byte common header, then the payload. Copy the bytes
   into the telemetry queue that the MQTT code reads (TEAM.md section 3,
@@ -185,7 +196,12 @@ degree. **Positive angles are to the right.**
   - `mc_inhibit(bool)`: **true** = motor outputs to zero at once, answer
     the current command with `NAV_MOTION_CANCELLED`, refuse new commands;
     **false** = accept commands again;
-  - `b5_motion_get_estimate()` for S5 (see `../subsystem5/README.md`).
+  - `b5_motion_get_estimate()` for S5 (see `../subsystem5/README.md`)
+    and `s3_motion_get_distance()` for S3 (the same wrapping `int16_t`
+    mm distance; finer than 1 mm helps the half-size barcode print).
+- **Stale-target timeout:** if no `mc_set_wheel_speeds()` arrives for
+  `NAV_LINE_STALE_MS` (50 ms), stop (statechart 6.2 "stale speed
+  targets"). S3 sends one every 10 ms while it steers.
 - Call `nav_post_motion_result(id, DONE / CANCELLED / FAILED)` when each
   command with an id finishes (FR-MOT-04). A new command replaces the
   current one; answer the replaced one with `CANCELLED`.
@@ -196,15 +212,15 @@ degree. **Positive angles are to the right.**
 
 ### S3 — Line and Barcode
 
-- Call `nav_post_line_speeds(left, right)` every control cycle.
-- Call `nav_post_line_event(NAV_LINE_LOST / FOUND / JUNCTION)`.
-- Call `nav_post_barcode(NAV_BARCODE_LEFT / RIGHT / STRAIGHT / UTURN)`
-  once per barcode, **at the moment the turn should start**.
-- Write `line_set_control(bool)`: only propose speeds while it is true.
-- Write `b5_line_detected()` for S5.
-- A broken sensor: `safety_report_fault(SAFETY_SRC_LINE, code, true)`.
+Done (`../subsystem3/`, see its README): steers with `nav_line_drive()`
+every 10 ms while granted, posts LOST / FOUND / JUNCTION and one barcode
+event per barcode, provides `line_set_control()`, `line_notify_state()`
+and `b5_line_detected()`, reports a stuck sensor as critical and sets
+`SYS_FAULT_LINE_SENSOR`. Barcode commands follow the Project Write-up
+(A left, B right, C straight, D U-turn). Still to agree: the turn point
+(`S3_BC_TURN_DELAY_MM`).
 
-Once S2 and S3 are in, set `SYS_SIM_CAR` to 0.
+Once S2 is in, set `SYS_SIM_CAR` to 0.
 
 ### S4 — IMU Terrain
 
@@ -241,8 +257,9 @@ Safe Stop.
 
 | Switch | When 1 | Set to 0 when |
 |---|---|---|
-| `SYS_SIM_CAR` | Simulates S2 and S3: a virtual car follows a line at 150 mm/s | S2 and S3 provide `mc_*()`, `line_set_control()`, `b5_motion_get_estimate()`, `b5_line_detected()` |
-| `SYS_CONSOLE_STATUS` | Prints coordinator, supervisor and S5 status on the console | S1 provides the `*_telemetry_publish()` functions |
+| `SYS_SIM_CAR` | Simulates S2: a virtual car drives (and stops on a stale wheel-speed target) | S2 provides `mc_*()`, `b5_motion_get_estimate()`, `s3_motion_get_distance()` |
+| `SYS_SIM_LINE` (0 by default) | Simulates S3 instead of running the real Buddy 3 task: the virtual car follows a virtual line. Use it for the Buddy 5 bench demo with no line under the car | — (keep 0 on the car) |
+| `SYS_CONSOLE_STATUS` | Prints coordinator, supervisor, S3 and S5 status on the console | S1 provides the `*_telemetry_publish()` functions |
 | `SYS_BENCH_BUTTONS` | Robo Pico buttons: **GP20** = emergency stop, **GP21** = reset and start | the supervisor PC is connected over MQTT |
 | `SYS_SIM_AUTOSTART_MS` | Starts a run by itself this long after power-up (0 = wait for GP21) | — |
 
@@ -349,7 +366,8 @@ length) is rejected, not decoded.
 | 6 Navigation Coordinator | 9 | state, owner, slow, search step, dropped (sat. 255), commands sent (16-bit) |
 | 7 Safety Supervisor | 15 | state, inhibited, fault and warning source and code, 4 event counters, last and worst stop time, **shared fault mask** |
 | 5 Obstacle Scan (Buddy 5) | 19 | state, fault, side, retries, servo angle (signed), ranges, confidence, width, shift, ping counters |
-| 1–4 | — | to be added by Buddies 1–4 in the same file |
+| 3 Line and Barcode (Buddy 3) | 15 | state, sensors, grant, side, last character / result / command, counters for good, bad and backwards reads, junctions, line lost, lost edges |
+| 1, 2, 4 | — | to be added by Buddies 1, 2 and 4 in the same file |
 
 **Effect** (default build): static RAM of these two modules went from
 555 to 278 bytes. The inbox alone went from 320 to 192 bytes. Total
@@ -411,8 +429,10 @@ make -C testing/host
 
 | Test | Checks | Result |
 |---|---|---|
-| `test_nav` | start and line following, a full bypass, late results ignored, barcode turns, line search, pause/resume/reset, e-stop latching, S5 fault, motion timeout, inhibit not treated as a motion fault; minimum bits: 8-byte inbox message, clamped step values, ids above 15 bits ignored, dropped count saturating at 255, every telemetry frame decoded, header sequence never skips (incl. across its wrap) | 63 passed |
+| `test_nav` | start and line following, a full bypass, late results ignored, barcode turns, line search, pause/resume/reset, e-stop latching, S5 fault, motion timeout, inhibit not treated as a motion fault; S3's direct steering only while granted (slow applied, refused while S5 owns motion, lock always paired); minimum bits: 8-byte inbox message, clamped step values, ids above 15 bits ignored, dropped count saturating at 255, every telemetry frame decoded, header sequence never skips (incl. across its wrap) | 72 passed |
 | `test_safety` | e-stop and timing, reset order, slow stop flagged, e-stop during a fault, warnings, silent task caught only while Running; minimum bits: stop time saturating at 1023 ms, 8-bit counters wrapping, fault mask in the frame, every telemetry frame decoded, header sequence never skips | 36 passed |
+| `test_s3` | Buddy 3 logic: Code 39 incl. the course's real barcodes, the distance-based reader, line logic, telemetry frame | 58 passed |
+| `test_s3_task` | Buddy 3 statechart on a simulated track | 55 passed |
 | `test_b5_pack` | minimum-bit packing: record sizes, clamping, sign extension, 16-bit wrap, echo word, telemetry frame with the common header (wrong version, source or length rejected) | 43 passed |
 
 ## 10. To agree as a team

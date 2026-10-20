@@ -3,3 +3,5 @@ test_b5_task
 test_nav
 test_safety
 test_b5_pack
+test_s3
+test_s3_task

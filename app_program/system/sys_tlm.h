@@ -139,7 +139,7 @@ sys_get_le32(uint8_t const * p)
 /* Sources (4 bits). 0 is never sent. */
 #define TLM_SRC_WIFI            (1U)    /* S1 WiFi and MQTT       (to define) */
 #define TLM_SRC_MOTION          (2U)    /* S2 Motion Control      (to define) */
-#define TLM_SRC_LINE            (3U)    /* S3 Line and Barcode    (to define) */
+#define TLM_SRC_LINE            (3U)    /* S3 Line and Barcode    (below)     */
 #define TLM_SRC_IMU             (4U)    /* S4 IMU Terrain         (to define) */
 #define TLM_SRC_OBSTACLE        (5U)    /* S5 Obstacle Scan       (below)     */
 #define TLM_SRC_NAV             (6U)    /* Navigation Coordinator (below)     */
@@ -314,8 +314,60 @@ bool safety_tlm_unpack(uint8_t const * p_frame, uint32_t len,
                        safety_tlm_t * p_out);
 
 /* ------------------------------------------------------------------------
- * Sources 1..4 (Buddies 1..4): add your payload sections here, in the
- * same style, before your first frame goes out.
+ * Source 3: Line and Barcode (Buddy 3). Payload 12 bytes.
+ * Packed by s3_tlm_pack() in subsystem3/s3_pack.c.
+ *
+ *   word 0  bits  0..2   state (s3_state_t, 6 values)
+ *           bits  3..5   sensors, 1 = black: bit 3 left, 4 right, 5 barcode
+ *           bit   6      line control granted by the coordinator
+ *           bits  7..8   side the line is on now (0 none, 1 left, 2 right,
+ *                        3 both)
+ *           bits  9..14  last barcode character, Code 39 index 0..43
+ *                        (0-9, A-Z, - . space $ / + % *), 63 = none
+ *           bits 15..17  last decode result (0 ok, 1 bad length, 2 bad
+ *                        wide/narrow ratio, 3 bad character, 4 no start or
+ *                        stop, 5 backwards, 6 timeout or overflow)
+ *           bits 18..20  last command sent (0 none, 1 left, 2 right,
+ *                        3 straight, 4 U-turn)
+ *           bit  21      last read measured widths by distance (1) or by
+ *                        time (0)
+ *           bits 22..31  reserved
+ *   word 1  bits  0..7   barcodes decoded and sent (wrapping)
+ *           bits  8..15  bad reads, no command sent (wrapping)
+ *           bits 16..23  backwards reads, no command sent (wrapping)
+ *           bits 24..31  junctions (wrapping)
+ *   word 2  bits  0..7   line-lost events (wrapping)
+ *           bits  8..15  barcode edges lost to a full buffer (wrapping)
+ *           bits 16..31  reserved
+ * --------------------------------------------------------------------- */
+#define S3_TLM_PAYLOAD_BYTES    (12U)
+#define S3_TLM_FRAME_BYTES      (TLM_HDR_BYTES + S3_TLM_PAYLOAD_BYTES)
+
+typedef struct
+{
+    uint8_t  seq;
+    uint8_t  state;
+    uint8_t  sensors;           /* S3_SENSE_* bits */
+    bool     b_granted;
+    uint8_t  side;
+    uint8_t  last_char;         /* Code 39 index or 63 */
+    uint8_t  last_result;
+    uint8_t  last_cmd;
+    bool     b_dist;
+    uint8_t  barcodes_ok;
+    uint8_t  bad_reads;
+    uint8_t  backwards;
+    uint8_t  junctions;
+    uint8_t  lost;
+    uint8_t  overflows;
+} s3_tlm_t;
+
+void s3_tlm_pack(s3_tlm_t const * p_in, uint8_t p_frame[S3_TLM_FRAME_BYTES]);
+bool s3_tlm_unpack(uint8_t const * p_frame, uint32_t len, s3_tlm_t * p_out);
+
+/* ------------------------------------------------------------------------
+ * Sources 1, 2 and 4 (Buddies 1, 2 and 4): add your payload sections
+ * here, in the same style, before your first frame goes out.
  * --------------------------------------------------------------------- */
 
 #endif /* SYS_TLM_H */

@@ -14,8 +14,9 @@
  *
  *   WiFi and MQTT (Buddy 1)    nav_post_command()
  *   Motion Control (Buddy 2)   nav_post_motion_result()
- *   Line and Barcode (Buddy 3) nav_post_line_speeds(), nav_post_line_event(),
- *                              nav_post_barcode()
+ *   Line and Barcode (Buddy 3) nav_line_drive() (direct, while granted),
+ *                              nav_post_line_event(), nav_post_barcode()
+ *                              (nav_post_line_speeds() still works, queued)
  *   Obstacle Scan (Buddy 5)    through b5_nav_*() in nav_b5.c
  *   Safety Supervisor (team)   nav_post_safety()
  *
@@ -137,6 +138,14 @@ nav_owner_t  nav_get_owner(void);
 char const * nav_state_name(nav_state_t state);
 char const * nav_owner_name(nav_owner_t owner);
 
+/* Line and Barcode (Buddy 3): steer directly while line control is
+ * granted (no inbox in the steering loop). Returns E_OK if the speeds went
+ * to Motion Control, E_OBJ if line control is not granted now (dropped).
+ * Call every line cycle: Motion Control treats a wheel-speed target older
+ * than NAV_LINE_STALE_MS as stale and stops (Week 6 feedback). */
+ER nav_line_drive(int16_t left_mm_s, int16_t right_mm_s);
+#define NAV_LINE_STALE_MS   (50U)   /* 5 line cycles of 10 ms */
+
 ER nav_post_command(nav_cmd_t cmd);
 ER nav_post_motion_result(uint32_t cmd_id, nav_motion_result_t result);
 ER nav_post_line_speeds(int16_t left_mm_s, int16_t right_mm_s);
@@ -148,6 +157,9 @@ ER nav_post_safety(nav_safety_t event);
  * Provided by other buddies (weak defaults in nav_stubs.c)
  * --------------------------------------------------------------------- */
 
+/* Motion Control (Buddy 2). Every bounded command carries cmd_id, and
+ * a wheel-speed target not renewed within NAV_LINE_STALE_MS means stop
+ * (stale-target timeout, Week 6 statechart 6.2 "stale speed targets"). */
 /* Motion Control (Buddy 2). Every bounded command carries cmd_id, and
  * Motion Control must answer it with nav_post_motion_result(cmd_id, ...).
  * A new command, including mc_set_wheel_speeds, replaces the current one
