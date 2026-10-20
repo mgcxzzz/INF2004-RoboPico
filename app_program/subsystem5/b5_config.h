@@ -55,8 +55,17 @@
 #define B5_SERVO_MIN_US         (500U)  /* TUNE: pulse at full right (+900) */
 #define B5_SERVO_MAX_US         (2400U) /* TUNE: pulse at full left  (-900) */
 #define B5_SERVO_REVERSED       (0)     /* 1 if +900 points left         */
-#define B5_SERVO_SETTLE_MS_30   (40U)   /* A8: settle time per 30 deg    */
-#define B5_SERVO_SETTLE_MIN_MS  (20U)   /* settle time for tiny moves    */
+#define B5_SERVO_SPEED_DD_S     (600U)  /* TUNE: horn speed, 0.1 deg/s:
+                                         * 60 deg/s. Unlimited, the SG90
+                                         * swings ~600 deg/s and snaps the
+                                         * bracket into the wiring.      */
+#define B5_SERVO_STEP_MS        (20U)   /* one small step per PWM period */
+#define B5_SERVO_SETTLE_MS      (40U)   /* TUNE (A8, S5-C02): rest after
+                                         * a move, before the next ping  */
+
+#if ((B5_SERVO_SPEED_DD_S * B5_SERVO_STEP_MS) < 1000U)
+#error "B5_SERVO_SPEED_DD_S too low: the step would be under 0.1 deg"
+#endif
 
 /* ------------------------------------------------------------------------
  * Scanning. Angles are signed tenths of a degree, 11 bits, with the same

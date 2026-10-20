@@ -8,8 +8,10 @@
  *   compare value -> pulse width in us (B5_SERVO_MIN_US .. B5_SERVO_MAX_US)
  *
  * The servo is powered from VIN through the servo header, never from 3V3
- * (Assumption A8). b5_servo_move() sleeps for the settle time after each
- * step so the next ping is taken with the horn at rest.
+ * (Assumption A8). b5_servo_move() turns the horn slowly, in small steps
+ * at B5_SERVO_SPEED_DD_S (an SG90 left alone swings fast enough to snap
+ * the sensor bracket into the wiring), then rests for B5_SERVO_SETTLE_MS
+ * so the next ping is taken with the horn still.
  *
  * The SG90 has no position feedback. The only "servo timeout" this driver
  * can detect is the PWM slice not running or not holding the commanded
@@ -34,7 +36,8 @@
 #define PWM_IS_CHAN_B           ((B5_PIN_SERVO_PWM & 1U) != 0U)
 
 #define ANGLE_SPAN_DD           (1800)  /* -900 .. +900                  */
-#define ANGLE_STEP_REF_DD       (300)
+#define SLEW_STEP_DD            ((int32_t)((B5_SERVO_SPEED_DD_S *        \
+                                            B5_SERVO_STEP_MS) / 1000U))
 
 static int16_t g_angle_dd = B5_AHEAD_DD;
 
@@ -98,24 +101,12 @@ b5_servo_init (void)
     return er;
 }
 
-/**
- * @brief  Move to an angle and sleep until it has settled.
- * @param  angle_dd  -900 = left, 0 = ahead, +900 = right (0.1 deg);
- *                   clamped to B5_SCAN_START_DD .. B5_SCAN_END_DD.
- * @return E_OK, or E_IO if the PWM slice is not holding the pulse.
- */
-ER
-b5_servo_move (int16_t angle_dd)
+/* Command one pulse and check the PWM slice is holding it. */
+static ER
+set_angle (int16_t angle_dd)
 {
-    uint32_t pulse;
-    uint32_t delta;
-    uint32_t settle_ms;
+    uint32_t pulse = angle_to_pulse_us(angle_dd);
 
-    /* Never past the sweep ends: beyond about 55 deg the sensor bracket
-     * hits the car's casing (mechanical limit, see b5_config.h). */
-    angle_dd = (int16_t)b5_clamp(angle_dd, B5_SCAN_START_DD, B5_SCAN_END_DD);
-
-    pulse = angle_to_pulse_us(angle_dd);
     (void)pwm_set_cc(B5_PIN_SERVO_PWM, pulse);
 
     if (((in_w(PWM_SLICE_REG(PWM_CHx_CSR)) & PWM_CH_CSR_EN) == 0U) ||
@@ -124,19 +115,70 @@ b5_servo_move (int16_t angle_dd)
         return E_IO;
     }
 
-    delta = (uint32_t)((angle_dd > g_angle_dd) ? (angle_dd - g_angle_dd)
-                                                : (g_angle_dd - angle_dd));
-    settle_ms = (B5_SERVO_SETTLE_MS_30 * delta) / ANGLE_STEP_REF_DD;
+    g_angle_dd = angle_dd;
+    return E_OK;
+}
 
-    if (settle_ms < B5_SERVO_SETTLE_MIN_MS)
+/**
+ * @brief  Turn slowly to an angle, then sleep until it has settled.
+ * @param  angle_dd  -900 = left, 0 = ahead, +900 = right (0.1 deg);
+ *                   clamped to B5_SCAN_START_DD .. B5_SCAN_END_DD.
+ * @return E_OK, or E_IO if the PWM slice is not holding the pulse.
+ *
+ * NOTE: blocks for the whole move: about 1 s for 55 deg at 60 deg/s.
+ */
+ER
+b5_servo_move (int16_t angle_dd)
+{
+    int32_t target;
+    int32_t now;
+    int32_t diff;
+    ER      er = E_OK;
+
+    /* Never past the sweep ends: beyond about 55 deg the sensor bracket
+     * hits the car's casing (mechanical limit, see b5_config.h). */
+    target = b5_clamp(angle_dd, B5_SCAN_START_DD, B5_SCAN_END_DD);
+    now    = (int32_t)g_angle_dd;
+
+    /* One step of at most SLEW_STEP_DD per PWM period. */
+    while ((er == E_OK) && (now != target))
     {
-        settle_ms = B5_SERVO_SETTLE_MIN_MS;
+        diff = target - now;
+
+        if (diff > SLEW_STEP_DD)
+        {
+            diff = SLEW_STEP_DD;
+        }
+        else if (diff < -SLEW_STEP_DD)
+        {
+            diff = -SLEW_STEP_DD;
+        }
+        else
+        {
+            /* last, shorter step */
+        }
+
+        now += diff;
+        er   = set_angle((int16_t)now);   /* within +/-55 deg: fits */
+
+        if ((er == E_OK) && (now != target))
+        {
+            (void)tk_dly_tsk((TMO)B5_SERVO_STEP_MS);
+        }
     }
 
-    g_angle_dd = angle_dd;
-    (void)tk_dly_tsk((TMO)settle_ms);
+    if (er == E_OK)
+    {
+        /* A zero-length move still re-checks the PWM slice. */
+        er = set_angle((int16_t)target);
+    }
 
-    return E_OK;
+    if (er == E_OK)
+    {
+        (void)tk_dly_tsk((TMO)B5_SERVO_SETTLE_MS);
+    }
+
+    return er;
 }
 
 /**

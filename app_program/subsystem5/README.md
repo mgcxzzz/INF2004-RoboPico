@@ -240,7 +240,8 @@ interrupt hand-over.
 | `B5_ALPHA_DD` | 75 (7.5°) | beam half-angle; **fit it from the A6 bench data**, do not trust the datasheet |
 | `B5_REFINE_STOP_DD` | 10 (1°) | see below |
 | `B5_SERVO_MIN_US` / `MAX_US` | 500 / 2400 | calibrate on your SG90 so 0 really points straight ahead (MIN = full right, MAX = full left) |
-| `B5_SERVO_SETTLE_MS_30` | 40 | A8 |
+| `B5_SERVO_SPEED_DD_S` | 600 (60°/s) | how fast the servo turns; unlimited, the SG90 snapped the bracket into the wiring |
+| `B5_SERVO_SETTLE_MS` | 40 | rest after each move before the next ping (A8, S5-C02) |
 | `B5_CAR_WIDTH_MM` / `LENGTH_MM` | 150 / 200 | **placeholders: measure the PicoCar** |
 | `B5_MARGIN_MM` | 50 | clearance margin |
 | `B5_MIN_CONFIDENCE_PCT` | 50 | Planning |
@@ -281,14 +282,16 @@ differences are recorded here rather than hidden:
 | Step | Estimate |
 |---|---|
 | Confirm (3 × 60 ms) | 0.18 s |
-| Halting (servo to −55°) | 0.07 s |
-| Coarse sweep: 5 × (3 pings + settle) | 1.1 s |
-| Edge refinement: ≤ 10 × (1 ping + settle) | ≤ 0.8 s |
-| **Scanning total** | **about 2.0 s** |
+| Halting (servo to −55° at 60°/s) | 0.9 s |
+| Coarse sweep: 4 × 27.5° of travel + 5 × (3 pings + settle) | 1.8 + 1.1 s |
+| Edge refinement: ≤ 10 × (1 ping + settle) + travel | ≤ 1 + 1.8 s |
+| **Scanning total** | **about 4–7 s** |
 
-That leaves about 1 s for the bypass and the line search, which is tight.
-If the track test misses 3 s, the cheapest saving is one ping per
-coarse-sweep angle, which saves 0.6 s.
+The servo speed limit (60°/s, added because the full-speed swing snapped
+the sensor bracket into the wiring) costs about 3 s of scanning, so 3 s in
+total is out of reach (it was already tight at 2 s of scanning). If the
+mounting allows it, raising `B5_SERVO_SPEED_DD_S` is the biggest saving;
+one ping per coarse-sweep angle saves another 0.6 s.
 
 ---
 

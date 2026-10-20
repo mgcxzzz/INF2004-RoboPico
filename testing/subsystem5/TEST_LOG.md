@@ -42,7 +42,7 @@ below (and commit the config change with it).
 | ID | What is calibrated | Value(s) set | Needs | How | Target |
 |---|---|---|---|---|---|
 | S5-C01 | servo centre, span and direction | `B5_SERVO_MIN_US`, `B5_SERVO_MAX_US`, `B5_SERVO_REVERSED` (`b5_config.h`) | bench | paper guide with lines straight ahead and at ±55°; command 0 and ±55° | 0° faces straight ahead, ±55° within ±3°, + is right |
-| S5-C02 | servo settle time | `B5_SERVO_SETTLE_MS_30` | bench | S5-U09 with 40 ms and with 80 ms | widths agree within 5 % (else keep the longer) |
+| S5-C02 | servo speed and settle time | `B5_SERVO_SPEED_DD_S`, `B5_SERVO_SETTLE_MS` | bench | S5-U09 with 40 ms and with 80 ms | widths agree within 5 % (else keep the longer) |
 | S5-C03 | range scale and sensor position | `SOUND_NUM` (`drv_ultrasonic.c`) only if needed; sensor-to-front offset | bench | S5-U08 readings vs tape measure; measure sensor face to the car's front | readings within ±10 mm; offset recorded |
 | S5-C04 | beam half-angle | `B5_ALPHA_DD` | bench | S5-U09 widths at a known distance | 100 mm and 200 mm boxes within 10 % |
 | S5-C05 | car size | `B5_CAR_WIDTH_MM`, `B5_CAR_LENGTH_MM` | bench | measure, wheels and brackets included | values set |

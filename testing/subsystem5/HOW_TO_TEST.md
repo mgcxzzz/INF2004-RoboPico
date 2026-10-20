@@ -213,7 +213,7 @@ atan(24/600) = 2.3° → add 23 (75 → 98). Too narrow: Δ is negative, so it
 gets smaller. Repeat S5-U09 with both boxes.
 
 **S5-C02 (calibration): servo settle time.** Repeat S5-U09 once with
-`B5_SERVO_SETTLE_MS_30` doubled (40 → 80). If the widths change by more
+`B5_SERVO_SETTLE_MS` doubled (40 → 80). If the widths change by more
 than 5 %, the sensor was still moving when it measured: keep 80.
 
 ### S5-U10: full bypass on the bench
