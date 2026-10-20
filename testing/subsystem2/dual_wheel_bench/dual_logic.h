@@ -153,4 +153,17 @@ static inline bool offline_step(OfflineArm *o,uint64_t now,bool usb,bool button,
     }
     return false;
 }
+/* Deliberate one-shot standalone arm: two-button hold, full release, separate tap. */
+typedef struct { uint64_t since; bool ready, used; } BootArm;
+static inline bool boot_arm_step(BootArm *b,uint64_t now,bool usb,bool busy,bool hold,bool stop) {
+    if(usb || busy) { b->since=0; b->ready=false; return false; }
+    if(b->used) return false;
+    if(hold && stop) {
+        if(!b->since) b->since=now;
+        if(now-b->since>=2000000) b->ready=true;
+    } else if(b->ready) {
+        if(!hold && !stop) { b->used=true; b->ready=false; return true; }
+    } else b->since=0;
+    return false;
+}
 #endif

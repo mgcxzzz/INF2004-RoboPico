@@ -92,7 +92,24 @@ static void test_pi_model(void) {
         assert(pi_step(&p,w,sign,0,v,0.01f)==0 && p.integral==0 && p.ramp==0);
     }
 }
+#include "log_store.h"
 int main(void) {
+    assert(log_crc("123456789",9)==0xcbf43926u);
+    char damaged[]="123456789"; damaged[4]='0';
+    assert(log_crc(damaged,9)!=0xcbf43926u);
+    BootArm boot={0};
+    assert(!boot_arm_step(&boot,1,false,false,true,true));
+    assert(!boot_arm_step(&boot,1000001,false,false,true,true));
+    assert(!boot_arm_step(&boot,2000001,false,false,true,true));
+    assert(!boot_arm_step(&boot,2000002,false,false,true,false));
+    assert(boot_arm_step(&boot,2000003,false,false,false,false));
+    assert(!boot_arm_step(&boot,5000000,false,false,true,true));
+    assert(!boot_arm_step(&boot,8000000,false,false,false,false));
+    BootArm cancel={0};
+    assert(!boot_arm_step(&cancel,1,false,false,true,true));
+    assert(!boot_arm_step(&cancel,2000001,false,false,true,true));
+    assert(!boot_arm_step(&cancel,2000002,true,false,false,false));
+    assert(!boot_arm_step(&cancel,2000003,false,false,false,false));
     test_geometry_and_outputs(); test_stops(); test_offline(); test_pi_model();
     puts("PASS: calibration/signs, PWM cap, command geometry, timer/hold/stop guards, offline one-shot/cancellation, PI model");
     return 0;

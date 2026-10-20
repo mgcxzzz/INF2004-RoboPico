@@ -1,3 +1,49 @@
+# V5: separate power sources and persistent logs
+
+Use `firmware/buddy2_dual_wheel_v5.uf2` for the current build. V4 UF2 is retained
+as a historical artifact; the adjacent source now builds V5.
+
+## First V5 test (wheels raised)
+
+1. With the power bank disconnected, flash V5 through the computer USB.
+2. Open PuTTY to check the `bench v5` banner, then close PuTTY.
+3. Disconnect computer USB. Connect the power bank as the only power source.
+4. Wait two seconds. Hold BOTH GP20 and GP21 for THREE seconds.
+5. Release BOTH buttons. Wait one second, then briefly press and release GP21.
+6. A two-second countdown precedes a single 100 mm encoder-target forward run.
+   GP20 or another GP21 press stops it. The three-second run limit still applies.
+7. Once wheels stop, wait THREE seconds for settling and flash programming.
+8. Disconnect the power bank, then connect computer USB normally (no BOOTSEL).
+9. Open PuTTY and press `p`. Expect `RESTORED: CRC-verified log...` and the run CSV.
+
+No automatic movement occurs on power-up, plugging or unplugging. The two-button
+arm can be used once per boot. Start another standalone run by restarting with
+one power source. The standalone button sequence always selects 100 mm forward;
+USB-selected Q/E profiles do not survive power loss. USB hold-to-run f/b tests
+and USB D/Q/E/a arming remain available as described below.
+
+Latest completed run is saved automatically after one second of settling,
+including USB runs. Each save replaces the previous saved log. No continuous
+flash streaming: one sector erase/program per completed run. Avoid unnecessary
+repeated saves; flash has finite write endurance. Power interruption while
+saving can lose the saved log; CRC and format checks reject damaged records.
+Wait three seconds after stopping before removing power. No erase/flash writes
+occur while driving. Flash routines run with interrupts masked, core 1 unused,
+outputs off; this flash approach must be redesigned before RTOS/multicore use.
+
+One 4 KiB sector at offset 0x1ff000 is reserved on the 2 MiB Pico W. A runtime
+firmware-end check refuses storage if the image overlaps it. UF2 contains only
+the program image, not saved logs. Treat logs as bench diagnostics, not a general
+filesystem or a final minimum-bit application data design.
+
+Firmware and host checks passed; standalone buttons, flash persistence and
+power-cycle recovery still need physical verification. Earlier V4 raised tests
+confirmed forward/backward direction, timeout, GP20 and GP21-release stops.
+They do not validate V5's new persistence paths or floor accuracy.
+
+---
+## Previous V4 reference (RAM-only power instructions superseded above)
+
 # Buddy 2 dual-wheel feedback bench v4
 
 **Initial physical validation is still required.** This is standalone Pico SDK

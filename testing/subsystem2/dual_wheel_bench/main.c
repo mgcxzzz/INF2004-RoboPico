@@ -2,6 +2,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <inttypes.h>
+#include <string.h>
+#include "hardware/flash.h"
+#include "hardware/regs/addressmap.h"
+#include "log_store.h"
 #include "pico/stdlib.h"
 #include "pico/stdio_usb.h"
 #include "hardware/clocks.h"
@@ -36,6 +40,67 @@ typedef struct {
 static Trace trace[TRACE_ROWS];
 static unsigned trace_count, trace_dropped;
 static bool trace_settling;
+
+/* Dedicated last 4 KiB of the Pico W's flash; firmware never writes while driving.
+   Single core only. CRC rejects an interrupted erase/program on the next boot. */
+#define LOG_OFFSET (PICO_FLASH_SIZE_BYTES-FLASH_SECTOR_SIZE)
+#define LOG_MAGIC 0x35474f4cu
+extern char __flash_binary_end;
+typedef struct {
+    uint32_t magic, version, crc, count, dropped;
+    uint64_t duration;
+    int32_t cutoff[2];
+    uint32_t invalid[2];
+    uint8_t reason, key, offline, reserved;
+    Trace rows[TRACE_ROWS];
+} SavedLog;
+_Static_assert(sizeof(SavedLog)<=FLASH_SECTOR_SIZE,"Log exceeds reserved flash sector");
+static union { SavedLog data; uint8_t sector[FLASH_SECTOR_SIZE]; } saved;
+static bool flash_loaded, save_failed;
+static void outputs_off(void);
+static bool storage_fits(void) {
+    return (uintptr_t)&__flash_binary_end <= XIP_BASE+LOG_OFFSET;
+}
+static bool stored_valid(const SavedLog *v) {
+    return v->magic==LOG_MAGIC && v->version==5 && v->count>0 && v->count<=TRACE_ROWS
+        && v->crc==log_crc((const uint8_t *)v+offsetof(SavedLog,count),
+                          sizeof(*v)-offsetof(SavedLog,count));
+}
+static void load_log(void) {
+    if(!storage_fits()) return;
+    const SavedLog *v=(const SavedLog *)(XIP_BASE+LOG_OFFSET);
+    if(!stored_valid(v)) return;
+    memcpy(trace,v->rows,sizeof(trace));
+    trace_count=v->count; trace_dropped=v->dropped;
+    recorded_key=v->key; recorded_offline=v->offline;
+    guard.duration_us=v->duration; guard.reason=v->reason;
+    for(unsigned w=0;w<2;++w) {
+        origin[w]=0; cut_ticks[w]=v->cutoff[w]; cut_invalid[w]=v->invalid[w];
+    }
+    flash_loaded=true;
+}
+static void save_log(void) {
+    if(guard.active || !trace_count || !storage_fits()) { save_failed=true; return; }
+    outputs_off();
+    memset(&saved,0,sizeof(saved));
+    SavedLog *v=&saved.data;
+    v->magic=LOG_MAGIC; v->version=5; v->count=trace_count; v->dropped=trace_dropped;
+    v->duration=guard.duration_us; v->reason=guard.reason;
+    v->key=recorded_key; v->offline=recorded_offline;
+    for(unsigned w=0;w<2;++w) {
+        v->cutoff[w]=(int32_t)((int64_t)cut_ticks[w]-origin[w]);
+        v->invalid[w]=cut_invalid[w];
+    }
+    memcpy(v->rows,trace,sizeof(trace));
+    v->crc=log_crc((const uint8_t *)v+offsetof(SavedLog,count),sizeof(*v)-offsetof(SavedLog,count));
+    uint32_t irq=save_and_disable_interrupts();
+    flash_range_erase(LOG_OFFSET,FLASH_SECTOR_SIZE);
+    flash_range_program(LOG_OFFSET,saved.sector,FLASH_SECTOR_SIZE);
+    restore_interrupts(irq);
+    const SavedLog *written=(const SavedLog *)(XIP_BASE+LOG_OFFSET);
+    save_failed=!stored_valid(written) || memcmp(written,v,sizeof(*v))!=0;
+    flash_loaded=false;
+}
 
 static uint8_t read_ab(unsigned w) {
     uint32_t p=gpio_get_all();
@@ -83,7 +148,7 @@ static const char *reason_name(uint8_t r) {
     return r<sizeof(names)/sizeof(names[0]) ? names[r] : "unknown";
 }
 static void help(void) {
-    puts("\nBuddy 2 DUAL FEEDBACK bench v4 | USB only | BOOTS WITH DRIVE OFF");
+    puts("\nBuddy 2 DUAL FEEDBACK bench v5 | USB only | BOOTS WITH DRIVE OFF");
     puts("Calibration: L=2524.05 R=2528.30 counts/rev; circumference=200 mm; track=110 mm.");
     puts("Both wheels use positive=chassis-forward. PWM cap=25%; PI gains provisional.");
     puts("WIRED raised tests: hold GP21 then f=both forward, b=both backward;");
@@ -94,7 +159,11 @@ static void help(void) {
     puts("Tap/release GP21 to request start; 2-second countdown; one run only.");
     puts("During offline run GP20 OR another GP21 press stops; limit still 3 seconds.");
     puts("Reconnecting USB cancels pending starts/stops offline motion and dumps last run.");
-    puts("p=dump last RAM log; h=help. Keep board powered: reset/power loss loses RAM log.");
+    puts("POWER-BANK START: hold BOTH GP20+GP21 for 2 s, release BOTH, then tap/release GP21.");
+    puts("This selects 100 mm forward; 2 s countdown. No USB connection is needed.");
+    puts("Completed logs auto-save to flash after 1 s settling. Wait 3 s after stop before power-off.");
+    puts("p=dump RAM/restored flash log; h=help. Latest saved run replaces previous run.");
+    puts("Use ONE power source at a time. Flash save occurs only with both motor outputs off.");
     puts("Finish raised f/b direction and stop checks BEFORE floor tests.");
 }
 static void add_trace(uint64_t now) {
@@ -114,6 +183,8 @@ static void add_trace(uint64_t now) {
 static void dump(void) {
     if(guard.active) { puts("Dump deferred: stop before requesting p."); return; }
     if(!trace_count) { puts("No recorded run yet."); return; }
+    if(flash_loaded) puts("RESTORED: CRC-verified log from previous power session.");
+    if(save_failed) puts("WARNING: flash save failed; this RAM log is not persistent.");
     printf("RUN: key=%c mode=%s rows=%u dropped=%u settling=%u\n",recorded_key,
         recorded_offline ? "offline" : "USB hold",trace_count,trace_dropped,trace_settling);
     puts("ms,active,L_mm,R_mm,progress_mm,heading_deg,L_mm_s,R_mm_s,L_PWM_permille,R_PWM_permille");
@@ -157,6 +228,7 @@ static bool start_run(char key,float speed,bool offline) {
         outputs_off();
         trace_count=trace_dropped=0;
         recorded_key=key; recorded_offline=offline; trace_settling=false;
+        flash_loaded=false; save_failed=false;
         last_control=last_trace=now;
     }
     restore_interrupts(irq);
@@ -236,6 +308,7 @@ int main(void) {
     struct repeating_timer timer;
     if(!add_repeating_timer_us(-1000,safety_tick,NULL,&timer)) while(true) tight_loop_contents();
     stdio_init_all();
+    load_log();
     last_control=time_us_64();
     bool old_connected=false,raw_button=false,button=false;
     uint64_t button_changed=0,last_status=0;
@@ -243,6 +316,7 @@ int main(void) {
     float speed=80;
     char offline_key='d';
     OfflineArm arm={0};
+    BootArm boot_arm={0};
     while(true) {
         uint64_t now=time_us_64();
         bool connected=stdio_usb_connected();
@@ -260,6 +334,11 @@ int main(void) {
         }
         if(!connected && guard.active && !offline_running) {
             uint32_t irq=save_and_disable_interrupts(); kill(now,WHY_USB); restore_interrupts(irq);
+        }
+        /* One deliberate power-bank arm per boot. Holding both never drives.
+           Require release of BOTH, then a separate GP21 tap to request motion. */
+        if(boot_arm_step(&boot_arm,now,connected,guard.active || trace_settling,hold,stop)) {
+            arm.state=OFF_BASE_RELEASE; offline_key='d';
         }
         if(offline_step(&arm,now,connected,button,stop))
             (void)start_run(offline_key,speed,true);
@@ -296,7 +375,9 @@ int main(void) {
             if(now-last_trace>=50000) { add_trace(now); last_trace=now; }
             if(trace_settling && now-stopped_us>=1000000) {
                 trace_settling=false;
-                if(connected) puts("LOG READY: press p to save the complete buffered run.");
+                save_log();
+                if(connected) puts(save_failed ? "FLASH SAVE FAILED: retrieve RAM log with p before power-off."
+                                               : "LOG SAVED TO FLASH: press p to retrieve complete run.");
             }
         }
         if(connected && guard.active && now-last_status>=200000) {
