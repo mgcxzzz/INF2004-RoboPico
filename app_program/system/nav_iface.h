@@ -104,7 +104,21 @@ typedef enum
     NAV_LINE_JUNCTION
 } nav_line_event_t;
 
-/* Decoded barcode navigation commands (FR-LINE-04). */
+/* Decoded barcode navigation commands (FR-LINE-04).
+ *
+ * Barcode turns search for the line instead of turning a fixed angle
+ * (the course does not say how sharp a branch is):
+ *  1. Line and Barcode posts LEFT or RIGHT once the wheel axle is over the
+ *     next junction (or where the line ended); UTURN right after the
+ *     barcode; STRAIGHT right after the barcode, and keeps following.
+ *  2. The coordinator takes control, stops, and spins slowly on the spot:
+ *     LEFT to the left, RIGHT and UTURN to the right.
+ *  3. Line and Barcode watches the LEADING front sensor (left for LEFT,
+ *     right for RIGHT and UTURN) and posts NAV_LINE_FOUND each time it
+ *     goes from white to black.
+ *  4. The coordinator hands line control back on the first NAV_LINE_FOUND
+ *     (for a U-turn, the first after NAV_BC_UTURN_MIN_DD). A full turn
+ *     with no line is a line-lost fault. */
 typedef enum
 {
     NAV_BARCODE_LEFT = 1,
@@ -112,6 +126,8 @@ typedef enum
     NAV_BARCODE_STRAIGHT,
     NAV_BARCODE_UTURN
 } nav_barcode_t;
+
+#define NAV_UTURN_TURNS_RIGHT   (1)     /* 1: U-turns spin right; 0: left */
 
 /* Safety Supervisor notifications. */
 typedef enum

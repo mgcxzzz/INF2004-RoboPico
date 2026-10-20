@@ -16,6 +16,14 @@ testing/
 └── system/                tests of the whole product against its requirements (shared)
 ```
 
+## Step-by-step guides
+
+- **Buddy 3** (line and barcode): `subsystem3/HOW_TO_TEST.md`.
+- **Buddy 5** (obstacle scan and recovery): `subsystem5/HOW_TO_TEST.md`.
+
+Each guide lists the hardware, the `sys_config.h` switches, and for every
+test what to do, what the console prints and what counts as a pass.
+
 ## Three levels of test
 
 | Level | ID format | Tests what | Written by | Where |
@@ -23,6 +31,7 @@ testing/
 | Unit | `S1-U01`, `S2-U01`, … | one subsystem on its own | the subsystem owner | `subsystemN/TEST_LOG.md` |
 | Integration | `INT-01`, … | an interface between subsystems (TEAM.md section 5) | the owners on both sides | `integration/TEST_LOG.md` |
 | System | `SYS-01`, … | the finished product against a requirement | whole team | `system/TEST_LOG.md` |
+| Calibration | `S3-C01`, `S5-C01`, … | a value measured or tuned on the hardware (sensor height, servo centre, speeds…) and set in a config file | the subsystem owner | the *Calibration* section of `subsystemN/TEST_LOG.md` |
 
 Test IDs never change and are never reused, even if a test is dropped.
 

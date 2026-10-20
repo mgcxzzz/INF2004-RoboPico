@@ -473,7 +473,10 @@ manoeuvre_done (void)
             break;
 
         case PURPOSE_BARCODE:
-            set_owner(NAV_OWNER_LINE);      /* back to line following */
+            /* A full turn and the new line never came under the leading
+             * sensor: the line is gone. */
+            nav_report_fault(NAV_FAULT_LINE_LOST);
+            enter_state(NAV_ST_SAFE_STOP);
             break;
 
         case PURPOSE_SEARCH:
@@ -704,10 +707,14 @@ on_line_event (nav_line_event_t event)
                         (uint8_t)(NAV_SEARCH_STEPS + 1U));
     }
     else if ((event == NAV_LINE_FOUND) &&
-             (nav_get_owner() == NAV_OWNER_SEARCH))
+             ((nav_get_owner() == NAV_OWNER_SEARCH) ||
+              ((nav_get_owner() == NAV_OWNER_BARCODE) &&
+               (g_man.next >= g_man.count))))
     {
         /* Hand straight back: the next wheel-speed proposal replaces the
-         * sweep in Motion Control. */
+         * sweep or spin in Motion Control. A barcode spin accepts the line
+         * only in its last step (a U-turn's first step skips side
+         * branches). */
         abandon_manoeuvre();
         set_owner(NAV_OWNER_LINE);
     }
@@ -717,10 +724,14 @@ on_line_event (nav_line_event_t event)
     }
 }
 
+/* Barcode turn: stop, then spin slowly until Line and Barcode reports
+ * the new line (see nav_barcode_t). No angle is assumed. */
 static void
 on_barcode (nav_barcode_t cmd)
 {
-    int32_t angle;
+    step_t  spin[3];
+    uint8_t count = 2U;
+    int32_t dir;                        /* +1 right, -1 left */
 
     if ((nav_get_state() != NAV_ST_RUNNING) ||
         (nav_get_owner() != NAV_OWNER_LINE))
@@ -729,20 +740,36 @@ on_barcode (nav_barcode_t cmd)
         return;
     }
 
-    switch (cmd)
+    if ((NAV_BARCODE_LEFT != cmd) && (NAV_BARCODE_RIGHT != cmd) &&
+        (NAV_BARCODE_UTURN != cmd))
     {
-        case NAV_BARCODE_LEFT:  angle = NAV_TURN_LEFT_DD;  break;
-        case NAV_BARCODE_RIGHT: angle = NAV_TURN_RIGHT_DD; break;
-        case NAV_BARCODE_UTURN: angle = NAV_TURN_UTURN_DD; break;
-        default:                return;     /* straight: keep following */
+        return;                         /* straight: keep following */
     }
 
-    {
-        step_t turn = make_step(STEP_TURN, angle, NAV_TURN_MM_S);
+    dir = ((NAV_BARCODE_RIGHT == cmd) ||
+           ((NAV_BARCODE_UTURN == cmd) && (NAV_UTURN_TURNS_RIGHT != 0))) ?
+          1 : -1;
 
-        set_owner(NAV_OWNER_BARCODE);
-        start_manoeuvre(PURPOSE_BARCODE, &turn, 1U);
+    spin[0] = make_step(STEP_STOP, 0, 0);
+
+    if (NAV_BARCODE_UTURN == cmd)
+    {
+        /* First part blind (side branches ignored), then the search. */
+        spin[1] = make_step(STEP_TURN, dir * NAV_BC_UTURN_MIN_DD,
+                            NAV_BC_TURN_MM_S);
+        spin[2] = make_step(STEP_TURN,
+                            dir * (NAV_BC_TURN_MAX_DD - NAV_BC_UTURN_MIN_DD),
+                            NAV_BC_TURN_MM_S);
+        count   = 3U;
     }
+    else
+    {
+        spin[1] = make_step(STEP_TURN, dir * NAV_BC_TURN_MAX_DD,
+                            NAV_BC_TURN_MM_S);
+    }
+
+    set_owner(NAV_OWNER_BARCODE);
+    start_manoeuvre(PURPOSE_BARCODE, spin, count);
 }
 
 /* --- Buddy 5 (Obstacle Scan and Recovery) ------------------------- */

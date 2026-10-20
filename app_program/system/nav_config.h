@@ -30,10 +30,22 @@
 #define NAV_REJOIN_MIN_MM       (20)    /* closer than this = on line    */
 #define NAV_REJOIN_MAX_MM       (600)   /* cap on one rejoin leg         */
 
-/* Barcode turns (FR-LINE-04). Positive = right. */
-#define NAV_TURN_LEFT_DD        (-900)
-#define NAV_TURN_RIGHT_DD       (900)
-#define NAV_TURN_UTURN_DD       (1800)
+/* Barcode turns (FR-LINE-04): no angle is assumed. Line and Barcode
+ * posts the command with the wheel axle over the junction; the car stops
+ * and spins slowly on the spot in the commanded direction until Line and
+ * Barcode reports the new line (NAV_LINE_FOUND), then line following
+ * resumes. Positive angle = right; U-turns turn right (nav_iface.h). */
+#define NAV_BC_TURN_MM_S        (70)    /* TUNE: slow spin, wheel speed.
+                                         * The front sensors then sweep at
+                                         * ~1 mm per 10 ms cycle, so the
+                                         * 18 mm line is seen for many
+                                         * cycles and the stop overshoots
+                                         * only a few mm.                */
+#define NAV_BC_TURN_MAX_DD      (3600)  /* one full turn without finding a
+                                         * line = the line is gone       */
+#define NAV_BC_UTURN_MIN_DD     (1350)  /* U-turn: a line met before this
+                                         * is a side branch, not the line
+                                         * we came along: keep turning   */
 
 /* Line search after an unexpected line loss: alternate sweeps of
  * growing size. After the last one fails the car goes to Safe Stop. */
@@ -41,7 +53,8 @@
 #define NAV_SEARCH_STEP1_DD     (150)   /* then -300, +450, -600 ...     */
 
 /* A bounded Motion Control command that takes longer than this is
- * treated as failed. */
+ * treated as failed. The longest is a full barcode search spin: at
+ * NAV_BC_TURN_MM_S with a ~130 mm wheel track, about 6 s. */
 #define NAV_MOTION_TMO_MS       (8000)
 
 /* Longest single drive or turn a manoeuvre step can hold: steps store

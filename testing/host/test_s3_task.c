@@ -208,7 +208,8 @@ line_telemetry_publish (uint8_t const * p_frame, uint32_t len)
 
 /* Front sensors: "zig-zag" along the line (one sensor, none, the other),
  * like a bang-bang follower; or a fixed pattern. */
-typedef enum { FRONT_ZIGZAG, FRONT_NONE, FRONT_BOTH, FRONT_LEFT } front_t;
+typedef enum { FRONT_ZIGZAG, FRONT_NONE, FRONT_BOTH, FRONT_LEFT,
+               FRONT_RIGHT } front_t;
 
 static void
 set_front (front_t f, int step)
@@ -221,6 +222,7 @@ set_front (front_t f, int step)
             break;
         case FRONT_BOTH:  g_front = S3_SENSE_LEFT | S3_SENSE_RIGHT; break;
         case FRONT_LEFT:  g_front = S3_SENSE_LEFT; break;
+        case FRONT_RIGHT: g_front = S3_SENSE_RIGHT; break;
         default:          g_front = 0U; break;
     }
 }
@@ -322,6 +324,32 @@ nav (nav_state_t st, bool b_grant)
     line_set_control(b_grant);
 }
 
+/* A junction: a crossing line under both front sensors (20 mm), then the
+ * line between the sensors again. Returns where it started. */
+static double
+junction_then_creep (double creep_mm)
+{
+    double s0 = g_s;
+
+    drive(20, 150, FRONT_BOTH);
+    drive(creep_mm, 150, FRONT_NONE);
+    return s0;
+}
+
+/* The coordinator's spin, as seen by the front sensors: control taken;
+ * the trailing sensor crosses the line we came along; white; then the
+ * leading sensor reaches the new line; control handed back. */
+static void
+spin_to_line (front_t trailing, front_t leading)
+{
+    line_set_control(false);
+    drive(30, 0, trailing);
+    drive(300, 0, FRONT_NONE);
+    drive(20, 0, leading);
+    line_set_control(true);
+    drive(30, 150, FRONT_ZIGZAG);
+}
+
 /* ---------------------------------------------------------------------
  * Scenarios
  * ------------------------------------------------------------------ */
@@ -348,26 +376,45 @@ test_start (void)
 static void
 test_barcode_left (void)
 {
-    int drives;
+    int    drives;
+    int    found0;
+    double js;
 
-    printf("course barcode *A* -> one LEFT event at the end, then await\n");
+    printf("course barcode *A* -> LEFT at the next junction, spin to line\n");
     place_px(g_pdf_a, 29, g_s + 100.0, false);
     drive(100 + 141 + 10, 150, FRONT_ZIGZAG);
     CHECK(s3_get_state() == S3_ST_READ, "Read Barcode while over it");
     CHECK(g_barcodes == 0, "nothing sent while reading");
     drive(40, 150, FRONT_ZIGZAG);
+    CHECK((g_barcodes == 0) && (s3_get_state() == S3_ST_FOLLOW),
+          "decoded; keeps following until the junction");
+    drive(200, 150, FRONT_ZIGZAG);
+    CHECK(g_barcodes == 0, "no junction yet: still waiting");
+
+    js = junction_then_creep(30);
+    CHECK(g_barcodes == 0, "junction: not yet, creeping to the pivot");
+    CHECK((g_drive_l == S3_CREEP_MM_S) && (g_drive_r == S3_CREEP_MM_S),
+          "creeps straight and slow (%d, %d)", g_drive_l, g_drive_r);
+    drive(60, 150, FRONT_NONE);
     CHECK((g_barcodes == 1) && (g_last_bc == NAV_BARCODE_LEFT),
           "one LEFT event (%d)", g_barcodes);
+    CHECK((g_bc_post_s - js > S3_JUNCTION_MM + S3_PIVOT_OFFSET_MM - 3) &&
+          (g_bc_post_s - js < S3_JUNCTION_MM + S3_PIVOT_OFFSET_MM + 5),
+          "posted with the axle over the junction (%.0f mm after it)",
+          g_bc_post_s - js);
     CHECK(s3_get_state() == S3_ST_AWAIT, "Await Navigation");
-    CHECK(g_bc_post_s > g_bc_start + 141.0, "sent after the barcode ends");
 
     drives = g_drives;
-    drive(10, 150, FRONT_ZIGZAG);       /* well inside S3_AWAIT_MS */
-    CHECK(g_drives == drives, "no proposals while awaiting");
-
-    line_set_control(false);            /* coordinator turns the car */
-    drive(500, 0, FRONT_NONE);          /* turn in place, 0.5 s       */
-    line_set_control(true);             /* turn done, line again      */
+    found0 = g_found;
+    line_set_control(false);            /* coordinator spins LEFT */
+    drive(30, 0, FRONT_RIGHT);          /* trailing sensor, old line */
+    CHECK(g_found == found0, "trailing sensor ignored");
+    drive(300, 0, FRONT_NONE);
+    drive(20, 0, FRONT_LEFT);           /* leading sensor: new line */
+    CHECK(g_found == found0 + 1, "leading sensor: FOUND once (%d)",
+          g_found - found0);
+    CHECK(g_drives == drives, "no proposals during the spin");
+    line_set_control(true);             /* coordinator hands back */
     drive(30, 150, FRONT_ZIGZAG);
     CHECK(s3_get_state() == S3_ST_FOLLOW, "back to Line Following");
     CHECK(g_drives > drives, "proposals resume");
@@ -384,11 +431,10 @@ test_one_event (void)
     place_text("B", g_s + 60.0);
     g_blip = g_s + 60.0 + 141.0 + 30.0;     /* 30 mm after the barcode */
     drive(60 + 141 + 80, 150, FRONT_ZIGZAG);
+    (void)junction_then_creep(S3_PIVOT_OFFSET_MM + 10);
     CHECK((g_barcodes == 2) && (g_last_bc == NAV_BARCODE_RIGHT),
           "B -> RIGHT once (%d events)", g_barcodes);
-    line_set_control(false);
-    drive(200, 0, FRONT_NONE);
-    line_set_control(true);
+    spin_to_line(FRONT_LEFT, FRONT_RIGHT);
     drive(150, 150, FRONT_ZIGZAG);
     CHECK(g_barcodes == 2, "the stray mark did not start another read");
     g_blip = -1.0;
@@ -412,22 +458,41 @@ test_half_size (void)
 static void
 test_commands (void)
 {
+    int found0;
+    int drives;
+
     printf("write-up table: C -> STRAIGHT, D -> U-TURN\n");
     place_text("C", g_s + 60.0);
     drive(60 + 141 + 40, 150, FRONT_ZIGZAG);
     CHECK((g_barcodes == 3) && (g_last_bc == NAV_BARCODE_STRAIGHT),
-          "C -> STRAIGHT (%d)", g_barcodes);
-    line_set_control(false);
-    line_set_control(true);
-    drive(60, 150, FRONT_ZIGZAG);
+          "C -> STRAIGHT right after the barcode (%d)", g_barcodes);
+    drives = g_drives;
+    drive(30, 150, FRONT_ZIGZAG);
+    CHECK((s3_get_state() == S3_ST_FOLLOW) && (g_drives > drives),
+          "straight: keeps following, no pause");
+    (void)junction_then_creep(30);
+    CHECK(g_barcodes == 3, "straight across the junction, nothing else");
+    drive(30, 150, FRONT_ZIGZAG);
 
     place_text("D", g_s + 60.0);
     drive(60 + 141 + 40, 150, FRONT_ZIGZAG);
     CHECK((g_barcodes == 4) && (g_last_bc == NAV_BARCODE_UTURN),
-          "D -> U-TURN (%d)", g_barcodes);
+          "D -> U-TURN right after the barcode, no junction (%d)",
+          g_barcodes);
+    CHECK(s3_get_state() == S3_ST_AWAIT, "awaits the spin");
+    found0 = g_found;
     line_set_control(false);
+    drive(30, 0, NAV_UTURN_TURNS_RIGHT ? FRONT_LEFT : FRONT_RIGHT);
+    CHECK(g_found == found0, "U-turn: trailing sensor ignored");
+    drive(300, 0, FRONT_NONE);
+    drive(20, 0, NAV_UTURN_TURNS_RIGHT ? FRONT_RIGHT : FRONT_LEFT);
+    drive(200, 0, FRONT_NONE);          /* that was a side branch:   */
+    drive(20, 0, NAV_UTURN_TURNS_RIGHT ? FRONT_RIGHT : FRONT_LEFT);
+    CHECK(g_found == found0 + 2, "every line the leading sensor meets is "
+          "reported; the coordinator picks (%d)", g_found - found0);
     line_set_control(true);
     drive(60, 150, FRONT_ZIGZAG);
+    CHECK(s3_get_state() == S3_ST_FOLLOW, "following after the U-turn");
     g_bc_start = -1.0;
 }
 
@@ -469,12 +534,11 @@ test_no_distance (void)
     g_dist_valid = false;
     place_px(g_pdf_a, 29, g_s + 60.0, false);
     drive(60 + 141 + 80, 150, FRONT_ZIGZAG);
+    (void)junction_then_creep(100);     /* 2 mm per cycle assumed */
     CHECK((g_barcodes == 5) && (g_last_bc == NAV_BARCODE_LEFT),
           "still decodes A (%d)", g_barcodes);
     CHECK(!g_tlm.b_dist, "telemetry says: measured by time");
-    line_set_control(false);
-    line_set_control(true);
-    drive(60, 150, FRONT_ZIGZAG);
+    spin_to_line(FRONT_RIGHT, FRONT_LEFT);
     g_dist_valid = true;
     drive(20, 150, FRONT_ZIGZAG);
     g_bc_start = -1.0;
@@ -486,6 +550,7 @@ test_ignored_event (void)
     printf("coordinator ignores an event (keeps control): resume anyway\n");
     place_text("A", g_s + 60.0);
     drive(60 + 141 + 40, 150, FRONT_ZIGZAG);
+    (void)junction_then_creep(S3_PIVOT_OFFSET_MM + 10);
     CHECK(s3_get_state() == S3_ST_AWAIT, "awaiting");
     drive(S3_AWAIT_MS + 50, 0, FRONT_ZIGZAG);
     CHECK(s3_get_state() == S3_ST_FOLLOW,
@@ -495,27 +560,69 @@ test_ignored_event (void)
 }
 
 static void
+test_no_junction (void)
+{
+    int     n0   = g_barcodes;
+    int     lost0 = g_lost;
+    uint8_t bad0;
+
+    printf("LEFT with no junction after it: dropped, never turns blind\n");
+    bad0 = g_tlm.bad_reads;
+    place_text("A", g_s + 60.0);
+    drive(60 + 141 + S3_BC_JUNCTION_MM + 50, 150, FRONT_ZIGZAG);
+    CHECK(g_barcodes == n0, "no event (%d)", g_barcodes - n0);
+    CHECK(g_last_code == S3_WARN_NO_JUNCTION, "warning 0x%02x",
+          g_last_code);
+    CHECK((uint8_t)(g_tlm.bad_reads - bad0) == 1U, "counted");
+    CHECK(s3_get_state() == S3_ST_FOLLOW, "still following");
+    (void)junction_then_creep(100);
+    CHECK(g_barcodes == n0, "a later junction does not revive it");
+    drive(30, 150, FRONT_ZIGZAG);
+
+    printf("line lost while a RIGHT waits: normal LOST, command dropped\n");
+    place_text("B", g_s + 60.0);
+    drive(60 + 141 + 40, 150, FRONT_ZIGZAG);
+    drive(S3_LOST_MM + 20, 150, FRONT_NONE);
+    CHECK((g_lost == lost0 + 1) && (g_barcodes == n0),
+          "LOST sent, no barcode event");
+    line_set_control(false);
+    drive(10, 0, FRONT_LEFT);
+    line_set_control(true);
+    drive(30, 150, FRONT_ZIGZAG);
+    (void)junction_then_creep(100);
+    CHECK(g_barcodes == n0, "the dropped RIGHT is not used later");
+    drive(30, 150, FRONT_ZIGZAG);
+    g_bc_start = -1.0;
+}
+
+static void
 test_junction_and_lost (void)
 {
     int drives;
+    int junctions0 = g_junctions;
+    int lost0      = g_lost;
+    int found0;
 
     printf("junction, then line lost and found again\n");
     drive(20, 150, FRONT_BOTH);
-    CHECK(g_junctions == 1, "both black for 20 mm: one junction (%d)",
-          g_junctions);
+    CHECK(g_junctions == junctions0 + 1,
+          "both black for 20 mm: one junction (%d)", g_junctions - junctions0);
     drive(30, 150, FRONT_ZIGZAG);
 
     drive(S3_LOST_MM + 20, 150, FRONT_NONE);
-    CHECK(g_lost == 1, "no line for 250 mm: one LOST (%d)", g_lost);
+    CHECK(g_lost == lost0 + 1, "no line for 250 mm: one LOST (%d)",
+          g_lost - lost0);
     CHECK(s3_get_state() == S3_ST_AWAIT, "awaits the coordinator's search");
     drives = g_drives;
+    found0 = g_found;
     line_set_control(false);            /* coordinator searches */
     drive(200, 0, FRONT_NONE);
     CHECK(g_drives == drives, "no proposals during the search");
     drive(10, 0, FRONT_LEFT);
-    CHECK(g_found == 1, "line seen: FOUND sent once (%d)", g_found);
+    CHECK(g_found == found0 + 1, "line seen: FOUND sent once (%d)",
+          g_found - found0);
     drive(30, 0, FRONT_LEFT);
-    CHECK(g_found == 1, "not repeated");
+    CHECK(g_found == found0 + 1, "not repeated");
     line_set_control(true);
     drive(30, 150, FRONT_ZIGZAG);
     CHECK(s3_get_state() == S3_ST_FOLLOW, "following again");
@@ -582,6 +689,7 @@ main (void)
     test_bad_reads();
     test_no_distance();
     test_ignored_event();
+    test_no_junction();
     test_junction_and_lost();
     test_states();
     test_overflow();

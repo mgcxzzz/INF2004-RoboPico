@@ -305,14 +305,51 @@ static void
 test_barcode (void)
 {
     mc_cmd_t c;
+    int      calls;
 
-    printf("barcode turn, barcode while busy\n");
+    printf("barcode turns: stop, spin slowly until the line is found\n");
+    g_mc_n = 0;
     (void)nav_post_barcode(NAV_BARCODE_LEFT);
     run();
     CHECK(nav_get_owner() == NAV_OWNER_BARCODE, "barcode owns motion");
+    CHECK(!g_line_ctl, "line control taken");
     c = reply_last(NAV_MOTION_DONE);
-    CHECK((c.kind == 'T') && (c.value == -900), "left 90");
-    CHECK(nav_get_owner() == NAV_OWNER_LINE, "back to line");
+    CHECK(c.kind == 'S', "stops first");
+    c = g_mc[g_mc_n - 1];
+    CHECK((c.kind == 'T') && (c.value == -NAV_BC_TURN_MAX_DD),
+          "then spins LEFT, up to a full turn (%ld)", (long)c.value);
+    (void)nav_post_line_event(NAV_LINE_FOUND);
+    run();
+    CHECK(nav_get_owner() == NAV_OWNER_LINE, "line found -> line following");
+    CHECK(g_line_ctl, "line control back");
+
+    (void)nav_post_barcode(NAV_BARCODE_UTURN);
+    run();
+    (void)reply_last(NAV_MOTION_DONE);  /* the stop */
+    c = g_mc[g_mc_n - 1];
+    CHECK((c.kind == 'T') &&
+          (c.value == (NAV_UTURN_TURNS_RIGHT ? NAV_BC_UTURN_MIN_DD
+                                             : -NAV_BC_UTURN_MIN_DD)),
+          "U-turn: blind part first (%ld)", (long)c.value);
+    (void)nav_post_line_event(NAV_LINE_FOUND);  /* a side branch */
+    run();
+    CHECK(nav_get_owner() == NAV_OWNER_BARCODE, "side branch ignored");
+    (void)reply_last(NAV_MOTION_DONE);
+    c = g_mc[g_mc_n - 1];
+    CHECK((c.kind == 'T') &&
+          (c.value == (NAV_UTURN_TURNS_RIGHT ?
+                       (NAV_BC_TURN_MAX_DD - NAV_BC_UTURN_MIN_DD) :
+                       -(NAV_BC_TURN_MAX_DD - NAV_BC_UTURN_MIN_DD))),
+          "then the search part (%ld)", (long)c.value);
+    (void)nav_post_line_event(NAV_LINE_FOUND);
+    run();
+    CHECK(nav_get_owner() == NAV_OWNER_LINE, "U-turn done on the line");
+
+    calls = g_mc_n;
+    (void)nav_post_barcode(NAV_BARCODE_STRAIGHT);
+    run();
+    CHECK((nav_get_owner() == NAV_OWNER_LINE) && (g_mc_n == calls),
+          "straight: keeps following, no motion command");
 
     b5_nav_request_stop();
     run();
@@ -325,6 +362,22 @@ test_barcode (void)
     b5_nav_release_motion();            /* false alarm */
     run();
     CHECK(nav_get_owner() == NAV_OWNER_LINE, "false alarm releases");
+
+    g_fault = 0U;
+    (void)nav_post_barcode(NAV_BARCODE_RIGHT);
+    run();
+    (void)reply_last(NAV_MOTION_DONE);  /* the stop */
+    c = g_mc[g_mc_n - 1];
+    CHECK((c.kind == 'T') && (c.value == NAV_BC_TURN_MAX_DD), "spins RIGHT");
+    (void)reply_last(NAV_MOTION_DONE);  /* full turn, no line */
+    CHECK(g_fault == NAV_FAULT_LINE_LOST, "full turn without a line: fault");
+    CHECK(nav_get_state() == NAV_ST_SAFE_STOP, "safe stop");
+    (void)take_event(B5_EV_MISSION_STOP);
+    (void)nav_post_command(NAV_CMD_RESET);
+    run();
+    start_running();
+    (void)take_event(B5_EV_MISSION_START);
+    CHECK(nav_get_state() == NAV_ST_RUNNING, "reset and running again");
 }
 
 static void

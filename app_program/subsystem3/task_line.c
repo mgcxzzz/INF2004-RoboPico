@@ -11,6 +11,13 @@
  *     Decode and Request --invalid / backwards / timeout--> Line Following
  *     Line Following --line lost--> Await Navigation
  *     Await Navigation --control granted again--> Line Following
+ *
+ * Turn point (no angle is assumed; protocol in nav_iface.h): LEFT / RIGHT
+ * wait for the next junction, creep on until the wheel axle is over it,
+ * then post; the coordinator spins the car slowly
+ * and this task reports NAV_LINE_FOUND when the LEADING front sensor
+ * reaches the new line. U-TURN posts right after the barcode. STRAIGHT
+ * posts and keeps following (no Await).
  *   stop / pause / mission complete --> Idle / Ready
  *   critical sensor fault or safety inhibit --> Fault / Inhibited
  *   Fault / Inhibited --authorised reset--> Initialising
@@ -55,7 +62,11 @@ typedef struct
     uint32_t b_pending    : 1;      /* valid barcode, waiting for the
                                      * turn point                         */
     uint32_t pending_cmd  : 3;      /* nav_barcode_t                     */
+    uint32_t b_creep      : 1;      /* junction seen: creeping to pivot  */
     uint32_t await_lost   : 1;      /* awaiting after LOST (else barcode) */
+    uint32_t lead         : 2;      /* awaiting a spin: S3_SENSE_* bit of
+                                     * the leading sensor, 0 = none      */
+    uint32_t lead_white   : 2;      /* cycles it has been white (sat.)   */
     uint32_t b_revoked    : 1;      /* control was taken while awaiting  */
     uint32_t b_found_sent : 1;
     uint32_t b_fault_bit  : 1;      /* our shared fault bit is set       */
@@ -66,7 +77,8 @@ typedef struct
     uint32_t last_result  : 3;
     uint32_t last_cmd     : 3;
     uint32_t rearm_mm     : 12;     /* barcode sensor white this far     */
-    uint32_t pending_mm   : 12;     /* travel since the barcode ended    */
+    uint32_t pending_mm   : 12;     /* travel since the barcode ended, or
+                                     * since the junction while creeping */
     uint32_t barcodes_ok  : 8;
     uint32_t bad_reads    : 8;
     uint32_t backwards    : 8;
@@ -381,13 +393,60 @@ run_barcode (uint32_t sensors, uint32_t moved, bool b_reading_allowed)
 }
 
 static void
-withdraw_and_await (bool b_lost)
+withdraw_and_await (bool b_lost, uint32_t lead)
 {
     g_ctx.await_lost   = b_lost ? 1U : 0U;
+    g_ctx.lead         = lead;
+    g_ctx.lead_white   = 0U;
     g_ctx.b_revoked    = 0U;
     g_ctx.b_found_sent = 0U;
     g_ctx.await_us     = s3_time_us();
     enter(S3_ST_AWAIT);
+}
+
+static bool
+is_turn (uint32_t cmd)
+{
+    return ((uint32_t)NAV_BARCODE_LEFT == cmd) ||
+           ((uint32_t)NAV_BARCODE_RIGHT == cmd);
+}
+
+/* Post the pending barcode command. Returns true if the task now awaits
+ * the coordinator's spin (LEFT, RIGHT, U-TURN). */
+static bool
+post_command (void)
+{
+    uint32_t cmd  = g_ctx.pending_cmd;
+    uint32_t lead = 0U;
+
+    g_ctx.b_pending = 0U;
+    g_ctx.b_creep   = 0U;
+    g_ctx.last_cmd  = cmd;
+    g_ctx.barcodes_ok++;
+    (void)nav_post_barcode((nav_barcode_t)cmd);
+
+    if ((uint32_t)NAV_BARCODE_LEFT == cmd)
+    {
+        lead = S3_SENSE_LEFT;
+    }
+    else if (((uint32_t)NAV_BARCODE_RIGHT == cmd) ||
+             ((uint32_t)NAV_BARCODE_UTURN == cmd))
+    {
+        lead = (((uint32_t)NAV_BARCODE_UTURN == cmd) &&
+                (0 == NAV_UTURN_TURNS_RIGHT)) ? S3_SENSE_LEFT
+                                              : S3_SENSE_RIGHT;
+    }
+    else
+    {
+        /* STRAIGHT: keep following across the junction. */
+    }
+
+    if (0U != lead)
+    {
+        withdraw_and_await(false, lead);
+    }
+
+    return (0U != lead);
 }
 
 static void
@@ -413,6 +472,7 @@ mission_guard (nav_state_t nav)
     if (nav != NAV_ST_RUNNING)
     {
         g_ctx.b_pending = 0U;           /* stop / pause / complete */
+        g_ctx.b_creep   = 0U;
         s3_rd_reset(&g_rd);
         enter(S3_ST_IDLE);
         return false;
@@ -457,6 +517,7 @@ s3_step (void)
             g_ctx.b_armed   = 0U;
             g_ctx.rearm_mm  = 0U;
             g_ctx.b_pending = 0U;
+            g_ctx.b_creep   = 0U;
 
             if (g_init_er != E_OK)
             {
@@ -509,38 +570,74 @@ s3_step (void)
             {
                 g_ctx.junctions++;
                 (void)nav_post_line_event(NAV_LINE_JUNCTION);
+
+                /* A LEFT / RIGHT turns here: creep on to the pivot. */
+                if ((g_ctx.b_pending != 0U) && (g_ctx.b_creep == 0U) &&
+                    is_turn(g_ctx.pending_cmd))
+                {
+                    g_ctx.b_creep    = 1U;
+                    g_ctx.pending_mm = 0U;
+                }
             }
 
             if ((out.events & S3_LEV_LOST) != 0U)
             {
                 g_ctx.lost++;
-                g_ctx.b_pending = 0U;
                 s3_rd_reset(&g_rd);
+
+                /* NOTE: a waiting LEFT / RIGHT is dropped, not turned
+                 * here: LOST comes S3_LOST_MM past the end of the line,
+                 * too far for a spin to reach a branch at the end. */
+                g_ctx.b_pending = 0U;
+                g_ctx.b_creep   = 0U;
                 (void)nav_post_line_event(NAV_LINE_LOST);
-                withdraw_and_await(true);
+                withdraw_and_await(true, 0U);
                 break;
             }
 
             /* Propose speeds; the coordinator forwards them only while it
-             * has granted line control. */
+             * has granted line control. Creeping to the pivot: straight
+             * and slow, the sensors are past the junction. */
             if (granted)
             {
-                (void)nav_line_drive(out.left_mm_s, out.right_mm_s);
+                if (g_ctx.b_creep != 0U)
+                {
+                    (void)nav_line_drive(S3_CREEP_MM_S, S3_CREEP_MM_S);
+                }
+                else
+                {
+                    (void)nav_line_drive(out.left_mm_s, out.right_mm_s);
+                }
             }
 
-            /* A valid barcode is sent once, at the turn point. */
+            /* A valid barcode is sent once, at its turn point. */
             if (g_ctx.b_pending != 0U)
             {
                 g_ctx.pending_mm = add_sat(g_ctx.pending_mm, moved);
 
-                if ((g_ctx.pending_mm + 1U) > (uint32_t)S3_BC_TURN_DELAY_MM)
+                if (!is_turn(g_ctx.pending_cmd) ||
+                    ((g_ctx.b_creep != 0U) &&
+                     (g_ctx.pending_mm >= (uint32_t)S3_PIVOT_OFFSET_MM)))
                 {
+                    if (post_command())
+                    {
+                        break;          /* awaiting the spin */
+                    }
+                }
+                else if ((g_ctx.b_creep == 0U) &&
+                         (g_ctx.pending_mm >= (uint32_t)S3_BC_JUNCTION_MM))
+                {
+                    /* No junction followed: turning here would only find
+                     * the line we came along. Drop it, warn. */
                     g_ctx.b_pending = 0U;
-                    g_ctx.last_cmd  = g_ctx.pending_cmd;
-                    g_ctx.barcodes_ok++;
-                    (void)nav_post_barcode((nav_barcode_t)g_ctx.pending_cmd);
-                    withdraw_and_await(false);
-                    break;
+                    g_ctx.bad_reads++;
+                    (void)safety_report_fault(SAFETY_SRC_LINE,
+                                              (uint8_t)S3_WARN_NO_JUNCTION,
+                                              false);
+                }
+                else
+                {
+                    /* still waiting for the junction or the pivot */
                 }
             }
 
@@ -565,6 +662,30 @@ s3_step (void)
             {
                 g_ctx.b_found_sent = 1U;
                 (void)nav_post_line_event(NAV_LINE_FOUND);
+            }
+
+            /* Barcode spin: only the LEADING sensor counts (the trailing
+             * one crosses the line we came along at the start). Report
+             * every white-to-black change; the coordinator decides which
+             * one ends the spin (a U-turn skips side branches). */
+            if (g_ctx.lead != 0U)
+            {
+                if ((sensors & g_ctx.lead) == 0U)
+                {
+                    if (g_ctx.lead_white < 3U)
+                    {
+                        g_ctx.lead_white++;
+                    }
+                }
+                else if (g_ctx.lead_white >= S3_TURN_WHITE_CYCLES)
+                {
+                    g_ctx.lead_white = 0U;
+                    (void)nav_post_line_event(NAV_LINE_FOUND);
+                }
+                else
+                {
+                    g_ctx.lead_white = 0U;  /* still on the old line */
+                }
             }
 
             /* Resume when control comes back; or if the coordinator never

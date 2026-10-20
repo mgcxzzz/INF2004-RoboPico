@@ -337,6 +337,20 @@ line_telemetry_publish (uint8_t const * p_frame, uint32_t len)
         return;
     }
 
+#if SYS_CONSOLE_SENSORS
+    {
+        static uint8_t last_sensors = 0xFFU;
+
+        if (t.sensors != last_sensors)
+        {
+            tm_printf((UB *)"[line] sensors  L%u R%u B%u   (1 = black)\n",
+                      (UINT)(t.sensors & 1U), (UINT)((t.sensors >> 1) & 1U),
+                      (UINT)((t.sensors >> 2) & 1U));
+            last_sensors = t.sensors;
+        }
+    }
+#endif
+
     if (t.state != last_state)
     {
         tm_printf((UB *)"[line] %s  (sensors L%u R%u B%u)\n",
@@ -372,6 +386,10 @@ b5_telemetry_publish (uint8_t const * p_frame, uint32_t len)
         tm_printf((UB *)"[b5]  bad telemetry frame\n");
         return;
     }
+
+#if SYS_CONSOLE_SENSORS
+    tm_printf((UB *)"[b5]  range %d mm\n", (INT)t.range_mm);
+#endif
 
     if ((b5_state_t)t.state != g_last_b5)
     {

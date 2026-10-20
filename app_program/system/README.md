@@ -56,7 +56,7 @@ a lower one:
 | Priority | Owner | Gets control when | Gives it back when |
 |---|---|---|---|
 | 1 (highest) | **Obstacle** (S5) | S5 asks for a stop | S5 releases motion |
-| 2 | **Barcode turn** | a left / right / U-turn barcode is decoded | the turn finishes |
+| 2 | **Barcode turn** | S3 posts a left / right / U-turn barcode | S3 reports the new line (LINE_FOUND) |
 | 3 | **Line search** | the line is lost during normal following | the line is found again |
 | 4 | **Line following** | default while Running | — |
 
@@ -88,7 +88,7 @@ failed.
 | S5 bypass plan (side, shift L, forward F) | turn 45° to that side → drive L × 1.414 → turn back 45° → drive F − L → reply `MOTION_DONE` |
 | S5 rejoin (offset, heading, search width) | turn to face the line at 45° → drive offset × 1.414 + search width (max 600 mm) → reply `MOTION_DONE` |
 | S5 reverse | drive backwards → reply `MOTION_DONE` |
-| Barcode left / right / U-turn | turn −90° / +90° / 180° |
+| Barcode left / right / U-turn | stop → spin slowly left / right / right, up to a full turn, until S3 reports the new line (LINE_FOUND); a U-turn ignores lines in its first 135°. No line in a full turn: Safe Stop. No angle is assumed (`nav_iface.h`, `nav_barcode_t`) |
 | Line lost | stop → turn +15° → −30° → +45° → −60°. Still lost: Safe Stop |
 
 If S5 releases motion **from its Fault state**, the coordinator does not
@@ -191,7 +191,8 @@ degree. **Positive angles are to the right.**
 - Write:
   - `mc_set_wheel_speeds(left, right)`: line following (FR-MOT-05);
   - `mc_drive_distance(mm, speed, id)`: negative = reverse (FR-MOT-01);
-  - `mc_turn(angle_dd, speed, id)`: positive = right;
+  - `mc_turn(angle_dd, speed, id)`: positive = right; must spin on the
+    spot (wheels opposite), because barcode turns pivot on the junction;
   - `mc_stop(id)`: controlled stop to standstill;
   - `mc_inhibit(bool)`: **true** = motor outputs to zero at once, answer
     the current command with `NAV_MOTION_CANCELLED`, refuse new commands;
@@ -217,8 +218,11 @@ every 10 ms while granted, posts LOST / FOUND / JUNCTION and one barcode
 event per barcode, provides `line_set_control()`, `line_notify_state()`
 and `b5_line_detected()`, reports a stuck sensor as critical and sets
 `SYS_FAULT_LINE_SENSOR`. Barcode commands follow the Project Write-up
-(A left, B right, C straight, D U-turn). Still to agree: the turn point
-(`S3_BC_TURN_DELAY_MM`).
+(A left, B right, C straight, D U-turn). Barcode turns search for the new
+line instead of turning a fixed angle: S3 posts LEFT / RIGHT with the
+wheel axle over the next junction, the coordinator spins slowly, and S3
+reports LINE_FOUND from the leading front sensor. Still to measure: the
+front-sensor-to-axle distance (`S3_PIVOT_OFFSET_MM`).
 
 Once S2 is in, set `SYS_SIM_CAR` to 0.
 
@@ -260,6 +264,7 @@ Safe Stop.
 | `SYS_SIM_CAR` | Simulates S2: a virtual car drives (and stops on a stale wheel-speed target) | S2 provides `mc_*()`, `b5_motion_get_estimate()`, `s3_motion_get_distance()` |
 | `SYS_SIM_LINE` (0 by default) | Simulates S3 instead of running the real Buddy 3 task: the virtual car follows a virtual line. Use it for the Buddy 5 bench demo with no line under the car | — (keep 0 on the car) |
 | `SYS_CONSOLE_STATUS` | Prints coordinator, supervisor, S3 and S5 status on the console | S1 provides the `*_telemetry_publish()` functions |
+| `SYS_CONSOLE_SENSORS` (0 by default) | Also prints raw readings for bench tests: S3's three IR sensors on every change, S5's range with every status frame (tests S3-M01, S5-U08) | — (keep 0 normally) |
 | `SYS_BENCH_BUTTONS` | Robo Pico buttons: **GP20** = emergency stop, **GP21** = reset and start | the supervisor PC is connected over MQTT |
 | `SYS_SIM_AUTOSTART_MS` | Starts a run by itself this long after power-up (0 = wait for GP21) | — |
 
@@ -429,10 +434,10 @@ make -C testing/host
 
 | Test | Checks | Result |
 |---|---|---|
-| `test_nav` | start and line following, a full bypass, late results ignored, barcode turns, line search, pause/resume/reset, e-stop latching, S5 fault, motion timeout, inhibit not treated as a motion fault; S3's direct steering only while granted (slow applied, refused while S5 owns motion, lock always paired); minimum bits: 8-byte inbox message, clamped step values, ids above 15 bits ignored, dropped count saturating at 255, every telemetry frame decoded, header sequence never skips (incl. across its wrap) | 72 passed |
+| `test_nav` | start and line following, a full bypass, late results ignored, barcode turns (stop then spin; LINE_FOUND ends it, a U-turn ignores side branches, a full turn with no line is a fault; straight does nothing), line search, pause/resume/reset, e-stop latching, S5 fault, motion timeout, inhibit not treated as a motion fault; S3's direct steering only while granted (slow applied, refused while S5 owns motion, lock always paired); minimum bits: 8-byte inbox message, clamped step values, ids above 15 bits ignored, dropped count saturating at 255, every telemetry frame decoded, header sequence never skips (incl. across its wrap) | 84 passed |
 | `test_safety` | e-stop and timing, reset order, slow stop flagged, e-stop during a fault, warnings, silent task caught only while Running; minimum bits: stop time saturating at 1023 ms, 8-bit counters wrapping, fault mask in the frame, every telemetry frame decoded, header sequence never skips | 36 passed |
 | `test_s3` | Buddy 3 logic: Code 39 incl. the course's real barcodes, the distance-based reader, line logic, telemetry frame | 58 passed |
-| `test_s3_task` | Buddy 3 statechart on a simulated track | 55 passed |
+| `test_s3_task` | Buddy 3 statechart on a simulated track | 74 passed |
 | `test_b5_pack` | minimum-bit packing: record sizes, clamping, sign extension, 16-bit wrap, echo word, telemetry frame with the common header (wrong version, source or length rejected) | 43 passed |
 
 ## 10. To agree as a team
@@ -440,7 +445,10 @@ make -C testing/host
 - **Priorities.** The template bands put S1–S4 above S5, while the report
   (Section 3) has obstacle handling above line following. See
   `../subsystem5/README.md`.
-- **Barcode timing:** the turn starts as soon as the barcode is posted.
+- **Barcode turns:** the car pivots on the junction after the barcode and
+  turns until it finds the line; needs `mc_turn()` to spin on the spot and
+  `S3_PIVOT_OFFSET_MM` measured. A one-sided branch looks like a curve to
+  two front sensors (see `../subsystem3/README.md`).
 - **Speeds and angles** in `nav_config.h` are starting values to tune on
   the real car.
 - **Hardware watchdog:** a later addition could kick the RP2040 watchdog

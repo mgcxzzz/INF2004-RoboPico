@@ -33,6 +33,13 @@
  *     the *_telemetry_publish() functions. */
 #define SYS_CONSOLE_STATUS      (1)
 
+/* 1 = also print raw sensor readings for bench checks (needs
+ *     SYS_CONSOLE_STATUS 1): Buddy 3's three IR sensors whenever one
+ *     changes (sampled with each status frame, about 5 times a second),
+ *     and Buddy 5's range with every status frame (about twice a second).
+ *     Used by tests S3-M01 and S5-U08; leave 0 otherwise (busy console). */
+#define SYS_CONSOLE_SENSORS     (0)
+
 /* 1 = the Robo Pico's two buttons act as the supervisor PC:
  *     GP20 = emergency stop, GP21 = reset and start a run.
  *     Pins are claimed in TEAM.md section 2. */

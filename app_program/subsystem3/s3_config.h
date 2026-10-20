@@ -87,13 +87,32 @@
                                          * next barcode can start (FR-LINE-05) */
 #define S3_BC_MIN_RATIO_X10     (15)    /* narrowest wide >= 1.5 x widest
                                          * narrow (print is 3 : 1)         */
-#define S3_BC_TURN_DELAY_MM     (0)     /* TUNE: travel after the barcode
-                                         * before the event is posted, so
-                                         * the coordinator turns at the
-                                         * junction, not at the barcode    */
 #define S3_AWAIT_MS             (300U)  /* coordinator kept line control
                                          * this long after an event: it
                                          * ignored it, so resume following */
+
+/* ------------------------------------------------------------------------
+ * Barcode turns: no angle is assumed (protocol in nav_iface.h).
+ *
+ * A spin finds a branch only if the car pivots ON the junction: the front
+ * sensors sweep a circle around the wheel axle, and a branch that starts
+ * outside that circle is never crossed (the car would find the line it
+ * came along instead). So LEFT / RIGHT wait for the next junction, the
+ * car creeps on until the axle is over it, and only then is the command
+ * posted. A U-turn needs no junction: it is posted right after the
+ * barcode. STRAIGHT is posted and the car keeps following, straight
+ * across the junction.
+ * --------------------------------------------------------------------- */
+#define S3_PIVOT_OFFSET_MM      (70)    /* TUNE (measure): front sensors to
+                                         * the wheel axle                */
+#define S3_CREEP_MM_S           (80)    /* TUNE: slow, straight, from the
+                                         * junction to the pivot point   */
+#define S3_BC_JUNCTION_MM       (1000)  /* TUNE: a LEFT / RIGHT barcode
+                                         * waits this far for its junction;
+                                         * none = dropped with a warning */
+#define S3_TURN_WHITE_CYCLES    (2U)    /* leading sensor white this many
+                                         * cycles before black counts as
+                                         * the new line                  */
 
 /* Command table: Code 39 character -> navigation event (FR-LINE-04).
  * Confirmed for the course (Project Write-up, "Barcode Navigation"):
@@ -110,5 +129,7 @@
 #define S3_FAULT_STUCK          (0x01U) /* front sensors black too long  */
 #define S3_FAULT_INIT           (0x02U) /* pins or interrupt not set up  */
 #define S3_WARN_EDGE_OVERFLOW   (0x03U) /* barcode edges lost (warning)  */
+#define S3_WARN_NO_JUNCTION     (0x04U) /* LEFT / RIGHT barcode but no
+                                         * junction followed (warning)   */
 
 #endif /* S3_CONFIG_H */

@@ -49,12 +49,45 @@ Week 6 feedback and the Tribunal 1 minimum-bit change (below).
 | Idle / Ready | front sensing only | coordinator Running → Line Following |
 | Line Following | steering proposal every 10 ms via `nav_line_drive()` (used only while line control is granted) | first bar [armed] → Read Barcode; line lost → Await |
 | Read Barcode | keeps steering; the reader collects edges | quiet zone → Decode and Request |
-| Decode and Request | decode once; valid + in the command table → **one** `nav_post_barcode()` at the turn point | valid → Await; invalid, backwards, timeout → Line Following, no event |
-| Await Navigation | no proposals; after LINE_LOST, reports LINE_FOUND once when a front sensor sees the line | line control granted again → Line Following |
+| Decode and Request | decode once; valid + in the command table → **one** `nav_post_barcode()` at the turn point (below) | LEFT / RIGHT / U-turn → Await; STRAIGHT → keeps following; invalid, backwards, timeout → Line Following, no event |
+| Await Navigation | no proposals; after LINE_LOST, reports LINE_FOUND once when a front sensor sees the line; during a barcode spin, reports LINE_FOUND each time the **leading** sensor reaches a line | line control granted again → Line Following |
 | Fault / Inhibited | no proposals | coordinator Ready again (authorised reset) → Initialising |
 
 Stop, pause or mission complete → Idle. Emergency stop or coordinator
 Fault → Fault / Inhibited.
+
+**Barcode turns: no angle is assumed.** The course does not say how sharp
+a branch is, so the car turns until it finds the new line:
+
+1. **LEFT / RIGHT** wait for the next junction (both front sensors black
+   for 12 mm), then creep on, straight and slow, `S3_PIVOT_OFFSET_MM`
+   (front sensors to wheel axle) so the car pivots **on** the junction,
+   and only then post the command. **U-turn** is posted right after the
+   barcode (no junction needed). **STRAIGHT** is posted and the car keeps
+   following, straight across the junction.
+2. The coordinator stops the car and spins it slowly on the spot
+   (`NAV_BC_TURN_MM_S`, about 1 mm of sensor travel per 10 ms cycle, so
+   the 18 mm line is seen for many cycles and the stop overshoots only a
+   few mm).
+3. Only the **leading** front sensor counts (left for LEFT; right for RIGHT
+   and U-turn). The trailing one crosses the line we came along as soon as
+   the spin starts. The leading sensor must see white for 2 cycles first,
+   then black = the new line: LINE_FOUND.
+4. The coordinator hands line control back and line following centres the
+   car on the new line. A U-turn ignores lines in its first 135° (side
+   branches). A full 360° with no line = line-lost fault, Safe Stop.
+
+Why the junction matters: the front sensors sweep a circle around the
+wheel axle. A branch that starts outside that circle is never crossed, so
+spinning anywhere else would only find the line the car came along (an
+accidental U-turn). A LEFT / RIGHT with no junction within
+`S3_BC_JUNCTION_MM` (1000 mm) is dropped with a warning; if the line is
+lost first, the normal line search runs and the command is dropped.
+
+**Limitation (two front sensors):** a branch that leaves to one side only
+(├ or ┤), with the line also going straight on, puts only ONE sensor on
+black, so it looks like a curve, not a junction: the car follows it like a
+curve whatever the barcode said. Check the course's junction shapes.
 
 **One event per barcode (FR-LINE-05).** After any read the reader is
 disarmed and re-arms only after the barcode sensor has seen white for
@@ -106,8 +139,10 @@ lost and lost edges.
    `b5_motion_get_estimate()`. **Finer than 1 mm would help the half-size
    print**: with 1 mm steps it decodes at steady speed, but at strongly
    varying speed it may be refused (never misread).
-3. **Turn point** (`S3_BC_TURN_DELAY_MM`, 0 now): how far after the
-   barcode the coordinator should start the turn.
+3. **Turn geometry**: measure `S3_PIVOT_OFFSET_MM` (front sensors to the
+   wheel axle, 70 mm now) on the car; Buddy 2's `mc_turn()` must spin on
+   the spot (wheels opposite) for the pivot to land on the junction; check
+   which junction shapes the course has (limitation above).
 4. **Stale-target timeout** (IF-19): Motion Control stops when no wheel
    speed arrives for 50 ms.
 5. **Template LED**: subsystem 1's template example still blinks an LED
@@ -125,7 +160,8 @@ lost and lost edges.
   not turn: keep the front sensors over the line (or black tape) so the
   line is not "lost", and pass a printed barcode under the side sensor by
   hand at a steady speed. The console prints each state change and every
-  barcode result.
+  barcode result. C and D send their event straight away; A and B wait for
+  a junction: put black tape across both front sensors after the barcode.
 - **1:** the bench simulates Line and Barcode instead (the Buddy 5 demo
   with no line under the car). The real task is not started, so S3-U06
   fails in that build.
@@ -136,5 +172,5 @@ lost and lost edges.
 |---|---|---|
 | S3-U01…U07 | Code 39 table, the course `*A*` print, backwards read, half-size `*Z*`, line logic, task running, telemetry | `make TEST=1`, `subsystem3_test.c` |
 | S3-U08 | host: 58 checks, incl. all four course barcodes from the PDF, 2000 noisy reads never misread, the reader at varying speed and with a stop on a space mid-barcode | `make -C testing/host` (`test_s3`) |
-| S3-U09 | host: the statechart on a simulated track, 55 checks: one event per barcode, all four commands A/B/C/D, sample Z gives no command, stray marks, bad and backwards reads, no distance, ignored events, junction, lost / found, pause, e-stop, stuck sensor and reset, lost edges, every telemetry frame | `make -C testing/host` (`test_s3_task`) |
-| S3-M01…M06 | on the car: polarity, NFR-LINE-01, NFR-LINE-02, junction vs curve, steering latency and stale stop, side-sensor position | `testing/subsystem3/TEST_LOG.md` |
+| S3-U09 | host: the statechart on a simulated track, 74 checks: LEFT / RIGHT wait for the junction and creep to the pivot, the leading sensor ends the spin (trailing ignored), U-turn straight after the barcode, STRAIGHT keeps following, no junction = dropped, one event per barcode, all four commands A/B/C/D, sample Z gives no command, stray marks, bad and backwards reads, no distance, ignored events, junction, lost / found, pause, e-stop, stuck sensor and reset, lost edges, every telemetry frame | `make -C testing/host` (`test_s3_task`) |
+| S3-M01…M07 | on the car: polarity, NFR-LINE-01, NFR-LINE-02, junction vs curve, steering latency and stale stop, side-sensor position, barcode turn by line search | `testing/subsystem3/TEST_LOG.md` |
