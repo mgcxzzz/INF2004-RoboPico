@@ -1,5 +1,13 @@
 # Buddy 2 hardware measurements and handover
 
+**Update, 20 October 2026:** calibration, geometry, speed samples and additional
+stop checks have now been supplied. See
+[`../MEASURED_CALIBRATION_2026-10-20.md`](../MEASURED_CALIBRATION_2026-10-20.md)
+for the actual recorded results. This file's original blank tables/checklist
+below remain as a reusable template, not a claim those measurements are missing.
+The next-stage firmware is [`../dual_wheel_bench/`](../dual_wheel_bench/), v4;
+its new feedback/offline behaviour still requires physical validation.
+
 Purpose: collect the measurements that require the physical robot before it is
 returned. Firmware development can continue later, but closed-loop tuning and
 full robot acceptance still require access to the robot.
