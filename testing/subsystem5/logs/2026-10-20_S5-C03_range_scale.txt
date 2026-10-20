@@ -1,0 +1,16 @@
+S5-C03  Range scale and sensor position (calibration)
+Date: 2026-10-20   Tester: n1sh0
+Data: the S5-U08 ranging runs (raw console in 2026-10-20_S5-U08_ranging.txt).
+Tape measured from the front of the sensor's cylinders, flat box face-on.
+
+  tape     mean     error   spread
+  100 mm   106 mm   +6 mm   0 mm
+  300 mm   303 mm   +3 mm   4 mm
+  500 mm   498 mm   -2 mm   9 mm
+
+The errors are a few mm and not a common percentage, so the speed of sound is right:
+SOUND_NUM stays 343 (drv_ultrasonic.c). 1 m was not used (box smaller than the beam,
+table reflection: two groups of readings).
+Sensor-to-front-of-car offset: 45 mm (front of the sensor's cylinders to the very
+front of the car). B5_D_STOP_MM is measured from the sensor, so at the 300 mm stop
+distance the gap left in front of the car is 300 - 45 = 255 mm (checked on the car in S5-C06).

@@ -1,0 +1,36 @@
+S5-U12  Host tests: obstacle profiling and the statechart (4 scenarios)
+Date: 2026-10-20   Tester: n1sh0   Result: PASS
+Code: commit 6b6edea plus the uncommitted S5-C05 change in b5_config.h (car 155 x 190 mm),
+committed together with this log.
+Run on: the MacBook's Linux shell (gcc 11.4, aarch64), testing/host, no Pico.
+Command: ./test_b5_profile; ./test_b5_task 1..4
+Expected: 95 passed, 0 failed; scenarios 1-4 PASS.
+----- output -----
+trig and median
+no obstacle -> Planning returns to Guard
+width accuracy, refinement stops at alpha (Week 6 text)
+  worst width error 42.0 %, max refinement samples 4 (for comparison only)
+width accuracy, refinement stops at B5_REFINE_STOP_DD
+  worst width error 6.0 %, max refinement samples 10
+side choice (NFR-USO-03)
+obstacle wider than the scan arc -> blocked
+dead sensor -> low confidence
+
+95 passed, 0 failed
+scenario 1 (2.5 s simulated)
+  states: Idle -> Guard -> Confirm -> Halting -> Coarse Sweep -> Edge Refinement -> Planning -> Bypassing -> Recovering -> Guard -> Idle
+  fault reported: 0 (expected 0), shared fault mask 0x00, bad frames 0
+  PASS
+scenario 2 (0.3 s simulated)
+  states: Idle -> Guard -> Fault
+  fault reported: 1 (expected 1), shared fault mask 0x08, bad frames 0
+  PASS
+scenario 3 (3.8 s simulated)
+  states: Idle -> Guard -> Confirm -> Halting -> Coarse Sweep -> Edge Refinement -> Planning -> Blocked -> Halting -> Coarse Sweep -> Edge Refinement -> Planning -> Blocked -> Halting -> Coarse Sweep -> Edge Refinement -> Planning -> Blocked -> Fault
+  fault reported: 4 (expected 4), shared fault mask 0x80, bad frames 0
+  PASS
+  reverses: 2 (expected 2)
+scenario 4 (2.5 s simulated)
+  states: Idle -> Guard -> Confirm -> Halting -> Coarse Sweep -> Edge Refinement -> Planning -> Bypassing -> Recovering -> Fault
+  fault reported: 3 (expected 3), shared fault mask 0x80, bad frames 0
+  PASS

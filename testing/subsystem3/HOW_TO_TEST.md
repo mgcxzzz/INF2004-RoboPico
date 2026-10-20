@@ -65,10 +65,21 @@ Read the console (see `../README.md`, step 4). On macOS:
 
 ```sh
 ls /dev/cu.usbmodem*                      # find the port
-cat /dev/cu.usbmodem1101 | tee ../testing/subsystem3/logs/2026-10-21_part2.txt
+cat /dev/cu.usbmodem1101 | tee ../testing/subsystem3/logs/2026-10-21_S3-M01_polarity.txt
 ```
 
-Start `cat` first, then press the Pico's reset (or unplug and replug USB).
+The USB serial port only exists while the Pico is running, and it
+disappears on every reset, so a `cat` started earlier stops. To catch the
+output from the very first line, start this **before** plugging in (or
+right after copying the `.uf2`); it waits for the port and then records:
+
+```sh
+P=/dev/cu.usbmodem1101    # your port name from ls
+until [ -e $P ]; do sleep 0.1; done; cat $P | tee <log file>
+```
+
+Unplug and replug the Pico's USB to restart it; run the line again each
+time.
 
 **The bench trick.** In Parts 2–4 the simulated car "drives" as soon as a
 run starts (2 s after power-up). If neither front sensor sees black for
@@ -83,11 +94,14 @@ under its left sensor forever.
 ## Part 1: PC tests, no Pico (S3-U08, S3-U09)
 
 ```sh
-make -C testing/host 2>&1 | tee testing/subsystem3/logs/2026-10-21_host.txt
+cd testing/host && make test_s3 test_s3_task
+./test_s3 2>&1 | tee ../subsystem3/logs/2026-10-21_S3-U08_host_barcode.txt
+./test_s3_task 2>&1 | tee ../subsystem3/logs/2026-10-21_S3-U09_host_statechart.txt
+make clean; cd ../..
 ```
 
 Pass: `test_s3` prints `58 passed, 0 failed` (S3-U08) and `test_s3_task`
-prints `74 passed, 0 failed` (S3-U09). Then `make -C testing/host clean`.
+prints `74 passed, 0 failed` (S3-U09).
 
 ## Part 2: wiring and sensor polarity (S3-M01)
 
@@ -145,6 +159,14 @@ the ruler.
    ```
 Pass: all seven PASS. S3-U06 fails if `SYS_SIM_LINE` is 1 (the real task
 is not started then).
+
+Log the whole run outside the repo (e.g. `~/SIT/Y2T1/Embedded/serial_logs/selftest.txt`),
+then split it into one file per test ID:
+
+```sh
+sh testing/split_log.sh ~/SIT/Y2T1/Embedded/serial_logs/selftest.txt \
+   testing/subsystem3/logs 2026-10-21 selftest
+```
 
 ## Part 4: barcodes and turns on the bench
 
@@ -286,10 +308,11 @@ For each test, in `TEST_LOG.md` → *Results*, add a row:
 
 | Date | Test ID | Commit | Tester | Result | Log / evidence | Notes |
 |---|---|---|---|---|---|---|
-| 2026-10-21 | S3-M01 | `8e63e12` | n1sh0 | PASS | `logs/2026-10-21_part2.txt`, photo | 5 mm height |
+| 2026-10-21 | S3-M01 | `8e63e12` | n1sh0 | PASS | `logs/2026-10-21_S3-M01_polarity.txt`, photo | 5 mm height |
 
 - **Commit:** `git rev-parse --short HEAD` (commit before testing).
-- **Logs** go in `logs/` (`YYYY-MM-DD_what.txt`), photos too; videos as
+- **Logs** go in `logs/`, one file per test ID (`YYYY-MM-DD_<ID>_what.txt`,
+  with a short header); photos too; videos as
   unlisted YouTube links listed in `videos/README.md`.
 - A FAIL stays in the table. Fix, re-run, add a new PASS row.
 

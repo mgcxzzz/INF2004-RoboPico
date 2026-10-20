@@ -64,10 +64,21 @@ Read the console (see `../README.md`, step 4). On macOS:
 
 ```sh
 ls /dev/cu.usbmodem*                      # find the port
-cat /dev/cu.usbmodem1101 | tee ../testing/subsystem5/logs/2026-10-21_bench.txt
+cat /dev/cu.usbmodem1101 | tee ../testing/subsystem5/logs/2026-10-21_S5-U10_bypass.txt
 ```
 
-Start `cat` first, then press the Pico's reset (or unplug and replug USB).
+The USB serial port only exists while the Pico is running, and it
+disappears on every reset, so a `cat` started earlier stops. To catch the
+output from the very first line, start this **before** plugging in (or
+right after copying the `.uf2`); it waits for the port and then records:
+
+```sh
+P=/dev/cu.usbmodem1101    # your port name from ls
+until [ -e $P ]; do sleep 0.1; done; cat $P | tee <log file>
+```
+
+Unplug and replug the Pico's USB to restart it; run the line again each
+time.
 A run starts by itself 2 s after power-up. **GP20** = emergency stop,
 **GP21** = reset and start a new run.
 
@@ -76,12 +87,14 @@ A run starts by itself 2 s after power-up. **GP20** = emergency stop,
 ## Part 1: PC tests, no Pico (S5-U12, S5-U16)
 
 ```sh
-make -C testing/host 2>&1 | tee testing/subsystem5/logs/2026-10-21_host.txt
+cd testing/host && make test_b5_pack test_b5_profile test_b5_task
+./test_b5_pack 2>&1 | tee ../subsystem5/logs/2026-10-21_S5-U16_host_pack.txt
+(./test_b5_profile; for s in 1 2 3 4; do ./test_b5_task $s; done) 2>&1 | tee ../subsystem5/logs/2026-10-21_S5-U12_host_profile.txt
+make clean; cd ../..
 ```
 
 Pass: `test_b5_pack` `43 passed, 0 failed` (S5-U16), `test_b5_profile`
-`95 passed, 0 failed` and scenarios 1–4 `PASS` (S5-U12). Then
-`make -C testing/host clean`.
+`95 passed, 0 failed` and scenarios 1–4 `PASS` (S5-U12).
 
 ## Part 2: quick hardware check (optional, before anything else)
 
@@ -127,6 +140,14 @@ included) and length (front to back). Set `B5_CAR_WIDTH_MM` and
 
 Pass: every S5 line PASS. `S5-U05 SKIP` means no run had started: check
 `SYS_SIM_LINE` is 1 and run it again.
+
+Log the whole run outside the repo (e.g. `~/SIT/Y2T1/Embedded/serial_logs/selftest.txt`),
+then split it into one file per test ID:
+
+```sh
+sh testing/split_log.sh ~/SIT/Y2T1/Embedded/serial_logs/selftest.txt \
+   testing/subsystem5/logs 2026-10-21 selftest
+```
 
 ## Part 4: bench tests (normal image, `make -j8`)
 
@@ -268,10 +289,11 @@ For each test, in `TEST_LOG.md` → *Results*, add a row:
 
 | Date | Test ID | Commit | Tester | Result | Log / evidence | Notes |
 |---|---|---|---|---|---|---|
-| 2026-10-21 | S5-U08 | `8e63e12` | n1sh0 | PASS | `logs/2026-10-21_u08.txt` | 500 mm: avg 503 |
+| 2026-10-21 | S5-U08 | `8e63e12` | n1sh0 | PASS | `logs/2026-10-21_S5-U08_ranging.txt` | 500 mm: avg 503 |
 
 - **Commit:** `git rev-parse --short HEAD` (commit before testing).
-- **Logs** go in `logs/` (`YYYY-MM-DD_what.txt`), photos too; videos as
+- **Logs** go in `logs/`, one file per test ID (`YYYY-MM-DD_<ID>_what.txt`,
+  with a short header); photos too; videos as
   unlisted YouTube links listed in `videos/README.md`.
 - A FAIL stays in the table. Fix, re-run, add a new PASS row.
 

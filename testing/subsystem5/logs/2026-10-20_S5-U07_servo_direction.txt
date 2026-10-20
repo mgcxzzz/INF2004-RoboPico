@@ -1,0 +1,45 @@
+S5-U07  Servo direction (which pulse end points right)
+Date: 2026-10-20   Tester: n1sh0   Result: PASS
+Tool: standalone servo_us_test_55 (not repo firmware), menu 'l' (left/right finder).
+Setup: Pico W USB to the Mac only. Box ~20-25 cm front-right of the car, one flat face
+turned to the sensor; front and left clear beyond ~35 cm.
+Expected: the box is found on one side; RESULT names which pulse end points right.
+Outcome: box seen at +5..+45 deg (~245 mm). SHORT pulses point RIGHT -> B5_SERVO_REVERSED stays 0.
+----- console -----
+[auto] SHORT-pulse side (870 us): 1 beep
+[auto] LONG-pulse side  (2030 us): 2 beeps
+[auto] centre: 3 beeps
+[auto] parking sensor: move your hand in front of the sensor
+
+=== Servo + ultrasonic bench test (GP12 servo, GP16 TRIG, GP17 ECHO) ===
+  t  automatic self-test           p  one ping
+  c  centre servo                  r  continuous ranging (any key stops)
+  [  short-side limit (870 us)     s  radar scan between the limits
+  ]  long-side limit  (2030 us)     l  which way is RIGHT?
+  a/d  -/+100 us   z/x  -/+10 us   w  slow wiggle (watch the direction)
+  m  print servo calibration       h  this help
+  (servo is limited to +/-55 deg so the sensor clears the casing;
+   reset the board to go back to the no-laptop beep mode)
+
+servo  1450 us   (code angle   +0 deg if short pulse = right)
+
+LEFT/RIGHT FINDER
+Put a box about 20 cm away on the car's RIGHT side (front-right is fine).
+Keep the left side and the front clear for at least 60 cm.
+Press any key to scan...
+ pulse  angle*   range
+  870   +55     868 |##################################
+  976   +45     262 |##########
+ 1082   +35     245 |#########
+ 1188   +25     246 |#########
+ 1294   +15     246 |#########
+ 1400    +5     275 |###########
+ 1506    -5     784 |###############################
+ 1612   -15     797 |###############################
+ 1718   -25     818 |################################
+ 1824   -35     ---  |
+ 1930   -45    2010 |################################################
+* code angle, assuming short pulse = right
+RESULT: SHORT pulses point RIGHT, LONG pulses point LEFT.
+        This matches the B5 code: keep B5_SERVO_REVERSED = 0.
+        500 us = +90 (right), 2400 us = -90 (left).

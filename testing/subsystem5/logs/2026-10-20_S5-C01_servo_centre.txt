@@ -1,0 +1,50 @@
+S5-C01  Servo centre, span and direction (calibration)
+Date: 2026-10-20   Tester: n1sh0
+Tool: standalone servo_us_test_55 (not repo firmware), menu 'c', 'm', '[', ']'.
+Setup: car on a paper guide with lines at 0 deg and +/-55 deg drawn with a protractor,
+servo shaft over the guide's centre; judged from above.
+Outcome: 'c' (1450 us) faces the 0 deg line, no trim needed; 'm' -> MIN 500 / MAX 2400 us.
+'[' (870 us) and ']' (2030 us) = commanded +/-55 deg: symmetric about 0 deg and clear of the
+casing, re-checked in a second session. Values unchanged: B5_SERVO_MIN_US 500,
+B5_SERVO_MAX_US 2400, B5_SERVO_REVERSED 0. End angles judged by eye; S5-U09 checks them
+indirectly.
+----- console, session 1 -----
+servo  1450 us   (code angle   +0 deg if short pulse = right)
+If the sensor faces straight ahead right now (1450 us), use:
+  #define B5_SERVO_MIN_US  (500U)
+  #define B5_SERVO_MAX_US  (2400U)
+(same span, centred here). Use a/d/z/x to trim, then press m again.
+If the servo buzzes or strains at an end, shrink the span instead.
+servo   870 us   (code angle  +55 deg if short pulse = right)
+servo  2030 us   (code angle  -55 deg if short pulse = right)
+servo  1450 us   (code angle   +0 deg if short pulse = right)
+
+----- console, session 2 (re-check of the ends) -----
+[auto] SHORT-pulse side (870 us): 1 beep
+[auto] LONG-pulse side  (2030 us): 2 beeps
+[auto] centre: 3 beeps
+[auto] parking sensor: move your hand in front of the sensor
+[auto] 2668 mm
+[auto] 2668 mm
+[auto] 2667 mm
+[auto] 2660 mm
+
+=== Servo + ultrasonic bench test (GP12 servo, GP16 TRIG, GP17 ECHO) ===
+  t  automatic self-test           p  one ping
+  c  centre servo                  r  continuous ranging (any key stops)
+  [  short-side limit (870 us)     s  radar scan between the limits
+  ]  long-side limit  (2030 us)     l  which way is RIGHT?
+  a/d  -/+100 us   z/x  -/+10 us   w  slow wiggle (watch the direction)
+  m  print servo calibration       h  this help
+  (servo is limited to +/-55 deg so the sensor clears the casing;
+   reset the board to go back to the no-laptop beep mode)
+
+servo  1450 us   (code angle   +0 deg if short pulse = right)
+servo  2030 us   (code angle  -55 deg if short pulse = right)
+servo  2030 us   (code angle  -55 deg if short pulse = right)
+servo  1450 us   (code angle   +0 deg if short pulse = right)
+servo  2030 us   (code angle  -55 deg if short pulse = right)
+servo   870 us   (code angle  +55 deg if short pulse = right)
+servo   870 us   (code angle  +55 deg if short pulse = right)
+servo  2030 us   (code angle  -55 deg if short pulse = right)
+servo  2020 us   (code angle  -54 deg if short pulse = right)

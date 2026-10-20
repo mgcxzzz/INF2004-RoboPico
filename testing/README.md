@@ -50,14 +50,29 @@ Test IDs never change and are never reused, even if a test is dropped.
    ```
    The test image runs every subsystem's tests at power-up and prints one
    `[TEST] <ID> PASS|FAIL` line per check. (A normal `make` leaves the tests out.)
-4. **Save the console output** to `logs/`, named `YYYY-MM-DD_<what>.txt`:
+4. **Save the console output** to `logs/`, **one file per test ID**, named
+   `YYYY-MM-DD_<TEST-ID>_<what>.txt` (e.g. `2026-10-20_S5-U08_ranging.txt`).
+   Start each file with a short header: test ID, date, tester, tool or
+   build, setup, expected and actual result. When one run covers several
+   IDs (the `TEST=1` self-test image, the host tests), split it with
+   `testing/split_log.sh` (see below) so each ID still gets its own file:
    ```sh
    # macOS (find the port name with: ls /dev/cu.usbmodem*)
-   cat /dev/cu.usbmodem1101 | tee ../testing/subsystem1/logs/2026-10-14_unit.txt
+   cat /dev/cu.usbmodem1101 | tee ../testing/subsystem1/logs/2026-10-14_S1-U03_led.txt
    # Linux / WSL with usbipd
-   cat /dev/ttyACM0 | tee ../testing/subsystem1/logs/2026-10-14_unit.txt
+   cat /dev/ttyACM0 | tee ../testing/subsystem1/logs/2026-10-14_S1-U03_led.txt
    ```
-   Start the command first, then reset the Pico. Press Ctrl-C when it is done.
+   The USB port disappears on every reset, so start a command that waits for
+   it, then plug the Pico in (or replug it). Press Ctrl-C when it is done:
+   ```sh
+   P=/dev/cu.usbmodem1101
+   until [ -e $P ]; do sleep 0.1; done; cat $P | tee ../testing/subsystem1/logs/2026-10-14_S1-U03_led.txt
+   ```
+   To split a run that covers several test IDs into one file per ID:
+   ```sh
+   sh testing/split_log.sh run.txt testing/subsystem5/logs 2026-10-20 selftest
+   # -> testing/subsystem5/logs/2026-10-20_S5-U01_selftest.txt, ..._S5-U02_..., ...
+   ```
    On Windows with PuTTY, use *Session → Logging → All session output*.
    For manual tests, save photos or scope screenshots in `logs/` the same way
    (keep each file under a few MB). Videos go in `videos/` instead (see below).

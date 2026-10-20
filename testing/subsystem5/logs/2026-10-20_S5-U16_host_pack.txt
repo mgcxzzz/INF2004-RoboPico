@@ -1,0 +1,20 @@
+S5-U16  Host packing tests (minimum-bit data)
+Date: 2026-10-20   Tester: n1sh0   Result: PASS
+Code: commit 6b6edea plus the uncommitted S5-C05 change in b5_config.h (car 155 x 190 mm),
+committed together with this log.
+Run on: the MacBook's Linux shell (gcc 11.4, aarch64), testing/host, no Pico.
+Command: ./test_b5_pack
+Expected: 43 passed, 0 failed (record sizes, clamping, sign extension, echo word,
+frame layout with the common header; wrong version, source or length rejected).
+The statechart side of S5-U16 (fault-mask bits, every frame decodes) is in the
+S5-U12 log: scenarios 1-4 with 0 bad frames.
+----- output -----
+record sizes
+  sample 4, profile 28, plan 8, rejoin 8, status 40 bytes
+masks, shifts and sign extension
+scan samples clamp instead of wrapping
+16-bit net distance wraps safely (agreed with Buddy 2)
+echo result word (single writer: the ISR)
+binary telemetry frame (3-byte common header + 16-byte payload)
+
+43 passed, 0 failed

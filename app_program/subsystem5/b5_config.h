@@ -79,8 +79,8 @@
 /* ------------------------------------------------------------------------
  * Planning and bypass (car geometry: TUNE on the real car)
  * --------------------------------------------------------------------- */
-#define B5_CAR_WIDTH_MM         (150)   /* TUNE: measure the PicoCar     */
-#define B5_CAR_LENGTH_MM        (200)   /* TUNE: measure the PicoCar     */
+#define B5_CAR_WIDTH_MM         (155)   /* measured, widest point (S5-C05) */
+#define B5_CAR_LENGTH_MM        (190)   /* measured, front to back (S5-C05) */
 #define B5_MARGIN_MM            (50)    /* clearance margin each side    */
 #define B5_OBST_DEPTH_MM        (200)   /* assumed obstacle depth        */
 #define B5_OPEN_CLEARANCE_MM    (1000)  /* reported when a side is open  */

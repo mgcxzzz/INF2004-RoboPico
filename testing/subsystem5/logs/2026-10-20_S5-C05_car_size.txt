@@ -1,0 +1,11 @@
+S5-C05  Car size (calibration)
+Date: 2026-10-20   Tester: n1sh0
+Method: tape measure, generous (widest and longest points, wheels and brackets included).
+
+  width   155 mm  -> B5_CAR_WIDTH_MM  155 (was placeholder 150)
+  length  190 mm  -> B5_CAR_LENGTH_MM 190 (was placeholder 200)
+
+Used by the bypass planner (obstacle_profile.c): the side gap needed is
+width + 2 x B5_MARGIN_MM = 255 mm; the forward leg adds the car length.
+Host tests after the change: test_b5_pack 43 passed, test_b5_profile 95 passed,
+test_b5_task scenarios 1-4 PASS.
