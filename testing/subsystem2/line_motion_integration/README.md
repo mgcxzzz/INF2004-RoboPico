@@ -1,30 +1,52 @@
-> **Current hardware blocker:** V2 now enumerates and prints initially, but the
-> user reports the IR stream freezes later. Do not use frozen values for sensor
-> adjustment or start motion yet. Use `sensor_probe/README.md` and the dedicated
-> `firmware/buddy23_ir_sensor_probe_v1.uf2` for the next diagnostic. This probe
-> has no motor commands and does not run the full integration.
-
-# Buddy 2 + Navigation Coordinator + Buddy 3: isolated line-motion test v2
+# Buddy 2 + Navigation Coordinator + Buddy 3: isolated line-motion test v3
 
 This folder is separate from `dual_wheel_bench`. Flash
-`firmware/buddy23_line_motion_v2.uf2` for this experiment; flash the V7 dual
+`firmware/buddy23_line_motion_v3.uf2` for this experiment; flash the V7 dual
 bench UF2 to return to the turning experiment. Only one program runs at a time.
 
-## V2 startup fix / current status
+## V3 stability check ï¿½ first, motors OFF
 
-V1 was reported not to enumerate a COM port, while V6 standalone firmware did.
-Source inspection found that returning from usermain calls shutdown_system in
-this kernel, which disables interrupts. V2 keeps the initial task asleep on
-both success and init failure. A source regression gate in prepare.py checks
-this lifecycle. Compile/link passed; USB enumeration on hardware awaits retest.
-Do not use the retained V1 UF2 for testing. No sensor/steering changes in V2.
+User hardware evidence:
+- V1 failed to enumerate USB; V2 fixed the return-to-kernel-shutdown bug.
+- V2 initially printed IR but later froze. Exact freeze cause is unconfirmed.
+- The separate SDK sensor probe kept printing without sequence gaps; user
+  calibrated BOTH front sensors: black=1, white=0. GP6/GP7 left/right mapping
+  and side-to-side response are confirmed at normal mat height.
+- Both-black-centred mounting did not discriminate reliably, so user chose
+  to retain straddling geometry with correctly calibrated sensitivity.
 
-Current S3 code straddles the line: both white can mean centred OR off-track.
-It reports LOST after 250 mm without black; the bench limit is only 150 mm.
-This can also falsely report LOST on a long centred straight, so this is not
-an adequate final line-end detector. Both-black-centred operation is a valid
-alternative but requires changed sensor placement, steering and junction rules.
-Moving tests remain pending sensor-polarity checks and agreement on that logic.
+V3 retains that S3 logic. In the isolated build it increases the single-core
+idle/temporary stacks from256 to2048 bytes and USB service stack from2048 to4096.
+The port's idle context uses the same small stack allocation for interrupts;
+USB plus nested timer/GPIO handlers are a concrete stack-headroom concern, not
+proof of observed overflow. V3 measures idle high-water use on the real robot.
+Kernel-aware USB/GPIO share priority3 with SysTick. The motor cutoff timer uses
+a raw TA_ASM priority0 handler that makes NO kernel or floating-point calls.
+This avoids nesting kernel-aware interrupt paths while preserving an independent
+fast cutoff. No kernel scheduler source is changed, only copied build settings
+and the USB priority shim. Root cause and physical stability still need checking.
+
+### First physical step (do not start a run)
+
+1. Disconnect bank; flash buddy23_line_motion_v3.uf2 from computer USB.
+2. Open current COM in PuTTY115200, flow None. DO NOT press buttons or send f.
+3. Confirm the integration v3 banner. Leave running60 seconds, motors OFF.
+4. seq/ms, mot, line, usb_irq and cut_irq should keep advancing.
+   mot counts motion-control LOOP iterations, not motor movement.
+   nav=0 and s3=1 mean Ready / Idle. save=0 is normal without a run.
+5. Send h once: a new help block should appear; typed h need not echo.
+6. Move left/right sensors over white/black at the verified height and confirm
+   channels still follow the observed surfaces. Send first/last IR lines and
+   whether h responds. If it freezes, send last IR line; stop here.
+
+`idle_stack=N/2048` is a measured stack high-water mark, not current usage.
+`drops` counts USB output-ring drops; should remain zero during this check.
+Do not proceed to powered steering until the new RTOS stability check passes.
+
+The original straddling algorithm still cannot distinguish centred both-white
+from no line in one sample. LOST after250 mm can falsely trigger on a long
+centred straight. The first bench run is bounded to150 mm/5 s; no final line-end
+recognition is claimed. A finish marker/extra sensor/design change remains needed.
 
 ## What is real
 
@@ -46,29 +68,14 @@ Your branch's top-level app_program and the teammate's branch are not edited.
 `prepare.py` creates an ignored build tree from the pinned source and applies
 explicit build-only config, USB input and flash-reservation changes.
 
-## FIRST TEST: IR sensors only — NO movement
+## Sensor placement already verified
 
-The user confirmed front sensors on GP6/GP7 but they have never been tested.
-Check these before any moving test:
+Both front sensors read black=1 and white=0 at normal mat height. Keep the
+verified straddling placement: both white when centred, left black when the
+robot drifts right, and right black when it drifts left. Use the V3 stability
+check above before starting any moving test.
 
-1. Disconnect power bank; flash this UF2 using Pico BOOTSEL and computer USB.
-2. Keep both wheels raised. Open PuTTY Serial on the Pico's current COM port,
-   115200, 8 data bits, 1 stop, no parity, flow None.
-3. Do NOT press onboard buttons or send f. Boot has DRIVE OFF, no autostart.
-4. Wait for `BUDDY 2 + NAV + BUDDY 3 LINE integration v2` and repeated IR lines.
-5. Present white under both sensors at their normal working height. Record
-   `rawL/rawR` and `blackL/blackR`.
-6. Put black tape under LEFT only; then RIGHT only; then BOTH. Record each pair.
-7. Confirm physical left changes rawL, physical right changes rawR, and return
-   to white restores the original readings. Share these four cases first.
-
-The inherited S3 setting assumes raw HIGH/1 means BLACK. Correct expected
-raw pairs would be white 0/0, left black 1/0, right black 0/1, both black 1/1.
-If your hardware is opposite, do not arm motion: report readings and change
-the isolated S3 polarity before proceeding. Stable readings alone do not prove
-sensor mounting height/spacing; use the actual floor/tape surface.
-
-## Bounded moving test — only after sensor/direction/stop checks
+## Bounded moving test ï¿½ only after sensor/direction/stop checks
 
 S3's original proposals are scaled by 50% as a TEST LIMIT, preserving steering
 ratios. Centred =75/75 mm/s; left-black=30/95; right-black=95/30;

@@ -24,7 +24,9 @@
 #define STOP 20u
 #define RUN_LIMIT_US 5000000u
 #define TRAVEL_LIMIT_MM 150.0f
-extern volatile UW tm_usb_link_state,tm_usb_dropped;
+extern volatile UW tm_usb_link_state,tm_usb_dropped,tm_usb_irq_count;
+extern UW knl_idle_stack_used(UINT core);
+static volatile uint32_t motion_cycles,line_frames,cutoff_ticks;
 static const unsigned a_pin[2]={0,4},b_pin[2]={1,5};
 static volatile BenchEncoder encoder[2];
 static volatile bool active,inhibited=true,offline;
@@ -88,6 +90,7 @@ static void encoder_edge(uint32_t pin,uint32_t edge,uint32_t time) {
 /* Dedicated hardware alarm, independent of task scheduling. No FP/printing. */
 static void watchdog_irq(UINT intno) {
     (void)intno;
+    ++cutoff_ticks;
     REG(TIMER_BASE_I+0x34)=2;
     uint32_t now=sys_time_us();
     if(active) {
@@ -144,7 +147,7 @@ bool b5_motion_get_estimate(b5_motion_est_t *est) {
 /* Buddy 5 sensor/servo module is absent; no fake obstacle events or motion. */
 ER b5_post_event(UINT event) { (void)event;return E_OK; }
 void nav_telemetry_publish(const uint8_t *f,uint32_t n) { (void)f;(void)n; }
-void line_telemetry_publish(const uint8_t *f,uint32_t n) { (void)f;(void)n; }
+void line_telemetry_publish(const uint8_t *f,uint32_t n) { (void)f;(void)n;++line_frames; }
 void safety_telemetry_publish(const uint8_t *f,uint32_t n) { (void)f;(void)n; }
 static void trace_row(uint32_t now) {
     if(log_data.count>=BENCH_ROWS) { ++log_data.dropped;return; }
@@ -166,7 +169,7 @@ static void trace_row(uint32_t now) {
 static void dump(void) {
     if(active || settling) { tm_putstring((UB *)"Wait until stopped and log saved.\n");return; }
     if(!log_data.count) { tm_putstring((UB *)"No integration run saved yet.\n");return; }
-    tm_printf((UB *)"B23 LINE v2: restored=%u save_ok=%u rows=%u dropped=%u accepted=%u\n",
+    tm_printf((UB *)"B23 LINE v3: restored=%u save_ok=%u rows=%u dropped=%u accepted=%u\n",
         stored,save_ok,log_data.count,log_data.dropped,log_data.accepted);
     tm_putstring((UB *)"ms,active,rawL,rawR,blackL,blackR,nav,owner,s3,L_mm10,R_mm10,L_speed10,R_speed10,requestL,requestR,targetL,targetR,PWM_L,PWM_R\n");
     uint32_t tx_before=tm_usb_dropped;
@@ -259,7 +262,7 @@ static void motion_task(INT stacd,void *exinf) {
     for(;;) {
         uint32_t now=sys_time_us(),elapsed=now-previous;
         if(elapsed>=10000) {
-            previous=now;control(now,elapsed);safety_kick(SAFETY_SRC_MOTION);
+            previous=now;++motion_cycles;control(now,elapsed);safety_kick(SAFETY_SRC_MOTION);
         }
         if(stop_reply_id && !active && now-stop_requested_at>=100000 &&
            velocity[0]>-5 && velocity[0]<5 && velocity[1]>-5 && velocity[1]<5) {
@@ -283,7 +286,7 @@ static void motion_task(INT stacd,void *exinf) {
     }
 }
 static void info(void) {
-    tm_putstring((UB *)"\nBUDDY 2 + NAV + BUDDY 3 LINE integration v2 | real RTOS, real sensors/encoders\n");
+    tm_putstring((UB *)"\nBUDDY 2 + NAV + BUDDY 3 LINE integration v3 | real RTOS, real sensors/encoders\n");
     tm_putstring((UB *)"DRIVE OFF on boot. First verify raw GP6 L / GP7 R on white and black. Black assumed HIGH.\n");
     tm_putstring((UB *)"IR diagnostics stream while idle. h=help p=saved log s=stop f=USB hold-GP21 test.\n");
     tm_putstring((UB *)"Bank: hold BOTH 3s, release BOTH, then tap/release GP21; 2s countdown. Either button stops.\n");
@@ -295,7 +298,7 @@ static void console_task(INT stacd,void *exinf) {
     (void)stacd;(void)exinf;
     BootArm boot={0}; OfflineArm arm={0};
     bool prior_usb=false,raw=false,button=false;
-    uint32_t changed=0,last_print=0;
+    uint32_t changed=0,last_print=0,seq=0;
     for(;;) {
         uint32_t now=sys_time_us();bool usb=tm_usb_link_state>=2;
         bool hold=pressed(HOLD),stop=pressed(STOP);
@@ -311,11 +314,13 @@ static void console_task(INT stacd,void *exinf) {
         else if(ch=='f' && usb && hold && !stop) {
             if(!start_run(false)) tm_putstring((UB *)"Start rejected: one run/boot; wait Ready/Idle; check safety.\n");
         }
-        if(usb && !active && !settling && now-last_print>=200000) {
+        if(usb && !active && !settling && now-last_print>=250000) {
             uint32_t bits=pins();
-            tm_printf((UB *)"IR: rawL=%u rawR=%u blackL=%u blackR=%u | nav=%s s3=%s save=%u\n",
-                (bits>>6)&1,(bits>>7)&1,s3_ir_read()&1,(s3_ir_read()>>1)&1,
-                (UB *)nav_state_name(nav_get_state()),(UB *)s3_state_name(s3_get_state()),save_ok);
+            tm_printf((UB *)"IR: seq=%u ms=%u rawL=%u rawR=%u blackL=%u blackR=%u nav=%u s3=%u save=%u mot=%u line=%u usb_irq=%u cut_irq=%u idle_stack=%u/2048 drops=%u\n",
+                seq++,now/1000,(bits>>6)&1,(bits>>7)&1,s3_ir_read()&1,(s3_ir_read()>>1)&1,
+                (unsigned)nav_get_state(),(unsigned)s3_get_state(),save_ok,
+                motion_cycles,line_frames,(uint32_t)tm_usb_irq_count,cutoff_ticks,
+                (uint32_t)knl_idle_stack_used(0),(uint32_t)tm_usb_dropped);
             last_print=now;
         }
         (void)tk_dly_tsk(20);
@@ -342,8 +347,8 @@ EXPORT INT usermain(void) {
         clr_w(GPIO(a_pin[w]),1u<<2);set_w(GPIO(a_pin[w]),1u<<3);
         clr_w(GPIO(b_pin[w]),1u<<2);set_w(GPIO(b_pin[w]),1u<<3);
         uint32_t bits=pins();encoder[w].ab=(uint8_t)((((bits>>a_pin[w])&1)<<1)|((bits>>b_pin[w])&1));
-        if(sys_gpio_irq_attach(a_pin[w],12,encoder_edge,1)!=E_OK ||
-           sys_gpio_irq_attach(b_pin[w],12,encoder_edge,1)!=E_OK) goto failed;
+        if(sys_gpio_irq_attach(a_pin[w],12,encoder_edge,3)!=E_OK ||
+           sys_gpio_irq_attach(b_pin[w],12,encoder_edge,3)!=E_OK) goto failed;
     }
     (void)gpio_set_pin(HOLD,GPIO_MODE_IN);(void)gpio_set_pin(STOP,GPIO_MODE_IN);
     for(unsigned pin=20;pin<=21;++pin) {
@@ -351,11 +356,13 @@ EXPORT INT usermain(void) {
     }
     if(sys_fault_init()!=E_OK || safety_init()!=E_OK || nav_init()!=E_OK || s3_init()!=E_OK) goto failed;
     stored=bench_flash_load(&log_data);save_ok=stored;
-    T_DINT d={0};d.intatr=TA_HLNG;d.inthdr=watchdog_irq;
+    /* Raw handler deliberately makes no kernel calls; it may pre-empt
+       kernel-aware handlers without entering scheduler bookkeeping. */
+    T_DINT d={0};d.intatr=TA_ASM;d.inthdr=watchdog_irq;
     if(tk_def_int(1,&d)!=E_OK) goto failed;
     REG(TIMER_BASE_I+0x38+0x2000)=2;REG(TIMER_BASE_I+0x34)=2;
     REG(TIMER_BASE_I+0x14)=sys_time_us()+1000;
-    ClearInt(1);EnableInt(1,1);
+    ClearInt(1);EnableInt(1,0);
     (void)safety_watch(SAFETY_SRC_MOTION,100);
     if(safety_start()!=E_OK || nav_start()!=E_OK || s3_start()!=E_OK ||
        task_start((FP)motion_task,12)!=E_OK || task_start((FP)console_task,18)!=E_OK) goto failed;

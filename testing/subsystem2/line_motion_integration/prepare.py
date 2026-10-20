@@ -67,3 +67,21 @@ assert entry.count("for(;;) (void)tk_slp_tsk(TMO_FEVR);")==2
 initial=(BUILD/"kernel/inittask/inittask.c").read_text()
 assert "fin = usermain();" in initial and "shutdown_system(fin);" in initial
 print("PASS startup lifecycle: success/failure keep USB task alive, no return to kernel shutdown")
+
+# Integration-only interrupt/stack hardening. Kernel-aware USB/GPIO/SysTick
+# share priority 3. The priority-0 motor cutoff is a raw handler with NO syscalls.
+compat=BUILD/"lib/libtm/sysdepend/pico_rp2040/usb/usb_sdk_compat.c"
+s=compat.read_text().replace("if (enabled) NVIC_ISER0 = 1UL << num;",
+ "if (enabled) {\n        ((volatile uint8_t *)0xe000e400u)[num] = 0xc0u; /* kernel-aware priority 3 */\n        NVIC_ISER0 = 1UL << num;\n    }")
+compat.write_text(s)
+config=BUILD/"config/config.h"
+s=config.read_text().replace("CNF_TMP_STACK_SIZE\t(256)","CNF_TMP_STACK_SIZE\t(2048)")
+assert "CNF_TMP_STACK_SIZE\t(2048)" in s
+config.write_text(s)
+usb=BUILD/"lib/libtm/sysdepend/pico_rp2040/usb/usb_console.c"
+s=usb.read_text().replace("#define USB_TASK_STACK\t\t2048","#define USB_TASK_STACK\t\t4096")
+usb.write_text(s)
+assert "0xc0u" in compat.read_text()
+assert "EnableInt(1,0)" in entry and "d.intatr=TA_ASM" in entry
+assert "encoder_edge,3)" in entry
+print("PASS IRQ configuration: raw cutoff priority0; kernel-aware GPIO/USB priority3; larger idle/USB stacks")
