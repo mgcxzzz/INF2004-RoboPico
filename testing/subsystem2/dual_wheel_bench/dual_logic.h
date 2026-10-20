@@ -113,12 +113,12 @@ static inline bool command_make(char key, float timed_speed, DualCommand *c) {
         c->sign[0] = key == 'r' ? 1 : -1;
         c->sign[1] = -c->sign[0];
         c->speed[0] = c->speed[1] = 40;
-    } else if (key == 'd' || key == 'q' || key == 'e') {
+    } else if (key == 'd' || key == 'g' || key == 'q' || key == 'e') {
         c->bounded = true;
-        if (key == 'd') {
+        if (key == 'd' || key == 'g') {
             c->sign[0] = c->sign[1] = 1;
-            c->target_mm[0] = c->target_mm[1] = 100;
-            c->speed[0] = c->speed[1] = 60;
+            c->target_mm[0] = c->target_mm[1] = key=='g' ? 300 : 100;
+            c->speed[0] = c->speed[1] = key=='g' ? 100 : 60;
         } else {
             c->sign[0] = key == 'e' ? 1 : -1;
             c->sign[1] = -c->sign[0];
@@ -132,7 +132,36 @@ static inline float position_demand(const DualCommand *c, unsigned w, float whee
     if (!c->bounded) return c->speed[w];
     float remaining = c->target_mm[w] - wheel_mm*c->sign[w];
     if (remaining <= 2.0f) return 0;
-    return fminf(c->speed[w], remaining*3.0f);
+    return fminf(c->speed[w], fmaxf(25.0f, remaining*3.0f));
+}
+
+/* Bench-only terminal approach: 15% was physically tested on both wheels.
+   Keep enough torque through the final 12 mm rather than tapering into stiction.
+   Cut at the existing 2 mm threshold, then measure coasting/overshoot physically. */
+static inline int32_t finish_output(const DualCommand *c,unsigned w,float pos,int32_t u) {
+    float remaining=c->target_mm[w]-pos*c->sign[w];
+    if(c->bounded && remaining>2 && remaining<=12 && u*c->sign[w]<150)
+        return c->sign[w]*150;
+    return u;
+}
+static inline uint32_t command_limit_us(char key) { return key=='g' ? 6000000u : MAX_RUN_US; }
+typedef struct { bool selecting, last_stop, ready; uint8_t index; } ProfileSelect;
+static inline char profile_key(uint8_t index) {
+    const char keys[]={'d','g','q','e'};
+    return keys[index%4];
+}
+/* GP20 cycles only before the start tap. Outside selection it remains STOP. */
+static inline bool profile_step(ProfileSelect *s,bool usb,bool hold,bool stop) {
+    if(usb) s->selecting=false;
+    if(!s->selecting) return false;
+    if(!s->ready) {
+        if(!hold && !stop) { s->ready=true; s->last_stop=false; }
+        return false;
+    }
+    if(stop && !s->last_stop) s->index=(s->index+1)%4;
+    s->last_stop=stop;
+    if(hold && !stop) { s->selecting=false; return true; }
+    return false;
 }
 
 enum { OFF_NONE, OFF_UNPLUG, OFF_BASE_RELEASE, OFF_PRESS, OFF_RELEASE, OFF_COUNTDOWN };

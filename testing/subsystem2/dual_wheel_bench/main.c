@@ -29,6 +29,7 @@ static float velocity[2];
 static uint64_t bad_direction_us[2], no_motion_us[2];
 static bool wheel_done[2];
 static uint64_t last_control, stopped_us, last_trace;
+static uint32_t trace_interval_us=50000;
 static char recorded_key;
 static bool recorded_offline;
 typedef struct {
@@ -142,25 +143,27 @@ static bool safety_tick(struct repeating_timer *t) {
 }
 static const char *reason_name(uint8_t r) {
     static const char *const names[]={"none","GP20 pressed","GP21 released",
-        "3000 ms limit","serial s","USB connection changed","control loop late",
+        "run time limit","serial s","USB connection changed","control loop late",
         "no encoder movement under drive","encoder direction mismatch",
         "invalid encoder transitions","encoder target reached (drive off)","GP21 stop pressed"};
     return r<sizeof(names)/sizeof(names[0]) ? names[r] : "unknown";
 }
 static void help(void) {
-    puts("\nBuddy 2 DUAL FEEDBACK bench v5 | USB only | BOOTS WITH DRIVE OFF");
+    puts("\nBuddy 2 DUAL FEEDBACK bench v6 | USB only | BOOTS WITH DRIVE OFF");
     puts("Calibration: L=2524.05 R=2528.30 counts/rev; circumference=200 mm; track=110 mm.");
     puts("Both wheels use positive=chassis-forward. PWM cap=25%; PI gains provisional.");
     puts("WIRED raised tests: hold GP21 then f=both forward, b=both backward;");
     puts("l/r=timed left/right pivot. Release GP21 / GP20 / s stops. Max 3 seconds.");
     puts("1/2/3 select timed speed 60/80/100 mm/s while stopped (default 80).");
-    puts("OFFLINE selection: D=100 mm forward; Q=45 deg left; E=45 deg right.");
+    puts("OFFLINE selection: D=100 mm at 60 mm/s; G=300 mm at 100 mm/s; Q/E=45 deg left/right.");
     puts("a=arm selected offline test, then unplug USB. No movement on unplug.");
     puts("Tap/release GP21 to request start; 2-second countdown; one run only.");
-    puts("During offline run GP20 OR another GP21 press stops; limit still 3 seconds.");
+    puts("During offline run GP20 OR another GP21 press stops. GP20 also cancels countdown.");
     puts("Reconnecting USB cancels pending starts/stops offline motion and dumps last run.");
     puts("POWER-BANK START: hold BOTH GP20+GP21 for 2 s, release BOTH, then tap/release GP21.");
-    puts("This selects 100 mm forward; 2 s countdown. No USB connection is needed.");
+    puts("Before the GP21 start tap, GP20 taps cycle: 0=100 mm, 1=300 mm, 2=left45, 3=right45.");
+    puts("GP21 tap/release starts selected test after 2 s; selection alone never drives.");
+    puts("Short/turn limit 3 s; G long straight limit 6 s. PWM always capped at 25%.");
     puts("Completed logs auto-save to flash after 1 s settling. Wait 3 s after stop before power-off.");
     puts("p=dump RAM/restored flash log; h=help. Latest saved run replaces previous run.");
     puts("Use ONE power source at a time. Flash save occurs only with both motor outputs off.");
@@ -216,6 +219,8 @@ static bool start_run(char key,float speed,bool offline) {
     bool accepted=guard_start(&guard,now,offline ? true : !gpio_get(HOLD),!gpio_get(STOP));
     if(accepted) {
         command=next;
+        guard.deadline_us=now+command_limit_us(key);
+        trace_interval_us=key=='g' ? 100000 : 50000;
         offline_running=offline;
         for(unsigned w=0;w<2;++w) {
             origin[w]=previous[w]=enc[w].position;
@@ -262,9 +267,10 @@ static void control_step(uint64_t now) {
         if(wheel_done[w]) wanted=0;
         float along=velocity[w]*command.sign[w];
         next_output[w]=pi_step(&pi[w],w,command.sign[w],wanted,along,dt);
+        if(!wheel_done[w]) next_output[w]=finish_output(&command,w,pos,next_output[w]);
         bad_direction_us[w]=along < -20.0f ? bad_direction_us[w]+elapsed : 0;
         if(bad_direction_us[w]>=50000) failure=WHY_DIRECTION;
-        bool driven=abs(next_output[w])>=150 && pi[w].ramp>=30;
+        bool driven=abs(next_output[w])>=150;
         no_motion_us[w]=driven && llabs(deltas[w])<2 ? no_motion_us[w]+elapsed : 0;
         if(no_motion_us[w]>=500000) failure=WHY_FEEDBACK;
         if(e[w].invalid-initial_invalid[w]>=8) failure=WHY_ENCODER;
@@ -317,12 +323,17 @@ int main(void) {
     char offline_key='d';
     OfflineArm arm={0};
     BootArm boot_arm={0};
+    ProfileSelect selection={0};
+    bool stop_raw=false,stop_button=false;
+    uint64_t stop_changed=0;
     while(true) {
         uint64_t now=time_us_64();
         bool connected=stdio_usb_connected();
         bool hold=!gpio_get(HOLD),stop=!gpio_get(STOP);
         if(hold!=raw_button) { raw_button=hold; button_changed=now; }
         if(now-button_changed>=20000) button=raw_button;
+        if(stop!=stop_raw) { stop_raw=stop; stop_changed=now; }
+        if(now-stop_changed>=20000) stop_button=stop_raw;
         if(connected!=old_connected) {
             if(guard.active) { uint32_t irq=save_and_disable_interrupts(); kill(now,WHY_USB); restore_interrupts(irq); }
             if(connected) {
@@ -338,7 +349,12 @@ int main(void) {
         /* One deliberate power-bank arm per boot. Holding both never drives.
            Require release of BOTH, then a separate GP21 tap to request motion. */
         if(boot_arm_step(&boot_arm,now,connected,guard.active || trace_settling,hold,stop)) {
-            arm.state=OFF_BASE_RELEASE; offline_key='d';
+            arm.state=OFF_NONE; offline_key='d';
+            selection=(ProfileSelect){.selecting=true};
+        }
+        if(profile_step(&selection,connected,button,stop_button)) {
+            offline_key=profile_key(selection.index);
+            arm.state=OFF_RELEASE;
         }
         if(offline_step(&arm,now,connected,button,stop))
             (void)start_run(offline_key,speed,true);
@@ -348,13 +364,13 @@ int main(void) {
         else if(ch=='s') {
             arm.state=OFF_NONE;
             uint32_t irq=save_and_disable_interrupts(); kill(now,WHY_SERIAL); restore_interrupts(irq);
-        } else if(ch=='D' || ch=='Q' || ch=='E' || ch=='a' || ch=='1' || ch=='2' || ch=='3') {
+        } else if(ch=='D' || ch=='G' || ch=='Q' || ch=='E' || ch=='a' || ch=='1' || ch=='2' || ch=='3') {
             if(guard.active || hold || trace_settling) puts("CONFIG rejected: stop, release GP21 and wait for settling.");
             else if(ch=='a') { arm.state=OFF_UNPLUG; puts("OFFLINE ARMED: unplug USB, release GP21, tap/release it; 2 s countdown. GP20 cancels."); }
             else {
                 arm.state=OFF_NONE;
                 if(ch=='1'||ch=='2'||ch=='3') speed=ch=='1'?60:ch=='2'?80:100;
-                else offline_key=ch=='D'?'d':ch=='Q'?'q':'e';
+                else offline_key=ch=='D'?'d':ch=='G'?'g':ch=='Q'?'q':'e';
                 printf("CONFIG: timed_speed=%.0f mm/s offline_test=%c | drive=off\n",(double)speed,offline_key);
             }
         } else if(ch=='f'||ch=='b'||ch=='l'||ch=='r') {
@@ -372,7 +388,7 @@ int main(void) {
                 reason_name(guard.reason),guard.duration_us/1000);
         }
         if(guard.active || trace_settling) {
-            if(now-last_trace>=50000) { add_trace(now); last_trace=now; }
+            if(now-last_trace>=trace_interval_us) { add_trace(now); last_trace=now; }
             if(trace_settling && now-stopped_us>=1000000) {
                 trace_settling=false;
                 save_log();

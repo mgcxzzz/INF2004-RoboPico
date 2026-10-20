@@ -1,3 +1,69 @@
+# V6: selectable offline tests and final approach adjustment
+
+Current UF2: `firmware/buddy2_dual_wheel_v6.uf2`. Adjacent source builds V6.
+V4/V5 binaries and build records are historical.
+
+## Test selection on power bank
+
+Use one power source at a time. After flashing through computer USB, disconnect
+it before connecting the power bank. First verify the updated short run raised.
+
+1. Power on, wait 2 s; hold BOTH GP20+GP21 for 3 s.
+2. Release BOTH; wait 1 s. Default selection is the short forward test.
+3. Before starting, tap GP20 the number of times below (pause 0.5 s between taps).
+4. Tap/release GP21 to start a 2 s countdown, then a single selected run.
+5. During countdown GP20/GP21 cancels. During motion either button stops.
+6. After stopping wait 3 s, disconnect bank, connect computer normally, open
+   PuTTY, press p. Save this log before another completed run replaces it.
+
+| GP20 taps after arming | Log key | Test | Requested speed | Deadline |
+|---|---|---|---|---|
+| 0 | d | Forward 100 mm | 60 mm/s | 3 s |
+| 1 | g | Forward 300 mm | 100 mm/s | 6 s |
+| 2 | q | Pivot left 45 degrees | 40 mm/s per wheel | 3 s |
+| 3 | e | Pivot right 45 degrees | 40 mm/s per wheel | 3 s |
+
+Four GP20 taps wrap to default. GP20 only selects BEFORE the start tap; it is
+always a stop while driving. One button-armed run per boot. No automatic driving
+on startup. No indicator confirms selection, so count deliberate taps and check
+the saved key. Do not combine travel and turning yet: evaluate them separately.
+USB selection additionally supports G for the longer profile; D/Q/E retained.
+
+## What changed in control
+
+The V5 offline log recovered correctly across power loss (80 rows, 0 dropped,
+invalid L/R=0), but timed out at L=96.19, R=95.40 mm instead of reaching 98 mm.
+Motion faded at the low PWM used for the final approach. V6 requests at least
+25 mm/s until the cutoff threshold. Within the final 12 mm it applies at least
+15% PWM in the commanded direction, a duty tested previously on both wheels.
+Each wheel cuts off once within 2 mm of its target; no automatic reversal or
+position correction. This is provisional bench friction compensation, not a
+precision position controller. Drive and mechanical coast may overshoot: measure
+actual endpoint on the floor after raised tests. Never force a stall by hand.
+
+PWM cap stays 25%. Default timed USB runs remain 3 s. Only g uses a 6 s deadline.
+Its trace interval is 100 ms, preserving the full run plus 1 s settling within
+100 rows / the existing 4 KiB saved-log sector. Other traces stay near 50 ms.
+Feedback/no-movement protection also covers minimum-drive final approach.
+All existing stop buttons, stale-loop protection and flash-save paths remain.
+
+## Heading interpretation and external evidence
+
+`heading_deg` = (L_mm - R_mm) / 110 mm * 180/pi, relative to the run's start.
+Positive is right/clockwise, negative is left/counterclockwise. This is wheel
+odometry based on provisional 110 mm track spacing, not an IMU or compass.
+Raised wheels can produce an estimated turn without the chassis rotating.
+Floor slip, scrub, scale errors and effective track width affect real accuracy.
+For floor trials send the log plus measured distance or angle, surface and a
+video showing the full robot and a ruler/tape reference from above if possible.
+Speed targets are controller requests, not promises of achieved floor speed.
+
+Firmware compile and native host checks passed; physical V6 tests are pending.
+First run d raised, retrieve log, then review before g/turn/floor trials.
+
+---
+## Historical V5 reference (selection/control details superseded above)
+
 # V5: separate power sources and persistent logs
 
 Use `firmware/buddy2_dual_wheel_v5.uf2` for the current build. V4 UF2 is retained
