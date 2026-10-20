@@ -31,13 +31,13 @@ Week 6 feedback and the Tribunal 1 minimum-bit change (below).
 ## The course (Barcode_Sample.pdf and the course photo)
 
 - Line: black, **18 mm** wide.
-- Commands (Project Write-up, "Barcode Navigation"): **A** turn left,
-  **B** turn right, **C** go straight, **D** U-turn. The write-up calls the
-  table an example, so check the barcodes on the final course.
-- Barcodes: **Code 39**, `*A*` and `*Z*` in the sample, about **141 mm**
-  long, printed **20 mm beside the line**. Narrow element **3.0 mm**, wide
-  **9.0 mm** (3 : 1). The half-size print in the same file (1.5 mm) also
-  decodes.
+- Commands (Project Write-up, "Barcode Navigation", confirmed for the
+  course): **A** turn left, **B** turn right, **C** go straight, **D**
+  U-turn.
+- Barcodes: **Code 39**, about **141 mm** long, printed **20 mm beside
+  the line**. Narrow element **3.0 mm**, wide **9.0 mm** (3 : 1).
+  `*A*` and `*Z*` in Barcode_Sample.pdf are test prints; the half-size
+  print in that file (1.5 mm) also decodes.
 - Mount the side sensor so it passes over the bars: at least
   9 + 20 = 29 mm from the line's centre, better about 40–50 mm.
 
@@ -99,23 +99,18 @@ lost and lost edges.
 
 ## To agree with the team
 
-1. **Command table** (`S3_BC_COMMANDS` in `s3_config.h`): A → LEFT,
-   B → RIGHT, C → STRAIGHT, D → U-turn, from the Project Write-up. The
-   write-up calls it an example, and the sample sheet has `*Z*`, which is
-   not in it (read and logged, no command). If the final course uses other
-   letters, change the table; nothing else changes.
-2. **IR polarity** (`S3_IR_BLACK_LEVEL`): HIGH over black on most boards.
+1. **IR polarity** (`S3_IR_BLACK_LEVEL`): HIGH over black on most boards.
    Check with S3-M01 first.
-3. **Distance** (IF-18): Buddy 2 provides `s3_motion_get_distance()`, a
+2. **Distance** (IF-18): Buddy 2 provides `s3_motion_get_distance()`, a
    wrapping `int16_t` mm like Buddy 5's. Until then S3 reuses
    `b5_motion_get_estimate()`. **Finer than 1 mm would help the half-size
    print**: with 1 mm steps it decodes at steady speed, but at strongly
    varying speed it may be refused (never misread).
-4. **Turn point** (`S3_BC_TURN_DELAY_MM`, 0 now): how far after the
+3. **Turn point** (`S3_BC_TURN_DELAY_MM`, 0 now): how far after the
    barcode the coordinator should start the turn.
-5. **Stale-target timeout** (IF-19): Motion Control stops when no wheel
+4. **Stale-target timeout** (IF-19): Motion Control stops when no wheel
    speed arrives for 50 ms.
-6. **Template LED**: subsystem 1's template example still blinks an LED
+5. **Template LED**: subsystem 1's template example still blinks an LED
    on GP19, this sensor's pin. Its task makes GP19 an output after
    `s3_init()` has made it an input, so on the car the barcode reader sees
    nothing and the pin drives against the sensor's D0. Subsystem 1's owner

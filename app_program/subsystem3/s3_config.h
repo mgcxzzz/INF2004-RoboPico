@@ -96,11 +96,10 @@
                                          * ignored it, so resume following */
 
 /* Command table: Code 39 character -> navigation event (FR-LINE-04).
- * From the Project Write-up, "Barcode Navigation": A Turn Left, B Turn
- * Right, C Go Straight, D U-Turn (the write-up calls it an example: check
- * the barcodes on the final course). Any other character, such as the
- * "*Z*" in Barcode_Sample.pdf, is decoded and logged but sends NO command
- * (NFR-LINE-02). */
+ * Confirmed for the course (Project Write-up, "Barcode Navigation"):
+ * A Turn Left, B Turn Right, C Go Straight, D U-Turn. Any other character,
+ * such as the test "*Z*" in Barcode_Sample.pdf, is decoded and logged but
+ * sends NO command (NFR-LINE-02). */
 #define S3_BC_COMMANDS                                              \
     { 'A', NAV_BARCODE_LEFT },                                      \
     { 'B', NAV_BARCODE_RIGHT },                                     \
