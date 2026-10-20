@@ -1,3 +1,9 @@
+> **Current hardware blocker:** V2 now enumerates and prints initially, but the
+> user reports the IR stream freezes later. Do not use frozen values for sensor
+> adjustment or start motion yet. Use `sensor_probe/README.md` and the dedicated
+> `firmware/buddy23_ir_sensor_probe_v1.uf2` for the next diagnostic. This probe
+> has no motor commands and does not run the full integration.
+
 # Buddy 2 + Navigation Coordinator + Buddy 3: isolated line-motion test v2
 
 This folder is separate from `dual_wheel_bench`. Flash
