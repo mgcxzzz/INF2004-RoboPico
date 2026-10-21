@@ -220,3 +220,30 @@ V8 keeps3s acquisition/60mm/angle/loss gates, speeds/PWM, and five-second phase6
 Append a distinct alignment-timeout reason so new phase9 failures are explicit.
 Saved record offsets/calibration unchanged; V1..V7 records accepted. Physical
 V8 result pending; user will repeat the same test.
+
+
+## V8 mode3 - power handover corrected, alignment still reaches3s deadline
+
+Fresh offline V8 test3,33rows/dropped0, invalid0/0. Leading49.48/trailing61.68mm,
+stripe12.19mm, turn-start goal92.58. Pivot starts3479ms L93.10/R90.50mm.
+
+- 7602ms enters phase9 L93.58/R264.92, levels790/3, targets23/33, PWM32/74.
+  The zero-output right handover seen in V7 is corrected in this trace.
+- At8004ms right speed0 atPWM250 is a breakaway event, not proof of continuous
+  maximum drive. Right then runs28..31mm/s; left generally15..23mm/s.
+- At9606ms levels1000/0; at10008ms75/743;10409ms0/1000. This suggests crossing
+  the stripe, but400ms-scale rows cannot establish intermediate overlap duration.
+  The both>=400/difference<=350 for80ms gate did not qualify.
+- Cutoff10603ms phase8 alignment timeout,3001ms after entry. It never entered
+  phase6. Left moved52.53mm/right62.89mm during acquisition, mean57.71mm and
+  roughly5.40deg additional left rotation. Final relative left96.00deg.
+- No evidence here of failed ten/five-second phase6 timing or invalid encoders.
+  The earlier three-second acquisition deadline was an implementation guard,
+  not an NFR provided by the user.
+
+User requests6s alignment then10s tracing. V9 changes phase9 to6s/180mm (mean
+speed target<=30mm/s), avoiding the old60mm abort just after3s. Same optical and
+60..115deg bounds, V8 PI handover and motor caps. Phase6 now10s from alignment
+success; whole35s/900mm, trace500ms preserves100-row/3792-byte flash record.
+Physical V9 result pending; more time is a bounded experiment, not a proven
+solution to centring dynamics. Keep enough outgoing track for~450mm follow.

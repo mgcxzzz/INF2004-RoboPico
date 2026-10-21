@@ -1,4 +1,4 @@
-# Junction detection, centring and left turn - V8
+# Junction detection, centring and left turn - V9
 
 Separate SDK test on the Buddy2 branch. Uses the successful V11 symmetric
 front controller and an existing offset digital sensor. No new sensor, barcode
@@ -13,7 +13,55 @@ turn as an alternative; V5 implements it as MODE3. V5 rolling motion passed
 visually, but outgoing-line handover failed. V6 changes that handover;
 user reported successful V6 handover. V7 extended the outgoing follow; its new log exposed a controller transition problem addressed by V8.
 
-## V8 quick start: correct the pivot-to-forward PI handover
+## V9 quick start: six-second alignment, then ten-second tracing
+
+User explicitly requests **6s alignment**, followed by **10s normal line tracing**
+after alignment succeeds. The old3s acquisition window was a provisional test
+guard introduced in V6, not a supplied NFR. The timers are separate: phase9
+allows up to6s; entering phase6 starts a new10s clock. Earlier alignment starts
+tracing earlier, rather than waiting for all6s to elapse.
+
+The V8 log confirmed right PWM74 at acquisition entry (the prior zero-output
+handover was fixed). It crossed from left~1000/right~0 to left75/right743 at
+10008ms, only~0.6s before the3s deadline. Phase6 still never began. More settling
+time is a useful next comparison; this does not prove it will establish tracking.
+
+1. Flash **firmware/buddy23_junction_left_v9.uf2**; press **h**: V9, front
+   valid1, side_valid1. Keep current mounting/height/calibration.
+2. Press **3**, **k**, **h** and confirm rolling mode3.
+3. Same start: bank boot wait5s, hold both3s, release both, wait1s, tap/release
+   GP21,2s countdown; or USB ready1/buttons released, then **g**.
+4. Expected **1 -> 2 -> 4 -> 9 -> 6 -> 7**; normal stop is **test complete**
+   about10s after phase6 entry. Either button or serial **s** still stops.
+5. Wait3s after stop/save, switch sources separately and press **p**. Send the
+   complete fresh V9 log and video; old restored records retain their revision.
+
+Alignment absolute-path allowance increases60->180mm, matching up to6s of its
+nominal<=30mm/s mean target. The V8 acquisition already used57.71mm; changing
+only the timer would otherwise hit60mm almost immediately. Actual overspeed can
+still hit the path bound earlier. Angle60..115deg and optical loss guards stay.
+Tracking confirmation remains both>=400/difference<=350 for80ms. V8 PI reset,
+V11 follower/targets, PWM, wiring and calibration are unchanged.
+
+The normal trace interval changes400->500ms so the100-row flash record fits the
+new35s whole-run deadline and settling/transition snapshots. Motor/sensor control
+continues at10ms; logging rate is separate.900mm whole-path,500ms feedback stall,
+button/USB/late-loop/encoder checks and bothwhite loss handling remain active.
+A guard failure can interrupt either window. The normal phase6 completion uses
+elapsed time, not distance.
+
+At45mm/s ten seconds covers about450mm after alignment. Allow at least another
+450..500mm of continuous black stripe and surrounding flat white surface beyond
+the reacquisition/alignment point; extend the mat if needed. If the stripe ends,
+the normal line-loss stop can interrupt the test. Keep optical height fixed.
+
+Strict host tests cover active just before6s and timeout at6s, no premature old
+60mm cutoff,180mm abort, successful alignment at5.58s followed by a fresh10s
+clock, continued follow past5s, and completion exactly at10s. Existing optical,
+controller and PWM checks pass. Arm/flash-layout checks pass; physical V9 result
+pending. See firmware/BUILD_V9.md.
+
+## Historical V8 quick start: correct the pivot-to-forward PI handover
 
 The V7 log reached phase9 at7145ms but never phase6. Left stayed near1000,
 right near0, and alignment timed out3002ms later. Right PWM dropped from228
@@ -264,12 +312,12 @@ firmware/BUILD_V2.md; user-reported evidence is in MEASUREMENTS.md.
 
 ## 1. Flash and check sensors while stopped
 
-Download firmware/buddy23_junction_left_v8.uf2 using GitHub's **Download raw file**,
+Download firmware/buddy23_junction_left_v9.uf2 using GitHub's **Download raw file**,
 then copy to RPI-RP2 in BOOTSEL mode. Open PuTTY at 115200, 8N1, flow control None.
 Use only one power source at a time. Keep the robot on the mat at its final height.
 Do not request a movement during this check.
 
-1. Press `h`. Confirm `BUDDY23 JUNCTION LEFT v8`.
+1. Press `h`. Confirm `BUDDY23 JUNCTION LEFT v9`.
 2. Front calibration is imported from a CRC-valid V11 record if present. `valid=1`
    means front endpoints are valid; `imported_v11=1` identifies the initial import.
    No V11 movement trace is imported. If invalid, capture BOTH front spots over
@@ -333,7 +381,7 @@ Runs can repeat without reboot: save/settling finished, both buttons released,
 estimated standstill for 1 second (`ready=1`), then a fresh explicit start.
 The newest run replaces the previous run; retrieve it before another test.
 
-## Controller and limits
+## Original controller details (see V9 changes above)
 
 - Approach: unchanged V11 symmetric targets, loss logic, ADC filtering; at most
   12 seconds or 450 mm forward approach before declaring no cross.
@@ -363,12 +411,12 @@ The newest run replaces the previous run; retrieve it before another test.
   uses signed feedback. Adequate loaded reverse torque is not yet established.
 - Timer ISR cuts motor power for button/deadline/100 ms late control. Main checks
   stalled feedback500 ms under demand, wrong direction50 ms and invalid edges>=8.
-- Whole run30 seconds or900 mm average absolute wheel path; exit5 seconds.
+- Whole run35 seconds or900 mm average absolute wheel path; exit10 seconds.
   These are output limits, not guarantees of physical stopping distance.
 
 ## Logs and persistence
 
-Trace400 ms plus phase transitions and1 second settling, capacity100 rows. `p`
+Trace500 ms plus phase transitions and1 second settling, capacity100 rows. `p`
 prints phase, raw GP19, front ADC/normalized levels, signed wheel targets/PWM,
 encoder distance/heading, measured cross width and axle goal. Phase numbers:
 
@@ -379,7 +427,7 @@ encoder distance/heading, measured cross width and axle goal. Phase numbers:
 | 3 | Settle before turn / finish mode1; skipped in mode3 |
 | 4 | Left turn |
 | 5 | Settle on outgoing line |
-| 6 | Follow outgoing line5s (V1..V6 used20mm) |
+| 6 | V9 follows10s; V7/V8 used5s, V1..V6 used20mm |
 | 7 | Completed |
 | 8 | Fault |
 | 9 | V6 mode3: slow forward alignment after first branch detection |
@@ -389,7 +437,7 @@ The final turn summary gives positive left rotation relative to turn start.
 
 CRC-verified last4 KiB flash record, written only with drive off on one core.
 The revision byte uses V1 zero-filled padding, keeping record size/row offsets
-and CRC range unchanged. V1's zero revision is interpreted as V1; revisions2..8
+and CRC range unchanged. V1's zero revision is interpreted as V1; revisions2..9
 identify later runs. The V5 rolling flag fits former Junction padding, with
 old versions normalized to false. Fresh runs use the running firmware's version.
 New record magic is separate from V11. First `k` or completed run replaces the
@@ -405,5 +453,5 @@ white gap. It intentionally contains no barcode. Success establishes junction
 centering/left turn with the existing sensor placement, not the final combined
 barcode navigation or endless-course system. Keep V11 as the line-follow baseline.
 
-See firmware/BUILD_V8.md for the current verified binary and software checks;
-earlier BUILD_V1..V7 records and UF2s remain available.
+See firmware/BUILD_V9.md for the current verified binary and software checks;
+earlier BUILD_V1..V8 records and UF2s remain available.

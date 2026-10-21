@@ -291,13 +291,16 @@ static void test_gradual_handover(void) {
     i=turn_sample(1040000,110.1f,721,3);d=junction_step(&j,&cal,&i);
     assert(d.stop && j.reason==J_BRANCH_MISSING);
     /* After transfer the inner wheel may move >12mm: this is forward alignment,
-       not the fixed-inner-wheel turn. Remain bounded by60mm/3s/angle limits. */
+       not the fixed-inner-wheel turn. Remain bounded by180mm/6s/angle limits. */
     j=acquire_fixture(721,3);i=turn_sample(j.phase_us+100000,93,721,3);
     i.wheel[0]+=15;i.wheel[1]+=15;i.path=j.exit_origin+15;
     d=junction_step(&j,&cal,&i);assert(!d.stop && j.phase==J_ACQUIRE);
-    i.path=j.exit_origin+60;d=junction_step(&j,&cal,&i);assert(d.stop && j.reason==J_BRANCH_MISSING);
+    i.path=j.exit_origin+61;d=junction_step(&j,&cal,&i);assert(!d.stop && j.phase==J_ACQUIRE);
+    i.path=j.exit_origin+J_ALIGN_MM;d=junction_step(&j,&cal,&i);assert(d.stop && j.reason==J_BRANCH_MISSING);
     j=acquire_fixture(721,3);i=turn_sample(j.phase_us+3000000,93,721,3);
-    d=junction_step(&j,&cal,&i);assert(d.stop && j.reason==J_ALIGN_TIMEOUT);
+    d=junction_step(&j,&cal,&i);assert(!d.stop && j.phase==J_ACQUIRE);
+    i.now=j.phase_us+J_ALIGN_US-1;d=junction_step(&j,&cal,&i);assert(!d.stop);
+    i.now+=1;d=junction_step(&j,&cal,&i);assert(d.stop && j.reason==J_ALIGN_TIMEOUT);
     j=acquire_fixture(721,3);i=turn_sample(j.phase_us+100000,116,721,3);
     d=junction_step(&j,&cal,&i);assert(d.stop && j.reason==J_BRANCH_MISSING);
     j=acquire_fixture(721,3);i=turn_sample(j.phase_us+10000,93,0,0);
@@ -312,22 +315,33 @@ static void test_gradual_handover(void) {
     i.now+=70000;i.adc[1]=184;d=junction_step(&j,&cal,&i);
     assert(!d.stop && j.phase==J_ACQUIRE && !j.line_timing);
 }
-static void test_five_second_exit(void) {
+static void test_ten_second_exit(void) {
     Junction j={.phase=J_EXIT,.phase_us=1000000};
     JunctionInput i=sample(1000001,100,false);
     AnalogDemand d=junction_step(&j,&cal,&i);
     assert(!d.stop && j.phase==J_EXIT && d.target[0]>0 && d.target[1]>0);
     /* Advancing beyond the old20mm limit does not finish the timed follow. */
-    i.wheel[0]=i.wheel[1]=240;i.path=240;i.now=j.phase_us+J_EXIT_US-1;
+    i.wheel[0]=i.wheel[1]=240;i.path=240;i.now=j.phase_us+5000000;
+    d=junction_step(&j,&cal,&i);assert(!d.stop && j.phase==J_EXIT);
+    i.now=j.phase_us+J_EXIT_US-1;
     d=junction_step(&j,&cal,&i);assert(!d.stop && j.phase==J_EXIT);
     i.now+=1;d=junction_step(&j,&cal,&i);
     assert(d.stop && j.phase==J_DONE && j.reason==J_COMPLETE && d.target[0]==0 && d.target[1]==0);
-    /* Lost line and global path limit still interrupt the five seconds. */
+    /* Lost line and global path limit still interrupt the ten seconds. */
     j=(Junction){.phase=J_EXIT,.phase_us=1000000};i=sample(1000001,100,false);
     i.adc[0]=i.adc[1]=184;d=junction_step(&j,&cal,&i);
     assert(d.stop && j.reason==J_LINE_LOST);
     j=(Junction){.phase=J_EXIT,.phase_us=1000000};i=sample(1000001,100,false);i.path=900;
     d=junction_step(&j,&cal,&i);assert(d.stop && j.reason==J_PATH_LIMIT);
+    /* Alignment late in the extended window still gets its OWN ten-second
+       follow clock. Seeing a line does not start the follow timer early. */
+    j=acquire_fixture(721,3);uint64_t alignment_start=j.phase_us;
+    i=turn_sample(alignment_start+5500000,93,700,500);i.path=j.exit_origin+80;
+    d=junction_step(&j,&cal,&i);assert(!d.stop && j.phase==J_ACQUIRE);
+    i.now+=80000;d=junction_step(&j,&cal,&i);
+    assert(!d.stop && j.phase==J_EXIT && j.phase_us==alignment_start+5580000);
+    i.now=j.phase_us+J_EXIT_US-1;d=junction_step(&j,&cal,&i);assert(!d.stop);
+    i.now+=1;d=junction_step(&j,&cal,&i);assert(d.stop && j.reason==J_COMPLETE);
 }
 static void test_pivot_to_forward_integral_reset(void) {
     /* V7 log at phase9 entry: right target33, speed31.8, prior turn PWM~228.
@@ -370,8 +384,8 @@ int main(void) {
     test_rolling_geometry_and_sequence(true);test_rolling_geometry_and_sequence(false);
     test_rolling_drift_and_kinematics();
     test_gradual_handover();
-    test_five_second_exit();
+    test_ten_second_exit();
     test_pivot_to_forward_integral_reset();
-    puts("PASS: V8 pivot-to-forward integral reset/ramp retained/one-time reset/no peak leak; five-second exit and acquisition guards");
+    puts("PASS: V9 six-second alignment/180mm bound/independent ten-second follow; V8 handover, optical and PWM guards");
     return 0;
 }
