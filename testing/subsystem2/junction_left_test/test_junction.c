@@ -200,7 +200,7 @@ static void test_rolling_geometry_and_sequence(bool branch) {
             /* Even with turn assistance enabled globally, the inner motor is OFF. */
             SignedWheel inner={0};assert(junction_wheel_step(&inner,0,0,0,0.01f,i.now,true)==0);
         }
-        if(j.phase==J_TURN_SETTLE) { turned=true;assert(j.turn_degrees>=88 && j.turn_degrees<=95); }
+        if(j.phase==J_ACQUIRE) { turned=true;assert(j.turn_degrees>=88 && j.turn_degrees<=95); }
         if(d.stop) {
             assert(started);
             if(branch) assert(turned && j.reason==J_COMPLETE);
@@ -235,6 +235,81 @@ static void test_rolling_drift_and_kinematics(void) {
     assert(moving.pi.ramp==31 && fabsf(moving.pi.integral)<1 && pwm<320);
     assert(moving.peak_used && !moving.peak_active); /* already moving: no forced40% */
 }
+static JunctionInput turn_sample(uint64_t now,float angle,unsigned l,unsigned r) {
+    JunctionInput i=sample(now,0,false);
+    i.wheel[1]=angle*TRACK_MM*(3.14159265358979323846f/180.0f);
+    i.path=i.wheel[1]*0.5f;
+    i.adc[0]=(uint16_t)(184+(3464-184)*l/1000);
+    i.adc[1]=(uint16_t)(184+(3692-184)*r/1000);
+    return i;
+}
+static Junction acquire_fixture(unsigned l,unsigned r) {
+    Junction j={.phase=J_TURN,.phase_us=1000,.rolling=true,.off_line=true};
+    JunctionInput i=turn_sample(1000000,92,l,r);
+    AnalogDemand d=junction_step(&j,&cal,&i);
+    assert(j.phase==J_TURN && j.line_timing && !d.stop);
+    i.now+=30000;i.wheel[1]+=0.9f;i.path+=0.45f;
+    d=junction_step(&j,&cal,&i);
+    assert(j.phase==J_ACQUIRE && !d.stop);
+    assert(d.target[0]>=20 && d.target[1]>=20 && d.target[0]<=35 && d.target[1]<=35);
+    assert((l>r)?d.target[0]<d.target[1]:d.target[0]>d.target[1]);
+    return j;
+}
+static void test_gradual_handover(void) {
+    /* User's V5 failure at7274ms: left721/right3, turn-only92.01deg.
+       The same sustained observation must now start alignment, not keep pivoting. */
+    Junction j=acquire_fixture(721,3);
+    assert(j.follower.direction==1);
+    JunctionInput i=turn_sample(j.phase_us+10000,93,700,500);i.path=j.exit_origin+1;
+    AnalogDemand d=junction_step(&j,&cal,&i);assert(j.phase==J_ACQUIRE && !d.stop);
+    i.now+=70000;d=junction_step(&j,&cal,&i);assert(j.phase==J_ACQUIRE);
+    i.now+=10000;d=junction_step(&j,&cal,&i);
+    assert(j.phase==J_EXIT && !d.stop && d.target[0]>0 && d.target[1]>0);
+    float exit=j.exit_origin;i.now+=10000;i.wheel[0]+=20;i.wheel[1]+=20;
+    d=junction_step(&j,&cal,&i);assert(j_mean(&i)-exit>=20 && d.stop && j.reason==J_COMPLETE);
+    j=acquire_fixture(3,721);assert(j.follower.direction==-1);
+    /* Short flicker, old line, and a line seen before75deg cannot start acquisition. */
+    j=(Junction){.phase=J_TURN,.phase_us=1000,.rolling=true,.off_line=true};
+    i=turn_sample(1000000,92,900,0);(void)junction_step(&j,&cal,&i);
+    i.now+=20000;(void)junction_step(&j,&cal,&i);
+    i.now+=10000;i.adc[0]=184;d=junction_step(&j,&cal,&i);
+    assert(j.phase==J_TURN && !j.line_timing && !d.stop);
+    j=(Junction){.phase=J_TURN,.phase_us=1000,.rolling=true};
+    for(unsigned n=0;n<8;++n) { i=turn_sample(1000000+n*10000,92,900,900);(void)junction_step(&j,&cal,&i); }
+    assert(j.phase==J_TURN && !j.line_timing && !j.off_line);
+    j.off_line=true;
+    for(unsigned n=0;n<8;++n) { i=turn_sample(1100000+n*10000,70,900,0);(void)junction_step(&j,&cal,&i); }
+    assert(j.phase==J_TURN && !j.line_timing);
+    j=(Junction){.phase=J_TURN,.phase_us=1000,.rolling=true,.off_line=true,
+                 .line_timing=true,.line_us=8900000};
+    i=turn_sample(9001000,92,721,3);d=junction_step(&j,&cal,&i);
+    assert(d.stop && j.reason==J_TURN_TIMEOUT); /* candidate cannot bypass turn deadline */
+    j=(Junction){.phase=J_TURN,.phase_us=1000,.rolling=true,.off_line=true,
+                 .line_timing=true,.line_us=1000000};
+    i=turn_sample(1040000,110.1f,721,3);d=junction_step(&j,&cal,&i);
+    assert(d.stop && j.reason==J_BRANCH_MISSING);
+    /* After transfer the inner wheel may move >12mm: this is forward alignment,
+       not the fixed-inner-wheel turn. Remain bounded by60mm/3s/angle limits. */
+    j=acquire_fixture(721,3);i=turn_sample(j.phase_us+100000,93,721,3);
+    i.wheel[0]+=15;i.wheel[1]+=15;i.path=j.exit_origin+15;
+    d=junction_step(&j,&cal,&i);assert(!d.stop && j.phase==J_ACQUIRE);
+    i.path=j.exit_origin+60;d=junction_step(&j,&cal,&i);assert(d.stop && j.reason==J_BRANCH_MISSING);
+    j=acquire_fixture(721,3);i=turn_sample(j.phase_us+3000000,93,721,3);
+    d=junction_step(&j,&cal,&i);assert(d.stop && j.reason==J_TURN_TIMEOUT);
+    j=acquire_fixture(721,3);i=turn_sample(j.phase_us+100000,116,721,3);
+    d=junction_step(&j,&cal,&i);assert(d.stop && j.reason==J_BRANCH_MISSING);
+    j=acquire_fixture(721,3);i=turn_sample(j.phase_us+10000,93,0,0);
+    d=junction_step(&j,&cal,&i);assert(!d.stop && d.target[0]==20 && d.target[1]==35);
+    i.now+=149999;d=junction_step(&j,&cal,&i);assert(!d.stop);
+    i.now+=1;d=junction_step(&j,&cal,&i);assert(d.stop && j.reason==J_LINE_LOST);
+    /* Either strong input alone never qualifies as established two-sensor tracking. */
+    j=acquire_fixture(1000,0);i=turn_sample(j.phase_us+200000,93,1000,0);
+    d=junction_step(&j,&cal,&i);assert(!d.stop && j.phase==J_ACQUIRE && !j.line_timing);
+    /* Dropping below400 or a difference>350 resets the stable-alignment timer. */
+    i.now+=10000;i.adc[1]=3692;(void)junction_step(&j,&cal,&i);assert(j.line_timing);
+    i.now+=70000;i.adc[1]=184;d=junction_step(&j,&cal,&i);
+    assert(!d.stop && j.phase==J_ACQUIRE && !j.line_timing);
+}
 int main(void) {
     test_geometry_and_qualification();simulate(false,true);simulate(true,true);simulate(true,false);
     test_turn_rejects_false_branch();test_signed_controller_and_stops();
@@ -242,6 +317,7 @@ int main(void) {
     test_one_shot_peak_and_timer_cap();
     test_rolling_geometry_and_sequence(true);test_rolling_geometry_and_sequence(false);
     test_rolling_drift_and_kinematics();
-    puts("PASS: V5 rolling offset55/inner OFF/outer arc/branch sequence/drift bounds; old modes and V4 effort guards unchanged");
+    test_gradual_handover();
+    puts("PASS: V6 single-sensor transfer/forward alignment/stable exit/flicker-loss-path-angle bounds; old modes and PWM guards");
     return 0;
 }

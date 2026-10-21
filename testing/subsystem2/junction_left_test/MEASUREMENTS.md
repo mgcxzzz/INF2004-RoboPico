@@ -133,3 +133,44 @@ No PWM increase beyond V4: only right may use35% sustained/one40% start pulse;
 if already>=25mm/s it skips that peak. Left request0 resets all PI/boost/pulse.
 Inner encoder displacement bound12mm; fresh-line gates/110deg remain, rolling
 outer bound240mm/9s accounts for longer arc. Mode1/2 behavior preserved.
+
+
+## V5 mode3 — first rolling test: substantial turn, front spots beyond mat
+
+22 October2026. Fresh offline test3,33rows/dropped0, invalid0/0. Cross leading
+131.94/trailing146.90mm, stripe14.96, turn-start goal176.42. Turn starts5275ms
+at L177.41/R173.87, ends10747ms at L177.89/R370.21: left coast0.48mm,
+right forward196.34mm, relative left rotation102.02deg. STOP no encoder movement
+under drive, phase4. Both front levels stayed nearwhite; no phase5/6/normal exit.
+Video video_2026-10-22_00-36-44.mp4 frames5/8/10/12seconds show the rotation and
+front sensing points reaching beyond the lower mat edge. Rolling torque/motion
+improved, but this was not a completed junction-and-follow sequence. Extending
+outgoing track was recommended before changing acquisition.
+
+## V5 mode3 — repeated with outgoing track available: first sensor is skipped
+
+Fresh offline test3,25rows/dropped0, invalid0/0. Video
+video_2026-10-22_01-05-10.mp4 duration10.402s inspected at3/7/8/9seconds.
+Robot approaches from below the image, turns left toward the image-left branch,
+and continues rotating across the branch. Unlike the first video, the outgoing
+track remains on the mat with room ahead; insufficient mat is not the explanation
+for this second optical failure.
+
+- Leading36.50/trailing48.57, stripe12.07mm, goal79.54mm.
+- Rolling starts3267ms L80.19/R76.89mm, heading+1.72deg.
+- 7274ms L80.82/R254.16, normalized left721/right3. Relative left rotation is
+  about92.01deg (run-relative heading-90.29deg plus initial1.72deg).
+- 7675ms left1000/right8. V5 still commands left0/right30, because both>=650
+  never qualify together. It passes the line rather than transferring control.
+- Cutoff8142ms L80.82/R288.73, relative left110.01deg, phase8fault,
+  STOP left branch not confirmed. Right still41.2mm/s. This is NOT a stall
+  or weak-torque cutoff; adding PWM is not supported by this log.
+- Raw ADC and normalized level columns differ because normalized control uses
+  filtered ADC; e.g. right raw1466 with level8 is possible during a fast crossing.
+
+V6 mode3 starts slow forward alignment from either>=400 for30ms in75..<110deg,
+after leaving the old line. Both wheels forward20..35mm/s,25% cap, no peak;
+require both>=400/difference<=350 for80ms, then unchanged V11 follow20mm.
+Acquisition3s/60mm/60..115deg, bothwhite150ms with recent direction only.
+No changes to centre/turn-start geometry, turn power, pins, calibration or V11.
+Physical V6 outcome pending; simulated transitions are not hardware proof.

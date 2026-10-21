@@ -1,4 +1,4 @@
-# Junction detection, centring and left turn — V5
+# Junction detection, centring and left turn — V6
 
 Separate SDK test on the Buddy2 branch. Uses the successful V11 symmetric
 front controller and an existing offset digital sensor. No new sensor, barcode
@@ -9,9 +9,71 @@ turn-only30% experiment is software-verified. Its22 October physical test made
 moving. User confirmed front IR housings scrape the mat; support ball is free.
 See MEASUREMENTS.md. User then explicitly requested a stronger drive test before
 mounting changes. V4 also stalled after14.10degrees. The user accepted a rolling
-turn as an alternative; V5 implements it as MODE3. Physical V5 result pending.
+turn as an alternative; V5 implements it as MODE3. V5 rolling motion passed
+visually, but outgoing-line handover failed. V6 changes that handover;
+physical V6 result pending.
 
-## V5 quick start: select MODE 3 for the rolling left corner
+## V6 quick start: gradual outgoing-line acquisition (MODE 3)
+
+V5 physically completed the rolling rotation, but kept pivoting past a visible
+outgoing line because it waited for BOTH levels>=650 at the same time. The latest
+log first shows left721/right3 near92degrees of turn-only rotation, then never
+qualifies before the110degree cutoff. This is evidence to change optical handover,
+not increase PWM. See MEASUREMENTS.md.
+
+1. Flash **firmware/buddy23_junction_left_v6.uf2**; open PuTTY115200, flow None.
+2. Press **h**: verify V6, front valid1, side_valid1. V5 calibration is imported
+   unchanged; no recapture if mounting/height/lighting response is unchanged.
+3. Press **3**, **k**, **h**: verify mode3. Keep the same straight approach,
+   front sensors on the black stripe, offset sensor on white, no barcode.
+4. Use the existing bank sequence: wait5s after boot, hold both buttons3s,
+   release both, wait1s, tap/release GP21, then leave it for the2s countdown.
+   USB hands-free alternative: release both buttons, ready1, then **g**.
+5. Expect **1 -> 2 -> 4 -> 9 -> 6 -> 7**: follow, position, rolling left,
+   slow forward alignment, V11 follow20mm, test complete. Mode3 no longer stops
+   to settle between optical acquisition and following. Either button stops.
+6. Wait3s after the final stop/save; switch power sources separately, **p**.
+   Send the complete fresh V6/test3 log and video. Old restored logs retain V5.
+
+**Phase4:** leaving the original line is still required (both<200 for30ms after
+10degrees). In the75..<110degree window, EITHER level>=400 continuously for30ms
+starts phase9. No blind handover based only on reaching90degrees. Mode2 retains
+its old both>=650/settle gate. Rolling geometry and phase4 PWM are unchanged.
+
+**Phase9:** both wheels now drive FORWARD, so the inner wheel is no longer held
+OFF. Use the V11 sensor error/sign and direction memory, with gentler targets:
+error magnitude<=80 gives30/30mm/s; at1000 the inner/outer targets are20/35.
+Interpolate between those endpoints. More black on the left means left slower;
+more black on the right means right slower. Motor output is capped25% in this
+phase (including breakaway), with no40% turn pulse or loaded turn feedforward.
+Targets are wheel speeds, not fixed PWM or measured torque.
+
+Both levels>=400 AND their difference<=350 continuously for80ms establishes
+tracking. Then flow directly into the unchanged V11 follower for20mm and stop.
+No assumption that the first sensor must be left: either sensor may see the
+branch first depending on placement/slip. The stored side cross-arm signal is
+ignored during the turn/alignment/exit.
+
+Acquisition is bounded by3s,60mm average absolute wheel path, and60..115degrees
+of turn-relative heading. If both levels fall below150, allow up to150ms only
+when a recent clear sensor difference supplies a direction; otherwise stop
+immediately. Loss of alignment or missing-line bounds stop, not endless search.
+The original500ms wheel stall/button/late-loop/encoder kills remain active.
+
+Keep a continuous flat white surface around the outgoing black line. At least
+220mm from cross centre is needed for the nominal turn+exit; **prefer300mm** to
+leave room for the additional bounded alignment travel. Keep sensor height fixed.
+The video for the latest V5 test shows the branch on the mat, not the prior
+short-mat/table-edge situation. This software change is unverified on hardware.
+
+Host tests cover the721/3 first-sensor observation, either-side handover, brief
+flicker/old-line/early-angle rejection, stable tracking, lost-line/time/path/angle
+bounds, and successful exit. Arm build retains the3792-byte saved record/row192
+layout, imports V1..V5 calibration/logs, and labels new tracesV6. Existing modes1/2,
+forward V11 baseline, and35% sustained/40% bounded turning effort are preserved.
+See firmware/BUILD_V6.md for the artifact and verification.
+
+## Historical V5 quick start: select MODE 3 for the rolling left corner
 
 The left motor stays OFF/coast, while the right keeps driving forward. This
 avoids demanding the left reverse movement that stalled in V1..V4. It does NOT
@@ -127,12 +189,12 @@ firmware/BUILD_V2.md; user-reported evidence is in MEASUREMENTS.md.
 
 ## 1. Flash and check sensors while stopped
 
-Download firmware/buddy23_junction_left_v5.uf2 using GitHub's **Download raw file**,
+Download firmware/buddy23_junction_left_v6.uf2 using GitHub's **Download raw file**,
 then copy to RPI-RP2 in BOOTSEL mode. Open PuTTY at 115200, 8N1, flow control None.
 Use only one power source at a time. Keep the robot on the mat at its final height.
 Do not request a movement during this check.
 
-1. Press `h`. Confirm `BUDDY23 JUNCTION LEFT v5`.
+1. Press `h`. Confirm `BUDDY23 JUNCTION LEFT v6`.
 2. Front calibration is imported from a CRC-valid V11 record if present. `valid=1`
    means front endpoints are valid; `imported_v11=1` identifies the initial import.
    No V11 movement trace is imported. If invalid, capture BOTH front spots over
@@ -217,7 +279,7 @@ The newest run replaces the previous run; retrieve it before another test.
   bounded arc synchronization. Abort after6 seconds, 110 degrees,120 mm on
   either wheel, reverse feedback or arc disagreement>20 mm.
 - Mode3: left unpowered/right45 then30mm/s, no reverse;9s/240mm outer arc, inner
-  displacement limited12mm. Same110deg/fresh-line gates. Optical confirmation
+  displacement limited12mm. Phase4 retains110deg/fresh-line gates; V6 mode3 then uses the bounded phase9 alignment above. Optical confirmation
   remains essential because the unpowered inner wheel can coast slightly.
 - V11 PI gains Kp1.0/Ki3.0, integral limit140, ramp100 mm/s^2, direction-specific
   feedforward plus the V4 turn-only loaded estimate31%; sustained turn ceiling35%,
@@ -245,13 +307,14 @@ encoder distance/heading, measured cross width and axle goal. Phase numbers:
 | 6 | Follow outgoing line20 mm |
 | 7 | Completed |
 | 8 | Fault |
+| 9 | V6 mode3: slow forward alignment after first branch detection |
 
 Heading is relative encoder rotation (negative left), not an absolute compass.
 The final turn summary gives positive left rotation relative to turn start.
 
 CRC-verified last4 KiB flash record, written only with drive off on one core.
 The revision byte uses V1 zero-filled padding, keeping record size/row offsets
-and CRC range unchanged. V1's zero revision is interpreted as V1; revisions2..5
+and CRC range unchanged. V1's zero revision is interpreted as V1; revisions2..6
 identify later runs. The V5 rolling flag fits former Junction padding, with
 old versions normalized to false. Fresh runs use the running firmware's version.
 New record magic is separate from V11. First `k` or completed run replaces the
@@ -267,5 +330,5 @@ white gap. It intentionally contains no barcode. Success establishes junction
 centering/left turn with the existing sensor placement, not the final combined
 barcode navigation or endless-course system. Keep V11 as the line-follow baseline.
 
-See firmware/BUILD_V5.md for the current verified binary and software checks;
-earlier BUILD_V1..V4 records and UF2s remain available.
+See firmware/BUILD_V6.md for the current verified binary and software checks;
+earlier BUILD_V1..V5 records and UF2s remain available.

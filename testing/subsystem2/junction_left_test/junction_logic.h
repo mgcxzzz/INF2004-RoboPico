@@ -3,7 +3,7 @@
 #include "../analog_line_follow/symmetric_logic.h"
 #include "../dual_wheel_bench/dual_logic.h"
 
-enum { J_APPROACH=1,J_CENTRE,J_SETTLE,J_TURN,J_TURN_SETTLE,J_EXIT,J_DONE,J_FAULT };
+enum { J_APPROACH=1,J_CENTRE,J_SETTLE,J_TURN,J_TURN_SETTLE,J_EXIT,J_DONE,J_FAULT,J_ACQUIRE };
 enum { J_OK=0,J_COMPLETE=20,J_NO_CROSS,J_BAD_STRIPE,J_CENTRE_DRIFT,J_SETTLE_TIMEOUT,
        J_TURN_TIMEOUT,J_BRANCH_MISSING,J_PATH_LIMIT,J_LINE_LOST };
 enum { J_RUN_US=25000000,J_TRACE_US=400000,J_MAX_PATH_MM=900 };
@@ -50,6 +50,42 @@ static inline void j_start_turn(Junction *j,const JunctionInput *i) {
     for(unsigned w=0;w<2;++w) j->turn_origin[w]=i->wheel[w];
     j->off_line=false;j->off_timing=j->line_timing=false;
     j_enter(j,J_TURN,i->now);
+}
+static inline float j_rotation(const Junction *j,const JunctionInput *i) {
+    return ((i->wheel[1]-j->turn_origin[1])-(i->wheel[0]-j->turn_origin[0]))
+        /TRACK_MM*(180.0f/3.14159265358979323846f);
+}
+/* Mode3 only: first sight of the outgoing stripe starts forward alignment.
+ * exit_origin holds absolute path at acquisition entry, then mean wheel position
+ * at J_EXIT entry. Reuse existing storage so saved V1..V5 record ABI is intact. */
+static inline AnalogDemand j_acquire(Junction *j,const LineCalibration *c,const JunctionInput *i) {
+    AnalogDemand d=symmetric_demand(&j->follower,c,i->adc[0],i->adc[1],i->now,(uint32_t)i->path);
+    j->turn_degrees=j_rotation(j,i);
+    if(j->turn_degrees<60 || j->turn_degrees>115 || i->path-j->exit_origin>=60) j_fail(j,J_BRANCH_MISSING);
+    else if(i->now-j->phase_us>=3000000) j_fail(j,J_TURN_TIMEOUT);
+    else if(d.stop) j_fail(j,J_LINE_LOST);
+    bool white=d.level[0]<150 && d.level[1]<150;
+    if(white) {
+        if(!j->off_timing) { j->off_timing=true;j->off_us=i->now; }
+        if(i->now-j->off_us>=150000) j_fail(j,J_LINE_LOST);
+    } else j->off_timing=false;
+    int32_t error=(int32_t)d.level[0]-d.level[1];
+    if(white) error=j->follower.recovery*1000;
+    int32_t magnitude=error<0?-error:error;
+    if(magnitude>1000) magnitude=1000;
+    int32_t amount=magnitude>80?magnitude-80:0;
+    int16_t inner=(int16_t)(30-amount*10/920),outer=(int16_t)(30+amount*5/920);
+    d.target[0]=error>=0?inner:outer;d.target[1]=error>=0?outer:inner;
+    d.decision=error>80?SYM_LEFT:error < -80?SYM_RIGHT:SYM_STRAIGHT;
+    bool aligned=d.level[0]>=400 && d.level[1]>=400 && magnitude<=350;
+    if(aligned) {
+        if(!j->line_timing) { j->line_timing=true;j->line_us=i->now; }
+        if(j->phase==J_ACQUIRE && i->now-j->line_us>=80000) {
+            j->exit_origin=j_mean(i);j_enter(j,J_EXIT,i->now);
+        }
+    } else j->line_timing=false;
+    if(j->phase==J_FAULT) { d.stop=true;d.target[0]=d.target[1]=0; }
+    return d;
 }
 /* Cross detection is ONLY valid on a straight, with NO barcode/other side marks.
  * The side sensing point is approximately 92mm ahead of the wheel axle.
@@ -113,21 +149,31 @@ static inline AnalogDemand junction_step(Junction *j,const LineCalibration *c,co
     case J_TURN: {
         float left=-(i->wheel[0]-j->turn_origin[0]);
         float right=i->wheel[1]-j->turn_origin[1];
-        j->turn_degrees=(left+right)/TRACK_MM*(180.0f/3.14159265358979323846f);
+        j->turn_degrees=j_rotation(j,i);
         if(j->rolling) {
             /* Inner wheel is unpowered, not actively locked. Encoder drift is
                bounded; optical branch confirmation must still succeed. */
             if(fabsf(left)>12 || right < -5) { j_fail(j,J_CENTRE_DRIFT);break; }
+            if(i->now-j->phase_us>=9000000u) { j_fail(j,J_TURN_TIMEOUT);break; }
         } else if(left < -5 || right < -5 || fabsf(left-right)>20) { j_fail(j,J_CENTRE_DRIFT);break; }
         bool white=d.level[0]<200 && d.level[1]<200;
         if(white && j->turn_degrees>10) {
             if(!j->off_timing) { j->off_timing=true;j->off_us=i->now; }
             if(i->now-j->off_us>=30000) j->off_line=true;
         } else j->off_timing=false;
-        bool found=j->off_line && j->turn_degrees>=75 && d.level[0]>=650 && d.level[1]>=650;
+        bool branch=j->rolling ? (d.level[0]>=400 || d.level[1]>=400)
+                               : (d.level[0]>=650 && d.level[1]>=650);
+        bool found=j->off_line && j->turn_degrees>=75 && (!j->rolling || j->turn_degrees<110) && branch;
         if(found) {
             if(!j->line_timing) { j->line_timing=true;j->line_us=i->now; }
-            if(i->now-j->line_us>=30000) { j_enter(j,J_TURN_SETTLE,i->now);break; }
+            if(i->now-j->line_us>=30000) {
+                if(j->rolling) {
+                    j->follower=(SymmetricTracker){0};j->exit_origin=i->path;
+                    j->line_timing=j->off_timing=false;j_enter(j,J_ACQUIRE,i->now);
+                    d=j_acquire(j,c,i);
+                } else j_enter(j,J_TURN_SETTLE,i->now);
+                break;
+            }
         } else j->line_timing=false;
         if(j->turn_degrees>=110 || left>=120 || right>=(j->rolling?240:120)) { j_fail(j,J_BRANCH_MISSING);break; }
         if(i->now-j->phase_us>=(j->rolling?9000000u:6000000u)) { j_fail(j,J_TURN_TIMEOUT);break; }
@@ -140,6 +186,9 @@ static inline AnalogDemand junction_step(Junction *j,const LineCalibration *c,co
         }
         break;
     }
+    case J_ACQUIRE:
+        d=j_acquire(j,c,i);
+        break;
     case J_TURN_SETTLE:
         if(j_still(j,i)) {
             if(d.level[0]<400 || d.level[1]<400) { j_fail(j,J_BRANCH_MISSING);break; }
