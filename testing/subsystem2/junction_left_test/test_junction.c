@@ -266,7 +266,9 @@ static void test_gradual_handover(void) {
     i.now+=10000;d=junction_step(&j,&cal,&i);
     assert(j.phase==J_EXIT && !d.stop && d.target[0]>0 && d.target[1]>0);
     float exit=j.exit_origin;i.now+=10000;i.wheel[0]+=20;i.wheel[1]+=20;
-    d=junction_step(&j,&cal,&i);assert(j_mean(&i)-exit>=20 && d.stop && j.reason==J_COMPLETE);
+    d=junction_step(&j,&cal,&i);assert(j_mean(&i)-exit>=20 && !d.stop && j.phase==J_EXIT);
+    i.now=j.phase_us+J_EXIT_US;d=junction_step(&j,&cal,&i);
+    assert(d.stop && j.reason==J_COMPLETE);
     j=acquire_fixture(3,721);assert(j.follower.direction==-1);
     /* Short flicker, old line, and a line seen before75deg cannot start acquisition. */
     j=(Junction){.phase=J_TURN,.phase_us=1000,.rolling=true,.off_line=true};
@@ -310,6 +312,23 @@ static void test_gradual_handover(void) {
     i.now+=70000;i.adc[1]=184;d=junction_step(&j,&cal,&i);
     assert(!d.stop && j.phase==J_ACQUIRE && !j.line_timing);
 }
+static void test_five_second_exit(void) {
+    Junction j={.phase=J_EXIT,.phase_us=1000000};
+    JunctionInput i=sample(1000001,100,false);
+    AnalogDemand d=junction_step(&j,&cal,&i);
+    assert(!d.stop && j.phase==J_EXIT && d.target[0]>0 && d.target[1]>0);
+    /* Advancing beyond the old20mm limit does not finish the timed follow. */
+    i.wheel[0]=i.wheel[1]=240;i.path=240;i.now=j.phase_us+J_EXIT_US-1;
+    d=junction_step(&j,&cal,&i);assert(!d.stop && j.phase==J_EXIT);
+    i.now+=1;d=junction_step(&j,&cal,&i);
+    assert(d.stop && j.phase==J_DONE && j.reason==J_COMPLETE && d.target[0]==0 && d.target[1]==0);
+    /* Lost line and global path limit still interrupt the five seconds. */
+    j=(Junction){.phase=J_EXIT,.phase_us=1000000};i=sample(1000001,100,false);
+    i.adc[0]=i.adc[1]=184;d=junction_step(&j,&cal,&i);
+    assert(d.stop && j.reason==J_LINE_LOST);
+    j=(Junction){.phase=J_EXIT,.phase_us=1000000};i=sample(1000001,100,false);i.path=900;
+    d=junction_step(&j,&cal,&i);assert(d.stop && j.reason==J_PATH_LIMIT);
+}
 int main(void) {
     test_geometry_and_qualification();simulate(false,true);simulate(true,true);simulate(true,false);
     test_turn_rejects_false_branch();test_signed_controller_and_stops();
@@ -318,6 +337,7 @@ int main(void) {
     test_rolling_geometry_and_sequence(true);test_rolling_geometry_and_sequence(false);
     test_rolling_drift_and_kinematics();
     test_gradual_handover();
-    puts("PASS: V6 single-sensor transfer/forward alignment/stable exit/flicker-loss-path-angle bounds; old modes and PWM guards");
+    test_five_second_exit();
+    puts("PASS: V7 five-second exit/timer boundary/distance independence/loss-path cutoff; V6 acquisition and PWM guards");
     return 0;
 }

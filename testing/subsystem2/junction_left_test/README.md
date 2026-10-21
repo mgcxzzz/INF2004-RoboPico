@@ -1,4 +1,4 @@
-# Junction detection, centring and left turn — V6
+# Junction detection, centring and left turn - V7
 
 Separate SDK test on the Buddy2 branch. Uses the successful V11 symmetric
 front controller and an existing offset digital sensor. No new sensor, barcode
@@ -11,9 +11,49 @@ See MEASUREMENTS.md. User then explicitly requested a stronger drive test before
 mounting changes. V4 also stalled after14.10degrees. The user accepted a rolling
 turn as an alternative; V5 implements it as MODE3. V5 rolling motion passed
 visually, but outgoing-line handover failed. V6 changes that handover;
-physical V6 result pending.
+user now reports successful V6 handover. V7 extends the outgoing follow.
 
-## V6 quick start: gradual outgoing-line acquisition (MODE 3)
+## V7 quick start: five seconds of following after the turn
+
+User reports the V6 gradual handover worked. A fresh V6 log has not yet been
+supplied, so this is user-observed success, not a measured timing/angle claim.
+V7 keeps that turn/acquisition controller and replaces the20mm exit completion
+with **five seconds of normal V11 line following**. The timer starts on phase6
+entry, after stable outgoing-line alignment. Turning/acquisition time does not
+count toward the five seconds. Both turn modes2/3 use the timed exit; mode1
+continues to centre and stop.
+
+1. Flash **firmware/buddy23_junction_left_v7.uf2**. Press **h**: verify V7,
+   front valid1 and side_valid1. Keep the existing calibration/mounting/height.
+2. Press **3**, **k**, then **h** to verify rolling mode3.
+3. Repeat the same bank start sequence (wait5s, both3s, release both, wait1s,
+   tap/release GP21,2s countdown), or ready1 then USB hands-free **g**.
+4. Expected phases **1 -> 2 -> 4 -> 9 -> 6 -> 7**. It turns, aligns, follows
+   for5s, then stops with **test complete**. Either button or serial **s** stops.
+5. Wait3s for settling/save before switching sources separately; **p** prints
+   the fresh V7 log. Send log/video from the longer follow.
+
+At a nominal45mm/s the follow covers about225mm after alignment; leave about
+250mm of continuous outgoing line beyond the point where the sensors reacquire
+it. Because the sensor spots are already roughly182mm down the outgoing branch
+at the nominal quarter turn (plus any alignment travel), about500mm of outgoing
+black line and surrounding flat white surface from the+centre gives room for
+this test. If the available track ends sooner, the normal line-loss stop can
+interrupt the five seconds. Keep the optical height unchanged across tile joins.
+
+The whole-run deadline is30s (was25s) to leave more time for the longer exit;
+400ms logging and the100-row saved record still fit the static trace budget.
+The900mm overall absolute-path cutoff, line-loss logic,500ms feedback stall,
+button/USB/late-loop/encoder checks and all PWM limits stay active. The900mm
+limit is an overall abort, not the new phase6 completion condition.
+
+Host tests check continue past20mm, still active at4,999,999us after phase6,
+normal completion at5,000,000us, early optical loss/path cutoff, and the existing
+V6 full handover sequences and PWM guards. See firmware/BUILD_V7.md. Physical
+V7 five-second result pending. V1..V6 calibration/records retain their layout;
+new traces identify V7, older restored traces retain their original revision.
+
+## Historical V6 quick start: gradual outgoing-line acquisition (MODE 3)
 
 V5 physically completed the rolling rotation, but kept pivoting past a visible
 outgoing line because it waited for BOTH levels>=650 at the same time. The latest
@@ -189,12 +229,12 @@ firmware/BUILD_V2.md; user-reported evidence is in MEASUREMENTS.md.
 
 ## 1. Flash and check sensors while stopped
 
-Download firmware/buddy23_junction_left_v6.uf2 using GitHub's **Download raw file**,
+Download firmware/buddy23_junction_left_v7.uf2 using GitHub's **Download raw file**,
 then copy to RPI-RP2 in BOOTSEL mode. Open PuTTY at 115200, 8N1, flow control None.
 Use only one power source at a time. Keep the robot on the mat at its final height.
 Do not request a movement during this check.
 
-1. Press `h`. Confirm `BUDDY23 JUNCTION LEFT v6`.
+1. Press `h`. Confirm `BUDDY23 JUNCTION LEFT v7`.
 2. Front calibration is imported from a CRC-valid V11 record if present. `valid=1`
    means front endpoints are valid; `imported_v11=1` identifies the initial import.
    No V11 movement trace is imported. If invalid, capture BOTH front spots over
@@ -288,7 +328,7 @@ The newest run replaces the previous run; retrieve it before another test.
   uses signed feedback. Adequate loaded reverse torque is not yet established.
 - Timer ISR cuts motor power for button/deadline/100 ms late control. Main checks
   stalled feedback500 ms under demand, wrong direction50 ms and invalid edges>=8.
-- Whole run25 seconds or900 mm average absolute wheel path; exit20 mm or3 seconds.
+- Whole run30 seconds or900 mm average absolute wheel path; exit5 seconds.
   These are output limits, not guarantees of physical stopping distance.
 
 ## Logs and persistence
@@ -304,7 +344,7 @@ encoder distance/heading, measured cross width and axle goal. Phase numbers:
 | 3 | Settle before turn / finish mode1; skipped in mode3 |
 | 4 | Left turn |
 | 5 | Settle on outgoing line |
-| 6 | Follow outgoing line20 mm |
+| 6 | Follow outgoing line5s (V1..V6 used20mm) |
 | 7 | Completed |
 | 8 | Fault |
 | 9 | V6 mode3: slow forward alignment after first branch detection |
@@ -314,7 +354,7 @@ The final turn summary gives positive left rotation relative to turn start.
 
 CRC-verified last4 KiB flash record, written only with drive off on one core.
 The revision byte uses V1 zero-filled padding, keeping record size/row offsets
-and CRC range unchanged. V1's zero revision is interpreted as V1; revisions2..6
+and CRC range unchanged. V1's zero revision is interpreted as V1; revisions2..7
 identify later runs. The V5 rolling flag fits former Junction padding, with
 old versions normalized to false. Fresh runs use the running firmware's version.
 New record magic is separate from V11. First `k` or completed run replaces the
@@ -330,5 +370,5 @@ white gap. It intentionally contains no barcode. Success establishes junction
 centering/left turn with the existing sensor placement, not the final combined
 barcode navigation or endless-course system. Keep V11 as the line-follow baseline.
 
-See firmware/BUILD_V6.md for the current verified binary and software checks;
-earlier BUILD_V1..V5 records and UF2s remain available.
+See firmware/BUILD_V7.md for the current verified binary and software checks;
+earlier BUILD_V1..V6 records and UF2s remain available.

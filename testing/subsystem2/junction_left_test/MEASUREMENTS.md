@@ -174,3 +174,21 @@ require both>=400/difference<=350 for80ms, then unchanged V11 follow20mm.
 Acquisition3s/60mm/60..115deg, bothwhite150ms with recent direction only.
 No changes to centre/turn-start geometry, turn power, pins, calibration or V11.
 Physical V6 outcome pending; simulated transitions are not hardware proof.
+
+
+## V6 user-reported handover success / V7 longer exit - 22 October2026
+
+User reports V6 worked and requests5seconds of line tracing after the left turn,
+instead of the20mm finish. No new V6 log/video provided in this message; do not
+infer exact acquisition angle, elapsed time or distance from this report.
+
+V7 changes only the outgoing follow completion to a5,000,000us phase6 timer,
+starting after stable line alignment. It can continue past20mm. Raise whole-run
+deadline25->30s to accommodate the extra follow, keeping900mm absolute-path and
+all line-loss/motor/button/USB/late-loop guards, V6 turn/acquisition and PWM caps.
+Mode1 still centre/stop; modes2/3 both use5s following. At45mm/s this nominally
+adds225mm after reacquisition, so plan sufficient flat outgoing track.
+
+Tests cover exact timer boundary, distance-independent completion, early line
+loss and path abort; V6 full sequences and PWM suite pass. Physical V7 result
+pending. Existing flash layout/front+side endpoints unchanged.

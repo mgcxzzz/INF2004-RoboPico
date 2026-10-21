@@ -6,7 +6,7 @@
 enum { J_APPROACH=1,J_CENTRE,J_SETTLE,J_TURN,J_TURN_SETTLE,J_EXIT,J_DONE,J_FAULT,J_ACQUIRE };
 enum { J_OK=0,J_COMPLETE=20,J_NO_CROSS,J_BAD_STRIPE,J_CENTRE_DRIFT,J_SETTLE_TIMEOUT,
        J_TURN_TIMEOUT,J_BRANCH_MISSING,J_PATH_LIMIT,J_LINE_LOST };
-enum { J_RUN_US=25000000,J_TRACE_US=400000,J_MAX_PATH_MM=900 };
+enum { J_RUN_US=30000000,J_EXIT_US=5000000,J_TRACE_US=400000,J_MAX_PATH_MM=900 };
 typedef struct { uint8_t white,black,mask; } SideCalibration;
 static inline bool side_valid(const SideCalibration *s) {
     return s->mask==3 && s->white<=1 && s->black<=1 && s->white!=s->black;
@@ -196,8 +196,9 @@ static inline AnalogDemand junction_step(Junction *j,const LineCalibration *c,co
         } else if(i->now-j->phase_us>=2000000) j_fail(j,J_SETTLE_TIMEOUT);
         break;
     case J_EXIT:
-        if(mean-j->exit_origin>=20) { j->phase=J_DONE;j->reason=J_COMPLETE;break; }
-        if(i->now-j->phase_us>=3000000) { j_fail(j,J_LINE_LOST);break; }
+        /* The five seconds begin only after outgoing-line alignment succeeds.
+           Distance is not a completion condition; whole-run/loss guards remain. */
+        if(i->now-j->phase_us>=J_EXIT_US) { j->phase=J_DONE;j->reason=J_COMPLETE;break; }
         d=symmetric_demand(&j->follower,c,i->adc[0],i->adc[1],i->now,(uint32_t)i->path);
         if(d.stop) j_fail(j,J_LINE_LOST);
         break;

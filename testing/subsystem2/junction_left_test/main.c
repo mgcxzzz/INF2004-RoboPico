@@ -34,7 +34,7 @@ static LineCalibration calibration;
 static Junction junction;
 static SideCalibration side_cal;
 static uint8_t test_mode=1,recorded_mode=1;
-static uint8_t recorded_version=6;
+static uint8_t recorded_version=7;
 static bool imported_front;
 static AnalogDemand demand;
 static uint16_t analog_raw[2];
@@ -101,14 +101,14 @@ _Static_assert(sizeof(SavedLog)<=FLASH_SECTOR_SIZE,"Junction log exceeds sector"
 _Static_assert(sizeof(Trace)==36,"Unexpected trace ABI");
 _Static_assert(offsetof(SavedLog,firmware)==66 && offsetof(SavedLog,junction)==72,
                "V2 revision byte must fit V1 padding without moving records");
-_Static_assert(offsetof(SavedLog,rows)==192 && sizeof(SavedLog)==3792,"Keep V1..V6 record ABI");
+_Static_assert(offsetof(SavedLog,rows)==192 && sizeof(SavedLog)==3792,"Keep V1..V7 record ABI");
 static union { SavedLog data;uint8_t sector[FLASH_SECTOR_SIZE]; } saved;
 static bool flash_loaded,save_failed;
 static void outputs_off(void);
 static bool storage_fits(void) { return (uintptr_t)&__flash_binary_end<=XIP_BASE+LOG_OFFSET; }
 static bool stored_valid(const SavedLog *v) {
     return v->magic==LOG_MAGIC && v->version==1 && v->count<=TRACE_ROWS &&
-        v->selected_mode>=1 && v->selected_mode<=3 && v->mode>=1 && v->mode<=3 && v->firmware<=6 &&
+        v->selected_mode>=1 && v->selected_mode<=3 && v->mode>=1 && v->mode<=3 && v->firmware<=7 &&
         calibration_valid(&v->calibration) && side_valid(&v->side) &&
         v->crc==log_crc((const uint8_t *)v+offsetof(SavedLog,count),sizeof(*v)-offsetof(SavedLog,count));
 }
@@ -143,7 +143,7 @@ static void save_log(void) {
     v->magic=LOG_MAGIC;v->version=1;v->count=trace_count;v->dropped=trace_dropped;
     v->duration=guard.duration_us;v->reason=guard.reason;v->key=recorded_key;
     v->offline=recorded_offline;v->mode=recorded_mode;v->selected_mode=test_mode;
-    v->firmware=trace_count?recorded_version:6;
+    v->firmware=trace_count?recorded_version:7;
     v->calibration=calibration;v->side=side_cal;v->junction=junction;
     for(unsigned w=0;w<2;++w) { v->cutoff[w]=cut_ticks[w]-origin[w];v->invalid[w]=cut_invalid[w]; }
     memcpy(v->rows,trace,sizeof(trace));
@@ -204,7 +204,7 @@ static bool safety_tick(struct repeating_timer *t) {
 }
 
 static const char *reason_name(uint8_t r) {
-    static const char *const names[]={"none","GP20 pressed","GP21 released","25s run limit","serial s",
+    static const char *const names[]={"none","GP20 pressed","GP21 released","30s run limit","serial s",
         "USB connection changed","control loop late","no encoder movement under drive","encoder direction mismatch",
         "invalid encoder transitions","distance test limit","GP21 stop pressed"};
     if(r<sizeof(names)/sizeof(names[0])) return names[r];
@@ -217,17 +217,17 @@ static const char *reason_name(uint8_t r) {
     }
 }
 static const char *phase_name(unsigned phase) {
-    const char *const names[]={"idle","approach","centre","settle","left turn","turn settle","exit20mm","done","fault","acquire line"};
+    const char *const names[]={"idle","approach","centre","settle","left turn","turn settle","follow exit","done","fault","acquire line"};
     return phase<sizeof(names)/sizeof(names[0])?names[phase]:"unknown";
 }
 static void help(void) {
-    puts("\nBUDDY23 JUNCTION LEFT v6 | isolated SDK test, NO BARCODE | DRIVE OFF on boot");
+    puts("\nBUDDY23 JUNCTION LEFT v7 | isolated SDK test, NO BARCODE | DRIVE OFF on boot");
     puts("Front analog: GP26 LEFT A0 / GP28 RIGHT A0; offset D0 GP19; 3.3V/common GND.");
     puts("Front calibration: w=BOTH WHITE, l=LEFT BLACK, r=RIGHT BLACK; wait1s before capture.");
     puts("Offset polarity: o=capture GP19 over WHITE, b=capture GP19 over BLACK. Motors remain OFF.");
     puts("Both captures must differ; k saves calibration/mode. First save replaces previous firmware log.");
     puts("1=centre/STOP; 2=old in-place LEFT; 3=NEW rolling LEFT starting55mm before cross centre. k saves.");
-    puts("Mode3: LEFT OFF/RIGHT forward, then acquire line with BOTH forward, follow20mm/STOP. Use3,k.");
+    puts("Mode3: LEFT OFF/RIGHT forward, then acquire line with BOTH forward, follow5s/STOP. Use3,k.");
     puts("Start front spots on black, offset on white, straight approach, NO BARCODE/other side marks.");
     puts("f=hold GP21 USB; g=hands-free USB2s countdown. s/either stop button; f also stops on GP21 release.");
     puts("BANK: hold BOTH3s, release BOTH, wait1s, tap/release GP21,2s countdown. Either button stops.");
@@ -236,9 +236,9 @@ static void help(void) {
     puts("Mode2 reverses LEFT wheel, RIGHT forward. Mode3 leaves LEFT unpowered and needs longer outgoing line.");
     puts("Mode3: leave old line; either>=400 for30ms at75..110deg starts phase9 slow alignment.");
     puts("Forward PWM cap25%, turn sustained35%, one start pulse40% up to150ms (1ms timer clamp).");
-    puts("V6: phase9 forward20..35mm/s,25% cap; both>=400/difference<=350 for80ms starts exit20mm.");
-    puts("Approach<=450mm/12s; whole run<=25s/900mm. No voltage or motor speed target increase.");
-    puts("Mode3 outgoing black needs>=220mm; prefer300mm for alignment room. No barcode/other offset marks.");
+    puts("V7: phase9 forward20..35mm/s,25% cap; both>=400/difference<=350 for80ms starts follow5s.");
+    puts("Approach<=450mm/12s; whole run<=30s/900mm. No voltage or motor speed target increase.");
+    puts("Allow about225mm additional line after alignment for the5s follow. No barcode/other offset marks.");
     puts("p=dump saved log, h=help. Wait3s after stop before switching power; never use two sources together.");
     printf("CAL white=%u,%u black=%u,%u valid=%u side_white=%u side_black=%u side_mask=%u side_valid=%u mode=%u restored=%u imported_v11=%u\n",
         calibration.white[0],calibration.white[1],calibration.black[0],calibration.black[1],calibration_valid(&calibration),
@@ -322,7 +322,7 @@ static bool start_run(unsigned mode) {
     uint64_t now=time_us_64();uint32_t irq=save_and_disable_interrupts();
     bool ok=guard_start(&guard,now,mode!=LINE_USB_HOLD || !gpio_get(HOLD),!gpio_get(STOP));
     if(ok) {
-        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=6;
+        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=7;
         guard.deadline_us=now+J_RUN_US;trace_interval_us=J_TRACE_US;
         for(unsigned w=0;w<2;++w) {
             origin[w]=previous[w]=enc[w].position;initial_invalid[w]=enc[w].invalid;
