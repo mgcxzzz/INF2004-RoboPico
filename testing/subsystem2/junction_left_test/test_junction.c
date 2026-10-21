@@ -97,11 +97,11 @@ static void test_signed_controller_and_stops(void) {
     for(unsigned w=0;w<2;++w) for(int desired=-50;desired<=50;++desired) {
         SignedWheel p={0};
         for(unsigned n=0;n<100;++n) {
-            int32_t u=junction_wheel_step(&p,w,(int16_t)desired,desired*0.8f,0.01f,1000+n*10000);
+            int32_t u=junction_wheel_step(&p,w,(int16_t)desired,desired*0.8f,0.01f,1000+n*10000,true);
             assert(abs(u)<=250 && (desired==0?u==0:u*desired>=0));
             DualLevels v=dual_levels(w,u);assert(v.a<=250 && v.b<=250 && !(v.a && v.b));
         }
-        assert(junction_wheel_step(&p,w,0,40,0.01f,2000000)==0);
+        assert(junction_wheel_step(&p,w,0,40,0.01f,2000000,true)==0);
         assert(p.pi.integral==0 && p.pi.ramp==0 && !p.kick.active);
     }
     DualGuard g={0};assert(guard_start(&g,1000000,true,false));
@@ -113,9 +113,35 @@ static void test_signed_controller_and_stops(void) {
     assert(side_valid(&(SideCalibration){0,1,3}));assert(side_valid(&(SideCalibration){1,0,3}));
     assert(!side_valid(&(SideCalibration){1,1,3}));assert(!side_valid(&(SideCalibration){0,1,1}));
 }
+static void test_loaded_turn_and_unchanged_follow(void) {
+    for(unsigned w=0;w<2;++w) {
+        SignedWheel loaded={0},unloaded={0};int sign=w==0?-1:1;
+        for(unsigned n=0;n<110;++n) {
+            uint64_t now=1000+n*10000;
+            int32_t u=junction_wheel_step(&loaded,w,(int16_t)(sign*35),0,0.01f,now,true);
+            (void)junction_wheel_step(&unloaded,w,(int16_t)(sign*35),0,0.01f,now,false);
+            /* Stationary under load: effort must persist after120ms kicks end. */
+            if(n>=40) assert(u*sign==250);
+        }
+        assert(fabsf(loaded.pi.integral)<=LINE_SPEED_I_LIMIT);
+        SignedWheel overspeed={.pi={.ramp=35},.sign=(int8_t)sign};
+        int32_t u=junction_wheel_step(&overspeed,w,(int16_t)(sign*35),sign*80,0.01f,2000000,true);
+        assert(u*sign<220 && u*sign>=0); /* not a forced output minimum */
+        SignedWheel follow={0};WheelPI reference={0};LineBreakaway kick={0};
+        for(unsigned n=0;n<500;++n) {
+            int16_t wanted=n<100?45:n<200?25:n<300?0:n<400?50:35;
+            float speed=n<50?0:wanted*0.9f;uint64_t now=1000+n*10000;
+            int32_t expected=line_speed_step(&reference,w,wanted,speed,0.01f);
+            expected=line_breakaway(&kick,now,wanted,reference.ramp,speed,expected);
+            int32_t actual=junction_wheel_step(&follow,w,wanted,speed,0.01f,now,false);
+            assert(expected==actual);
+        }
+    }
+}
 int main(void) {
     test_geometry_and_qualification();simulate(false,true);simulate(true,true);simulate(true,false);
     test_turn_rejects_false_branch();test_signed_controller_and_stops();
-    puts("PASS: junction qualification/geometry/staged centring/settling/left branch/rejection/signed PWM/guards");
+    test_loaded_turn_and_unchanged_follow();
+    puts("PASS: junction sequence/guards; V2 sustained turn effort/overspeed/zero reset; unchanged forward controller");
     return 0;
 }

@@ -34,6 +34,7 @@ static LineCalibration calibration;
 static Junction junction;
 static SideCalibration side_cal;
 static uint8_t test_mode=1,recorded_mode=1;
+static uint8_t recorded_version=2;
 static bool imported_front;
 static AnalogDemand demand;
 static uint16_t analog_raw[2];
@@ -90,18 +91,21 @@ typedef struct {
     LineCalibration calibration;
     SideCalibration side;
     uint8_t selected_mode;
+    uint8_t firmware; /* Uses V1's zero-filled padding: existing record layout unchanged. */
     Junction junction;
     Trace rows[TRACE_ROWS];
 } SavedLog;
 _Static_assert(sizeof(SavedLog)<=FLASH_SECTOR_SIZE,"Junction log exceeds sector");
 _Static_assert(sizeof(Trace)==36,"Unexpected trace ABI");
+_Static_assert(offsetof(SavedLog,firmware)==66 && offsetof(SavedLog,junction)==72,
+               "V2 revision byte must fit V1 padding without moving records");
 static union { SavedLog data;uint8_t sector[FLASH_SECTOR_SIZE]; } saved;
 static bool flash_loaded,save_failed;
 static void outputs_off(void);
 static bool storage_fits(void) { return (uintptr_t)&__flash_binary_end<=XIP_BASE+LOG_OFFSET; }
 static bool stored_valid(const SavedLog *v) {
     return v->magic==LOG_MAGIC && v->version==1 && v->count<=TRACE_ROWS &&
-        v->selected_mode>=1 && v->selected_mode<=2 && v->mode>=1 && v->mode<=2 &&
+        v->selected_mode>=1 && v->selected_mode<=2 && v->mode>=1 && v->mode<=2 && v->firmware<=2 &&
         calibration_valid(&v->calibration) && side_valid(&v->side) &&
         v->crc==log_crc((const uint8_t *)v+offsetof(SavedLog,count),sizeof(*v)-offsetof(SavedLog,count));
 }
@@ -111,6 +115,7 @@ static void load_log(void) {
     if(stored_valid(v)) {
         memcpy(trace,v->rows,sizeof(trace));trace_count=v->count;trace_dropped=v->dropped;
         recorded_key=v->key;recorded_offline=v->offline;recorded_mode=v->mode;test_mode=v->selected_mode;
+        recorded_version=v->firmware?v->firmware:1;
         guard.duration_us=v->duration;guard.reason=v->reason;
         for(unsigned w=0;w<2;++w) { origin[w]=0;cut_ticks[w]=v->cutoff[w];cut_invalid[w]=v->invalid[w]; }
         calibration=v->calibration;side_cal=v->side;junction=v->junction;flash_loaded=true;
@@ -133,6 +138,7 @@ static void save_log(void) {
     v->magic=LOG_MAGIC;v->version=1;v->count=trace_count;v->dropped=trace_dropped;
     v->duration=guard.duration_us;v->reason=guard.reason;v->key=recorded_key;
     v->offline=recorded_offline;v->mode=recorded_mode;v->selected_mode=test_mode;
+    v->firmware=trace_count?recorded_version:2;
     v->calibration=calibration;v->side=side_cal;v->junction=junction;
     for(unsigned w=0;w<2;++w) { v->cutoff[w]=cut_ticks[w]-origin[w];v->invalid[w]=cut_invalid[w]; }
     memcpy(v->rows,trace,sizeof(trace));
@@ -200,7 +206,7 @@ static const char *phase_name(unsigned phase) {
     return phase<sizeof(names)/sizeof(names[0])?names[phase]:"unknown";
 }
 static void help(void) {
-    puts("\nBUDDY23 JUNCTION LEFT v1 | isolated SDK test, NO BARCODE | DRIVE OFF on boot");
+    puts("\nBUDDY23 JUNCTION LEFT v2 | isolated SDK test, NO BARCODE | DRIVE OFF on boot");
     puts("Front analog: GP26 LEFT A0 / GP28 RIGHT A0; offset D0 GP19; 3.3V/common GND.");
     puts("Front calibration: w=BOTH WHITE, l=LEFT BLACK, r=RIGHT BLACK; wait1s before capture.");
     puts("Offset polarity: o=capture GP19 over WHITE, b=capture GP19 over BLACK. Motors remain OFF.");
@@ -213,6 +219,7 @@ static void help(void) {
     puts("Approx geometry: side92mm ahead of rear-wheel axle; measured stripe midpoint+92mm centres axle.");
     puts("Mode2 reverses LEFT wheel, RIGHT forward. Leave old line then seek both>=650 near90deg (75..110).");
     puts("25% PWM cap. Approach<=450mm/12s; whole run<=25s/900mm. Outgoing line needs>=170mm from cross.");
+    puts("V2 in-place turn only: loaded feedforward22%, signed PI may reduce or raise to25%. Same stall guard.");
     puts("p=dump saved log, h=help. Wait3s after stop before switching power; never use two sources together.");
     printf("CAL white=%u,%u black=%u,%u valid=%u side_white=%u side_black=%u side_mask=%u side_valid=%u mode=%u restored=%u imported_v11=%u\n",
         calibration.white[0],calibration.white[1],calibration.black[0],calibration.black[1],calibration_valid(&calibration),
@@ -258,7 +265,7 @@ static void dump(void) {
     if(!trace_count) { puts("No junction run saved yet.");return; }
     if(flash_loaded) puts("RESTORED: CRC-verified junction test log.");
     if(save_failed) puts("WARNING: flash save failed; RAM log only.");
-    printf("JUNCTION LEFT v1: key=%c mode=%s test=%u rows=%u dropped=%u settling=%u\n",recorded_key,
+    printf("JUNCTION LEFT v%u: key=%c mode=%s test=%u rows=%u dropped=%u settling=%u\n",recorded_version,recorded_key,
         recorded_offline?"offline":recorded_key=='g'?"USB hands-free":"USB hold",recorded_mode,trace_count,trace_dropped,trace_settling);
     printf("CAL white=%u,%u black=%u,%u SIDE white=%u black=%u | side_ahead_mm=92\n",
         calibration.white[0],calibration.white[1],calibration.black[0],calibration.black[1],side_cal.white,side_cal.black);
@@ -294,7 +301,7 @@ static bool start_run(unsigned mode) {
     uint64_t now=time_us_64();uint32_t irq=save_and_disable_interrupts();
     bool ok=guard_start(&guard,now,mode!=LINE_USB_HOLD || !gpio_get(HOLD),!gpio_get(STOP));
     if(ok) {
-        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;
+        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=2;
         guard.deadline_us=now+J_RUN_US;trace_interval_us=J_TRACE_US;
         for(unsigned w=0;w<2;++w) {
             origin[w]=previous[w]=enc[w].position;initial_invalid[w]=enc[w].invalid;
@@ -345,7 +352,8 @@ static void control_step(uint64_t now) {
     uint8_t failure=demand.stop?junction.reason:WHY_NONE;int32_t next[2];
     for(unsigned w=0;w<2;++w) {
         int sign=demand.target[w]>0?1:demand.target[w]<0?-1:0;
-        next[w]=junction_wheel_step(&controller[w],w,demand.target[w],velocity[w],dt,now);
+        bool turning=junction.phase==J_TURN && demand.target[0]<0 && demand.target[1]>0;
+        next[w]=junction_wheel_step(&controller[w],w,demand.target[w],velocity[w],dt,now,turning);
         float along=velocity[w]*sign;
         bad_direction_us[w]=sign && along<-20?bad_direction_us[w]+elapsed:0;
         if(bad_direction_us[w]>=50000) failure=WHY_DIRECTION;
