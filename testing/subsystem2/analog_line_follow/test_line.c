@@ -2,9 +2,71 @@
 #include <stdio.h>
 #include "line_logic.h"
 #include "wheel_control.h"
+#include "symmetric_logic.h"
 #include "../dual_wheel_bench/dual_logic.h"
 #include "../line_motion_integration/logic.h"
 int main(void) {
+    /* New placement: both-black is normal, differential steering sign must
+       reverse relative to the historical single-edge controller. */
+    LineCalibration sc={{0,0},{1000,1000},7};SymmetricTracker st={0};
+    AnalogDemand sd=symmetric_demand(&st,&sc,1000,1000,0,0);
+    assert(!sd.stop && sd.decision==SYM_STRAIGHT && sd.target[0]==45 && sd.target[1]==45);
+    sd=symmetric_demand(&st,&sc,1000,1000,3000000,100);
+    assert(!sd.stop && sd.target[0]==45 && sd.target[1]==45); /* no crossing stop */
+    sd=symmetric_demand(&st,&sc,1000,0,3100000,101);
+    assert(sd.decision==SYM_LEFT && sd.target[0]==30 && sd.target[1]==60);
+    sd=symmetric_demand(&st,&sc,0,1000,3200000,102);
+    assert(sd.decision==SYM_RIGHT && sd.target[0]==60 && sd.target[1]==30);
+    sd=symmetric_demand(&st,&sc,980,950,3200001,102);assert(sd.target[0]==45 && sd.target[1]==45);
+    /* Loss uses the last reliable side, latched for this loss episode. */
+    sd=symmetric_demand(&st,&sc,0,0,3300000,103);
+    assert(!sd.stop && sd.decision==SYM_RECOVER_RIGHT && sd.target[0]==60 && sd.target[1]==30);
+    sd=symmetric_demand(&st,&sc,0,0,3949999,127);assert(!sd.stop);
+    sd=symmetric_demand(&st,&sc,0,0,3950000,127);
+    assert(sd.stop && sd.decision==AL_LOST && !sd.target[0] && !sd.target[1]);
+    st=(SymmetricTracker){0};
+    sd=symmetric_demand(&st,&sc,0,0,0,0);assert(sd.stop); /* no invented left turn */
+    st=(SymmetricTracker){0};
+    (void)symmetric_demand(&st,&sc,1000,0,100,0);
+    sd=symmetric_demand(&st,&sc,0,0,500101,0);assert(sd.stop); /* stale side */
+    st=(SymmetricTracker){0};
+    (void)symmetric_demand(&st,&sc,1000,0,100,0);
+    sd=symmetric_demand(&st,&sc,0,0,500100,0);
+    assert(!sd.stop && sd.decision==SYM_RECOVER_LEFT && sd.target[0]==30 && sd.target[1]==60);
+    sd=symmetric_demand(&st,&sc,0,0,500101,25);assert(sd.stop); /* path bound */
+    sd=symmetric_demand(&st,&sc,0,1000,500102,26);
+    assert(!sd.stop && !st.white && st.direction==-1);
+    sd=symmetric_demand(&st,&sc,0,0,500103,27);assert(!sd.stop && sd.decision==SYM_RECOVER_RIGHT);
+    sc.mask=0;sd=symmetric_demand(&st,&sc,1000,1000,500104,28);assert(sd.stop);sc.mask=7;
+    /* Weak/noisy asymmetry does not become a remembered recovery direction. */
+    st=(SymmetricTracker){0};
+    (void)symmetric_demand(&st,&sc,350,0,0,0);
+    sd=symmetric_demand(&st,&sc,0,0,1,0);assert(sd.stop);
+    LineCalibration measured={{184,184},{3464,3692},7};
+    st=(SymmetricTracker){0};
+    sd=symmetric_demand(&st,&measured,3425,3631,0,0);assert(sd.target[0]==45 && sd.target[1]==45);
+    sd=symmetric_demand(&st,&measured,204,3717,1,0);assert(sd.target[0]>sd.target[1]);
+    sd=symmetric_demand(&st,&measured,3676,271,2,0);assert(sd.target[0]<sd.target[1]);
+    /* Equal calibrated levels give mirror-symmetric bounded forward requests. */
+    for(unsigned l=0;l<=1000;l+=7) for(unsigned r=0;r<=1000;r+=11) {
+        SymmetricTracker a={0},b={0};
+        AnalogDemand da=symmetric_demand(&a,&sc,(uint16_t)l,(uint16_t)r,0,0);
+        AnalogDemand db=symmetric_demand(&b,&sc,(uint16_t)r,(uint16_t)l,0,0);
+        assert(da.stop==db.stop && da.target[0]==db.target[1] && da.target[1]==db.target[0]);
+        assert(da.target[0]>=0 && da.target[0]<=60 && da.target[1]>=0 && da.target[1]<=60);
+        if(!da.stop) assert(da.target[0]>=30 && da.target[1]>=30);
+    }
+    assert(profile_start_block(5,false,false,true,false,true,1000,1000,false,LINE_BANK)==START_OK);
+    assert(profile_start_block(5,false,false,true,false,true,1000,700,false,LINE_USB_FREE)==START_OK);
+    assert(profile_start_block(5,false,false,true,false,true,700,1000,false,LINE_USB_FREE)==START_OK);
+    assert(profile_start_block(5,false,false,true,false,true,649,649,false,LINE_BANK)==START_LINE_ABSENT);
+    assert(profile_start_block(5,false,false,true,false,true,0,650,false,LINE_BANK)==START_OK);
+    assert(profile_start_block(5,false,false,false,false,true,1000,1000,false,LINE_BANK)==START_CAL);
+    assert(profile_start_block(5,false,false,true,true,true,1000,1000,false,LINE_BANK)==START_GP20);
+    assert(profile_start_block(5,false,false,true,false,false,1000,1000,false,LINE_BANK)==START_REARM);
+    assert(profile_start_block(5,false,true,true,false,true,1000,1000,false,LINE_BANK)==START_SETTLING);
+    assert(profile_start_block(5,false,false,true,false,true,1000,1000,true,LINE_USB_FREE)==START_RELEASE_GP21);
+    puts("PASS: symmetric two-black straight, left/right mirror steering, measured calibration samples, recent-direction loss bounds/refusal, symmetric start gates");
     /* Response profile must ignore optics but NEVER bypass stop/rearm gates. */
     assert(run_start_block(true,false,false,true,false,true,0,0,false,LINE_USB_FREE)==START_OK);
     assert(run_start_block(true,false,false,true,false,true,1000,1000,false,LINE_BANK)==START_OK);

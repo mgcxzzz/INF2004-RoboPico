@@ -1,10 +1,86 @@
-# Analog line following bench v8
+# Analog line following bench v9
 
 Standalone hardware test: GP26/GP28 analog sensors -> line error -> Buddy2
 encoder PI speed control -> both motors. It is NOT the real RTOS Navigation
 Coordinator/S3 task integration. That build's bank-only startup remains unresolved.
 No barcode, GP19 use, junction branch turn, obstacle module, radio or IMU.
 Boots DRIVE OFF; calibrating, printing, saving and switching power never start it.
+
+## V9: NEW symmetric two-sensor placement, profile6
+
+Both front modules now sit side by side near the robot centre. The user observed
+both-black when centred, left fades with robot pointing left, right fades with
+robot pointing right. Stationary evidence/calibration is saved under
+logs/symmetric_stationary_2026-10-21.txt. Reported calibration: white184/184,
+black3464/3692. The snapshots988/982,6/1000,1000/24 produce straight/right/left
+requests respectively. These are stationary tests, not successful driving trials.
+Assumes lateral movements/yaw at constant height; lifting contaminates readings.
+
+Use ONLY profile6 with the new layout. Historical profiles remain available for
+reproducibility but their asymmetric/left-edge geometry is incompatible.
+The new controller is in symmetric_logic.h; original controllers/PI/kick are
+unchanged. Main dispatch selects this code only for profile6.
+
+### Symmetric rules
+
+- Normalize each sensor with its OWN white/black endpoints. Error=levelL-levelR.
+- Difference strictly between-80 and80: both targets45mm/s (noise deadband).
+- More left black -> left slower/right faster -> turn LEFT.
+- More right black -> left faster/right slower -> turn RIGHT.
+- Correction=15*error/1000mm/s. Targets45-correction,45+correction, bounded30..60.
+- BOTH BLACK is normal straight, not a crossing stop. Both saturated spots leave
+  a blind band: equality cannot prove exact geometric centring or detect a junction.
+- Both levels<150: remember only a clear asymmetry (absolute difference>=200 and
+  at least one level>=400) seen within500ms of loss. That side is latched at loss.
+  Recover with30/60left or60/30right, at most650ms OR25mm average absolute
+  encoder path. If no recent reliable side, STOP immediately. No invented left
+  recovery, reverse drive, or unbounded search. Return to proportional control
+  when either level>=150. This heuristic does not resolve every ambiguous loss.
+- Start requires valid calibration, ready/released buttons/mode gates and at least
+  one normalized sensor>=650. Both-black and either offset side are accepted.
+- Profile6 is SHORT5s OR200mm, trace75ms (fits100-row buffer plus settling).
+- Stop reasons, wheel PI gains,100mm/s^2 ramp,25% PWM cap, bounded startup boost,
+  encoder guards, USB disconnect and independent1ms late-control cutoff retained.
+- Decision11=balanced straight,12=left,13=right,14=left recovery,15=right recovery,
+  4=line lost. Neither these states nor heading estimates identify a + junction.
+
+### First home test: centred straight ONLY
+
+1. Flash firmware/buddy23_analog_line_follow_v9.uf2. Open PuTTY1152008N1 flowNone.
+   h must show V9/valid1 and your new calibration. No recapture for firmware alone.
+   If home line/surface, mounting or height differs, redo stopped w/l/r then k
+   using the actual home test surface. Keep sensors at normal loaded driving height.
+2. Press6 then k; h verify profile6. BOTH spots on black, normalized levels near
+   900..1000 and difference preferably below80. Do NOT aim one sensor at500 and
+   the other on white. At least250..300mm clear line gives room for stopping.
+3. Offline: computerUSB OFF before bank ON; wait5s, hold BOTH3s, release BOTH,
+   wait1s, tap/release GP21;2s countdown. Either button stops. Normal travel may
+   be below200mm if5s expires. Support no part of the chassis by hand during drive.
+   Alternative USB only: both released, ready1, g ->2s countdown; s/either button/
+   USB disconnect stops. Use cable slack. Never bank and computerUSB simultaneously.
+4. Wait3s after stop, bank OFF then computerUSB ON, open PuTTY and p. Save the
+   complete run under a distinct filename before requesting another movement.
+   Send the log and whether it stays near the strip and whether startup/corrections
+   jerk. Video optional. Stop here for analysis before curve or longer testing.
+
+### Follow-up tests on the SAME straight (after centred result)
+
+These are correction tests, not replacements for later continuous left/right
+curve trials. Keep both wheel contacts on the surface, same heading, slide only.
+
+- Robot slightly RIGHT: left remains dark, right becomes less dark; aim a moderate
+  level difference around+200..350. Expected LEFT correction toward the line.
+- Robot slightly LEFT: right remains dark, left less dark; difference-200..-350.
+  Expected RIGHT correction. Do not start with both white or far away.
+- Use one run/log at a time. Return to centred placement between runs. Failure
+  to settle, excessive weaving, stale/missing logs or no movement are results to
+  inspect, not reasons to extend timers or raise PWM.
+
+SavedLog structure/version unchanged; profile6 extends selected value to5 and
+recorded-profile byte to6. V9 reads old calibration/log records. Older firmware
+can reject a V9 record with selected OR recorded profile6. Changing selection
+alone may not restore downgrade compatibility while the old trace remains;
+record calibration endpoints and expect to recapture after a downgrade.
 
 ## V8: separate left-curve recovery experiment (profile5)
 
@@ -326,7 +402,7 @@ Use only one power source, bank OR computer USB. Never overlap them.
 
 ## First stage: CALIBRATE ONLY, no f/buttons yet
 
-Computer USB only, flash firmware/buddy23_analog_line_follow_v8.uf2 with BOOTSEL.
+Computer USB only, flash firmware/buddy23_analog_line_follow_v9.uf2 with BOOTSEL.
 PuTTY Serial115200,8N1,flow None. All keys are lowercase, no Enter needed.
 Keep the sensors at final mat height, fixed spacing/lighting, no pot adjustment.
 

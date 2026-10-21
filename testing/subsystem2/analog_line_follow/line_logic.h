@@ -10,7 +10,7 @@ typedef struct { int16_t target[2]; uint16_t level[2]; uint8_t decision; bool st
 enum { LINE_BASE_MM_S=45, LINE_DIFFERENTIAL_MM_S=15 };
 enum { LINE_USB_HOLD, LINE_BANK, LINE_USB_FREE };
 enum { START_OK,START_ACTIVE,START_SETTLING,START_CAL,START_GP20,START_REARM,
-       START_LEFT_WHITE,START_RIGHT_DARK,START_HOLD_GP21,START_RELEASE_GP21,START_GUARD };
+       START_LEFT_WHITE,START_RIGHT_DARK,START_HOLD_GP21,START_RELEASE_GP21,START_GUARD,START_LINE_ABSENT };
 typedef struct { uint64_t since; bool timing,ready; } LineRearm;
 /* Readiness is permission for a NEW explicit request, never auto-start.
  * Holding GP21 after readiness is allowed for the original USB hold mode. */
@@ -60,8 +60,9 @@ static inline unsigned run_start_block(bool response,bool active,bool settling,b
 }
 static inline unsigned profile_start_block(unsigned profile,bool active,bool settling,bool valid,bool stop,
                                            bool ready,uint16_t left,uint16_t right,bool hold,unsigned mode) {
-    unsigned reason=run_start_block(profile==2,active,settling,valid,stop,ready,left,right,hold,mode);
+    unsigned reason=run_start_block(profile==2 || profile==5,active,settling,valid,stop,ready,left,right,hold,mode);
     if(!reason && profile==3 && left<850) return START_LEFT_WHITE;
+    if(!reason && profile==5 && left<650 && right<650) return START_LINE_ABSENT;
     return reason;
 }
 enum { AL_KICK_PWM=250, AL_KICK_US=120000, AL_KICK_COOLDOWN_US=100000 };
