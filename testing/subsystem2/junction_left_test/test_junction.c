@@ -98,8 +98,9 @@ static void test_signed_controller_and_stops(void) {
         SignedWheel p={0};
         for(unsigned n=0;n<100;++n) {
             int32_t u=junction_wheel_step(&p,w,(int16_t)desired,desired*0.8f,0.01f,1000+n*10000,true);
-            assert(abs(u)<=250 && (desired==0?u==0:u*desired>=0));
-            DualLevels v=dual_levels(w,u);assert(v.a<=250 && v.b<=250 && !(v.a && v.b));
+            assert(abs(u)<=J_TURN_PWM_LIMIT && (desired==0?u==0:u*desired>=0));
+            DualLevels v=junction_levels(w,u,true);
+            assert(v.a<=300 && v.b<=300 && !(v.a && v.b));
         }
         assert(junction_wheel_step(&p,w,0,40,0.01f,2000000,true)==0);
         assert(p.pi.integral==0 && p.pi.ramp==0 && !p.kick.active);
@@ -121,12 +122,16 @@ static void test_loaded_turn_and_unchanged_follow(void) {
             int32_t u=junction_wheel_step(&loaded,w,(int16_t)(sign*35),0,0.01f,now,true);
             (void)junction_wheel_step(&unloaded,w,(int16_t)(sign*35),0,0.01f,now,false);
             /* Stationary under load: effort must persist after120ms kicks end. */
-            if(n>=40) assert(u*sign==250);
+            if(n>=40) {
+                assert(u*sign==300);
+                DualLevels actual=junction_levels(w,u,true);
+                assert(actual.a+actual.b==300); /* no hidden25% bridge clamp */
+            }
         }
         assert(fabsf(loaded.pi.integral)<=LINE_SPEED_I_LIMIT);
         SignedWheel overspeed={.pi={.ramp=35},.sign=(int8_t)sign};
         int32_t u=junction_wheel_step(&overspeed,w,(int16_t)(sign*35),sign*80,0.01f,2000000,true);
-        assert(u*sign<220 && u*sign>=0); /* not a forced output minimum */
+        assert(u*sign<J_TURN_FEEDFORWARD && u*sign>=0); /* not a forced output minimum */
         SignedWheel follow={0};WheelPI reference={0};LineBreakaway kick={0};
         for(unsigned n=0;n<500;++n) {
             int16_t wanted=n<100?45:n<200?25:n<300?0:n<400?50:35;
@@ -135,13 +140,22 @@ static void test_loaded_turn_and_unchanged_follow(void) {
             expected=line_breakaway(&kick,now,wanted,reference.ramp,speed,expected);
             int32_t actual=junction_wheel_step(&follow,w,wanted,speed,0.01f,now,false);
             assert(expected==actual);
+            DualLevels reference_levels=dual_levels(w,expected);
+            DualLevels actual_levels=junction_levels(w,actual,false);
+            assert(actual_levels.a==reference_levels.a && actual_levels.b==reference_levels.b);
         }
+    }
+    for(unsigned w=0;w<2;++w) for(int pwm=-1000;pwm<=1000;++pwm) {
+        DualLevels turn=junction_levels(w,pwm,true),follow=junction_levels(w,pwm,false);
+        assert(turn.a<=300 && turn.b<=300 && !(turn.a && turn.b));
+        assert(follow.a<=250 && follow.b<=250 && !(follow.a && follow.b));
+        DualLevels old=dual_levels(w,pwm);assert(old.a==follow.a && old.b==follow.b);
     }
 }
 int main(void) {
     test_geometry_and_qualification();simulate(false,true);simulate(true,true);simulate(true,false);
     test_turn_rejects_false_branch();test_signed_controller_and_stops();
     test_loaded_turn_and_unchanged_follow();
-    puts("PASS: junction sequence/guards; V2 sustained turn effort/overspeed/zero reset; unchanged forward controller");
+    puts("PASS: junction sequence/guards; V3 actual30% turn bridge gate/overspeed/zero reset; unchanged25% forward controller");
     return 0;
 }

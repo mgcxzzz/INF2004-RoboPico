@@ -1,11 +1,31 @@
-# Junction detection, centring and left turn — V2
+# Junction detection, centring and left turn — V3
 
 Separate SDK test on the Buddy2 branch. Uses the successful V11 symmetric
 front controller and an existing offset digital sensor. No new sensor, barcode
 decoder, RTOS coordinator, IMU or radio. V1 centring passed by user observation
-from different starting distances. Its loaded turn stalled; V2 turn testing pending.
+from different starting distances. Both V1 and V2 loaded turns stalled; V3
+turn-only30% experiment is software-verified, physical test pending.
 
-## V2 change: sustain turning effort
+## V3 change: increase the turn-only limit
+
+V2 sustained25% but the user log/video still showed a small3.13degree twitch
+then stationary wheels. V3 raises ONLY the phase4 opposite-wheel turn ceiling
+to30% and its loaded feedforward estimate to27%. Signed PI can reduce effort
+for overspeed. Forward approach/centring/exit retain25%, same V11 controller.
+The same500ms stall,6s turn and110degree angle bounds remain active.
+
+Both the PI output and phase-gated motor bridge mapping allow300permille during
+the turn; the shared V11 helpers still clamp250 for every other phase. New tests
+verify actual bridge300 during stationary turn demand, and exact forward-output
+equality with V11. This is a controlled next test, not a measured current/torque
+guarantee. Keep the existing power source and voltage.
+
+V1/V2 calibration and mode records still load. h must show v3 and valid1,
+side_valid1. Choose2,k,h then repeat the same junction approach. A restored old
+run prints its original V1/V2 version; only a fresh run prints V3. See BUILD_V3.md
+in firmware/ and MEASUREMENTS.md for evidence and binary verification.
+
+## Historical V2 change: sustain turning effort
 
 The V1 turn log showed a brief25% kick then approximately16..18% PWM while
 nearly stationary. V2 uses a provisional22% LOADED feedforward estimate during
@@ -41,12 +61,12 @@ firmware/BUILD_V2.md; user-reported evidence is in MEASUREMENTS.md.
 
 ## 1. Flash and check sensors while stopped
 
-Download firmware/buddy23_junction_left_v2.uf2 using GitHub's **Download raw file**,
+Download firmware/buddy23_junction_left_v3.uf2 using GitHub's **Download raw file**,
 then copy to RPI-RP2 in BOOTSEL mode. Open PuTTY at 115200, 8N1, flow control None.
 Use only one power source at a time. Keep the robot on the mat at its final height.
 Do not request a movement during this check.
 
-1. Press `h`. Confirm `BUDDY23 JUNCTION LEFT v2`.
+1. Press `h`. Confirm `BUDDY23 JUNCTION LEFT v3`.
 2. Front calibration is imported from a CRC-valid V11 record if present. `valid=1`
    means front endpoints are valid; `imported_v11=1` identifies the initial import.
    No V11 movement trace is imported. If invalid, capture BOTH front spots over
@@ -129,7 +149,7 @@ The newest run replaces the previous run; retrieve it before another test.
   bounded arc synchronization. Abort after6 seconds, 110 degrees,120 mm on
   either wheel, reverse feedback or arc disagreement>20 mm.
 - V11 PI gains Kp1.0/Ki3.0, integral limit140, ramp100 mm/s^2, direction-specific
-  feedforward plus the V2 turn-only loaded estimate22%; same25% PWM cap and
+  feedforward plus the V3 turn-only loaded estimate27%; turn ceiling30%, forward25%, and
   bounded120 ms breakaway. Reverse adaptation
   uses signed feedback. Adequate loaded reverse torque is not yet established.
 - Timer ISR cuts motor power for button/deadline/100 ms late control. Main checks
@@ -158,8 +178,9 @@ Heading is relative encoder rotation (negative left), not an absolute compass.
 The final turn summary gives positive left rotation relative to turn start.
 
 CRC-verified last4 KiB flash record, written only with drive off on one core.
-V2 revision byte uses V1 zero-filled padding, keeping record size/row offsets and
-CRC range unchanged. V1's zero revision is interpreted as V1, fresh records as V2.
+The revision byte uses V1 zero-filled padding, keeping record size/row offsets
+and CRC range unchanged. V1's zero revision is interpreted as V1; revisions2/3
+identify V2/V3 runs. Fresh runs use the running firmware's version.
 New record magic is separate from V11. First `k` or completed run replaces the
 old flash log; back up logs/endpoints first. New firmware can import valid V11
 front calibration, but V11 cannot import this experiment's record. Returning to
@@ -173,5 +194,5 @@ white gap. It intentionally contains no barcode. Success establishes junction
 centering/left turn with the existing sensor placement, not the final combined
 barcode navigation or endless-course system. Keep V11 as the line-follow baseline.
 
-See firmware/BUILD_V2.md for the current verified binary and software checks;
-firmware/BUILD_V1.md and its UF2 are retained as the historical version.
+See firmware/BUILD_V3.md for the current verified binary and software checks;
+firmware/BUILD_V1.md, BUILD_V2.md and their UF2s are retained as historical versions.

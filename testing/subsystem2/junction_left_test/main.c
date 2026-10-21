@@ -34,7 +34,7 @@ static LineCalibration calibration;
 static Junction junction;
 static SideCalibration side_cal;
 static uint8_t test_mode=1,recorded_mode=1;
-static uint8_t recorded_version=2;
+static uint8_t recorded_version=3;
 static bool imported_front;
 static AnalogDemand demand;
 static uint16_t analog_raw[2];
@@ -105,7 +105,7 @@ static void outputs_off(void);
 static bool storage_fits(void) { return (uintptr_t)&__flash_binary_end<=XIP_BASE+LOG_OFFSET; }
 static bool stored_valid(const SavedLog *v) {
     return v->magic==LOG_MAGIC && v->version==1 && v->count<=TRACE_ROWS &&
-        v->selected_mode>=1 && v->selected_mode<=2 && v->mode>=1 && v->mode<=2 && v->firmware<=2 &&
+        v->selected_mode>=1 && v->selected_mode<=2 && v->mode>=1 && v->mode<=2 && v->firmware<=3 &&
         calibration_valid(&v->calibration) && side_valid(&v->side) &&
         v->crc==log_crc((const uint8_t *)v+offsetof(SavedLog,count),sizeof(*v)-offsetof(SavedLog,count));
 }
@@ -138,7 +138,7 @@ static void save_log(void) {
     v->magic=LOG_MAGIC;v->version=1;v->count=trace_count;v->dropped=trace_dropped;
     v->duration=guard.duration_us;v->reason=guard.reason;v->key=recorded_key;
     v->offline=recorded_offline;v->mode=recorded_mode;v->selected_mode=test_mode;
-    v->firmware=trace_count?recorded_version:2;
+    v->firmware=trace_count?recorded_version:3;
     v->calibration=calibration;v->side=side_cal;v->junction=junction;
     for(unsigned w=0;w<2;++w) { v->cutoff[w]=cut_ticks[w]-origin[w];v->invalid[w]=cut_invalid[w]; }
     memcpy(v->rows,trace,sizeof(trace));
@@ -206,7 +206,7 @@ static const char *phase_name(unsigned phase) {
     return phase<sizeof(names)/sizeof(names[0])?names[phase]:"unknown";
 }
 static void help(void) {
-    puts("\nBUDDY23 JUNCTION LEFT v2 | isolated SDK test, NO BARCODE | DRIVE OFF on boot");
+    puts("\nBUDDY23 JUNCTION LEFT v3 | isolated SDK test, NO BARCODE | DRIVE OFF on boot");
     puts("Front analog: GP26 LEFT A0 / GP28 RIGHT A0; offset D0 GP19; 3.3V/common GND.");
     puts("Front calibration: w=BOTH WHITE, l=LEFT BLACK, r=RIGHT BLACK; wait1s before capture.");
     puts("Offset polarity: o=capture GP19 over WHITE, b=capture GP19 over BLACK. Motors remain OFF.");
@@ -218,8 +218,9 @@ static void help(void) {
     puts("Repeat after settling/save, both released and stationary1s. No automatic restart.");
     puts("Approx geometry: side92mm ahead of rear-wheel axle; measured stripe midpoint+92mm centres axle.");
     puts("Mode2 reverses LEFT wheel, RIGHT forward. Leave old line then seek both>=650 near90deg (75..110).");
-    puts("25% PWM cap. Approach<=450mm/12s; whole run<=25s/900mm. Outgoing line needs>=170mm from cross.");
-    puts("V2 in-place turn only: loaded feedforward22%, signed PI may reduce or raise to25%. Same stall guard.");
+    puts("Forward PWM cap25%, in-place turn cap30%. Approach<=450mm/12s; whole run<=25s/900mm.");
+    puts("V3 turn only: loaded feedforward27%, signed PI can reduce or raise to30%. Same500ms stall guard.");
+    puts("Outgoing black line needs>=170mm from cross. No barcode/other offset marks in this test.");
     puts("p=dump saved log, h=help. Wait3s after stop before switching power; never use two sources together.");
     printf("CAL white=%u,%u black=%u,%u valid=%u side_white=%u side_black=%u side_mask=%u side_valid=%u mode=%u restored=%u imported_v11=%u\n",
         calibration.white[0],calibration.white[1],calibration.black[0],calibration.black[1],calibration_valid(&calibration),
@@ -301,7 +302,7 @@ static bool start_run(unsigned mode) {
     uint64_t now=time_us_64();uint32_t irq=save_and_disable_interrupts();
     bool ok=guard_start(&guard,now,mode!=LINE_USB_HOLD || !gpio_get(HOLD),!gpio_get(STOP));
     if(ok) {
-        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=2;
+        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=3;
         guard.deadline_us=now+J_RUN_US;trace_interval_us=J_TRACE_US;
         for(unsigned w=0;w<2;++w) {
             origin[w]=previous[w]=enc[w].position;initial_invalid[w]=enc[w].invalid;
@@ -350,9 +351,9 @@ static void control_step(uint64_t now) {
     for(unsigned w=0;w<2;++w) input.wheel[w]=raw_to_mm(w,(int64_t)e[w].position-origin[w]);
     demand=junction_step(&junction,&calibration,&input);
     uint8_t failure=demand.stop?junction.reason:WHY_NONE;int32_t next[2];
+    bool turning=junction.phase==J_TURN && demand.target[0]<0 && demand.target[1]>0;
     for(unsigned w=0;w<2;++w) {
         int sign=demand.target[w]>0?1:demand.target[w]<0?-1:0;
-        bool turning=junction.phase==J_TURN && demand.target[0]<0 && demand.target[1]>0;
         next[w]=junction_wheel_step(&controller[w],w,demand.target[w],velocity[w],dt,now,turning);
         float along=velocity[w]*sign;
         bad_direction_us[w]=sign && along<-20?bad_direction_us[w]+elapsed:0;
@@ -366,7 +367,7 @@ static void control_step(uint64_t now) {
         if(failure) kill(now,failure);
         else {
             for(unsigned w=0;w<2;++w) {
-                output[w]=next[w];DualLevels v=dual_levels(w,next[w]);
+                output[w]=next[w];DualLevels v=junction_levels(w,next[w],turning);
                 pwm_set_both_levels(pwm_gpio_to_slice_num(ma[w]),v.a,v.b);
             }
             guard.last_control_us=now;
