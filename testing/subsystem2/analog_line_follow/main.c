@@ -33,7 +33,8 @@ static uint16_t analog_raw[2];
 static float adc_filtered[2], path_mm;
 static bool one_run;
 static uint8_t profile;
-static uint64_t pulse_us[2],cooldown_us[2];
+static LineBreakaway breakaway[2];
+_Static_assert(AL_KICK_PWM<=PWM_LIMIT,"Breakaway must remain inside motor PWM cap");
 static WheelPI pi[2];
 static int32_t previous[2], output[2];
 static float velocity[2];
@@ -167,7 +168,7 @@ static const char *reason_name(uint8_t r) {
     return r<sizeof(names)/sizeof(names[0]) ? names[r] : "unknown";
 }
 static void help(void) {
-    puts("\nBUDDY23 ANALOG LINE FOLLOW v1 | SDK bench, NOT RTOS NAV | DRIVE OFF on boot");
+    puts("\nBUDDY23 ANALOG LINE FOLLOW v2 | SDK bench, NOT RTOS NAV | DRIVE OFF on boot");
     puts("GP26/ADC0 LEFT A0; GP28/ADC2 RIGHT A0; sensor supply3.3V; UART OFF.");
     puts("Calibrate, stopped and GP21 released: w=BOTH WHITE; l=LEFT BLACK; r=RIGHT BLACK.");
     puts("Wait1s on each surface before key. w clears old black calibration; k=saves calibration/profile.");
@@ -178,6 +179,7 @@ static void help(void) {
     puts("BANK ONLY: hold BOTH3s; release BOTH; wait1s; GP21 tap/release;2s countdown.");
     puts("Either button stops offline. One accepted run per boot; no automatic restart.");
     puts("Speeds35..95mm/s, PWM cap25%; PI and breakaway assistance are provisional.");
+    puts("V2 breakaway:25% for up to120ms/control tick; ends at20mm/s,100ms cooldown.");
     puts("Both-white recovery bounded650ms/40mm; both-dark120ms stops. No branch turns or barcode.");
     puts("p=saved run; h=help. Wait3s after stop before switching power sources, then p.");
     printf("CAL mask=%u white=%u,%u black=%u,%u valid=%u profile=%u restored=%u\n",
@@ -260,7 +262,7 @@ static bool start_run(bool offline) {
         for(unsigned w=0;w<2;++w) {
             origin[w]=previous[w]=enc[w].position;initial_invalid[w]=enc[w].invalid;
             velocity[w]=0;output[w]=0;pi[w]=(WheelPI){0};
-            pulse_us[w]=cooldown_us[w]=bad_direction_us[w]=no_motion_us[w]=0;
+            breakaway[w]=(LineBreakaway){0};bad_direction_us[w]=no_motion_us[w]=0;
         }
         tracker=(AnalogTracker){0};path_mm=0;
         demand=analog_demand(&tracker,&calibration,analog_raw[0],analog_raw[1],now,0);
@@ -292,15 +294,9 @@ static void control_step(uint64_t now) {
     if(path_mm>=(profile?600.0f:150.0f)) failure=WHY_TARGET;
     for(unsigned w=0;w<2;++w) {
         next[w]=pi_step(&pi[w],w,1,demand.target[w],velocity[w],dt);
-        /* Same bounded forward breakaway assistance as raised B23 tests. */
-        cooldown_us[w]=cooldown_us[w]>elapsed?cooldown_us[w]-elapsed:0;
-        if(pulse_us[w]) {
-            pulse_us[w]=pulse_us[w]>elapsed?pulse_us[w]-elapsed:0;
-            if(velocity[w]>=20 || !pulse_us[w]) { pulse_us[w]=0;cooldown_us[w]=100000; }
-        }
-        if(!pulse_us[w] && !cooldown_us[w] && demand.target[w]>=20 && pi[w].ramp>=20 && velocity[w]>=-8 && velocity[w]<8)
-            pulse_us[w]=80000;
-        if(pulse_us[w] && next[w]<180) next[w]=180;
+        /* Stronger bounded floor kick; no-movement accounting below continues
+           across pulses/cooldowns and all existing kill paths remain active. */
+        next[w]=line_breakaway(&breakaway[w],now,demand.target[w],pi[w].ramp,velocity[w],next[w]);
         bad_direction_us[w]=velocity[w]<-20?bad_direction_us[w]+elapsed:0;
         if(bad_direction_us[w]>=50000) failure=WHY_DIRECTION;
         no_motion_us[w]=demand.target[w]>=20 && pi[w].ramp>=20 && llabs(delta[w])<2?no_motion_us[w]+elapsed:0;

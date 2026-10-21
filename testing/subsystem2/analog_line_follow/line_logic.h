@@ -7,6 +7,25 @@ typedef struct { uint16_t white[2],black[2]; uint8_t mask; } LineCalibration;
 enum { AL_EDGE, AL_RIGHT_GUARD, AL_BOTH_BLACK, AL_SEEK_LEFT, AL_LOST };
 typedef struct { uint64_t white_since,both_since; uint32_t white_mm; bool white,both; } AnalogTracker;
 typedef struct { int16_t target[2]; uint16_t level[2]; uint8_t decision; bool stop; } AnalogDemand;
+enum { AL_KICK_PWM=250, AL_KICK_US=120000, AL_KICK_COOLDOWN_US=100000 };
+typedef struct { uint64_t end_us,cooldown_until; bool active; } LineBreakaway;
+/* Forward-only floor breakaway. Independent drive-off guards still own the
+ * outputs. Pulse ends on the first control update at120ms or speed>=20mm/s;
+ * it cannot trigger again until100ms cooldown and near-stationary feedback. */
+static inline int32_t line_breakaway(LineBreakaway *b,uint64_t now,int16_t wanted,
+                                     float ramp,float speed,int32_t pwm) {
+    if(wanted<=0) { *b=(LineBreakaway){0};return 0; }
+    if(b->active && (now>=b->end_us || speed>=20 || speed < -8)) {
+        b->active=false;b->cooldown_until=now+AL_KICK_COOLDOWN_US;
+    }
+    if(!b->active && now>=b->cooldown_until && wanted>=20 && ramp>=20 && speed>=-8 && speed<8) {
+        b->active=true;b->end_us=now+AL_KICK_US;
+    }
+    if(b->active && pwm<AL_KICK_PWM) pwm=AL_KICK_PWM;
+    if(pwm<0) pwm=0;
+    if(pwm>AL_KICK_PWM) pwm=AL_KICK_PWM;
+    return pwm;
+}
 static inline bool calibration_valid(const LineCalibration *c) {
     return c->mask==7 && c->white[0]<=4095 && c->white[1]<=4095 &&
         c->black[0]<=4095 && c->black[1]<=4095 &&

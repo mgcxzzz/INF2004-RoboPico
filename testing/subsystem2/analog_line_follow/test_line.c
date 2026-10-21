@@ -4,6 +4,33 @@
 #include "../dual_wheel_bench/dual_logic.h"
 #include "../line_motion_integration/logic.h"
 int main(void) {
+    LineBreakaway kick={0};
+    assert(line_breakaway(&kick,0,65,19,0,100)==100 && !kick.active);
+    assert(line_breakaway(&kick,200000,65,20,0,100)==250 && kick.active && kick.end_us==320000);
+    assert(line_breakaway(&kick,250000,65,25,10,100)==250 && kick.active);
+    /* Speed acquisition ends the pulse early, then a stall cannot restart
+       it during cooldown. Steady speed uses PI PWM rather than a fixed duty. */
+    assert(line_breakaway(&kick,260000,65,26,20,110)==110 && !kick.active);
+    assert(line_breakaway(&kick,359999,65,35,0,110)==110 && !kick.active);
+    assert(line_breakaway(&kick,360000,65,36,0,110)==250 && kick.active);
+    assert(line_breakaway(&kick,479999,65,45,0,110)==250 && kick.active);
+    assert(line_breakaway(&kick,480000,65,46,0,110)==110 && !kick.active);
+    assert(line_breakaway(&kick,580000,65,55,0,110)==250 && kick.active);
+    assert(line_breakaway(&kick,581000,0,55,0,250)==0 && !kick.active);
+    assert(line_breakaway(&kick,600000,65,60,65,175)==175 && !kick.active);
+    assert(line_breakaway(&kick,600001,65,60,65,999)==250);
+    assert(line_breakaway(&kick,600002,65,60,65,-5)==0);
+    assert(line_breakaway(&kick,600003,65,60,-9,110)==110 && !kick.active);
+    /* Irregular control intervals cannot extend the recorded pulse deadline
+       or bypass its cooldown; the hardware watchdog handles missed updates. */
+    kick=(LineBreakaway){0};
+    for(uint64_t us=0;us<1000000;us+=13000) {
+        bool prior=kick.active;uint64_t prior_end=kick.end_us;
+        int32_t u=line_breakaway(&kick,us,65,65,0,110);
+        assert(u>=0 && u<=250);
+        if(prior && us<prior_end) assert(kick.end_us==prior_end);
+        if(prior && us>=prior_end) assert(!kick.active && u==110);
+    }
     LineCalibration c={{132,132},{350,450},7};
     assert(calibration_valid(&c));
     assert(line_level(0,132,350)==0 && line_level(132,132,350)==0);
@@ -52,5 +79,5 @@ int main(void) {
     assert(!bench_arm_step(&arm,3500000,0,0,1,0));
     assert(!bench_arm_step(&arm,4000000,0,0,0,0));
     assert(bench_arm_step(&arm,6000000,0,0,0,0));
-    puts("PASS: separate calibration, normalization, edge steering sign, right assist, bounded recovery/crossing, target bounds, release/stop/stale guards, offline deliberate sequence");
+    puts("PASS: 25% breakaway duration/speed exit/cooldown/off/normal PI/jitter; separate calibration, edge steering, bounded recovery/crossing, targets, release/stop/stale guards, offline sequence");
 }

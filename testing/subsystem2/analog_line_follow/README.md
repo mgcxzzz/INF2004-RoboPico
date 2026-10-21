@@ -1,10 +1,27 @@
-# Analog left-edge line following bench v1
+# Analog left-edge line following bench v2
 
 Standalone hardware test: GP26/GP28 analog sensors -> line error -> Buddy2
 encoder PI speed control -> both motors. It is NOT the real RTOS Navigation
 Coordinator/S3 task integration. That build's bank-only startup remains unresolved.
 No barcode, GP19 use, junction branch turn, obstacle module, radio or IMU.
 Boots DRIVE OFF; calibrating, printing, saving and switching power never start it.
+
+## V2 floor-start adjustment
+
+V1 did start offline and save its log, but the wheels travelled only about2.2mm
+before its no-movement guard stopped the run. V2 raises only breakaway assistance
+from180permille/80ms to250permille/120ms. It ends early once feedback reaches20mm/s,
+then waits100ms before another eligible pulse. Main-loop sampling checks the
+pulse deadline: duration can include up to the next control update; the separate
+100ms control-late cutoff still removes drive if updates cease. The no-movement
+counter is NOT reset by a boost or cooldown. PWM cap remains250permille throughout.
+Steady motion still uses PI speed feedback and the same analog target rule.
+V2 hardware performance is not confirmed by compilation or host tests.
+
+Calibration/profile/log flash format is unchanged from V1. Existing saved analog
+calibration should load without recapture; verify h shows valid1/profile1. After
+any change in sensor height/brackets, recapture the affected endpoints and k.
+Do not use old raw edge targets after recalibration: align normalized levelL500.
 
 ## Wiring
 
@@ -14,7 +31,7 @@ Use only one power source, bank OR computer USB. Never overlap them.
 
 ## First stage: CALIBRATE ONLY, no f/buttons yet
 
-Computer USB only, flash firmware/buddy23_analog_line_follow_v1.uf2 with BOOTSEL.
+Computer USB only, flash firmware/buddy23_analog_line_follow_v2.uf2 with BOOTSEL.
 PuTTY Serial115200,8N1,flow None. All keys are lowercase, no Enter needed.
 Keep the sensors at final mat height, fixed spacing/lighting, no pot adjustment.
 
@@ -94,7 +111,7 @@ Positive wheel speed means forwards on both motors; right PWM polarity inverted.
 Hardware1ms timer cuts on buttons, run deadline or100ms late control loop.
 10ms target control (actual elapsed time),25% PWM cap, encoder invalid>=8,
 reverse feedback<-20mm/s50ms and no movement under demand500ms stop the run.
-Bounded18%/80ms forward breakaway pulses, end at20mm/s,100ms cooldown; floor tuning
+V2 bounded25%/120ms forward breakaway pulses, end at20mm/s,100ms cooldown; floor tuning
 still needed. Main loop floating point cannot override a timer cutoff: generation
 and active flags are rechecked with interrupts masked before committing PWM.
 
