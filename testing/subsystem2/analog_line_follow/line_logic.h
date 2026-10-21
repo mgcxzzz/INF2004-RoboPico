@@ -5,7 +5,7 @@
 
 typedef struct { uint16_t white[2],black[2]; uint8_t mask; } LineCalibration;
 enum { AL_EDGE, AL_RIGHT_GUARD, AL_BOTH_BLACK, AL_SEEK_LEFT, AL_LOST };
-typedef struct { uint64_t white_since,both_since; uint32_t white_mm; bool white,both; } AnalogTracker;
+typedef struct { uint64_t white_since,both_since; uint32_t white_mm; bool white,both,black_hold; } AnalogTracker;
 typedef struct { int16_t target[2]; uint16_t level[2]; uint8_t decision; bool stop; } AnalogDemand;
 enum { LINE_BASE_MM_S=45, LINE_DIFFERENTIAL_MM_S=15 };
 enum { LINE_USB_HOLD, LINE_BANK, LINE_USB_FREE };
@@ -57,6 +57,12 @@ static inline unsigned run_start_block(bool response,bool active,bool settling,b
     /* Only optical alignment is bypassed. Calibration and deliberate rearm
        remain required, including for a diagnostic on a plain white surface. */
     return line_start_block(active,settling,valid,stop,ready,response?500:left,response?0:right,hold,mode);
+}
+static inline unsigned profile_start_block(unsigned profile,bool active,bool settling,bool valid,bool stop,
+                                           bool ready,uint16_t left,uint16_t right,bool hold,unsigned mode) {
+    unsigned reason=run_start_block(profile==2,active,settling,valid,stop,ready,left,right,hold,mode);
+    if(!reason && profile==3 && left<850) return START_LEFT_WHITE;
+    return reason;
 }
 enum { AL_KICK_PWM=250, AL_KICK_US=120000, AL_KICK_COOLDOWN_US=100000 };
 typedef struct { uint64_t end_us,cooldown_until; bool active; } LineBreakaway;
@@ -123,6 +129,28 @@ static inline AnalogDemand analog_demand(AnalogTracker *t,const LineCalibration 
         }
     } else t->white=false;
     if(d.stop) d.target[0]=d.target[1]=0;
+    return d;
+}
+/* Experimental profile4: black plateau means straight, not an estimated centre.
+ * Reuse the existing white-loss and both-dark guards, then replace edge demands.
+ * Hysteresis prevents flickering near a single black threshold. All-white
+ * recovery assumes the strip is to the left; two widely spaced spots cannot
+ * disambiguate every departure. This is deliberately a short test, not a search. */
+static inline AnalogDemand black_straight_demand(AnalogTracker *t,const LineCalibration *c,
+                                                uint16_t l,uint16_t r,uint64_t now,uint32_t mm) {
+    AnalogDemand d=analog_demand(t,c,l,r,now,mm);
+    if(d.stop || d.decision==AL_BOTH_BLACK) { t->black_hold=false;return d; }
+    if(d.level[1]>=650) {
+        t->black_hold=false;d.target[0]=60;d.target[1]=30;
+        d.decision=AL_RIGHT_GUARD;return d;
+    }
+    if(d.level[0]>=850) t->black_hold=true;
+    else if(d.level[0]<=650) t->black_hold=false;
+    if(t->black_hold) { d.target[0]=d.target[1]=45;d.decision=8; }
+    else {
+        d.target[0]=30;d.target[1]=60;
+        if(d.decision!=AL_SEEK_LEFT) d.decision=9;
+    }
     return d;
 }
 #endif

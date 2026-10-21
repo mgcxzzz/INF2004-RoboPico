@@ -82,7 +82,7 @@ static bool storage_fits(void) {
     return (uintptr_t)&__flash_binary_end <= XIP_BASE+LOG_OFFSET;
 }
 static bool stored_valid(const SavedLog *v) {
-    return v->magic==LOG_MAGIC && v->version==1 && v->count<=TRACE_ROWS && v->profile<=2 && v->reserved<=3 && calibration_valid(&v->calibration)
+    return v->magic==LOG_MAGIC && v->version==1 && v->count<=TRACE_ROWS && v->profile<=3 && v->reserved<=4 && calibration_valid(&v->calibration)
         && v->crc==log_crc((const uint8_t *)v+offsetof(SavedLog,count),
                           sizeof(*v)-offsetof(SavedLog,count));
 }
@@ -173,7 +173,7 @@ static const char *reason_name(uint8_t r) {
     return r<sizeof(names)/sizeof(names[0]) ? names[r] : "unknown";
 }
 static void help(void) {
-    puts("\nBUDDY23 ANALOG LINE FOLLOW v6 | SDK bench, NOT RTOS NAV | DRIVE OFF on boot");
+    puts("\nBUDDY23 ANALOG LINE FOLLOW v7 | SDK bench, NOT RTOS NAV | DRIVE OFF on boot");
     puts("GP26/ADC0 LEFT A0; GP28/ADC2 RIGHT A0; sensor supply3.3V; UART OFF.");
     puts("Calibrate, stopped and GP21 released: w=BOTH WHITE; l=LEFT BLACK; r=RIGHT BLACK.");
     puts("Wait1s on each surface before key. w clears old black calibration; k=saves calibration/profile.");
@@ -182,16 +182,19 @@ static void help(void) {
     puts("Hold GP21 then f=follow; release GP21, GP20 or s stops. No b/l/r motor commands.");
     puts("g=USB HANDS-FREE follow: both buttons released,2s countdown, no need to hold GP21.");
     puts("Either button / s / USB disconnect stops hands-free; either button cancels countdown.");
-    puts("Profile1:line150mm/3s. Profile2:line600mm/12s. Profile3:WHEEL RESPONSE450mm/6s. 1/2/3 select; k saves.");
+    puts("Profile1:line150mm/3s. Profile2:line600mm/12s. Profile3:WHEEL RESPONSE450mm/6s. 1/2/3/4 select; k saves.");
     puts("BANK ONLY: hold BOTH3s; release BOTH; wait1s; GP21 tap/release;2s countdown.");
     puts("Repeat runs: release BOTH, wait for settling/save then1s estimated standstill; ready=1.");
     puts("Then request f/g again or repeat bank button sequence. No automatic restart.");
-    puts("V6 line cruise45mm/s, wheel targets30..60mm/s; PWM cap25%; PI/breakaway provisional.");
+    puts("Edge profiles: cruise45mm/s, wheel targets30..60mm/s; PWM cap25%; PI/breakaway provisional.");
     puts("Retained V5 wheel PI: Kp1.0 Ki3.0 I-limit140permille; ramp100mm/s^2; no steering D.");
     puts("Breakaway:25% for up to120ms/control tick; ends at20mm/s,100ms cooldown.");
     puts("Both-white recovery bounded650ms/40mm; both-dark120ms stops. No branch turns or barcode.");
     puts("Profile3 ignores line steering/loss:65/65 for2s,35/95 for2s,95/35 for2s. Clear floor needed.");
     puts("Profile3 decision5=equal,6=right faster,7=left faster; existing PI/PWM cap unchanged.");
+    puts("Profile4 EXPERIMENTAL BLACK=STRAIGHT:150mm/3s; start left>=850,right<=450.");
+    puts("Left>=850 straight45/45; stays straight until<=650. Left fade ->30/60; right>=650 ->60/30.");
+    puts("Profile4 decision8=black straight,9=left reacquire; both-white recovery assumes line on LEFT.");
     puts("p=saved run; h=help. Wait3s after stop before switching power sources, then p.");
     printf("CAL mask=%u white=%u,%u black=%u,%u valid=%u profile=%u restored=%u\n",
         calibration.mask,calibration.white[0],calibration.white[1],calibration.black[0],calibration.black[1],
@@ -237,7 +240,7 @@ static void dump(void) {
     if(save_failed) puts("WARNING: flash save failed; this RAM log is not persistent.");
     printf("RUN: key=%c mode=%s rows=%u dropped=%u settling=%u\n",recorded_key,
         recorded_offline ? "offline" : recorded_key=='g' ? "USB hands-free" : "USB hold",trace_count,trace_dropped,trace_settling);
-    printf("TEST: %s\n",recorded_profile==2?"wheel response (not line following)":"analog line following");
+    printf("TEST: %s\n",recorded_profile==2?"wheel response (not line following)":recorded_profile==3?"experimental black means straight":"analog edge following");
     printf("CAL white=%u,%u black=%u,%u profile=%u\n",calibration.white[0],calibration.white[1],calibration.black[0],calibration.black[1],recorded_profile+1);
     puts("ms,active,L_mm,R_mm,progress_mm,heading_deg,L_mm_s,R_mm_s,PWM_L,PWM_R,ADC_L,ADC_R,levelL_1000,levelR_1000,targetL,targetR,decision");
     for(unsigned i=0;i<trace_count;++i) {
@@ -263,7 +266,7 @@ static void dump(void) {
 static bool start_run(unsigned mode) {
     uint16_t left=line_level(analog_raw[0],calibration.white[0],calibration.black[0]);
     uint16_t right=line_level(analog_raw[1],calibration.white[1],calibration.black[1]);
-    last_start_block=run_start_block(profile==2,guard.active,trace_settling,calibration_valid(&calibration),
+    last_start_block=profile_start_block(profile,guard.active,trace_settling,calibration_valid(&calibration),
         !gpio_get(STOP),rearm.ready,left,right,!gpio_get(HOLD),mode);
     if(last_start_block) return false;
     uint64_t now=time_us_64();
@@ -272,15 +275,15 @@ static bool start_run(unsigned mode) {
     if(ok) {
         ++runs;rearm=(LineRearm){0};run_mode=mode;
         recorded_profile=profile;
-        guard.deadline_us=now+(profile==2?RESPONSE_US:profile?12000000u:3000000u);
-        trace_interval_us=profile==2?100000:profile?150000:50000;
+        guard.deadline_us=now+(profile==2?RESPONSE_US:profile==1?12000000u:3000000u);
+        trace_interval_us=profile==2?100000:profile==1?150000:50000;
         for(unsigned w=0;w<2;++w) {
             origin[w]=previous[w]=enc[w].position;initial_invalid[w]=enc[w].invalid;
             velocity[w]=0;output[w]=0;pi[w]=(WheelPI){0};
             breakaway[w]=(LineBreakaway){0};bad_direction_us[w]=no_motion_us[w]=0;
         }
         tracker=(AnalogTracker){0};path_mm=0;
-        demand=profile==2?response_demand(0):analog_demand(&tracker,&calibration,analog_raw[0],analog_raw[1],now,0);
+        demand=profile==2?response_demand(0):profile==3?black_straight_demand(&tracker,&calibration,analog_raw[0],analog_raw[1],now,0):analog_demand(&tracker,&calibration,analog_raw[0],analog_raw[1],now,0);
         outputs_off();trace_count=trace_dropped=0;
         recorded_key=mode==LINE_USB_FREE?'g':'f';recorded_offline=mode==LINE_BANK;trace_settling=false;
         flash_loaded=false;save_failed=false;last_control=last_trace=now;
@@ -291,9 +294,9 @@ static bool start_run(unsigned mode) {
     return ok;
 }
 static void report_start_block(void) {
-    static const char *const text[]={"none","run already active","wait for settling/log save",
+    const char *const text[]={"none","run already active","wait for settling/log save",
         "capture valid w/l/r calibration","release GP20","release both buttons; wait for save and1s standstill",
-        "left sensor sees white: move onto edge/black (level>=150)",
+        profile==3?"profile4 needs left black level>=850":"left sensor sees white: move onto edge/black (level>=150)",
         "right sensor too dark: move it toward white (level<=450)","hold GP21 for f",
         "release GP21 for hands-free/offline start","release/repress GP21 and wait for cooldown"};
     printf("START rejected: %s | ready=%u levelL=%u levelR=%u\n",
@@ -316,12 +319,13 @@ static void control_step(uint64_t now) {
     if(!active) return;
     path_mm+=step;
     demand=profile==2?response_demand(now-guard.start_us):
+        profile==3?black_straight_demand(&tracker,&calibration,(uint16_t)adc_filtered[0],(uint16_t)adc_filtered[1],now,(uint32_t)path_mm):
         analog_demand(&tracker,&calibration,(uint16_t)adc_filtered[0],(uint16_t)adc_filtered[1],now,(uint32_t)path_mm);
     if(profile==2) for(unsigned w=0;w<2;++w)
         demand.level[w]=line_level((uint16_t)adc_filtered[w],calibration.white[w],calibration.black[w]);
     uint8_t failure=WHY_NONE;int32_t next[2];
     if(demand.stop) failure=profile==2?WHY_LIMIT:demand.decision==AL_BOTH_BLACK?WHY_CROSSING:WHY_LOST;
-    if(path_mm>=(profile==2?RESPONSE_MM:profile?600.0f:150.0f)) failure=WHY_TARGET;
+    if(path_mm>=(profile==2?RESPONSE_MM:profile==1?600.0f:150.0f)) failure=WHY_TARGET;
     for(unsigned w=0;w<2;++w) {
         next[w]=line_speed_step(&pi[w],w,demand.target[w],velocity[w],dt);
         /* Stronger bounded floor kick; no-movement accounting below continues
@@ -405,7 +409,7 @@ int main(void) {
         else if(ch=='s') {
             usb_pending=false;arm.state=ARM_IDLE;uint32_t irq=save_and_disable_interrupts();kill(now,WHY_SERIAL);restore_interrupts(irq);
         } else if(ch=='w' || ch=='l' || ch=='r') { usb_pending=false;calibrate(ch); }
-        else if(ch=='k' || ch=='1' || ch=='2' || ch=='3') {
+        else if(ch=='k' || ch=='1' || ch=='2' || ch=='3' || ch=='4') {
             usb_pending=false;
             if(guard.active || trace_settling || hold || stop) puts("CONFIG rejected: stop/release both buttons.");
             else if(ch=='k') { save_log();puts(save_failed?"SAVE FAILED":"CALIBRATION/PROFILE SAVED; bank-only requires fresh button sequence."); }
@@ -416,7 +420,7 @@ int main(void) {
         } else if(ch=='g') {
             if(usb_pending) puts("USB countdown already pending; s/either button cancels.");
             else {
-                last_start_block=run_start_block(profile==2,guard.active,trace_settling,calibration_valid(&calibration),stop,
+                last_start_block=profile_start_block(profile,guard.active,trace_settling,calibration_valid(&calibration),stop,
                     rearm.ready,line_level(analog_raw[0],calibration.white[0],calibration.black[0]),
                     line_level(analog_raw[1],calibration.white[1],calibration.black[1]),hold,LINE_USB_FREE);
                 if(last_start_block) report_start_block();

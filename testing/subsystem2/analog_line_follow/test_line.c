@@ -133,6 +133,46 @@ int main(void) {
         if(prior && us<prior_end) assert(kick.end_us==prior_end);
         if(prior && us>=prior_end) assert(!kick.active && u==110);
     }
+    assert(profile_start_block(3,false,false,true,false,true,1000,0,false,LINE_BANK)==START_OK);
+    assert(profile_start_block(3,false,false,true,false,true,849,0,false,LINE_BANK)==START_LEFT_WHITE);
+    assert(profile_start_block(3,false,false,true,false,true,850,450,false,LINE_USB_FREE)==START_OK);
+    assert(profile_start_block(3,false,false,true,false,true,1000,451,false,LINE_BANK)==START_RIGHT_DARK);
+    assert(profile_start_block(3,false,false,true,true,true,1000,0,false,LINE_BANK)==START_GP20);
+    assert(profile_start_block(3,false,false,true,false,false,1000,0,false,LINE_BANK)==START_REARM);
+    assert(profile_start_block(3,false,false,false,false,true,1000,0,false,LINE_BANK)==START_CAL);
+    LineCalibration plateau={{0,0},{1000,1000},7};
+    AnalogTracker bt={0};
+    AnalogDemand bd=black_straight_demand(&bt,&plateau,1000,0,0,0);
+    assert(!bd.stop && bd.decision==8 && bd.target[0]==45 && bd.target[1]==45);
+    bd=black_straight_demand(&bt,&plateau,750,0,1,0);
+    assert(bd.decision==8 && bd.target[0]==45 && bt.black_hold);
+    bd=black_straight_demand(&bt,&plateau,650,0,2,0);
+    assert(!bt.black_hold && bd.decision==9 && bd.target[0]==30 && bd.target[1]==60);
+    bd=black_straight_demand(&bt,&plateau,750,0,3,0);assert(bd.decision==9);
+    bd=black_straight_demand(&bt,&plateau,850,0,4,0);assert(bd.decision==8 && bt.black_hold);
+    bd=black_straight_demand(&bt,&plateau,900,650,5,0);
+    assert(!bd.stop && !bt.black_hold && bd.decision==AL_RIGHT_GUARD && bd.target[0]==60 && bd.target[1]==30);
+    bd=black_straight_demand(&bt,&plateau,0,0,10,0);assert(!bd.stop && bd.decision==AL_SEEK_LEFT);
+    bd=black_straight_demand(&bt,&plateau,0,0,650010,0);
+    assert(bd.stop && bd.decision==AL_LOST && !bd.target[0] && !bd.target[1]);
+    bt=(AnalogTracker){0};
+    (void)black_straight_demand(&bt,&plateau,0,0,1,0);
+    bd=black_straight_demand(&bt,&plateau,0,0,2,40);assert(bd.stop);
+    bt=(AnalogTracker){0};
+    bd=black_straight_demand(&bt,&plateau,1000,1000,0,0);
+    assert(!bd.stop && bd.decision==AL_BOTH_BLACK && bd.target[0]==35 && bd.target[1]==35);
+    bd=black_straight_demand(&bt,&plateau,1000,1000,120000,0);
+    assert(bd.stop && !bd.target[0] && !bd.target[1]);
+    LineCalibration no_cal={0};
+    bd=black_straight_demand(&bt,&no_cal,1000,0,1,0);assert(bd.stop);
+    /* Sample the full ADC range in both hysteresis states. */
+    for(unsigned l=0;l<=4095;l+=31) for(unsigned r=0;r<=4095;r+=37) for(unsigned hold=0;hold<2;++hold) {
+        bt=(AnalogTracker){.black_hold=hold!=0};
+        bd=black_straight_demand(&bt,&plateau,(uint16_t)l,(uint16_t)r,0,0);
+        assert(bd.target[0]>=0 && bd.target[0]<=60 && bd.target[1]>=0 && bd.target[1]<=60);
+        if(!bd.stop) assert(bd.target[0]>=30 && bd.target[1]>=30);
+    }
+    puts("PASS: profile4 black=straight, threshold hysteresis, right assist, white timeout/distance, crossing stop and start gates");
     LineCalibration c={{132,132},{350,450},7};
     assert(calibration_valid(&c));
     assert(line_level(0,132,350)==0 && line_level(132,132,350)==0);

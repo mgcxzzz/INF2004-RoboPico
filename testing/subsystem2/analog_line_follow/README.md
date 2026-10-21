@@ -1,10 +1,66 @@
-# Analog left-edge line following bench v6
+# Analog line following bench v7
 
 Standalone hardware test: GP26/GP28 analog sensors -> line error -> Buddy2
 encoder PI speed control -> both motors. It is NOT the real RTOS Navigation
 Coordinator/S3 task integration. That build's bank-only startup remains unresolved.
 No barcode, GP19 use, junction branch turn, obstacle module, radio or IMU.
 Boots DRIVE OFF; calibrating, printing, saving and switching power never start it.
+
+## V7: experimental left-black means straight (profile4)
+
+User explicitly requested trying level1000 as the straight condition. Profile4
+implements a different discrete strategy; it does NOT infer the physical centre
+of the strip from a saturated reading. Profiles1/2 keep V6 analog edge following,
+profile3 keeps the original wheel-response sequence. No PI/PWM/kick changes.
+
+Profile4 targets and normalized thresholds:
+
+| Condition | L/R request mm/s | Decision |
+|---|---|---|
+| Left>=850, right<650 |45/45 straight|8|
+| Left650..850 |retain previous straight/reacquire state|8 or9|
+| Left<=650, right<650 |30/60 steer left to reacquire|9 (3 if both white)|
+| Right>=650, unless both>=750 |60/30 steer right|1|
+| Both>=750 |35/35 then stop after120ms|2|
+| Both<150 |left recovery, stop after650ms or40mm|3 then4|
+
+The850-enter/650-exit hysteresis avoids rapid switching around one threshold.
+Left1000 requests equal wheel speeds when right is white; exact1000 is NOT
+required. Right assist clears straight state until left black is reacquired.
+Initial profile4 alignment requires left>=850/right<=450, valid calibration,
+released/rearmed buttons and all original mode start gates. Profile4 uses a
+SHORT3s/150mm bound independent of profile2. All motion/encoder/USB/timer guards
+remain. A new run resets the state. Calibration is shared with the other profiles.
+
+Limitation: with35mm sensor spacing and20mm line, both-white can mean departure
+on either side. This experiment assumes the line is LEFT during both-white
+recovery; it stops when recovery fails. It is not general line search, automatic
+centre finding, a junction navigator, or validated curve following. If the user
+starts on a straight, drives until a gentle curve and observes loss, save the log
+rather than extend the recovery timeout. Existing startup kicks/contact drag may
+still cause jerking even though left-black no longer commands a right correction.
+
+### First test: short straight with LEFT fully black, RIGHT white
+
+1. Flash firmware/buddy23_analog_line_follow_v7.uf2. PuTTY115200,8N1,flow None.
+   h confirms V7/valid1 and the current close-height calibration. No recapture
+   solely for this firmware; keep mounting and lighting unchanged.
+2. Press4 then k. Verify h says profile4. Left sensing point fully inside black,
+   right white; aim levelL850..1000 and levelR<150. Do NOT aim left500 here.
+3. Computer USB OFF before bank ON. With normal load, on a clear straight, wait5s;
+   hold BOTH3s, release BOTH, wait1s, tap/release GP21;2s countdown. Either button
+   stops. Maximum3s or150mm; lower travel at the time limit is normal.
+4. Wait3s after stop. Bank OFF, computer USB ON, PuTTY p. Send complete log and
+   whether it stays straight/smooth, and whether it loses contact or jerks.
+   Header must say experimental black means straight and profile4; old restored
+   records are not evidence for V7 until a fresh run has completed.
+5. Repeated runs still supported. Use1/2 then k to return to edge following.
+   Test the short straight before curves or any longer black-straight profile.
+
+SavedLog structure/version is unchanged; selected profile4 uses value3 and the
+reserved recorded-profile byte uses4. V7 reads earlier records/calibration.
+Older V1-V6 firmware rejects a saved selected profile4; choose1 then k in V7
+before downgrading to keep the saved calibration readable.
 
 ## V6: gentler optical steering for the closer sensor mounting
 
@@ -210,7 +266,7 @@ Use only one power source, bank OR computer USB. Never overlap them.
 
 ## First stage: CALIBRATE ONLY, no f/buttons yet
 
-Computer USB only, flash firmware/buddy23_analog_line_follow_v6.uf2 with BOOTSEL.
+Computer USB only, flash firmware/buddy23_analog_line_follow_v7.uf2 with BOOTSEL.
 PuTTY Serial115200,8N1,flow None. All keys are lowercase, no Enter needed.
 Keep the sensors at final mat height, fixed spacing/lighting, no pot adjustment.
 
