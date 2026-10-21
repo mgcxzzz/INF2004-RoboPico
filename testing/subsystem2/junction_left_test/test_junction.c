@@ -98,9 +98,9 @@ static void test_signed_controller_and_stops(void) {
         SignedWheel p={0};
         for(unsigned n=0;n<100;++n) {
             int32_t u=junction_wheel_step(&p,w,(int16_t)desired,desired*0.8f,0.01f,1000+n*10000,true);
-            assert(abs(u)<=J_TURN_PWM_LIMIT && (desired==0?u==0:u*desired>=0));
+            assert(abs(u)<=J_TURN_PEAK_PWM && (desired==0?u==0:u*desired>=0));
             DualLevels v=junction_levels(w,u,true);
-            assert(v.a<=300 && v.b<=300 && !(v.a && v.b));
+            assert(v.a<=400 && v.b<=400 && !(v.a && v.b));
         }
         assert(junction_wheel_step(&p,w,0,40,0.01f,2000000,true)==0);
         assert(p.pi.integral==0 && p.pi.ramp==0 && !p.kick.active);
@@ -123,13 +123,13 @@ static void test_loaded_turn_and_unchanged_follow(void) {
             (void)junction_wheel_step(&unloaded,w,(int16_t)(sign*35),0,0.01f,now,false);
             /* Stationary under load: effort must persist after120ms kicks end. */
             if(n>=40) {
-                assert(u*sign==300);
+                assert(u*sign==350);
                 DualLevels actual=junction_levels(w,u,true);
-                assert(actual.a+actual.b==300); /* no hidden25% bridge clamp */
+                assert(actual.a+actual.b==350); /* no hidden25% bridge clamp */
             }
         }
         assert(fabsf(loaded.pi.integral)<=LINE_SPEED_I_LIMIT);
-        SignedWheel overspeed={.pi={.ramp=35},.sign=(int8_t)sign};
+        SignedWheel overspeed={.pi={.ramp=35},.sign=(int8_t)sign,.peak_used=true};
         int32_t u=junction_wheel_step(&overspeed,w,(int16_t)(sign*35),sign*80,0.01f,2000000,true);
         assert(u*sign<J_TURN_FEEDFORWARD && u*sign>=0); /* not a forced output minimum */
         SignedWheel follow={0};WheelPI reference={0};LineBreakaway kick={0};
@@ -147,15 +147,41 @@ static void test_loaded_turn_and_unchanged_follow(void) {
     }
     for(unsigned w=0;w<2;++w) for(int pwm=-1000;pwm<=1000;++pwm) {
         DualLevels turn=junction_levels(w,pwm,true),follow=junction_levels(w,pwm,false);
-        assert(turn.a<=300 && turn.b<=300 && !(turn.a && turn.b));
+        assert(turn.a<=400 && turn.b<=400 && !(turn.a && turn.b));
         assert(follow.a<=250 && follow.b<=250 && !(follow.a && follow.b));
         DualLevels old=dual_levels(w,pwm);assert(old.a==follow.a && old.b==follow.b);
+    }
+}
+static void test_one_shot_peak_and_timer_cap(void) {
+    for(unsigned w=0;w<2;++w) {
+        SignedWheel p={0};int sign=w==0?-1:1;uint64_t start=1000000;
+        int32_t u=junction_wheel_step(&p,w,(int16_t)(sign*35),0,0.01f,start,true);
+        assert(u*sign==400 && p.peak_end_us==start+150000);
+        assert(junction_peak_cap(u,p.peak_end_us,start+149999)==u);
+        assert(junction_peak_cap(u,p.peak_end_us,start+150000)==sign*350);
+        /* Even a stale400 command presented much later gets clamped. */
+        assert(junction_peak_cap(u,p.peak_end_us,start+300000)==sign*350);
+        u=junction_wheel_step(&p,w,(int16_t)(sign*35),0,0.01f,start+150000,true);
+        assert(abs(u)<=350 && !p.peak_active && p.peak_used);
+        for(unsigned n=0;n<200;++n) {
+            u=junction_wheel_step(&p,w,(int16_t)(sign*35),0,0.01f,start+160000+n*10000,true);
+            assert(abs(u)<=350); /* a stalled turn never starts another40% pulse */
+        }
+        p=(SignedWheel){0};
+        (void)junction_wheel_step(&p,w,(int16_t)(sign*35),0,0.01f,start,true);
+        u=junction_wheel_step(&p,w,(int16_t)(sign*35),sign*25,0.01f,start+10000,true);
+        assert(abs(u)<=350 && !p.peak_active && p.peak_used);
+        u=junction_wheel_step(&p,w,(int16_t)(sign*35),0,0.01f,start+20000,true);
+        assert(abs(u)<=350); /* no retrigger after early release */
+        assert(junction_wheel_step(&p,w,0,0,0.01f,start+30000,true)==0);
+        assert(!p.peak_used && !p.peak_active && p.peak_end_us==0);
     }
 }
 int main(void) {
     test_geometry_and_qualification();simulate(false,true);simulate(true,true);simulate(true,false);
     test_turn_rejects_false_branch();test_signed_controller_and_stops();
     test_loaded_turn_and_unchanged_follow();
-    puts("PASS: junction sequence/guards; V3 actual30% turn bridge gate/overspeed/zero reset; unchanged25% forward controller");
+    test_one_shot_peak_and_timer_cap();
+    puts("PASS: junction guards; V4 one-shot40%/150ms clamp/early release/no retrigger; sustained35% and unchanged25% forward");
     return 0;
 }

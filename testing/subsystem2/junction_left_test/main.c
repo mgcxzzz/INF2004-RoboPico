@@ -34,7 +34,7 @@ static LineCalibration calibration;
 static Junction junction;
 static SideCalibration side_cal;
 static uint8_t test_mode=1,recorded_mode=1;
-static uint8_t recorded_version=3;
+static uint8_t recorded_version=4;
 static bool imported_front;
 static AnalogDemand demand;
 static uint16_t analog_raw[2];
@@ -44,7 +44,9 @@ static unsigned last_start_block;
 static uint32_t runs;
 static SignedWheel controller[2];
 _Static_assert(AL_KICK_PWM<=PWM_LIMIT,"Breakaway must remain inside motor PWM cap");
-static int32_t previous[2], output[2];
+static int32_t previous[2];
+static volatile int32_t output[2];
+static volatile uint64_t peak_until[2];
 static float velocity[2];
 static uint64_t bad_direction_us[2], no_motion_us[2];
 static uint64_t last_control, stopped_us, last_trace;
@@ -105,7 +107,7 @@ static void outputs_off(void);
 static bool storage_fits(void) { return (uintptr_t)&__flash_binary_end<=XIP_BASE+LOG_OFFSET; }
 static bool stored_valid(const SavedLog *v) {
     return v->magic==LOG_MAGIC && v->version==1 && v->count<=TRACE_ROWS &&
-        v->selected_mode>=1 && v->selected_mode<=2 && v->mode>=1 && v->mode<=2 && v->firmware<=3 &&
+        v->selected_mode>=1 && v->selected_mode<=2 && v->mode>=1 && v->mode<=2 && v->firmware<=4 &&
         calibration_valid(&v->calibration) && side_valid(&v->side) &&
         v->crc==log_crc((const uint8_t *)v+offsetof(SavedLog,count),sizeof(*v)-offsetof(SavedLog,count));
 }
@@ -138,7 +140,7 @@ static void save_log(void) {
     v->magic=LOG_MAGIC;v->version=1;v->count=trace_count;v->dropped=trace_dropped;
     v->duration=guard.duration_us;v->reason=guard.reason;v->key=recorded_key;
     v->offline=recorded_offline;v->mode=recorded_mode;v->selected_mode=test_mode;
-    v->firmware=trace_count?recorded_version:3;
+    v->firmware=trace_count?recorded_version:4;
     v->calibration=calibration;v->side=side_cal;v->junction=junction;
     for(unsigned w=0;w<2;++w) { v->cutoff[w]=cut_ticks[w]-origin[w];v->invalid[w]=cut_invalid[w]; }
     memcpy(v->rows,trace,sizeof(trace));
@@ -184,6 +186,16 @@ static bool safety_tick(struct repeating_timer *t) {
     if(!guard.active) {
         outputs_off();
         if(active) capture_cutoff();
+    } else {
+        /* Bound the stronger start pulse even if the main control is delayed.
+           Only integer arithmetic in this ISR; global late-loop cutoff retained. */
+        for(unsigned w=0;w<2;++w) {
+            int32_t capped=junction_peak_cap(output[w],peak_until[w],now);
+            if(capped!=output[w]) {
+                output[w]=capped;DualLevels v=junction_levels(w,capped,true);
+                pwm_set_both_levels(pwm_gpio_to_slice_num(ma[w]),v.a,v.b);
+            }
+        }
     }
     return true;
 }
@@ -206,7 +218,7 @@ static const char *phase_name(unsigned phase) {
     return phase<sizeof(names)/sizeof(names[0])?names[phase]:"unknown";
 }
 static void help(void) {
-    puts("\nBUDDY23 JUNCTION LEFT v3 | isolated SDK test, NO BARCODE | DRIVE OFF on boot");
+    puts("\nBUDDY23 JUNCTION LEFT v4 | isolated SDK test, NO BARCODE | DRIVE OFF on boot");
     puts("Front analog: GP26 LEFT A0 / GP28 RIGHT A0; offset D0 GP19; 3.3V/common GND.");
     puts("Front calibration: w=BOTH WHITE, l=LEFT BLACK, r=RIGHT BLACK; wait1s before capture.");
     puts("Offset polarity: o=capture GP19 over WHITE, b=capture GP19 over BLACK. Motors remain OFF.");
@@ -218,8 +230,9 @@ static void help(void) {
     puts("Repeat after settling/save, both released and stationary1s. No automatic restart.");
     puts("Approx geometry: side92mm ahead of rear-wheel axle; measured stripe midpoint+92mm centres axle.");
     puts("Mode2 reverses LEFT wheel, RIGHT forward. Leave old line then seek both>=650 near90deg (75..110).");
-    puts("Forward PWM cap25%, in-place turn cap30%. Approach<=450mm/12s; whole run<=25s/900mm.");
-    puts("V3 turn only: loaded feedforward27%, signed PI can reduce or raise to30%. Same500ms stall guard.");
+    puts("Forward PWM cap25%, turn sustained35%, one start pulse40% up to150ms (1ms timer clamp).");
+    puts("V4 turn feedforward31%; PI can reduce. Peak ends early at25mm/s. Same500ms stall guard.");
+    puts("Approach<=450mm/12s; whole run<=25s/900mm. No voltage or motor speed target increase.");
     puts("Outgoing black line needs>=170mm from cross. No barcode/other offset marks in this test.");
     puts("p=dump saved log, h=help. Wait3s after stop before switching power; never use two sources together.");
     printf("CAL white=%u,%u black=%u,%u valid=%u side_white=%u side_black=%u side_mask=%u side_valid=%u mode=%u restored=%u imported_v11=%u\n",
@@ -302,11 +315,11 @@ static bool start_run(unsigned mode) {
     uint64_t now=time_us_64();uint32_t irq=save_and_disable_interrupts();
     bool ok=guard_start(&guard,now,mode!=LINE_USB_HOLD || !gpio_get(HOLD),!gpio_get(STOP));
     if(ok) {
-        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=3;
+        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=4;
         guard.deadline_us=now+J_RUN_US;trace_interval_us=J_TRACE_US;
         for(unsigned w=0;w<2;++w) {
             origin[w]=previous[w]=enc[w].position;initial_invalid[w]=enc[w].invalid;
-            velocity[w]=0;output[w]=0;controller[w]=(SignedWheel){0};
+            velocity[w]=0;output[w]=0;peak_until[w]=0;controller[w]=(SignedWheel){0};
             bad_direction_us[w]=no_motion_us[w]=0;
         }
         path_mm=0;
@@ -367,7 +380,9 @@ static void control_step(uint64_t now) {
         if(failure) kill(now,failure);
         else {
             for(unsigned w=0;w<2;++w) {
-                output[w]=next[w];DualLevels v=junction_levels(w,next[w],turning);
+                peak_until[w]=turning?controller[w].peak_end_us:0;
+                output[w]=junction_peak_cap(next[w],peak_until[w],time_us_64());
+                DualLevels v=junction_levels(w,output[w],turning);
                 pwm_set_both_levels(pwm_gpio_to_slice_num(ma[w]),v.a,v.b);
             }
             guard.last_control_us=now;
@@ -403,7 +418,7 @@ int main(void) {
     analog_raw[0]=read_adc(0);analog_raw[1]=read_adc(2);
     adc_filtered[0]=analog_raw[0];adc_filtered[1]=analog_raw[1];
     stdio_init_all();load_log();last_control=time_us_64();
-    bool old_connected=false,usb_pending=false;uint8_t raw_buttons=0,buttons=0;
+    bool old_connected=false,usb_pending=false;uint8_t raw_buttons=0,buttons=0,last_peak_mask=0;
     uint64_t changed=0,last_status=0,last_adc=0,usb_start_at=0;uint32_t seen_stops=0;
     BenchArm arm={0};
     while(true) {
@@ -472,10 +487,13 @@ int main(void) {
         }
         uint8_t before_phase=junction.phase;
         control_step(time_us_64());now=time_us_64();
-        if(guard.active && junction.phase!=before_phase) {
+        uint8_t peak_mask=(output[0]>J_TURN_PWM_LIMIT || output[0]<-J_TURN_PWM_LIMIT?1:0)
+                        |(output[1]>J_TURN_PWM_LIMIT || output[1]<-J_TURN_PWM_LIMIT?2:0);
+        if(guard.active && (junction.phase!=before_phase || peak_mask!=last_peak_mask)) {
             add_trace(now);last_trace=now;
-            if(connected) printf("PHASE %u: %s\n",junction.phase,phase_name(junction.phase));
+            if(connected && junction.phase!=before_phase) printf("PHASE %u: %s\n",junction.phase,phase_name(junction.phase));
         }
+        last_peak_mask=peak_mask;
         if(guard.stops!=seen_stops) {
             seen_stops=guard.stops;stopped_us=now;trace_settling=true;run_mode=LINE_USB_HOLD;
             add_trace(now);last_trace=now;

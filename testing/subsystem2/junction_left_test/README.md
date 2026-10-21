@@ -1,12 +1,38 @@
-# Junction detection, centring and left turn — V3
+# Junction detection, centring and left turn — V4
 
 Separate SDK test on the Buddy2 branch. Uses the successful V11 symmetric
 front controller and an existing offset digital sensor. No new sensor, barcode
 decoder, RTOS coordinator, IMU or radio. V1 centring passed by user observation
 from different starting distances. Both V1 and V2 loaded turns stalled; V3
-turn-only30% experiment is software-verified, physical test pending.
+turn-only30% experiment is software-verified. Its22 October physical test made
+11.34degrees, then the LEFT reversing wheel stalled at30% while the right kept
+moving. User confirmed front IR housings scrape the mat; support ball is free.
+See MEASUREMENTS.md. User then explicitly requested a stronger drive test before
+mounting changes. V4 is the bounded stronger-turn experiment below, physical test
+pending. The scraping/contact issue remains a potential contributor.
 
-## V3 change: increase the turn-only limit
+## V4: stronger one-shot turn start
+
+Only the phase4 in-place turn gets one40% start pulse per wheel, nominal150 ms
+maximum, released early when that wheel's along-direction speed reaches25 mm/s.
+It does not repeat during a stalled turn. Afterward signed PI uses31% loaded
+feedforward and35% maximum; it can reduce actual output for overspeed. All forward
+phases still use25%. Same turn directions, optical gates, geometry and limits.
+
+The absolute pulse expiry is checked before motor output commit AND by the
+independent1ms safety timer; after expiry output is clamped to35% at the next
+timer tick even if the main control is delayed. Control-late/button/stall kills
+remain active. Normal trace also captures peak-mask transitions, so the brief
+pulse is visible in the next log instead of falling between400ms samples.
+
+V1/V2/V3 calibration/mode records load. Flash V4, h verify v4/valid1/side_valid1,
+2,k,h confirm mode2, then use the same physical start sequence. No height change
+or recalibration is required for this software-only comparison. Use the current
+power source/voltage. Retrieve the fresh log after one attempt. An older restored
+trace keeps its original version; new runs print V4. Older V2/V3 firmware may
+reject V4 records on downgrade, requiring calibration recapture.
+
+## Historical V3 change: increase the turn-only limit
 
 V2 sustained25% but the user log/video still showed a small3.13degree twitch
 then stationary wheels. V3 raises ONLY the phase4 opposite-wheel turn ceiling
@@ -61,12 +87,12 @@ firmware/BUILD_V2.md; user-reported evidence is in MEASUREMENTS.md.
 
 ## 1. Flash and check sensors while stopped
 
-Download firmware/buddy23_junction_left_v3.uf2 using GitHub's **Download raw file**,
+Download firmware/buddy23_junction_left_v4.uf2 using GitHub's **Download raw file**,
 then copy to RPI-RP2 in BOOTSEL mode. Open PuTTY at 115200, 8N1, flow control None.
 Use only one power source at a time. Keep the robot on the mat at its final height.
 Do not request a movement during this check.
 
-1. Press `h`. Confirm `BUDDY23 JUNCTION LEFT v3`.
+1. Press `h`. Confirm `BUDDY23 JUNCTION LEFT v4`.
 2. Front calibration is imported from a CRC-valid V11 record if present. `valid=1`
    means front endpoints are valid; `imported_v11=1` identifies the initial import.
    No V11 movement trace is imported. If invalid, capture BOTH front spots over
@@ -149,7 +175,8 @@ The newest run replaces the previous run; retrieve it before another test.
   bounded arc synchronization. Abort after6 seconds, 110 degrees,120 mm on
   either wheel, reverse feedback or arc disagreement>20 mm.
 - V11 PI gains Kp1.0/Ki3.0, integral limit140, ramp100 mm/s^2, direction-specific
-  feedforward plus the V3 turn-only loaded estimate27%; turn ceiling30%, forward25%, and
+  feedforward plus the V4 turn-only loaded estimate31%; sustained turn ceiling35%,
+  one40%/150ms start pulse per wheel, forward25%, and
   bounded120 ms breakaway. Reverse adaptation
   uses signed feedback. Adequate loaded reverse torque is not yet established.
 - Timer ISR cuts motor power for button/deadline/100 ms late control. Main checks
@@ -179,8 +206,8 @@ The final turn summary gives positive left rotation relative to turn start.
 
 CRC-verified last4 KiB flash record, written only with drive off on one core.
 The revision byte uses V1 zero-filled padding, keeping record size/row offsets
-and CRC range unchanged. V1's zero revision is interpreted as V1; revisions2/3
-identify V2/V3 runs. Fresh runs use the running firmware's version.
+and CRC range unchanged. V1's zero revision is interpreted as V1; revisions2/3/4
+identify V2/V3/V4 runs. Fresh runs use the running firmware's version.
 New record magic is separate from V11. First `k` or completed run replaces the
 old flash log; back up logs/endpoints first. New firmware can import valid V11
 front calibration, but V11 cannot import this experiment's record. Returning to
@@ -194,5 +221,5 @@ white gap. It intentionally contains no barcode. Success establishes junction
 centering/left turn with the existing sensor placement, not the final combined
 barcode navigation or endless-course system. Keep V11 as the line-follow baseline.
 
-See firmware/BUILD_V3.md for the current verified binary and software checks;
-firmware/BUILD_V1.md, BUILD_V2.md and their UF2s are retained as historical versions.
+See firmware/BUILD_V4.md for the current verified binary and software checks;
+firmware/BUILD_V1.md, BUILD_V2.md, BUILD_V3.md and their UF2s remain available.

@@ -61,3 +61,42 @@ This is not evidence that30% is sufficient or that stall current is safe/measure
 Manufacturer board information was checked at https://www.cytron.io/p-robo-pico
 (3.6..6V motors,1A continuous/channel); actual motor stall current and loaded
 bank voltage have not been measured. Board ratings do not determine current from PWM.
+
+## V3 mode2 — 22 October 2026: left reverse stalls, right keeps moving
+
+- Fresh offline V3 test2,25 rows/dropped0, invalid0/0.
+- Leading137.17mm/trailing152.76mm, stripe15.60mm, axle target236.96mm.
+  Centring drive-off7242ms mean236.05mm; turn origin7547ms L237.79/R234.47mm.
+- 7947ms L232.64/R243.64: left estimated speed0 despite PWM-300 (30%);
+  right19.3mm/s at PWM279, targets-38/+31. Left position then stays fixed.
+- Cutoff8246ms L232.64/R251.08: left reversed5.15mm, right advanced16.61mm.
+  Relative left rotation11.34degrees. Right speed28.4mm/s at cutoff. STOP is
+  no encoder movement under drive, specifically left feedback, not optical loss.
+- Improvement over V2's3.13degree twitch, but not a completed turn. Right moved
+  about3.2 times the left arc; cannot describe this as balanced in-place motion.
+- User subsequently confirmed front IR housings ARE scraping the mat, and front
+  support ball rolls freely. Earlier contact height was chosen for stable scans.
+  Additional drag is a plausible contributor, not proof of sole cause; loaded
+  motor current/voltage and contact force remain unmeasured.
+
+Next recommendation: preserve close, fixed optical height while relieving housing
+drag/weight-bearing contact (mount adjustment or low-friction support). If optical
+height changes, recheck stationary white/black response and recalibrate at the
+final height before repeating V3. No new PWM increase or firmware was made for
+this recommendation. A one-wheel pivot/rolling corner remains a possible later
+test, but needs earlier turn start and more branch space; it is not equivalent
+to swapping left reverse for zero in the current axle-centred turn.
+
+## V4 request and bounded implementation — 22 October 2026
+
+After the drag discussion, user reported substantial hand torque needed and
+explicitly requested much higher turning effort. User prefers keeping contact
+height for the present comparison. Firmware controls PWM, not measured torque.
+
+V4 chooses one40% turn-start pulse per wheel for nominal150ms, ending early at
+25mm/s measured along speed, followed by35% maximum with31% turn feedforward.
+It never repeats that peak within a turn; independent1ms timer clamps expired
+peaks, plus pre-commit expiry check. Same500ms no-motion-under-established-demand,
+6s/110degree turn limits and button/late-loop kills. Forward25% unchanged.
+No supply voltage change or current/torque guarantee. Physical V4 result pending.
+The V3 binary remains available. Mount contact is still a plausible drag source.
