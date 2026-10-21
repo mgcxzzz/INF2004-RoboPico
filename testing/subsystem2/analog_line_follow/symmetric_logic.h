@@ -6,7 +6,7 @@
  * Two-black is normal, never evidence of a crossing in this profile.
  * This cannot locate the exact centre inside a saturated two-black plateau. */
 enum { SYM_STRAIGHT=11,SYM_LEFT,SYM_RIGHT,SYM_RECOVER_LEFT,SYM_RECOVER_RIGHT };
-enum { SYM_RUN_US=5000000,SYM_RUN_MM=200,SYM_LOSS_US=650000,SYM_LOSS_MM=25,
+enum { SYM_RUN_US=10000000,SYM_RUN_MM=500,SYM_TRACE_US=125000,SYM_LOSS_US=650000,SYM_LOSS_MM=25,
        SYM_MEMORY_US=500000 };
 typedef struct {
     uint64_t direction_us,white_since;

@@ -1,10 +1,30 @@
-# Analog line following bench v9
+# Analog line following bench v10
 
 Standalone hardware test: GP26/GP28 analog sensors -> line error -> Buddy2
 encoder PI speed control -> both motors. It is NOT the real RTOS Navigation
 Coordinator/S3 task integration. That build's bank-only startup remains unresolved.
 No barcode, GP19 use, junction branch turn, obstacle module, radio or IMU.
 Boots DRIVE OFF; calibrating, printing, saving and switching power never start it.
+
+## V10: user-requested longer symmetric run
+
+Use profile6 with the new symmetric placement. Only the profile6 run envelope
+and logging cadence changed:5s/200mm ->10s/500mm;75ms ->125ms trace interval so
+all10s plus1s settling fit the existing100-row flash record. A compile-time
+capacity assertion checks this budget. Steering, calibration, PI, PWM cap,
+startup boost,650ms/25mm loss recovery and all other motor stops are unchanged.
+This allows observing settling for longer; it does not prove that the earlier
+overshoot was caused solely by the shorter run. Earlier records remain readable.
+
+Flash firmware/buddy23_analog_line_follow_v10.uf2; h confirm V10/valid1;6 then k.
+Keep current calibration if surface/mount/height unchanged. Give roughly600mm
+clear continuous line and stopping space. Start with the same modest offset or
+centred position being compared; keep normal load. ComputerUSB OFF before bank
+ON; wait5s,BOTH3s,release BOTH,wait1s,GP21tap/release,2s countdown. Either button
+stops; USB-only g/s also supported. Run ends at10s OR500mm, or earlier for loss/
+other guards. Wait3s after stop, switch power sources separately, p. Save full
+log under a distinct name before another run. Observe whether it settles after
+5s or continues weaving; a longer run cannot substitute for later bend testing.
 
 ## V9: NEW symmetric two-sensor placement, profile6
 

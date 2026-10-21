@@ -67,6 +67,14 @@ int main(void) {
     assert(profile_start_block(5,false,true,true,false,true,1000,1000,false,LINE_BANK)==START_SETTLING);
     assert(profile_start_block(5,false,false,true,false,true,1000,1000,true,LINE_USB_FREE)==START_RELEASE_GP21);
     puts("PASS: symmetric two-black straight, left/right mirror steering, measured calibration samples, recent-direction loss bounds/refusal, symmetric start gates");
+    /* Longer symmetric run still stops at its independent hard deadline.
+       Model a healthy control update, rather than defeating the late watchdog. */
+    DualGuard long_run={0};assert(guard_start(&long_run,1000000,true,false));
+    long_run.deadline_us=1000000+SYM_RUN_US;
+    long_run.last_control_us=long_run.deadline_us-10000;
+    guard_tick(&long_run,long_run.deadline_us-1,true,false);assert(long_run.active);
+    guard_tick(&long_run,long_run.deadline_us,true,false);
+    assert(!long_run.active && long_run.reason==WHY_LIMIT && long_run.duration_us==SYM_RUN_US);
     /* Response profile must ignore optics but NEVER bypass stop/rearm gates. */
     assert(run_start_block(true,false,false,true,false,true,0,0,false,LINE_USB_FREE)==START_OK);
     assert(run_start_block(true,false,false,true,false,true,1000,1000,false,LINE_BANK)==START_OK);

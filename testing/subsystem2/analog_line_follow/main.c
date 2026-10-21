@@ -22,6 +22,8 @@
 #include "symmetric_logic.h"
 
 enum { HOLD=21, STOP=20, PWM_TOP=999, TRACE_ROWS=100 };
+_Static_assert(SYM_RUN_US/SYM_TRACE_US+1000000/SYM_TRACE_US+3<=TRACE_ROWS,
+               "Symmetric run plus settling must fit the saved trace");
 static const uint ma[2]={8,10}, mb[2]={9,11}, ea[2]={0,4}, eb[2]={1,5};
 static volatile BenchEncoder enc[2];
 static volatile DualGuard guard={.consumed=true};
@@ -175,7 +177,7 @@ static const char *reason_name(uint8_t r) {
     return r<sizeof(names)/sizeof(names[0]) ? names[r] : "unknown";
 }
 static void help(void) {
-    puts("\nBUDDY23 ANALOG LINE FOLLOW v9 | SDK bench, NOT RTOS NAV | DRIVE OFF on boot");
+    puts("\nBUDDY23 ANALOG LINE FOLLOW v10 | SDK bench, NOT RTOS NAV | DRIVE OFF on boot");
     puts("GP26/ADC0 LEFT A0; GP28/ADC2 RIGHT A0; sensor supply3.3V; UART OFF.");
     puts("Calibrate, stopped and GP21 released: w=BOTH WHITE; l=LEFT BLACK; r=RIGHT BLACK.");
     puts("Wait1s on each surface before key. w clears old black calibration; k=saves calibration/profile.");
@@ -200,7 +202,7 @@ static void help(void) {
     puts("Profile5 EDGE + LEFT CURVE recovery:600mm/12s; both-white ->0/45mm/s,1200ms/30mm bound.");
     puts("Profile5 decision10=left pivot recovery; assumes LEFT bend. Both buttons/s still stop.");
     puts("Profile6 NEW SYMMETRIC placement: both-black straight45/45; more left black ->LEFT, more right ->RIGHT.");
-    puts("Profile6 short200mm/5s; normalized difference deadband80, gain15; wheel targets30..60.");
+    puts("Profile6 500mm/10s, trace125ms; normalized difference deadband80, gain15; wheel targets30..60.");
     puts("White recovery needs clear direction<=500ms old; bounded650ms/25mm; unknown direction stops.");
     puts("Profile6 starts with either level>=650; centre both-black. Do NOT use old profiles on new layout.");
     puts("p=saved run; h=help. Wait3s after stop before switching power sources, then p.");
@@ -284,7 +286,7 @@ static bool start_run(unsigned mode) {
         ++runs;rearm=(LineRearm){0};run_mode=mode;
         recorded_profile=profile;
         guard.deadline_us=now+(profile==5?SYM_RUN_US:profile==2?RESPONSE_US:(profile==1 || profile==4)?12000000u:3000000u);
-        trace_interval_us=profile==5?75000:profile==2?100000:(profile==1 || profile==4)?150000:50000;
+        trace_interval_us=profile==5?SYM_TRACE_US:profile==2?100000:(profile==1 || profile==4)?150000:50000;
         for(unsigned w=0;w<2;++w) {
             origin[w]=previous[w]=enc[w].position;initial_invalid[w]=enc[w].invalid;
             velocity[w]=0;output[w]=0;pi[w]=(WheelPI){0};
