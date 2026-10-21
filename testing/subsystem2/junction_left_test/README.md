@@ -15,6 +15,14 @@ user reported successful V6 handover. V7 extended the outgoing follow; its new l
 
 ## V9 quick start: six-second alignment, then ten-second tracing
 
+**Physical V9 result:** junction detection, rolling left turn, stable alignment
+and return to V11 line following observed. Alignment took4.053s, then phase6
+followed about156.4mm before the user-reported board edge caused optical loss.
+Final stop was `line not recovered`, not the ten-second normal completion.
+Keep V9 as the working junction/exit baseline; full ten-second completion still
+needs sufficient outgoing track. See MEASUREMENTS.md and the archived log at
+`logs/v9_left_turn_exit_edge_2026-10-22.txt`.
+
 User explicitly requests **6s alignment**, followed by **10s normal line tracing**
 after alignment succeeds. The old3s acquisition window was a provisional test
 guard introduced in V6, not a supplied NFR. The timers are separate: phase9
@@ -58,8 +66,9 @@ the normal line-loss stop can interrupt the test. Keep optical height fixed.
 Strict host tests cover active just before6s and timeout at6s, no premature old
 60mm cutoff,180mm abort, successful alignment at5.58s followed by a fresh10s
 clock, continued follow past5s, and completion exactly at10s. Existing optical,
-controller and PWM checks pass. Arm/flash-layout checks pass; physical V9 result
-pending. See firmware/BUILD_V9.md.
+controller and PWM checks pass. Arm/flash-layout checks pass. The physical
+junction/exit result is recorded above; ten-second completion remains unverified
+because available track ended. See firmware/BUILD_V9.md.
 
 ## Historical V8 quick start: correct the pivot-to-forward PI handover
 

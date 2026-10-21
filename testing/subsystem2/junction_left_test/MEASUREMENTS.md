@@ -135,7 +135,7 @@ Inner encoder displacement bound12mm; fresh-line gates/110deg remain, rolling
 outer bound240mm/9s accounts for longer arc. Mode1/2 behavior preserved.
 
 
-## V5 mode3 — first rolling test: substantial turn, front spots beyond mat
+## V5 mode3 â€” first rolling test: substantial turn, front spots beyond mat
 
 22 October2026. Fresh offline test3,33rows/dropped0, invalid0/0. Cross leading
 131.94/trailing146.90mm, stripe14.96, turn-start goal176.42. Turn starts5275ms
@@ -147,7 +147,7 @@ front sensing points reaching beyond the lower mat edge. Rolling torque/motion
 improved, but this was not a completed junction-and-follow sequence. Extending
 outgoing track was recommended before changing acquisition.
 
-## V5 mode3 — repeated with outgoing track available: first sensor is skipped
+## V5 mode3 â€” repeated with outgoing track available: first sensor is skipped
 
 Fresh offline test3,25rows/dropped0, invalid0/0. Video
 video_2026-10-22_01-05-10.mp4 duration10.402s inspected at3/7/8/9seconds.
@@ -247,3 +247,33 @@ speed target<=30mm/s), avoiding the old60mm abort just after3s. Same optical and
 success; whole35s/900mm, trace500ms preserves100-row/3792-byte flash record.
 Physical V9 result pending; more time is a bounded experiment, not a proven
 solution to centring dynamics. Keep enough outgoing track for~450mm follow.
+
+## V9 mode3 - turn, alignment and outgoing line following work; board edge ends run
+
+Archived full user log: logs/v9_left_turn_exit_edge_2026-10-22.txt. Fresh offline
+V9 test3,37rows/dropped0, invalid0/0. User reports it turned, drove to the end
+of the board and stopped at the edge. There is no new video in this message.
+
+- Cross leading42.08/trailing53.84mm, stripe11.76mm, turn-start goal84.96mm.
+- Pivot starts3194ms; acquisition starts7032ms L85.18/R258.91, levels776/2.
+- 9036ms levels570/566 briefly balance, then right-only black; it continues
+  aligning beyond the old3s limit instead of aborting.
+- Stable alignment qualifies11085ms, phase9->6, levels699/715. Alignment took
+  4.053s and90.34mm mean forward travel. Both old3s/60mm bounds would cut it off.
+  Turn-relative encoder rotation92.84deg, not an externally measured angle.
+- Phase6 targets settle around45/45 with small sensor-based corrections. Visible
+  rows from11585 through14089ms show both levels roughly596..725 and wheel
+  speeds mostly41..50mm/s: sustained outgoing line tracking, not just coasting.
+- 14589ms first logged bothwhite0/105, decision15 (recover right). Latest clear
+  sensor difference selects that recovery.15230ms final phase8, line not recovered.
+  This is consistent with the reported board edge; encoders alone cannot locate it.
+- Phase6 elapsed4.145s total, with bothwhite visible by3.504s after entry.
+  Phase6 encoder travel L162.59/R150.14, mean156.365mm. Normal ten-second timer
+  would expire21085ms if line and guards remained valid. This run did not reach it.
+
+Preserve V9 firmware/calibration as the working junction/exit baseline. Detection,
+rolling turn, gradual acquisition and return to V11 tracking are demonstrated in
+this test. Full10s normal completion, repeatability, other turn directions and
+barcode integration are not established. Next comparison uses SAME V9 with about
+300mm extra outgoing track (roughly450..500mm available after alignment) and
+matching flat white background/height, then checks phase7/test complete.
