@@ -1,10 +1,70 @@
-# Analog line following bench v7
+# Analog line following bench v8
 
 Standalone hardware test: GP26/GP28 analog sensors -> line error -> Buddy2
 encoder PI speed control -> both motors. It is NOT the real RTOS Navigation
 Coordinator/S3 task integration. That build's bank-only startup remains unresolved.
 No barcode, GP19 use, junction branch turn, obstacle module, radio or IMU.
 Boots DRIVE OFF; calibrating, printing, saving and switching power never start it.
+
+## V8: separate left-curve recovery experiment (profile5)
+
+User's V6 profile2 run tracked a straight then lost the line on a LEFT bend.
+The saved source log is logs/v6_left_bend_loss_2026-10-21.txt. Final continuous
+white interval ended at9.538s after the650ms bound (about8.888s onset). At8.931s
+heading estimate was+0.28deg; cutoff-3.20deg. Thus about3.5deg of estimated left
+rotation in the last logged part, while requesting about30/60mm/s. Both wheels
+kept moving forward, so recovery was a shallow arc. No encoder-invalid or
+row-loss errors; this was neither overall12s timeout nor600mm distance limit.
+An earlier brief contact at8.778s reset the loss interval. We cannot infer the
+physical curve radius or global heading from those encoder values alone.
+
+V8 adds profile5; profiles1/2 (edge),3 (wheel response),4 (V7 black=straight)
+remain unchanged. Select5 then k to save. Normal tracking is the V6 edge rule:
+left target500, cruise45, wheel requests30..60mm/s. On BOTH levels<150:
+
+-Left target0mm/s, PWM0 (coasts, no active braking or reverse polarity).
+-Right target45mm/s under unchanged speed PI and bounded startup assistance.
+-Decision10 distinguishes this recovery from decision3 in old profiles.
+-Stop after1200ms OR30mm average absolute encoder path, whichever comes first.
+-Reacquiring contact (either level>=150) returns to normal edge/right-assist
+ logic and resets the white timer. Both-dark>=750/120ms still stops.
+-Overall600mm/12s, trace150ms interval, independent timer/button/USB/encoder/
+ feedback/direction guards unchanged. Stop sets both targets/PWM0.
+
+The longer TIME allowance is coupled to a SMALLER path limit (30 vs40mm) and a
+stationary-left request, not simply a longer period driving blindly forward.
+Ideal no-slip stationary-left pivot would rotate about31deg over30mm average
+wheelpath; this is geometry, NOT a measured bound on chassis heading. Real coast,
+slip or drag changes it. No dynamic loss timeout in the1ms ISR: recovery is
+checked in the control loop with its existing100ms independent late cutoff.
+
+This profile assumes the missing line lies LEFT, appropriate to the reported
+left bend but ambiguous on arbitrary departures. It is not general search,
+right-bend recovery, edge-of-mat detection, or full-course/junction navigation.
+It may still require repeated recovery on a tight curve and is not claimed smooth.
+
+### Use after the currently running V7 experiment
+
+Keep/send V7 profile4's result before switching firmware. V8 still includes4,
+so selecting4 reproduces the same black-straight algorithm. For the new recovery:
+
+1. Flash firmware/buddy23_analog_line_follow_v8.uf2, open PuTTY1152008N1 flowNone.
+   h verifies V8/valid1 and the current close-height calibration; no recapture
+   unless mounting/lighting changed. Press5 then k; verify profile5.
+2. Place on a short straight immediately BEFORE a gentle LEFT bend. Left edge
+   level450..550/rightwhite. Keep mat beneath the entire planned route and allow
+   stopping space; do not start all-white or beyond the curve.
+3. ComputerUSB OFF before bank ON. Wait5s, BOTH3s, release BOTH, wait1s,
+   GP21tap/release;2s countdown. Either button stops. Observe whether the left
+   wheel stops briefly and right wheel turns the chassis back onto the line.
+4. After stop wait3s, bank OFF then computerUSB ON, p. Send the complete log,
+   whether recovery reacquires the line, and any video of the left bend.
+   If it repeatedly searches or fails, save that result rather than increasing
+   the recovery time further. A new run replaces the previous log.
+
+SavedLog structure/version unchanged. Selected profile5 extends range to4;
+reserved recorded-profile byte5. Old records/calibration load in V8. Older
+firmware rejects a saved selected profile5; select1 then k before downgrading.
 
 ## V7: experimental left-black means straight (profile4)
 
@@ -266,7 +326,7 @@ Use only one power source, bank OR computer USB. Never overlap them.
 
 ## First stage: CALIBRATE ONLY, no f/buttons yet
 
-Computer USB only, flash firmware/buddy23_analog_line_follow_v7.uf2 with BOOTSEL.
+Computer USB only, flash firmware/buddy23_analog_line_follow_v8.uf2 with BOOTSEL.
 PuTTY Serial115200,8N1,flow None. All keys are lowercase, no Enter needed.
 Keep the sensors at final mat height, fixed spacing/lighting, no pot adjustment.
 

@@ -153,4 +153,21 @@ static inline AnalogDemand black_straight_demand(AnalogTracker *t,const LineCali
     }
     return d;
 }
+/* Profile5 only: tighter left recovery on BOTH WHITE after edge tracking.
+ * No reverse drive. Left output becomes zero, right speed45mm/s. Recovery
+ * remains bounded by1200ms OR30mm average absolute wheel path. With no slip,
+ * a stationary-left pivot using30mm average path turns about31degrees.
+ * Both-white direction is ambiguous: this experiment assumes a LEFT bend. */
+enum { CURVE_RECOVERY_US=1200000, CURVE_RECOVERY_MM=30 };
+static inline AnalogDemand curve_demand(AnalogTracker *t,const LineCalibration *c,
+                                        uint16_t l,uint16_t r,uint64_t now,uint32_t mm) {
+    AnalogDemand d=analog_demand(t,c,l,r,now,mm);
+    if(!calibration_valid(c)) return d;
+    if(d.level[0]<150 && d.level[1]<150) {
+        d.stop=now-t->white_since>=CURVE_RECOVERY_US || mm-t->white_mm>=CURVE_RECOVERY_MM;
+        d.decision=d.stop?AL_LOST:10;
+        d.target[0]=0;d.target[1]=d.stop?0:45;
+    }
+    return d;
+}
 #endif

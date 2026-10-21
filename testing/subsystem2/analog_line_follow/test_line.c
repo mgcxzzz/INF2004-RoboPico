@@ -173,6 +173,33 @@ int main(void) {
         if(!bd.stop) assert(bd.target[0]>=30 && bd.target[1]>=30);
     }
     puts("PASS: profile4 black=straight, threshold hysteresis, right assist, white timeout/distance, crossing stop and start gates");
+    /* Profile5 deliberately replaces only BOTH-WHITE recovery. It must not
+       inherit the650ms stop, nor bypass its own time/path or crossing guards. */
+    AnalogTracker ct={0};
+    AnalogDemand cd=curve_demand(&ct,&plateau,500,0,0,0);
+    assert(!cd.stop && cd.target[0]==45 && cd.target[1]==45);
+    cd=curve_demand(&ct,&plateau,0,0,100,5);
+    assert(!cd.stop && cd.decision==10 && cd.target[0]==0 && cd.target[1]==45);
+    cd=curve_demand(&ct,&plateau,0,0,650100,20);assert(!cd.stop && cd.decision==10);
+    cd=curve_demand(&ct,&plateau,0,0,1200099,34);assert(!cd.stop);
+    cd=curve_demand(&ct,&plateau,0,0,1200100,34);
+    assert(cd.stop && cd.decision==AL_LOST && !cd.target[0] && !cd.target[1]);
+    ct=(AnalogTracker){0};
+    (void)curve_demand(&ct,&plateau,0,0,1,5);
+    cd=curve_demand(&ct,&plateau,0,0,2,35);assert(cd.stop);
+    cd=curve_demand(&ct,&plateau,500,0,3,35);
+    assert(!cd.stop && !ct.white && cd.target[0]==45 && cd.target[1]==45);
+    cd=curve_demand(&ct,&plateau,0,0,4,36);assert(!cd.stop && ct.white_since==4 && ct.white_mm==36);
+    ct=(AnalogTracker){0};
+    cd=curve_demand(&ct,&plateau,1000,1000,1,0);assert(!cd.stop && cd.decision==AL_BOTH_BLACK);
+    cd=curve_demand(&ct,&plateau,1000,1000,120001,0);assert(cd.stop && !cd.target[0] && !cd.target[1]);
+    cd=curve_demand(&ct,&no_cal,0,0,1,0);assert(cd.stop);
+    WheelPI stopped_wheel={.integral=100,.ramp=45};LineBreakaway stopped_kick={.active=true,.end_us=9999999};
+    assert(line_speed_step(&stopped_wheel,0,0,45,0.01f)==0 && !stopped_wheel.integral && !stopped_wheel.ramp);
+    assert(line_breakaway(&stopped_kick,10,0,0,45,0)==0 && !stopped_kick.active);
+    assert(profile_start_block(4,false,false,true,false,true,500,0,false,LINE_BANK)==START_OK);
+    assert(profile_start_block(4,false,false,true,false,true,0,0,false,LINE_BANK)==START_LEFT_WHITE);
+    puts("PASS: profile5 left-zero/right45 recovery, extended deadline, reduced path cap, reacquisition reset, invalid-cal/crossing stop, zero-wheel PI/kick reset");
     LineCalibration c={{132,132},{350,450},7};
     assert(calibration_valid(&c));
     assert(line_level(0,132,350)==0 && line_level(132,132,350)==0);
