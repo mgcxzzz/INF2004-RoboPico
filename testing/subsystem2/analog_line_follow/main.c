@@ -177,7 +177,7 @@ static const char *reason_name(uint8_t r) {
     return r<sizeof(names)/sizeof(names[0]) ? names[r] : "unknown";
 }
 static void help(void) {
-    puts("\nBUDDY23 ANALOG LINE FOLLOW v10 | SDK bench, NOT RTOS NAV | DRIVE OFF on boot");
+    puts("\nBUDDY23 ANALOG LINE FOLLOW v11 | SDK bench, NOT RTOS NAV | DRIVE OFF on boot");
     puts("GP26/ADC0 LEFT A0; GP28/ADC2 RIGHT A0; sensor supply3.3V; UART OFF.");
     puts("Calibrate, stopped and GP21 released: w=BOTH WHITE; l=LEFT BLACK; r=RIGHT BLACK.");
     puts("Wait1s on each surface before key. w clears old black calibration; k=saves calibration/profile.");
@@ -202,8 +202,8 @@ static void help(void) {
     puts("Profile5 EDGE + LEFT CURVE recovery:600mm/12s; both-white ->0/45mm/s,1200ms/30mm bound.");
     puts("Profile5 decision10=left pivot recovery; assumes LEFT bend. Both buttons/s still stop.");
     puts("Profile6 NEW SYMMETRIC placement: both-black straight45/45; more left black ->LEFT, more right ->RIGHT.");
-    puts("Profile6 500mm/10s, trace125ms; normalized difference deadband80, gain15; wheel targets30..60.");
-    puts("White recovery needs clear direction<=500ms old; bounded650ms/25mm; unknown direction stops.");
+    puts("Profile6 500mm/10s, trace125ms; adaptive difference: inner/outer45/45 ->40/50 ->25/50 ->0/45.");
+    puts("White recovery pivots0/45 or45/0; clear direction<=500ms old, bounded650ms/25mm; unknown stops.");
     puts("Profile6 starts with either level>=650; centre both-black. Do NOT use old profiles on new layout.");
     puts("p=saved run; h=help. Wait3s after stop before switching power sources, then p.");
     printf("CAL mask=%u white=%u,%u black=%u,%u valid=%u profile=%u restored=%u\n",

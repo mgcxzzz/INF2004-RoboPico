@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include "line_logic.h"
 #include "wheel_control.h"
 #include "symmetric_logic.h"
@@ -14,13 +15,13 @@ int main(void) {
     sd=symmetric_demand(&st,&sc,1000,1000,3000000,100);
     assert(!sd.stop && sd.target[0]==45 && sd.target[1]==45); /* no crossing stop */
     sd=symmetric_demand(&st,&sc,1000,0,3100000,101);
-    assert(sd.decision==SYM_LEFT && sd.target[0]==30 && sd.target[1]==60);
+    assert(sd.decision==SYM_LEFT && sd.target[0]==0 && sd.target[1]==45);
     sd=symmetric_demand(&st,&sc,0,1000,3200000,102);
-    assert(sd.decision==SYM_RIGHT && sd.target[0]==60 && sd.target[1]==30);
+    assert(sd.decision==SYM_RIGHT && sd.target[0]==45 && sd.target[1]==0);
     sd=symmetric_demand(&st,&sc,980,950,3200001,102);assert(sd.target[0]==45 && sd.target[1]==45);
     /* Loss uses the last reliable side, latched for this loss episode. */
     sd=symmetric_demand(&st,&sc,0,0,3300000,103);
-    assert(!sd.stop && sd.decision==SYM_RECOVER_RIGHT && sd.target[0]==60 && sd.target[1]==30);
+    assert(!sd.stop && sd.decision==SYM_RECOVER_RIGHT && sd.target[0]==45 && sd.target[1]==0);
     sd=symmetric_demand(&st,&sc,0,0,3949999,127);assert(!sd.stop);
     sd=symmetric_demand(&st,&sc,0,0,3950000,127);
     assert(sd.stop && sd.decision==AL_LOST && !sd.target[0] && !sd.target[1]);
@@ -32,7 +33,7 @@ int main(void) {
     st=(SymmetricTracker){0};
     (void)symmetric_demand(&st,&sc,1000,0,100,0);
     sd=symmetric_demand(&st,&sc,0,0,500100,0);
-    assert(!sd.stop && sd.decision==SYM_RECOVER_LEFT && sd.target[0]==30 && sd.target[1]==60);
+    assert(!sd.stop && sd.decision==SYM_RECOVER_LEFT && sd.target[0]==0 && sd.target[1]==45);
     sd=symmetric_demand(&st,&sc,0,0,500101,25);assert(sd.stop); /* path bound */
     sd=symmetric_demand(&st,&sc,0,1000,500102,26);
     assert(!sd.stop && !st.white && st.direction==-1);
@@ -53,8 +54,8 @@ int main(void) {
         AnalogDemand da=symmetric_demand(&a,&sc,(uint16_t)l,(uint16_t)r,0,0);
         AnalogDemand db=symmetric_demand(&b,&sc,(uint16_t)r,(uint16_t)l,0,0);
         assert(da.stop==db.stop && da.target[0]==db.target[1] && da.target[1]==db.target[0]);
-        assert(da.target[0]>=0 && da.target[0]<=60 && da.target[1]>=0 && da.target[1]<=60);
-        if(!da.stop) assert(da.target[0]>=30 && da.target[1]>=30);
+        assert(da.target[0]>=0 && da.target[0]<=50 && da.target[1]>=0 && da.target[1]<=50);
+        if(!da.stop) assert(da.target[0]+da.target[1]>=45 && da.target[0]+da.target[1]<=90);
     }
     assert(profile_start_block(5,false,false,true,false,true,1000,1000,false,LINE_BANK)==START_OK);
     assert(profile_start_block(5,false,false,true,false,true,1000,700,false,LINE_USB_FREE)==START_OK);
@@ -67,6 +68,40 @@ int main(void) {
     assert(profile_start_block(5,false,true,true,false,true,1000,1000,false,LINE_BANK)==START_SETTLING);
     assert(profile_start_block(5,false,false,true,false,true,1000,1000,true,LINE_USB_FREE)==START_RELEASE_GP21);
     puts("PASS: symmetric two-black straight, left/right mirror steering, measured calibration samples, recent-direction loss bounds/refusal, symmetric start gates");
+    /* Adaptive mapping: increasing imbalance must never increase forward
+       average or decrease curvature demand. Check all integer error magnitudes,
+       continuity, mirror symmetry and the actual coast/off output at zero. */
+    int16_t prev_target[2]={45,45};
+    for(int32_t e=0;e<=1000;++e) {
+        int16_t forward[2],mirror[2];symmetric_targets(e,forward);symmetric_targets(-e,mirror);
+        assert(forward[0]==mirror[1] && forward[1]==mirror[0]);
+        assert(forward[0]>=0 && forward[0]<=45 && forward[1]>=45 && forward[1]<=50);
+        int sum=forward[0]+forward[1],last_sum=prev_target[0]+prev_target[1];
+        int diff=forward[1]-forward[0],last_diff=prev_target[1]-prev_target[0];
+        assert(sum<=last_sum && diff*last_sum>=last_diff*sum);
+        assert(abs(forward[0]-prev_target[0])<=1 && abs(forward[1]-prev_target[1])<=1);
+        prev_target[0]=forward[0];prev_target[1]=forward[1];
+    }
+    int16_t adaptive[2];
+    symmetric_targets(80,adaptive);assert(adaptive[0]==45 && adaptive[1]==45);
+    symmetric_targets(250,adaptive);assert(adaptive[0]==40 && adaptive[1]==50);
+    symmetric_targets(500,adaptive);assert(adaptive[0]==25 && adaptive[1]==50);
+    symmetric_targets(1000,adaptive);assert(adaptive[0]==0 && adaptive[1]==45);
+    for(unsigned w=0;w<2;++w) {
+        WheelPI changed_pi={0};LineBreakaway changed_kick={0};
+        for(uint64_t us=0;us<SYM_RUN_US;us+=10000) {
+            int32_t e=us<2000000?0:us<4000000?500:us<6000000?1000:us<8000000?-1000:0;
+            symmetric_targets(e,adaptive);
+            int32_t pwm=line_speed_step(&changed_pi,w,adaptive[w],35,0.01f);
+            pwm=line_breakaway(&changed_kick,us,adaptive[w],changed_pi.ramp,35,pwm);
+            assert(pwm>=0 && pwm<=250);
+            if(adaptive[w]==0) {
+                assert(pwm==0 && !changed_pi.integral && !changed_pi.ramp && !changed_kick.active);
+                DualLevels off=dual_levels(w,pwm);assert(off.a==0 && off.b==0);
+            }
+        }
+    }
+    puts("PASS: adaptive forward speed/curvature, continuous mirrored mapping, whole-run PWM bounds and zero-wheel off/reset");
     /* Longer symmetric run still stops at its independent hard deadline.
        Model a healthy control update, rather than defeating the late watchdog. */
     DualGuard long_run={0};assert(guard_start(&long_run,1000000,true,false));

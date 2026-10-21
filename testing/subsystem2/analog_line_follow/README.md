@@ -1,10 +1,80 @@
-# Analog line following bench v10
+# Analog line following bench v11
 
 Standalone hardware test: GP26/GP28 analog sensors -> line error -> Buddy2
 encoder PI speed control -> both motors. It is NOT the real RTOS Navigation
 Coordinator/S3 task integration. That build's bank-only startup remains unresolved.
 No barcode, GP19 use, junction branch turn, obstacle module, radio or IMU.
 Boots DRIVE OFF; calibrating, printing, saving and switching power never start it.
+
+## V11: adaptive speed and tighter symmetric turns (profile6)
+
+User approved stronger/weaker correction by imbalance, including permission to
+increase PWM if necessary. This version keeps the tested25% cap: it gets tighter
+turns by reducing the inner wheel, not assuming additional PWM is needed. A
+loaded outer-wheel speed shortfall can be evaluated separately from the next log.
+No motor voltage/rating claim or untested higher PWM is introduced.
+
+Historical V9 offset evidence is saved in logs/v9_offset_response_2026-10-21.txt:
+normal5s timer stop, initial right correction then extended left correction,
+about-31deg encoder heading at cutoff and right PWM reaching250permille. This
+shows an offset response, not proven stable centring. The later user-supplied
+steep-angle log requested left and ended at the650ms loss bound; arbitrary steep
+stationary acquisition is explicitly out of scope. Test nearly aligned starts.
+
+The latest V10 log is saved as logs/v10_successful_run_2026-10-21.txt. The user
+subsequently clarified that this was a SUCCESSFUL physical run, not the intended
+failure example. Its normal10s timer stop must not be reported as a line-loss
+failure. It is archived as successful user-observed evidence; do not infer a
+failed bend or a need for more PWM from it. V11 is the previously requested
+adaptive-steering experiment and still needs its own physical evaluation.
+
+Profile6 now maps the magnitude of calibrated difference (L-R) progressively:
+
+| Absolute difference | Inner/outer target mm/s | Average forward target |
+|---|---|---|
+|0..80|45/45|45|
+|250|40/50|45|
+|500|25/50|37.5|
+|1000|0/45|22.5|
+
+Integer interpolation joins the anchors with at most1mm/s adjacent changes.
+In the strongest segment the outer target is quantized alongside the inner so
+rounding cannot weaken turn curvature as error increases. More left black makes
+LEFT the inner wheel and turns LEFT; more right black mirrors it. A zero target
+resets its speed PI and bounded kick and sets both motor bridge PWM channels0:
+this is coasting, not active braking, a locked wheel or reverse drive. Tiny
+nonzero targets may still be limited by physical stiction; observe the next log.
+
+BOTH BLACK remains normal. Both-white recovery retains the same reliable-side
+memory (difference>=200 and one level>=400 within500ms),650ms/25mm bounds and
+unknown-direction stop, but now uses0/45left or45/0right. This pairs recovery
+with the severe-error turn instead of reverting to a shallow30/60 arc.
+
+Keep10s/500mm profile limit,125ms logging, calibration format, sampling/filtering,
+PI gains,100mm/s^2 ramp for nonzero targets,25% PWM cap, startup assistance and all
+button/USB/encoder/feedback/control-late cutoffs. No derivative term or automatic
+motion/calibration added. Old profiles1..5 remain unchanged and still use the old
+placement. Profile6 behaviour needs physical verification; sharper steering can
+also overshoot, so this is not a guarantee of smooth tracking or curve success.
+
+### Next test: centred straight, then modest offsets after review
+
+1. Flash firmware/buddy23_analog_line_follow_v11.uf2; PuTTY1152008N1 flowNone.
+   h confirms V11 and valid1. Existing calibration should load (white184/184,
+   black3464/3692 in latest stationary test). Recalibrate only for mounting/height/
+   surface changes, not the firmware version. Press6 then k.
+2. Keep the symmetric spots, normal load, both on black, robot nearly parallel.
+   Provide about600mm clear continuous line/stopping room. Run centred first.
+3. ComputerUSB OFF before bank ON. Wait5s,BOTH3s,release BOTH,wait1s,GP21tap/
+   release,2s countdown. Either button stops. It can still stop before10s due to
+   distance/loss or another guard. Do not extend recovery to force completion.
+4. Wait3s after stop, bank OFF then computerUSB ON, p. Save under a new filename.
+   Send the full run and whether steering is smooth, whether an inner wheel
+   pauses during large errors, and whether it returns to both-black balance.
+5. After reviewing centred behaviour, use a small sideways offset with robot
+   still parallel: L1000/R700 for LEFT correction, orL700/R1000 for RIGHT. Do not
+   start at a steep crossing angle. One fresh run/log per test. These do not prove
+   continuous bends; later mat tests must cover both bend directions.
 
 ## V10: user-requested longer symmetric run
 
@@ -422,7 +492,7 @@ Use only one power source, bank OR computer USB. Never overlap them.
 
 ## First stage: CALIBRATE ONLY, no f/buttons yet
 
-Computer USB only, flash firmware/buddy23_analog_line_follow_v9.uf2 with BOOTSEL.
+Computer USB only, flash firmware/buddy23_analog_line_follow_v11.uf2 with BOOTSEL.
 PuTTY Serial115200,8N1,flow None. All keys are lowercase, no Enter needed.
 Keep the sensors at final mat height, fixed spacing/lighting, no pot adjustment.
 

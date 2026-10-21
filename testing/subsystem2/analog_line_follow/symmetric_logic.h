@@ -14,6 +14,29 @@ typedef struct {
     int8_t direction,recovery;
     bool white;
 } SymmetricTracker;
+/* V11 adaptive forward speed. Level difference is reflectance error, not mm.
+ * Piecewise interpolation keeps target changes <=1mm/s per error count:
+ * |error|80:45/45,250:40/50,500:25/50,1000:0/45 (inner/outer).
+ * Targets stay forward-only. Zero is coast/off through the unchanged wheel PI. */
+static inline void symmetric_targets(int32_t error,int16_t target[2]) {
+    if(error>1000) error=1000;
+    if(error < -1000) error=-1000;
+    int32_t magnitude=error<0?-error:error;
+    int32_t inner=45,outer=45;
+    if(magnitude>80 && magnitude<=250) {
+        int32_t turn=((magnitude-80)*5+169)/170;
+        inner=45-turn;outer=45+turn;
+    } else if(magnitude>250 && magnitude<=500) {
+        inner=40-(magnitude-250)*15/250;outer=50;
+    } else if(magnitude>500) {
+        inner=(1000-magnitude)*25/500;
+        /* Quantize the outer target with the inner target, so rounding cannot
+           weaken curvature on a step where only the outer speed decreases. */
+        outer=45+inner/5;
+    }
+    target[0]=(int16_t)(error>=0?inner:outer);
+    target[1]=(int16_t)(error>=0?outer:inner);
+}
 static inline AnalogDemand symmetric_demand(SymmetricTracker *t,const LineCalibration *c,
                                              uint16_t l,uint16_t r,uint64_t now,uint32_t mm) {
     AnalogDemand d={.decision=SYM_STRAIGHT};
@@ -29,7 +52,7 @@ static inline AnalogDemand symmetric_demand(SymmetricTracker *t,const LineCalibr
             d.stop=true;d.decision=AL_LOST;return d;
         }
         d.decision=t->recovery>0?SYM_RECOVER_LEFT:SYM_RECOVER_RIGHT;
-        d.target[0]=t->recovery>0?30:60;d.target[1]=t->recovery>0?60:30;
+        d.target[0]=t->recovery>0?0:45;d.target[1]=t->recovery>0?45:0;
         return d;
     }
     t->white=false;t->recovery=0;
@@ -38,11 +61,9 @@ static inline AnalogDemand symmetric_demand(SymmetricTracker *t,const LineCalibr
     if((error>=200 || error<=-200) && (d.level[0]>=400 || d.level[1]>=400)) {
         t->direction=error>0?1:-1;t->direction_us=now;
     }
-    if(error>-80 && error<80) error=0;
-    int32_t correction=error*15/1000; /* +/-15 mm/s; equal45, extremes30/60 */
-    d.target[0]=(int16_t)(45-correction);d.target[1]=(int16_t)(45+correction);
-    if(correction>0) d.decision=SYM_LEFT;
-    else if(correction<0) d.decision=SYM_RIGHT;
+    symmetric_targets(error,d.target);
+    if(d.target[0]<d.target[1]) d.decision=SYM_LEFT;
+    else if(d.target[0]>d.target[1]) d.decision=SYM_RIGHT;
     return d;
 }
 #endif
