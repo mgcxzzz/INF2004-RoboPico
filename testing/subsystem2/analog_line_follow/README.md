@@ -1,10 +1,63 @@
-# Analog left-edge line following bench v5
+# Analog left-edge line following bench v6
 
 Standalone hardware test: GP26/GP28 analog sensors -> line error -> Buddy2
 encoder PI speed control -> both motors. It is NOT the real RTOS Navigation
 Coordinator/S3 task integration. That build's bank-only startup remains unresolved.
 No barcode, GP19 use, junction branch turn, obstacle module, radio or IMU.
 Boots DRIVE OFF; calibrating, printing, saving and switching power never start it.
+
+## V6: gentler optical steering for the closer sensor mounting
+
+The user reported jerking after lowering the sensors; calibration is now
+white177/183,black3639/3629. The original user log is saved under
+logs/v5_close_height_line_2026-10-21.txt. It stopped at the NORMAL3s time limit,
+not the line-loss guard. It repeatedly crossed from near-white to dark and back;
+wheel feedback lagged the target reversals. Right PWM often hit25% while speed
+remained near65mm/s despite a95mm/s request. Sensor contact may add drag, but
+this cause is not established by the log. Existing bounded startup kicks also
+remain a possible contributor to the visible jerking.
+
+V6 changes only the optical target mapping in profiles1/2:
+
+| Setting | V5 | V6 |
+|---|---|---|
+| Equal-speed cruise |65mm/s|45mm/s|
+| Proportional differential |+/-30mm/s|+/-15mm/s|
+| Full-black L/R target |95/35|60/30mm/s|
+| Full-white recovery L/R target |35/95|30/60mm/s|
+| Right-sensor assist L/R target |95/35|60/30mm/s|
+
+The full sensor-range reversal changes a wheel request by30 rather than60mm/s.
+The normal max right-left difference is30 rather than60mm/s. Keep target500,
+strict deadband|error|<60, same ADC sampling/IIR, white/both-dark thresholds,
+650ms/40mm loss guard,120ms both-dark stop, profile distances/deadlines, V5 wheel
+PI/ramp,25% cap and kick timing. No derivative or extra target smoothing added.
+Both-dark pending targets stay35/35, then stop; profile3 stays EXACTLY65/65,
+35/95,95/35 for2s each. New steering gains may be too weak for tight curves;
+actual improvement is pending the next physical test, not proven by compilation.
+Mechanical contact/drag is not corrected by a firmware change.
+
+### Next physical test: profile1 on a straight, same close mounting/load
+
+1. Flash firmware/buddy23_analog_line_follow_v6.uf2. PuTTY115200,8N1,flow None.
+   h confirms V6 and valid1. Existing close-height calibration should restore:
+   approximately white177/183,black3639/3629. Do not recalibrate solely for V6.
+2. Select1 then k. Aim normalized levelL450..550, right near0, on the straight.
+   Keep normal robot load, contact pressure and mounting consistent.
+3. Computer USB OFF before bank ON. Wait5s; hold BOTH3s; release BOTH; wait1s;
+   tap/release GP21;2s countdown. Either button stops. Keep the route on the mat.
+4. Expect slower movement. Profile1 still stops at3s OR150mm: it may travel less
+   than150mm at this lower speed, and a normal time-limit stop is not failure.
+5. Wait3s after stop. Bank OFF, computer USB ON; open PuTTY and p. Send the whole
+   run and whether corrections are smoother, whether startup still stutters,
+   and whether the sensors remain in light consistent contact.
+6. Validate this short straight before profile2 curves. Profile2 still permits
+   600mm/12s but slower motion can reach the time limit before600mm. Neither
+   profile changes its stop reason merely because it is now slower.
+
+Flash Trace/SavedLog structure and version unchanged; V1-V5 analog calibration
+and saved logs remain readable. A restored old run is still old evidence, even
+though h now shows V6. Start a fresh run to evaluate the new steering.
 
 ## V5: provisional wheel-speed PI adjustment
 
@@ -157,7 +210,7 @@ Use only one power source, bank OR computer USB. Never overlap them.
 
 ## First stage: CALIBRATE ONLY, no f/buttons yet
 
-Computer USB only, flash firmware/buddy23_analog_line_follow_v5.uf2 with BOOTSEL.
+Computer USB only, flash firmware/buddy23_analog_line_follow_v6.uf2 with BOOTSEL.
 PuTTY Serial115200,8N1,flow None. All keys are lowercase, no Enter needed.
 Keep the sensors at final mat height, fixed spacing/lighting, no pot adjustment.
 

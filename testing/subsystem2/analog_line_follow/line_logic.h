@@ -7,6 +7,7 @@ typedef struct { uint16_t white[2],black[2]; uint8_t mask; } LineCalibration;
 enum { AL_EDGE, AL_RIGHT_GUARD, AL_BOTH_BLACK, AL_SEEK_LEFT, AL_LOST };
 typedef struct { uint64_t white_since,both_since; uint32_t white_mm; bool white,both; } AnalogTracker;
 typedef struct { int16_t target[2]; uint16_t level[2]; uint8_t decision; bool stop; } AnalogDemand;
+enum { LINE_BASE_MM_S=45, LINE_DIFFERENTIAL_MM_S=15 };
 enum { LINE_USB_HOLD, LINE_BANK, LINE_USB_FREE };
 enum { START_OK,START_ACTIVE,START_SETTLING,START_CAL,START_GP20,START_REARM,
        START_LEFT_WHITE,START_RIGHT_DARK,START_HOLD_GP21,START_RELEASE_GP21,START_GUARD };
@@ -98,8 +99,10 @@ static inline AnalogDemand analog_demand(AnalogTracker *t,const LineCalibration 
     d.level[1]=line_level(r,c->white[1],c->black[1]);
     int32_t error=(int32_t)d.level[0]-500;
     if(error>-60 && error<60) error=0;
-    int32_t differential=error*60/1000; /* -30..30 mm/s, base65 */
-    if(d.level[1]>=650) { differential=30;d.decision=AL_RIGHT_GUARD; }
+    /* V6 halves the proportional steering differential and lowers cruise.
+       Keep the same optical target/deadband and all loss/crossing guards. */
+    int32_t differential=error*(2*LINE_DIFFERENTIAL_MM_S)/1000;
+    if(d.level[1]>=650) { differential=LINE_DIFFERENTIAL_MM_S;d.decision=AL_RIGHT_GUARD; }
     bool both=d.level[0]>=750 && d.level[1]>=750;
     if(both) {
         if(!t->both) t->both_since=now;
@@ -107,7 +110,9 @@ static inline AnalogDemand analog_demand(AnalogTracker *t,const LineCalibration 
         d.target[0]=d.target[1]=35;
         if(now-t->both_since>=120000) d.stop=true;
     } else {
-        t->both=false;d.target[0]=(int16_t)(65+differential);d.target[1]=(int16_t)(65-differential);
+        t->both=false;
+        d.target[0]=(int16_t)(LINE_BASE_MM_S+differential);
+        d.target[1]=(int16_t)(LINE_BASE_MM_S-differential);
     }
     bool white=d.level[0]<150 && d.level[1]<150;
     if(white) {

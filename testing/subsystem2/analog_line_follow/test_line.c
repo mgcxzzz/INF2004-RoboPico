@@ -142,10 +142,10 @@ int main(void) {
     bad=c;bad.black[1]=4096;assert(!calibration_valid(&bad));
     AnalogTracker t={0};
     AnalogDemand d=analog_demand(&t,&bad,241,132,0,0);assert(d.stop);
-    d=analog_demand(&t,&c,241,132,0,0);assert(!d.stop && d.target[0]==65 && d.target[1]==65);
+    d=analog_demand(&t,&c,241,132,0,0);assert(!d.stop && d.target[0]==45 && d.target[1]==45);
     d=analog_demand(&t,&c,300,132,10000,1);assert(!d.stop && d.target[0]>d.target[1]);
     d=analog_demand(&t,&c,190,132,20000,2);assert(!d.stop && d.target[0]<d.target[1]);
-    d=analog_demand(&t,&c,190,450,30000,3);assert(d.decision==AL_RIGHT_GUARD && d.target[0]==95 && d.target[1]==35);
+    d=analog_demand(&t,&c,190,450,30000,3);assert(d.decision==AL_RIGHT_GUARD && d.target[0]==60 && d.target[1]==30);
     t=(AnalogTracker){0};
     d=analog_demand(&t,&c,132,132,10000,0);assert(!d.stop && d.decision==AL_SEEK_LEFT);
     d=analog_demand(&t,&c,132,132,659999,39);assert(!d.stop);
@@ -160,13 +160,27 @@ int main(void) {
     d=analog_demand(&t,&c,350,450,120499,7);assert(!d.stop);
     d=analog_demand(&t,&c,350,450,120500,8);assert(d.stop && d.decision==AL_BOTH_BLACK);
     d=analog_demand(&t,&c,241,132,120501,9);assert(!d.stop && !t.both);
+    /* V6 extremes retain steering direction while halving the V5 differential.
+       Crossing the whole optical range changes either request by at most30mm/s. */
+    t=(AnalogTracker){0};
+    AnalogDemand full_black=analog_demand(&t,&c,350,132,0,0);
+    AnalogDemand full_white=analog_demand(&t,&c,132,132,1,0);
+    assert(full_black.target[0]==60 && full_black.target[1]==30);
+    assert(full_white.target[0]==30 && full_white.target[1]==60);
+    assert(full_black.target[0]-full_white.target[0]==30);
+    d=analog_demand(&t,&c,241,132,2,0);assert(d.target[0]==45 && d.target[1]==45);
+    LineCalibration contact={{177,183},{3639,3629},7};
+    assert(calibration_valid(&contact));
+    assert(line_level(1908,177,3639)==500);
+    t=(AnalogTracker){0};
+    d=analog_demand(&t,&contact,1908,183,0,0);assert(d.target[0]==45 && d.target[1]==45);
     /* Every valid input yields forward-only bounded wheel targets; no hidden
        spin/reverse command, including saturated and out-of-calibration ADC. */
     for(unsigned l=0;l<=4095;l+=17) for(unsigned r=0;r<=4095;r+=19) {
         t=(AnalogTracker){0};d=analog_demand(&t,&c,(uint16_t)l,(uint16_t)r,0,0);
         assert(d.level[0]<=1000 && d.level[1]<=1000);
-        assert(d.target[0]>=0 && d.target[0]<=95 && d.target[1]>=0 && d.target[1]<=95);
-        if(!d.stop) assert(d.target[0]>=35 && d.target[1]>=35);
+        assert(d.target[0]>=0 && d.target[0]<=60 && d.target[1]>=0 && d.target[1]<=60);
+        if(!d.stop) assert(d.target[0]>=30 && d.target[1]>=30);
     }
     DualGuard g={0};assert(guard_start(&g,1000,true,false));
     guard_tick(&g,1100,false,false);assert(!g.active && g.reason==WHY_RELEASE);
@@ -181,5 +195,5 @@ int main(void) {
     assert(!bench_arm_step(&arm,3500000,0,0,1,0));
     assert(!bench_arm_step(&arm,4000000,0,0,0,0));
     assert(bench_arm_step(&arm,6000000,0,0,0,0));
-    puts("PASS: loose start/full-black/both-dark refusal; repeat rearm/guard cycles; hands-free countdown cancellation; 25% pulse/cooldown; calibration/steering/loss/stop bounds; offline sequence");
+    puts("PASS: V6 45mm/s cruise, 30..60 targets, reduced steering reversal, close-height calibration; loose start/full-black/both-dark refusal; repeat rearm/guard cycles; hands-free countdown cancellation; 25% pulse/cooldown; calibration/steering/loss/stop bounds; offline sequence");
 }

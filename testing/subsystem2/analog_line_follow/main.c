@@ -173,7 +173,7 @@ static const char *reason_name(uint8_t r) {
     return r<sizeof(names)/sizeof(names[0]) ? names[r] : "unknown";
 }
 static void help(void) {
-    puts("\nBUDDY23 ANALOG LINE FOLLOW v5 | SDK bench, NOT RTOS NAV | DRIVE OFF on boot");
+    puts("\nBUDDY23 ANALOG LINE FOLLOW v6 | SDK bench, NOT RTOS NAV | DRIVE OFF on boot");
     puts("GP26/ADC0 LEFT A0; GP28/ADC2 RIGHT A0; sensor supply3.3V; UART OFF.");
     puts("Calibrate, stopped and GP21 released: w=BOTH WHITE; l=LEFT BLACK; r=RIGHT BLACK.");
     puts("Wait1s on each surface before key. w clears old black calibration; k=saves calibration/profile.");
@@ -186,8 +186,8 @@ static void help(void) {
     puts("BANK ONLY: hold BOTH3s; release BOTH; wait1s; GP21 tap/release;2s countdown.");
     puts("Repeat runs: release BOTH, wait for settling/save then1s estimated standstill; ready=1.");
     puts("Then request f/g again or repeat bank button sequence. No automatic restart.");
-    puts("Speeds35..95mm/s, PWM cap25%; PI and breakaway assistance are provisional.");
-    puts("V5 wheel PI: Kp1.0 Ki3.0 I-limit140permille; ramp100mm/s^2; no steering D.");
+    puts("V6 line cruise45mm/s, wheel targets30..60mm/s; PWM cap25%; PI/breakaway provisional.");
+    puts("Retained V5 wheel PI: Kp1.0 Ki3.0 I-limit140permille; ramp100mm/s^2; no steering D.");
     puts("Breakaway:25% for up to120ms/control tick; ends at20mm/s,100ms cooldown.");
     puts("Both-white recovery bounded650ms/40mm; both-dark120ms stops. No branch turns or barcode.");
     puts("Profile3 ignores line steering/loss:65/65 for2s,35/95 for2s,95/35 for2s. Clear floor needed.");
