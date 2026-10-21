@@ -4,6 +4,37 @@
 #include "../dual_wheel_bench/dual_logic.h"
 #include "../line_motion_integration/logic.h"
 int main(void) {
+    /* Response profile must ignore optics but NEVER bypass stop/rearm gates. */
+    assert(run_start_block(true,false,false,true,false,true,0,0,false,LINE_USB_FREE)==START_OK);
+    assert(run_start_block(true,false,false,true,false,true,1000,1000,false,LINE_BANK)==START_OK);
+    assert(run_start_block(false,false,false,true,false,true,0,0,false,LINE_USB_FREE)==START_LEFT_WHITE);
+    assert(run_start_block(true,false,false,true,true,true,0,0,false,LINE_USB_FREE)==START_GP20);
+    assert(run_start_block(true,false,false,true,false,false,0,0,false,LINE_USB_FREE)==START_REARM);
+    assert(run_start_block(true,false,true,true,false,true,0,0,false,LINE_USB_FREE)==START_SETTLING);
+    assert(run_start_block(true,false,false,false,false,true,0,0,false,LINE_USB_FREE)==START_CAL);
+    assert(run_start_block(true,false,false,true,false,true,0,0,true,LINE_USB_FREE)==START_RELEASE_GP21);
+    assert(run_start_block(true,true,false,true,false,true,0,0,false,LINE_USB_FREE)==START_ACTIVE);
+    AnalogDemand response=response_demand(0);
+    assert(!response.stop && response.decision==5 && response.target[0]==65 && response.target[1]==65);
+    response=response_demand(1999999);assert(response.target[0]==65 && response.target[1]==65);
+    response=response_demand(2000000);
+    assert(!response.stop && response.decision==6 && response.target[0]==35 && response.target[1]==95);
+    response=response_demand(3999999);assert(response.target[0]==35 && response.target[1]==95);
+    response=response_demand(4000000);
+    assert(!response.stop && response.decision==7 && response.target[0]==95 && response.target[1]==35);
+    response=response_demand(5999999);assert(!response.stop);
+    response=response_demand(6000000);assert(response.stop && !response.target[0] && !response.target[1]);
+    /* Through all three stages the unchanged PI/ramp/kick remains bounded. */
+    WheelPI response_pi[2]={{0}};LineBreakaway response_kick[2]={{0}};
+    for(uint64_t us=0;us<RESPONSE_US;us+=10000) {
+        response=response_demand(us);
+        for(unsigned w=0;w<2;++w) {
+            float feedback=w==0?47.0f:36.0f;
+            int32_t pwm=pi_step(&response_pi[w],w,1,response.target[w],feedback,0.01f);
+            pwm=line_breakaway(&response_kick[w],us,response.target[w],response_pi[w].ramp,feedback,pwm);
+            assert(pwm>=0 && pwm<=PWM_LIMIT);
+        }
+    }
     LineRearm ready={0};
     line_rearm_step(&ready,0,true,true,false);assert(!ready.ready);
     line_rearm_step(&ready,999999,true,true,false);assert(!ready.ready);

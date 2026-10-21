@@ -37,6 +37,26 @@ static inline unsigned line_start_block(bool active,bool settling,bool valid,boo
 static inline bool line_countdown_cancel(bool connected,bool held,bool stop) {
     return !connected || held || stop;
 }
+
+/* Profile3 isolates the existing wheel controllers from optical steering.
+ * Deliberately forward-only; two-second stages include the normal speed ramp.
+ * Caller retains button, feedback, direction, distance and deadline guards. */
+enum { RESPONSE_US=6000000, RESPONSE_MM=450 };
+static inline AnalogDemand response_demand(uint64_t elapsed) {
+    AnalogDemand d={0};
+    unsigned phase=(unsigned)(elapsed/2000000u);
+    d.decision=(uint8_t)(5+(phase>2?2:phase));
+    if(elapsed>=RESPONSE_US) { d.stop=true;return d; }
+    d.target[0]=phase==1?35:phase==2?95:65;
+    d.target[1]=phase==1?95:phase==2?35:65;
+    return d;
+}
+static inline unsigned run_start_block(bool response,bool active,bool settling,bool valid,bool stop,
+                                       bool ready,uint16_t left,uint16_t right,bool hold,unsigned mode) {
+    /* Only optical alignment is bypassed. Calibration and deliberate rearm
+       remain required, including for a diagnostic on a plain white surface. */
+    return line_start_block(active,settling,valid,stop,ready,response?500:left,response?0:right,hold,mode);
+}
 enum { AL_KICK_PWM=250, AL_KICK_US=120000, AL_KICK_COOLDOWN_US=100000 };
 typedef struct { uint64_t end_us,cooldown_until; bool active; } LineBreakaway;
 /* Forward-only floor breakaway. Independent drive-off guards still own the

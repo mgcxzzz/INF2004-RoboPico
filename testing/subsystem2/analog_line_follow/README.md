@@ -1,10 +1,58 @@
-# Analog left-edge line following bench v3
+# Analog left-edge line following bench v4
 
 Standalone hardware test: GP26/GP28 analog sensors -> line error -> Buddy2
 encoder PI speed control -> both motors. It is NOT the real RTOS Navigation
 Coordinator/S3 task integration. That build's bank-only startup remains unresolved.
 No barcode, GP19 use, junction branch turn, obstacle module, radio or IMU.
 Boots DRIVE OFF; calibrating, printing, saving and switching power never start it.
+
+## V4: isolate wheel-speed response before adding steering PID
+
+The latest V3 floor run recovered optical contact several times but ended in
+line loss. Near its end, targets were35/95mm/s while measured speeds were about
+47/36mm/s and right PWM reached250permille. This does not identify the cause.
+V4 keeps the V3 steering, wheel PI gains, feedforward, calibration, ramp and25%
+PWM cap unchanged. It adds diagnostic profile3 to measure the existing response.
+No derivative term or automatic tuning has been added.
+
+### Next physical test: profile3 on the mat, normal driving load
+
+1. Flash `firmware/buddy23_analog_line_follow_v4.uf2`; open PuTTY115200,8N1,
+   flow None. Press h and verify V4 and valid calibration (mask7/valid1).
+   Existing analog calibration should restore; keep sensor height unchanged.
+2. Select3 then k. Profile3 is a WHEEL RESPONSE test, not a line follower.
+   The sensing points can be anywhere; line loss/both-dark stops are disabled
+   only in this profile. Calibration is still required. Provide roughly a
+   1m square of clear floor: it will go forward, arc left, then arc right.
+3. Computer USB only: release both, wait ready=1, send g; it starts after2s.
+   Give the cable slack. Either button, s, or USB/DTR disconnect stops it.
+   Alternatively, bank only: remove computer USB before applying bank power,
+   wait5s, hold BOTH3s, release BOTH, wait1s, tap/release GP21, then2s countdown.
+   Do not use both power sources together. Either button stops the offline run.
+4. Stages from drive start:0..2s targets65/65;2..4s targets35/95;
+   4..6s targets95/35mm/s. Existing100mm/s^2 ramp and PI continue across stages.
+   The first stage includes startup, so compare later samples in each stage.
+   Stop at6s OR450mm average absolute encoder path, or any motor safety guard.
+5. Wait3s after it stops. USB: press p. Bank: disconnect bank, connect computer,
+   open PuTTY, press p. Send the WHOLE run plus whether it moved continuously,
+   whether the left/right arcs were visible, and any cable tug/changed load.
+   Video is optional; keep the whole robot visible if recording.
+6. To repeat, release both and wait ready=1, then request a new run. Save p first:
+   the next accepted run replaces the buffered/persistent run.
+
+Profile3 decision5=equal speed,6=right faster/left arc,7=left faster/right arc.
+CSV targets are final requests (the internal ramp is not shown); PWM remains
+permille,250=25%. Sensor columns are recorded for context but never steer this
+profile. Log header TEST explicitly identifies wheel response. No movement or
+arc is a hardware result, not a reason to defeat the guards or raise the cap.
+Use1 or2, then k, to return to line following. Profile3 persists across reboot;
+verify the selected profile before every offline button sequence.
+
+Flash structure/version is unchanged. V4 uses the former reserved byte to keep
+the recorded profile distinct from a newly selected profile; old zero values
+fall back to the old selected-profile field. V4 accepts profile3 records; older firmware
+rejects a V4 record with profile3, including its calibration. If downgrading,
+select1 then k in V4 first. V4 does not otherwise require recalibration.
 
 ## V3: repeat runs, looser start and optional USB hands-free mode
 
@@ -61,7 +109,7 @@ Use only one power source, bank OR computer USB. Never overlap them.
 
 ## First stage: CALIBRATE ONLY, no f/buttons yet
 
-Computer USB only, flash firmware/buddy23_analog_line_follow_v3.uf2 with BOOTSEL.
+Computer USB only, flash firmware/buddy23_analog_line_follow_v4.uf2 with BOOTSEL.
 PuTTY Serial115200,8N1,flow None. All keys are lowercase, no Enter needed.
 Keep the sensors at final mat height, fixed spacing/lighting, no pot adjustment.
 
