@@ -1,4 +1,4 @@
-# Junction detection, centring and left turn - V7
+# Junction detection, centring and left turn - V8
 
 Separate SDK test on the Buddy2 branch. Uses the successful V11 symmetric
 front controller and an existing offset digital sensor. No new sensor, barcode
@@ -11,9 +11,44 @@ See MEASUREMENTS.md. User then explicitly requested a stronger drive test before
 mounting changes. V4 also stalled after14.10degrees. The user accepted a rolling
 turn as an alternative; V5 implements it as MODE3. V5 rolling motion passed
 visually, but outgoing-line handover failed. V6 changes that handover;
-user now reports successful V6 handover. V7 extends the outgoing follow.
+user reported successful V6 handover. V7 extended the outgoing follow; its new log exposed a controller transition problem addressed by V8.
 
-## V7 quick start: five seconds of following after the turn
+## V8 quick start: correct the pivot-to-forward PI handover
+
+The V7 log reached phase9 at7145ms but never phase6. Left stayed near1000,
+right near0, and alignment timed out3002ms later. Right PWM dropped from228
+in the pivot to0 at handover, then56. A negative integral accumulated under
+turn feedforward can cancel the lower ordinary-forward feedforward. The old
+adapter cleared integral when ENTERING a pivot, but retained it when LEAVING.
+
+V8 clears integral at both turn/forward boundaries, once per transition, while
+preserving the speed ramp. It then allows the normal forward integral to build.
+The V11 forward controller, alignment20..35mm/s targets,3s/60mm bounds, optical
+thresholds, pivot geometry and PWM limits remain unchanged. New phase9 timeouts
+say **outgoing-line alignment timeout**; old V7 logs retain their saved reason.
+The five-second phase6 timer starts after stable alignment, as in V7.
+
+1. Flash **firmware/buddy23_junction_left_v8.uf2**; press **h** and verify V8,
+   front valid1 and side_valid1. Same mounting/height retains saved endpoints.
+2. Press **3**, **k**, **h** and confirm mode3.
+3. Repeat the same incoming placement and bank sequence: wait5s after boot,
+   both buttons3s, release both, wait1s, tap/release GP21,2s countdown.
+   USB alternative: release buttons, ready1, then **g**.
+4. Expected **1 -> 2 -> 4 -> 9 -> 6 -> 7**, then **test complete** after5s
+   in phase6. Leave enough outgoing flat track (about250mm after reacquisition,
+   roughly500mm of branch from the crossing centre allows alignment room).
+5. Wait3s after stop/save, switch power sources separately and press **p**.
+   Send the fresh V8 log and video. It may still stop early on a guard condition.
+
+Host regression fixture: right ramp30, prior I=-82, speed31.8, next target33.
+This representative state produced0 PWM in the V7 calculation; V8 gives75
+permille on the first tick, retaining ramp31 and resetting I to near0. The
+integral value is inferred/modelled, not a logged measurement. Further tests
+check one-time reset, either sign of inherited I, no40% peak leakage, exact
+forward-controller equivalence, full acquisition and five-second boundaries.
+Arm/UF2 checks pass; physical V8 result pending. See firmware/BUILD_V8.md.
+
+## Historical V7 quick start: five seconds of following after the turn
 
 User reports the V6 gradual handover worked. A fresh V6 log has not yet been
 supplied, so this is user-observed success, not a measured timing/angle claim.
@@ -229,12 +264,12 @@ firmware/BUILD_V2.md; user-reported evidence is in MEASUREMENTS.md.
 
 ## 1. Flash and check sensors while stopped
 
-Download firmware/buddy23_junction_left_v7.uf2 using GitHub's **Download raw file**,
+Download firmware/buddy23_junction_left_v8.uf2 using GitHub's **Download raw file**,
 then copy to RPI-RP2 in BOOTSEL mode. Open PuTTY at 115200, 8N1, flow control None.
 Use only one power source at a time. Keep the robot on the mat at its final height.
 Do not request a movement during this check.
 
-1. Press `h`. Confirm `BUDDY23 JUNCTION LEFT v7`.
+1. Press `h`. Confirm `BUDDY23 JUNCTION LEFT v8`.
 2. Front calibration is imported from a CRC-valid V11 record if present. `valid=1`
    means front endpoints are valid; `imported_v11=1` identifies the initial import.
    No V11 movement trace is imported. If invalid, capture BOTH front spots over
@@ -354,7 +389,7 @@ The final turn summary gives positive left rotation relative to turn start.
 
 CRC-verified last4 KiB flash record, written only with drive off on one core.
 The revision byte uses V1 zero-filled padding, keeping record size/row offsets
-and CRC range unchanged. V1's zero revision is interpreted as V1; revisions2..7
+and CRC range unchanged. V1's zero revision is interpreted as V1; revisions2..8
 identify later runs. The V5 rolling flag fits former Junction padding, with
 old versions normalized to false. Fresh runs use the running firmware's version.
 New record magic is separate from V11. First `k` or completed run replaces the
@@ -370,5 +405,5 @@ white gap. It intentionally contains no barcode. Success establishes junction
 centering/left turn with the existing sensor placement, not the final combined
 barcode navigation or endless-course system. Keep V11 as the line-follow baseline.
 
-See firmware/BUILD_V7.md for the current verified binary and software checks;
-earlier BUILD_V1..V6 records and UF2s remain available.
+See firmware/BUILD_V8.md for the current verified binary and software checks;
+earlier BUILD_V1..V7 records and UF2s remain available.

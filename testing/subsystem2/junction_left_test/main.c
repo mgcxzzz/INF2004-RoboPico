@@ -34,7 +34,7 @@ static LineCalibration calibration;
 static Junction junction;
 static SideCalibration side_cal;
 static uint8_t test_mode=1,recorded_mode=1;
-static uint8_t recorded_version=7;
+static uint8_t recorded_version=8;
 static bool imported_front;
 static AnalogDemand demand;
 static uint16_t analog_raw[2];
@@ -101,14 +101,14 @@ _Static_assert(sizeof(SavedLog)<=FLASH_SECTOR_SIZE,"Junction log exceeds sector"
 _Static_assert(sizeof(Trace)==36,"Unexpected trace ABI");
 _Static_assert(offsetof(SavedLog,firmware)==66 && offsetof(SavedLog,junction)==72,
                "V2 revision byte must fit V1 padding without moving records");
-_Static_assert(offsetof(SavedLog,rows)==192 && sizeof(SavedLog)==3792,"Keep V1..V7 record ABI");
+_Static_assert(offsetof(SavedLog,rows)==192 && sizeof(SavedLog)==3792,"Keep V1..V8 record ABI");
 static union { SavedLog data;uint8_t sector[FLASH_SECTOR_SIZE]; } saved;
 static bool flash_loaded,save_failed;
 static void outputs_off(void);
 static bool storage_fits(void) { return (uintptr_t)&__flash_binary_end<=XIP_BASE+LOG_OFFSET; }
 static bool stored_valid(const SavedLog *v) {
     return v->magic==LOG_MAGIC && v->version==1 && v->count<=TRACE_ROWS &&
-        v->selected_mode>=1 && v->selected_mode<=3 && v->mode>=1 && v->mode<=3 && v->firmware<=7 &&
+        v->selected_mode>=1 && v->selected_mode<=3 && v->mode>=1 && v->mode<=3 && v->firmware<=8 &&
         calibration_valid(&v->calibration) && side_valid(&v->side) &&
         v->crc==log_crc((const uint8_t *)v+offsetof(SavedLog,count),sizeof(*v)-offsetof(SavedLog,count));
 }
@@ -143,7 +143,7 @@ static void save_log(void) {
     v->magic=LOG_MAGIC;v->version=1;v->count=trace_count;v->dropped=trace_dropped;
     v->duration=guard.duration_us;v->reason=guard.reason;v->key=recorded_key;
     v->offline=recorded_offline;v->mode=recorded_mode;v->selected_mode=test_mode;
-    v->firmware=trace_count?recorded_version:7;
+    v->firmware=trace_count?recorded_version:8;
     v->calibration=calibration;v->side=side_cal;v->junction=junction;
     for(unsigned w=0;w<2;++w) { v->cutoff[w]=cut_ticks[w]-origin[w];v->invalid[w]=cut_invalid[w]; }
     memcpy(v->rows,trace,sizeof(trace));
@@ -213,6 +213,7 @@ static const char *reason_name(uint8_t r) {
     case J_BAD_STRIPE:return "cross-arm width or centring timeout";case J_CENTRE_DRIFT:return "centring drift / turn arcs unequal";
     case J_SETTLE_TIMEOUT:return "wheels did not settle";case J_TURN_TIMEOUT:return "turn timeout";
     case J_BRANCH_MISSING:return "left branch not confirmed";case J_PATH_LIMIT:return "900mm path limit";
+    case J_ALIGN_TIMEOUT:return "outgoing-line alignment timeout";
     case J_LINE_LOST:return "line not recovered";default:return "unknown";
     }
 }
@@ -221,7 +222,7 @@ static const char *phase_name(unsigned phase) {
     return phase<sizeof(names)/sizeof(names[0])?names[phase]:"unknown";
 }
 static void help(void) {
-    puts("\nBUDDY23 JUNCTION LEFT v7 | isolated SDK test, NO BARCODE | DRIVE OFF on boot");
+    puts("\nBUDDY23 JUNCTION LEFT v8 | isolated SDK test, NO BARCODE | DRIVE OFF on boot");
     puts("Front analog: GP26 LEFT A0 / GP28 RIGHT A0; offset D0 GP19; 3.3V/common GND.");
     puts("Front calibration: w=BOTH WHITE, l=LEFT BLACK, r=RIGHT BLACK; wait1s before capture.");
     puts("Offset polarity: o=capture GP19 over WHITE, b=capture GP19 over BLACK. Motors remain OFF.");
@@ -236,7 +237,8 @@ static void help(void) {
     puts("Mode2 reverses LEFT wheel, RIGHT forward. Mode3 leaves LEFT unpowered and needs longer outgoing line.");
     puts("Mode3: leave old line; either>=400 for30ms at75..110deg starts phase9 slow alignment.");
     puts("Forward PWM cap25%, turn sustained35%, one start pulse40% up to150ms (1ms timer clamp).");
-    puts("V7: phase9 forward20..35mm/s,25% cap; both>=400/difference<=350 for80ms starts follow5s.");
+    puts("V8 clears PI integral entering/leaving pivot; preserves speed ramp, targets and PWM limits.");
+    puts("V8: phase9 forward20..35mm/s,25% cap; both>=400/difference<=350 for80ms starts follow5s.");
     puts("Approach<=450mm/12s; whole run<=30s/900mm. No voltage or motor speed target increase.");
     puts("Allow about225mm additional line after alignment for the5s follow. No barcode/other offset marks.");
     puts("p=dump saved log, h=help. Wait3s after stop before switching power; never use two sources together.");
@@ -322,7 +324,7 @@ static bool start_run(unsigned mode) {
     uint64_t now=time_us_64();uint32_t irq=save_and_disable_interrupts();
     bool ok=guard_start(&guard,now,mode!=LINE_USB_HOLD || !gpio_get(HOLD),!gpio_get(STOP));
     if(ok) {
-        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=7;
+        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=8;
         guard.deadline_us=now+J_RUN_US;trace_interval_us=J_TRACE_US;
         for(unsigned w=0;w<2;++w) {
             origin[w]=previous[w]=enc[w].position;initial_invalid[w]=enc[w].invalid;

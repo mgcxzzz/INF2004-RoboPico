@@ -297,7 +297,7 @@ static void test_gradual_handover(void) {
     d=junction_step(&j,&cal,&i);assert(!d.stop && j.phase==J_ACQUIRE);
     i.path=j.exit_origin+60;d=junction_step(&j,&cal,&i);assert(d.stop && j.reason==J_BRANCH_MISSING);
     j=acquire_fixture(721,3);i=turn_sample(j.phase_us+3000000,93,721,3);
-    d=junction_step(&j,&cal,&i);assert(d.stop && j.reason==J_TURN_TIMEOUT);
+    d=junction_step(&j,&cal,&i);assert(d.stop && j.reason==J_ALIGN_TIMEOUT);
     j=acquire_fixture(721,3);i=turn_sample(j.phase_us+100000,116,721,3);
     d=junction_step(&j,&cal,&i);assert(d.stop && j.reason==J_BRANCH_MISSING);
     j=acquire_fixture(721,3);i=turn_sample(j.phase_us+10000,93,0,0);
@@ -329,6 +329,39 @@ static void test_five_second_exit(void) {
     j=(Junction){.phase=J_EXIT,.phase_us=1000000};i=sample(1000001,100,false);i.path=900;
     d=junction_step(&j,&cal,&i);assert(d.stop && j.reason==J_PATH_LIMIT);
 }
+static void test_pivot_to_forward_integral_reset(void) {
+    /* V7 log at phase9 entry: right target33, speed31.8, prior turn PWM~228.
+       Integral~-82 with turn FF310 reproduces the inherited negative offset.
+       Integral itself was not logged; this is a controller regression fixture. */
+    SignedWheel right={.pi={.integral=-82,.ramp=30},.sign=1,
+                       .was_turning=true,.peak_used=true,.peak_end_us=7000000};
+    int32_t pwm=junction_wheel_step(&right,1,33,31.8f,0.01f,7145000,false);
+    assert(pwm>=70 && pwm<=90); /* V7 returned0 for this state. */
+    assert(right.pi.ramp==31 && fabsf(right.pi.integral)<0.1f);
+    assert(!right.was_turning && !right.peak_used && !right.peak_active && !right.peak_end_us);
+    DualLevels bridge=junction_levels(1,pwm,false);
+    assert(bridge.a+bridge.b==(unsigned)pwm && bridge.a<=250 && bridge.b<=250);
+    /* Reset occurs once, not every alignment tick: forward I can then build. */
+    (void)junction_wheel_step(&right,1,33,20,0.01f,7155000,false);
+    float first=right.pi.integral;assert(first>0);
+    (void)junction_wheel_step(&right,1,33,20,0.01f,7165000,false);
+    assert(right.pi.integral>first && right.pi.ramp==33);
+    /* Either sign of old compensation is cleared on leaving a pivot.
+       Forward-only runs remain exactly equal to V11 in the existing suite. */
+    for(unsigned w=0;w<2;++w) for(int integral=-140;integral<=140;integral+=280) {
+        SignedWheel p={.pi={.integral=(float)integral,.ramp=30},.sign=1,.was_turning=true};
+        WheelPI ref={.ramp=30};LineBreakaway kick={0};
+        int32_t expected=line_speed_step(&ref,w,33,31.8f,0.01f);
+        expected=line_breakaway(&kick,7145000,33,ref.ramp,31.8f,expected);
+        int32_t actual=junction_wheel_step(&p,w,33,31.8f,0.01f,7145000,false);
+        assert(actual==expected && fabsf(p.pi.integral-ref.integral)<0.001f && p.pi.ramp==31);
+    }
+    /* An unused start peak cannot leak from turn mode into ordinary forward. */
+    right=(SignedWheel){.pi={.integral=-82,.ramp=30},.sign=1,.was_turning=true,
+        .peak_used=true,.peak_active=true,.peak_end_us=8000000};
+    pwm=junction_wheel_step(&right,1,33,31.8f,0.01f,7145000,false);
+    assert(pwm<=250 && !right.peak_active && right.peak_end_us==0);
+}
 int main(void) {
     test_geometry_and_qualification();simulate(false,true);simulate(true,true);simulate(true,false);
     test_turn_rejects_false_branch();test_signed_controller_and_stops();
@@ -338,6 +371,7 @@ int main(void) {
     test_rolling_drift_and_kinematics();
     test_gradual_handover();
     test_five_second_exit();
-    puts("PASS: V7 five-second exit/timer boundary/distance independence/loss-path cutoff; V6 acquisition and PWM guards");
+    test_pivot_to_forward_integral_reset();
+    puts("PASS: V8 pivot-to-forward integral reset/ramp retained/one-time reset/no peak leak; five-second exit and acquisition guards");
     return 0;
 }

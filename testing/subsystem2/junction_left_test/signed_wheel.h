@@ -21,9 +21,11 @@ static inline int32_t junction_wheel_step(SignedWheel *p,unsigned w,int16_t want
     if(sign!=p->sign) { *p=(SignedWheel){.sign=(int8_t)sign}; }
     if(!sign) { *p=(SignedWheel){0};return 0; }
     float magnitude=(float)(wanted*sign),along=speed*sign;
-    /* Rolling mode keeps the forward right-wheel ramp, but its old loaded
-       straight integral must not be added again to the higher turn feedforward. */
-    if(turning && !p->was_turning) p->pi.integral=0;
+    /* The loaded pivot and ordinary forward motion use different feedforward.
+       Clear accumulated compensation in BOTH directions of that transition:
+       a negative turn integral can otherwise cancel the lower forward output.
+       Preserve the speed ramp, so handover does not restart acceleration. */
+    if(turning!=p->was_turning) p->pi.integral=0;
     p->was_turning=turning;
     if(!turning) { p->peak_used=false;p->peak_active=false;p->peak_end_us=0; }
     else {

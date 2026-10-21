@@ -5,7 +5,7 @@
 
 enum { J_APPROACH=1,J_CENTRE,J_SETTLE,J_TURN,J_TURN_SETTLE,J_EXIT,J_DONE,J_FAULT,J_ACQUIRE };
 enum { J_OK=0,J_COMPLETE=20,J_NO_CROSS,J_BAD_STRIPE,J_CENTRE_DRIFT,J_SETTLE_TIMEOUT,
-       J_TURN_TIMEOUT,J_BRANCH_MISSING,J_PATH_LIMIT,J_LINE_LOST };
+       J_TURN_TIMEOUT,J_BRANCH_MISSING,J_PATH_LIMIT,J_LINE_LOST,J_ALIGN_TIMEOUT };
 enum { J_RUN_US=30000000,J_EXIT_US=5000000,J_TRACE_US=400000,J_MAX_PATH_MM=900 };
 typedef struct { uint8_t white,black,mask; } SideCalibration;
 static inline bool side_valid(const SideCalibration *s) {
@@ -62,7 +62,7 @@ static inline AnalogDemand j_acquire(Junction *j,const LineCalibration *c,const 
     AnalogDemand d=symmetric_demand(&j->follower,c,i->adc[0],i->adc[1],i->now,(uint32_t)i->path);
     j->turn_degrees=j_rotation(j,i);
     if(j->turn_degrees<60 || j->turn_degrees>115 || i->path-j->exit_origin>=60) j_fail(j,J_BRANCH_MISSING);
-    else if(i->now-j->phase_us>=3000000) j_fail(j,J_TURN_TIMEOUT);
+    else if(i->now-j->phase_us>=3000000) j_fail(j,J_ALIGN_TIMEOUT);
     else if(d.stop) j_fail(j,J_LINE_LOST);
     bool white=d.level[0]<150 && d.level[1]<150;
     if(white) {

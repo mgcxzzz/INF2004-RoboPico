@@ -192,3 +192,31 @@ adds225mm after reacquisition, so plan sufficient flat outgoing track.
 Tests cover exact timer boundary, distance-independent completion, early line
 loss and path abort; V6 full sequences and PWM suite pass. Physical V7 result
 pending. Existing flash layout/front+side endpoints unchanged.
+
+
+## V7 mode3 - three-second acquisition timeout before timed following
+
+Fresh offline V7 test3,31rows/dropped0, invalid0/0. Leading47.19/trailing59.62mm,
+stripe12.43mm; turn-start goal90.40. Pivot starts3372ms L89.70/R89.39mm.
+
+- 7145ms enters phase9 at L90.01/R263.73, levels794/1, targets23/33,
+  right speed31.8 but PWM right0 (left32). Prior pivot rightPWM228 at7007ms.
+- 7547ms rightPWM56, speed2.4 despite target34. Both wheels then run slowly
+  with intermittent250-permille breakaway pulses. Left stays~1000/right~0.
+- 10147ms phase8 cutoff (guard duration10146ms), L138.19/R317.76mm,
+  heading-93.53; relative left93.69deg. STOP turn timeout is the phase9
+  acquisition3s deadline. It never entered phase6; five-second timer never began.
+- Phase9 travel48.18mm left/54.03mm right: differential5.85mm, only about3.05deg
+  further left rotation. Actual steering was weaker than target20/35 suggests.
+
+Source review: ordinary forward feedforward replaces the pivot FF310, but V7
+retained the pivot integral. A representative negative I=-82, ramp30 and measured
+speed31.8 reproduces zero output at target33; that state is inferred, not logged.
+V8 clears I when leaving pivot (entry reset already existed), keeps ramp, then
+allows forward I to rebuild. Regression fixture produces75permille rather than0.
+Do not claim this proves the sole physical cause or successful V8 capture.
+
+V8 keeps3s acquisition/60mm/angle/loss gates, speeds/PWM, and five-second phase6.
+Append a distinct alignment-timeout reason so new phase9 failures are explicit.
+Saved record offsets/calibration unchanged; V1..V7 records accepted. Physical
+V8 result pending; user will repeat the same test.
