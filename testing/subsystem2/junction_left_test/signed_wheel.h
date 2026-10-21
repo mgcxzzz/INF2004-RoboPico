@@ -4,7 +4,7 @@
 #include "../analog_line_follow/line_logic.h"
 typedef struct {
     WheelPI pi;LineBreakaway kick;int8_t sign;
-    uint64_t peak_end_us;bool peak_used,peak_active;
+    uint64_t peak_end_us;bool peak_used,peak_active,was_turning;
 } SignedWheel;
 enum { J_TURN_FEEDFORWARD=310,J_TURN_PWM_LIMIT=350,J_TURN_PEAK_PWM=400,J_TURN_PEAK_US=150000 };
 _Static_assert(J_TURN_FEEDFORWARD<=J_TURN_PWM_LIMIT && J_TURN_PWM_LIMIT<=J_TURN_PEAK_PWM && J_TURN_PEAK_PWM<=999,
@@ -21,6 +21,10 @@ static inline int32_t junction_wheel_step(SignedWheel *p,unsigned w,int16_t want
     if(sign!=p->sign) { *p=(SignedWheel){.sign=(int8_t)sign}; }
     if(!sign) { *p=(SignedWheel){0};return 0; }
     float magnitude=(float)(wanted*sign),along=speed*sign;
+    /* Rolling mode keeps the forward right-wheel ramp, but its old loaded
+       straight integral must not be added again to the higher turn feedforward. */
+    if(turning && !p->was_turning) p->pi.integral=0;
+    p->was_turning=turning;
     if(!turning) { p->peak_used=false;p->peak_active=false;p->peak_end_us=0; }
     else {
         if(!p->peak_used) {
@@ -52,8 +56,8 @@ static inline int32_t junction_peak_cap(int32_t pwm,uint64_t until,uint64_t now)
     if(pwm < -limit) return -limit;
     return pwm;
 }
-/* Shared dual_levels also clamps at25%. Only the explicitly gated opposite-
- * wheel turn may use the bounded40% peak; other phases keep the V11 mapping. */
+/* Shared dual_levels also clamps at25%. Only the explicitly gated phase4
+ * turn may use the bounded40% peak; other phases keep the V11 mapping. */
 static inline DualLevels junction_levels(unsigned w,int32_t pwm,bool turning) {
     if(!turning) return dual_levels(w,pwm);
     DualLevels v={0};if(w>1) return v;

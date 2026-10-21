@@ -34,7 +34,7 @@ static LineCalibration calibration;
 static Junction junction;
 static SideCalibration side_cal;
 static uint8_t test_mode=1,recorded_mode=1;
-static uint8_t recorded_version=4;
+static uint8_t recorded_version=5;
 static bool imported_front;
 static AnalogDemand demand;
 static uint16_t analog_raw[2];
@@ -101,13 +101,14 @@ _Static_assert(sizeof(SavedLog)<=FLASH_SECTOR_SIZE,"Junction log exceeds sector"
 _Static_assert(sizeof(Trace)==36,"Unexpected trace ABI");
 _Static_assert(offsetof(SavedLog,firmware)==66 && offsetof(SavedLog,junction)==72,
                "V2 revision byte must fit V1 padding without moving records");
+_Static_assert(offsetof(SavedLog,rows)==192 && sizeof(SavedLog)==3792,"Keep V1..V4 record ABI");
 static union { SavedLog data;uint8_t sector[FLASH_SECTOR_SIZE]; } saved;
 static bool flash_loaded,save_failed;
 static void outputs_off(void);
 static bool storage_fits(void) { return (uintptr_t)&__flash_binary_end<=XIP_BASE+LOG_OFFSET; }
 static bool stored_valid(const SavedLog *v) {
     return v->magic==LOG_MAGIC && v->version==1 && v->count<=TRACE_ROWS &&
-        v->selected_mode>=1 && v->selected_mode<=2 && v->mode>=1 && v->mode<=2 && v->firmware<=4 &&
+        v->selected_mode>=1 && v->selected_mode<=3 && v->mode>=1 && v->mode<=3 && v->firmware<=5 &&
         calibration_valid(&v->calibration) && side_valid(&v->side) &&
         v->crc==log_crc((const uint8_t *)v+offsetof(SavedLog,count),sizeof(*v)-offsetof(SavedLog,count));
 }
@@ -120,7 +121,9 @@ static void load_log(void) {
         recorded_version=v->firmware?v->firmware:1;
         guard.duration_us=v->duration;guard.reason=v->reason;
         for(unsigned w=0;w<2;++w) { origin[w]=0;cut_ticks[w]=v->cutoff[w];cut_invalid[w]=v->invalid[w]; }
-        calibration=v->calibration;side_cal=v->side;junction=v->junction;flash_loaded=true;
+        calibration=v->calibration;side_cal=v->side;memcpy(&junction,&v->junction,sizeof(junction));
+        if(recorded_version<5) junction.rolling=false; /* Old byte was padding. */
+        flash_loaded=true;
         return;
     }
     /* Read-only import of V11 front calibration, NOT its trace or run state.
@@ -140,7 +143,7 @@ static void save_log(void) {
     v->magic=LOG_MAGIC;v->version=1;v->count=trace_count;v->dropped=trace_dropped;
     v->duration=guard.duration_us;v->reason=guard.reason;v->key=recorded_key;
     v->offline=recorded_offline;v->mode=recorded_mode;v->selected_mode=test_mode;
-    v->firmware=trace_count?recorded_version:4;
+    v->firmware=trace_count?recorded_version:5;
     v->calibration=calibration;v->side=side_cal;v->junction=junction;
     for(unsigned w=0;w<2;++w) { v->cutoff[w]=cut_ticks[w]-origin[w];v->invalid[w]=cut_invalid[w]; }
     memcpy(v->rows,trace,sizeof(trace));
@@ -218,22 +221,24 @@ static const char *phase_name(unsigned phase) {
     return phase<sizeof(names)/sizeof(names[0])?names[phase]:"unknown";
 }
 static void help(void) {
-    puts("\nBUDDY23 JUNCTION LEFT v4 | isolated SDK test, NO BARCODE | DRIVE OFF on boot");
+    puts("\nBUDDY23 JUNCTION LEFT v5 | isolated SDK test, NO BARCODE | DRIVE OFF on boot");
     puts("Front analog: GP26 LEFT A0 / GP28 RIGHT A0; offset D0 GP19; 3.3V/common GND.");
     puts("Front calibration: w=BOTH WHITE, l=LEFT BLACK, r=RIGHT BLACK; wait1s before capture.");
     puts("Offset polarity: o=capture GP19 over WHITE, b=capture GP19 over BLACK. Motors remain OFF.");
     puts("Both captures must differ; k saves calibration/mode. First save replaces previous firmware log.");
-    puts("1=detect/centre/STOP; 2=detect/centre/LEFT/reacquire/follow20mm/STOP. Default1; k saves mode.");
+    puts("1=centre/STOP; 2=old in-place LEFT; 3=NEW rolling LEFT starting55mm before cross centre. k saves.");
+    puts("Mode3: LEFT motor OFF/coast, RIGHT forward; fresh line near90deg, follow20mm/STOP. Use3,k.");
     puts("Start front spots on black, offset on white, straight approach, NO BARCODE/other side marks.");
     puts("f=hold GP21 USB; g=hands-free USB2s countdown. s/either stop button; f also stops on GP21 release.");
     puts("BANK: hold BOTH3s, release BOTH, wait1s, tap/release GP21,2s countdown. Either button stops.");
     puts("Repeat after settling/save, both released and stationary1s. No automatic restart.");
     puts("Approx geometry: side92mm ahead of rear-wheel axle; measured stripe midpoint+92mm centres axle.");
-    puts("Mode2 reverses LEFT wheel, RIGHT forward. Leave old line then seek both>=650 near90deg (75..110).");
+    puts("Mode2 reverses LEFT wheel, RIGHT forward. Mode3 leaves LEFT unpowered and needs longer outgoing line.");
+    puts("Both leave old line then seek both>=650 near90deg (75..110); mode3 inner drift bound12mm.");
     puts("Forward PWM cap25%, turn sustained35%, one start pulse40% up to150ms (1ms timer clamp).");
-    puts("V4 turn feedforward31%; PI can reduce. Peak ends early at25mm/s. Same500ms stall guard.");
+    puts("V5 keeps V4 turn effort31% feedforward/35% cap/one40% peak; mode3 applies it only to RIGHT.");
     puts("Approach<=450mm/12s; whole run<=25s/900mm. No voltage or motor speed target increase.");
-    puts("Outgoing black line needs>=170mm from cross. No barcode/other offset marks in this test.");
+    puts("Mode3 outgoing black line needs>=220mm from cross (mode2>=170mm). No barcode/other offset marks.");
     puts("p=dump saved log, h=help. Wait3s after stop before switching power; never use two sources together.");
     printf("CAL white=%u,%u black=%u,%u valid=%u side_white=%u side_black=%u side_mask=%u side_valid=%u mode=%u restored=%u imported_v11=%u\n",
         calibration.white[0],calibration.white[1],calibration.black[0],calibration.black[1],calibration_valid(&calibration),
@@ -294,6 +299,8 @@ static void dump(void) {
     printf("JUNCTION: phase=%u(%s) leading_mm=%.2f trailing_mm=%.2f stripe_mm=%.2f axle_target_mm=%.2f left_rotation_deg=%.2f\n",
         junction.phase,phase_name(junction.phase),(double)junction.leading_mm,(double)junction.trailing_mm,
         (double)(junction.trailing_mm-junction.leading_mm),(double)junction.centre_mm,(double)junction.turn_degrees);
+    printf("TURN: style=%s start_before_cross_mm=%.1f (axle_target is stop/turn-start goal)\n",
+        junction.rolling?"rolling left":"centre/in-place",(double)j_turn_start_offset(&junction));
     float l=raw_to_mm(0,(int64_t)cut_ticks[0]-origin[0]),r=raw_to_mm(1,(int64_t)cut_ticks[1]-origin[1]);
     printf("STOP: %s | run_ms=%" PRIu64 " L_mm=%.2f R_mm=%.2f heading_deg=%.2f invalid_L=%lu invalid_R=%lu\n",
         reason_name(guard.reason),guard.duration_us/1000,(double)l,(double)r,(double)heading_deg(l,r),
@@ -315,7 +322,7 @@ static bool start_run(unsigned mode) {
     uint64_t now=time_us_64();uint32_t irq=save_and_disable_interrupts();
     bool ok=guard_start(&guard,now,mode!=LINE_USB_HOLD || !gpio_get(HOLD),!gpio_get(STOP));
     if(ok) {
-        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=4;
+        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=5;
         guard.deadline_us=now+J_RUN_US;trace_interval_us=J_TRACE_US;
         for(unsigned w=0;w<2;++w) {
             origin[w]=previous[w]=enc[w].position;initial_invalid[w]=enc[w].invalid;
@@ -324,7 +331,7 @@ static bool start_run(unsigned mode) {
         }
         path_mm=0;
         JunctionInput input={.now=now,.adc={analog_raw[0],analog_raw[1]},.side_black=gpio_get(19)==side_cal.black};
-        j_begin(&junction,test_mode==2,&input);demand=junction_step(&junction,&calibration,&input);
+        j_begin_mode(&junction,test_mode,&input);demand=junction_step(&junction,&calibration,&input);
         outputs_off();trace_count=trace_dropped=0;
         recorded_key=mode==LINE_USB_FREE?'g':'f';recorded_offline=mode==LINE_BANK;trace_settling=false;
         flash_loaded=false;save_failed=false;last_control=last_trace=now;
@@ -364,7 +371,8 @@ static void control_step(uint64_t now) {
     for(unsigned w=0;w<2;++w) input.wheel[w]=raw_to_mm(w,(int64_t)e[w].position-origin[w]);
     demand=junction_step(&junction,&calibration,&input);
     uint8_t failure=demand.stop?junction.reason:WHY_NONE;int32_t next[2];
-    bool turning=junction.phase==J_TURN && demand.target[0]<0 && demand.target[1]>0;
+    bool turning=junction.phase==J_TURN && demand.target[1]>0 &&
+                 (junction.rolling?demand.target[0]==0:demand.target[0]<0);
     for(unsigned w=0;w<2;++w) {
         int sign=demand.target[w]>0?1:demand.target[w]<0?-1:0;
         next[w]=junction_wheel_step(&controller[w],w,demand.target[w],velocity[w],dt,now,turning);
@@ -461,7 +469,7 @@ int main(void) {
                 else { side_cal.black=(uint8_t)gpio_get(19);side_cal.mask|=2; }
                 help();
             }
-        } else if(ch=='k' || ch=='1' || ch=='2') {
+        } else if(ch=='k' || ch=='1' || ch=='2' || ch=='3') {
             usb_pending=false;
             if(guard.active || trace_settling || hold || stop) puts("CONFIG rejected: stop/release both buttons.");
             else if(ch=='k') { save_log();puts(save_failed?"SAVE FAILED: need valid front + differing side captures":"CALIBRATION/MODE SAVED."); }

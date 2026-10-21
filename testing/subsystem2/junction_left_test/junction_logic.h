@@ -21,6 +21,7 @@ typedef struct {
     uint8_t phase,reason;
     bool turn_enabled,side_last,side_armed,striped,off_line;
     bool still_timing,off_timing,line_timing;
+    bool rolling; /* Fits former padding: persisted record offsets unchanged. */
     uint64_t phase_us,edge_us,still_us,off_us,line_us;
     float edge_mm,leading_mm,trailing_mm,centre_mm,approach_heading;
     float turn_origin[2],exit_origin,turn_degrees;
@@ -34,12 +35,21 @@ static inline void j_begin(Junction *j,bool turn,const JunctionInput *i) {
     *j=(Junction){.turn_enabled=turn,.edge_us=i->now,.edge_mm=j_mean(i)};
     j_enter(j,J_APPROACH,i->now);
 }
+static inline void j_begin_mode(Junction *j,unsigned mode,const JunctionInput *i) {
+    j_begin(j,mode!=1,i);j->rolling=mode==3;
+}
+static inline float j_turn_start_offset(const Junction *j) { return j->rolling?TRACK_MM*0.5f:0; }
 static inline void j_fail(Junction *j,unsigned why) { j->phase=J_FAULT;j->reason=(uint8_t)why; }
 static inline bool j_still(Junction *j,const JunctionInput *i) {
     bool still=fabsf(i->speed[0])<5 && fabsf(i->speed[1])<5;
     if(!still) { j->still_timing=false;return false; }
     if(!j->still_timing) { j->still_timing=true;j->still_us=i->now; }
     return i->now-j->phase_us>=300000 && i->now-j->still_us>=200000;
+}
+static inline void j_start_turn(Junction *j,const JunctionInput *i) {
+    for(unsigned w=0;w<2;++w) j->turn_origin[w]=i->wheel[w];
+    j->off_line=false;j->off_timing=j->line_timing=false;
+    j_enter(j,J_TURN,i->now);
 }
 /* Cross detection is ONLY valid on a straight, with NO barcode/other side marks.
  * The side sensing point is approximately 92mm ahead of the wheel axle.
@@ -61,7 +71,7 @@ static inline AnalogDemand junction_step(Junction *j,const LineCalibration *c,co
         if(!i->side_black && i->now-j->edge_us>=100000) j->side_armed=true;
         if(i->side_black && i->now-j->edge_us>=20000) {
             if(!j->side_armed) { j_fail(j,J_NO_CROSS);break; }
-            j->leading_mm=j->edge_mm;j->centre_mm=j->leading_mm+101.0f;
+            j->leading_mm=j->edge_mm;j->centre_mm=j->leading_mm+101.0f-j_turn_start_offset(j);
             j->approach_heading=heading_deg(i->wheel[0],i->wheel[1]);
             j_enter(j,J_CENTRE,i->now);
             d.target[0]=d.target[1]=30;d.stop=false;
@@ -75,14 +85,19 @@ static inline AnalogDemand junction_step(Junction *j,const LineCalibration *c,co
             float width=j->trailing_mm-j->leading_mm;
             if(width<6 || width>40) { j_fail(j,J_BAD_STRIPE);break; }
             j->striped=true;
-            j->centre_mm=(j->leading_mm+j->trailing_mm)*0.5f+92.0f;
+            j->centre_mm=(j->leading_mm+j->trailing_mm)*0.5f+92.0f-j_turn_start_offset(j);
         }
         if((!j->striped && mean-j->leading_mm>50) || i->now-j->phase_us>=6000000) {
             j_fail(j,J_BAD_STRIPE);break;
         }
         float remaining=j->centre_mm-mean;
         if(j->striped && remaining<=1.0f) {
-            j_enter(j,J_SETTLE,i->now);break;
+            if(j->rolling) {
+                /* No reversal: keep the right wheel rolling through the corner
+                   instead of stopping both wheels and overcoming stiction again. */
+                j_start_turn(j,i);d.target[0]=0;d.target[1]=45;
+            } else j_enter(j,J_SETTLE,i->now);
+            break;
         }
         float base=remaining<15?25.0f:30.0f;
         float correction=clampf(drift*1.5f,-6,6);
@@ -92,16 +107,18 @@ static inline AnalogDemand junction_step(Junction *j,const LineCalibration *c,co
     case J_SETTLE:
         if(j_still(j,i)) {
             if(!j->turn_enabled) { j->phase=J_DONE;j->reason=J_COMPLETE;break; }
-            for(unsigned w=0;w<2;++w) j->turn_origin[w]=i->wheel[w];
-            j->off_line=false;j->off_timing=j->line_timing=false;
-            j_enter(j,J_TURN,i->now);
+            j_start_turn(j,i);
         } else if(i->now-j->phase_us>=2000000) j_fail(j,J_SETTLE_TIMEOUT);
         break;
     case J_TURN: {
         float left=-(i->wheel[0]-j->turn_origin[0]);
         float right=i->wheel[1]-j->turn_origin[1];
         j->turn_degrees=(left+right)/TRACK_MM*(180.0f/3.14159265358979323846f);
-        if(left < -5 || right < -5 || fabsf(left-right)>20) { j_fail(j,J_CENTRE_DRIFT);break; }
+        if(j->rolling) {
+            /* Inner wheel is unpowered, not actively locked. Encoder drift is
+               bounded; optical branch confirmation must still succeed. */
+            if(fabsf(left)>12 || right < -5) { j_fail(j,J_CENTRE_DRIFT);break; }
+        } else if(left < -5 || right < -5 || fabsf(left-right)>20) { j_fail(j,J_CENTRE_DRIFT);break; }
         bool white=d.level[0]<200 && d.level[1]<200;
         if(white && j->turn_degrees>10) {
             if(!j->off_timing) { j->off_timing=true;j->off_us=i->now; }
@@ -112,12 +129,15 @@ static inline AnalogDemand junction_step(Junction *j,const LineCalibration *c,co
             if(!j->line_timing) { j->line_timing=true;j->line_us=i->now; }
             if(i->now-j->line_us>=30000) { j_enter(j,J_TURN_SETTLE,i->now);break; }
         } else j->line_timing=false;
-        if(j->turn_degrees>=110 || left>=120 || right>=120) { j_fail(j,J_BRANCH_MISSING);break; }
-        if(i->now-j->phase_us>=6000000) { j_fail(j,J_TURN_TIMEOUT);break; }
-        int16_t speed=j->turn_degrees>=65?25:35;
-        /* Balance wheel arcs so this remains an approximate in-place turn. */
-        float sync=clampf((left-right)*1.0f,-7,7);
-        d.target[0]=-(int16_t)(speed-sync);d.target[1]=(int16_t)(speed+sync);
+        if(j->turn_degrees>=110 || left>=120 || right>=(j->rolling?240:120)) { j_fail(j,J_BRANCH_MISSING);break; }
+        if(i->now-j->phase_us>=(j->rolling?9000000u:6000000u)) { j_fail(j,J_TURN_TIMEOUT);break; }
+        if(j->rolling) {
+            d.target[0]=0;d.target[1]=j->turn_degrees>=65?30:45;
+        } else {
+            int16_t speed=j->turn_degrees>=65?25:35;
+            float sync=clampf((left-right)*1.0f,-7,7);
+            d.target[0]=-(int16_t)(speed-sync);d.target[1]=(int16_t)(speed+sync);
+        }
         break;
     }
     case J_TURN_SETTLE:

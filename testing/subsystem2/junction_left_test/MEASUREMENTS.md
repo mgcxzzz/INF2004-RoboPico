@@ -100,3 +100,36 @@ peaks, plus pre-commit expiry check. Same500ms no-motion-under-established-deman
 6s/110degree turn limits and button/late-loop kills. Forward25% unchanged.
 No supply voltage change or current/torque guarantee. Physical V4 result pending.
 The V3 binary remains available. Mount contact is still a plausible drag source.
+
+## V4 mode2: pulse starts wheels, left stalls later
+
+Fresh offline V4 test2,28 rows/dropped0, invalid0/0. Centring goal242.92mm,
+settled turn origin7840ms L243.10/R241.35mm, mean242.22mm.
+
+- 7850ms: both turn outputs-400/+400, speeds0/0, targets-35/+35.
+- 7882ms: left-37.5mm/s, right17.8; left peak ends early, output-275/+400.
+- 7893ms: left-56.1/right26.3; both peaks ended, output-256/+288.
+- 8294ms: left-0.4/right22.6 at PWM-349/+316; left then stationary.
+- Cutoff8668ms L234.07/R259.38mm: left reversed9.03mm, right advanced18.03mm,
+  relative left angle14.10degrees. STOP no encoder movement under drive (left),
+  not optical loss/branch timeout. Startup boost helped but did not complete turn.
+
+Board published continuous current rating1A/channel was checked again at
+https://www.cytron.io/p-robo-pico . PWM can theoretically reach100% but there is
+no established safe maximum for this motor/load from duty alone; actual motor
+stall current and supply drop remain unmeasured. No100% test was introduced.
+
+## V5 rolling corner accepted by user — physical test pending
+
+User confirmed a rolling turn is acceptable instead of exact-centre in-place
+rotation. New mode3 removes left reverse demand: left motor OFF/coast, right
+forward; begin55mm before cross centre using provisional110mm wheel spacing.
+Ideal turn ends55mm along outgoing branch, outer wheel172.8mm arc at90degrees.
+Needs outgoing black line>=220mm due127mm front overhang plus20mm exit travel.
+
+Keep right rolling across the position-to-turn transition (no phase3 stop).
+Preserve its speed ramp, clear old straight I when activating loaded turn FF.
+No PWM increase beyond V4: only right may use35% sustained/one40% start pulse;
+if already>=25mm/s it skips that peak. Left request0 resets all PI/boost/pulse.
+Inner encoder displacement bound12mm; fresh-line gates/110deg remain, rolling
+outer bound240mm/9s accounts for longer arc. Mode1/2 behavior preserved.

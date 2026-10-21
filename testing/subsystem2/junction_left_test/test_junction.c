@@ -177,11 +177,71 @@ static void test_one_shot_peak_and_timer_cap(void) {
         assert(!p.peak_used && !p.peak_active && p.peak_end_us==0);
     }
 }
+static void test_rolling_geometry_and_sequence(bool branch) {
+    Junction j;JunctionInput i=sample(1000,0,false);j_begin_mode(&j,3,&i);
+    assert(j.rolling && j.turn_enabled && j_turn_start_offset(&j)==55);
+    bool started=false,turned=false;float rotation=0;
+    for(unsigned tick=0;tick<2600;++tick) {
+        float mean=j_mean(&i);i.side_black=mean>=100 && mean<118;
+        i.adc[0]=3464;i.adc[1]=3692;
+        if(j.phase==J_TURN) {
+            rotation=-heading_deg(i.wheel[0]-j.turn_origin[0],i.wheel[1]-j.turn_origin[1]);
+            if(rotation>3 && !(branch && rotation>=88 && rotation<=95)) i.adc[0]=i.adc[1]=184;
+        }
+        AnalogDemand d=junction_step(&j,&cal,&i);
+        if(j.phase==J_TURN && !started) {
+            started=true;
+            /* 10ms sampling at<=50mm/s quantizes each detected edge by<=0.5mm. */
+            assert(fabsf(j.centre_mm-146)<0.6f); /* 100+18/2+92-55 */
+            assert(d.target[1]>0); /* no full stop before the rolling corner */
+        }
+        if(j.phase==J_TURN) {
+            assert(d.target[0]==0 && d.target[1]>=0);
+            /* Even with turn assistance enabled globally, the inner motor is OFF. */
+            SignedWheel inner={0};assert(junction_wheel_step(&inner,0,0,0,0.01f,i.now,true)==0);
+        }
+        if(j.phase==J_TURN_SETTLE) { turned=true;assert(j.turn_degrees>=88 && j.turn_degrees<=95); }
+        if(d.stop) {
+            assert(started);
+            if(branch) assert(turned && j.reason==J_COMPLETE);
+            else assert(!turned && j.reason==J_BRANCH_MISSING);
+            return;
+        }
+        for(unsigned w=0;w<2;++w) {
+            i.speed[w]=(float)d.target[w];i.wheel[w]+=i.speed[w]*0.01f;
+            i.path+=fabsf(i.speed[w])*0.005f;
+        }
+        i.now+=10000;
+    }
+    assert(!"rolling sequence failed to terminate");
+}
+static void test_rolling_drift_and_kinematics(void) {
+    Junction j={.phase=J_TURN,.phase_us=1000,.rolling=true};JunctionInput i=sample(1000,0,false);
+    i.wheel[1]=100;i.adc[0]=i.adc[1]=184;
+    AnalogDemand d=junction_step(&j,&cal,&i);
+    assert(!d.stop && d.target[0]==0 && d.target[1]>0); /* unequal arcs are intentional */
+    i.wheel[0]=13;d=junction_step(&j,&cal,&i);assert(d.stop && j.reason==J_CENTRE_DRIFT);
+    j=(Junction){.phase=J_TURN,.phase_us=1000,.rolling=true};i=sample(9001000,0,false);
+    d=junction_step(&j,&cal,&i);assert(d.stop && j.reason==J_TURN_TIMEOUT);
+    /* Ideal 90deg arc, inner wheel fixed: radius55. Start(-55,0), end(0,55),
+       heading left90. This is not an axle-centred stationary turn. */
+    const float pi=3.14159265358979323846f,r=TRACK_MM/2;
+    float outer_arc=TRACK_MM*pi/2;
+    assert(fabsf(-heading_deg(0,outer_arc)-90)<0.001f);
+    assert(fabsf((-r+r*sinf(pi/2))-0)<0.001f);
+    assert(fabsf((r-r*cosf(pi/2))-55)<0.001f);
+    SignedWheel moving={.pi={.integral=80,.ramp=30},.sign=1};
+    int32_t pwm=junction_wheel_step(&moving,1,45,30,0.01f,1000000,true);
+    assert(moving.pi.ramp==31 && fabsf(moving.pi.integral)<1 && pwm<320);
+    assert(moving.peak_used && !moving.peak_active); /* already moving: no forced40% */
+}
 int main(void) {
     test_geometry_and_qualification();simulate(false,true);simulate(true,true);simulate(true,false);
     test_turn_rejects_false_branch();test_signed_controller_and_stops();
     test_loaded_turn_and_unchanged_follow();
     test_one_shot_peak_and_timer_cap();
-    puts("PASS: junction guards; V4 one-shot40%/150ms clamp/early release/no retrigger; sustained35% and unchanged25% forward");
+    test_rolling_geometry_and_sequence(true);test_rolling_geometry_and_sequence(false);
+    test_rolling_drift_and_kinematics();
+    puts("PASS: V5 rolling offset55/inner OFF/outer arc/branch sequence/drift bounds; old modes and V4 effort guards unchanged");
     return 0;
 }
