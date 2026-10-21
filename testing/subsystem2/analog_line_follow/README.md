@@ -1,10 +1,58 @@
-# Analog left-edge line following bench v4
+# Analog left-edge line following bench v5
 
 Standalone hardware test: GP26/GP28 analog sensors -> line error -> Buddy2
 encoder PI speed control -> both motors. It is NOT the real RTOS Navigation
 Coordinator/S3 task integration. That build's bank-only startup remains unresolved.
 No barcode, GP19 use, junction branch turn, obstacle module, radio or IMU.
 Boots DRIVE OFF; calibrating, printing, saving and switching power never start it.
+
+## V5: provisional wheel-speed PI adjustment
+
+V4 profile3 completed offline and the user observed forward/left/right motion.
+The saved user log is in logs/v4_wheel_response_2026-10-21.txt. Averages of final
+samples in each stage (1.4..2.0s,3.4..4.0s,5.4..6.0s) were:
+
+| Stage | Requested L/R mm/s | Measured L/R mm/s | Mean PWM L/R permille |
+|---|---|---|---|
+| Equal |65/65|51.7/40.3|137.5/164.2|
+| Left arc |35/95|40.6/79.7|91.2/228.7|
+| Right arc |95/35|86.6/43.6|185.3/137.7|
+
+These finite-stage samples show tracking error, not proven steady-state values.
+No invalid encoder transitions/dropped rows; normal6s limit and CRC restore.
+Final encoder average310.31mm is wheel-derived, not external travel distance.
+
+V5 changes ONLY the wheel speed PI in this standalone test, via wheel_control.h:
+
+| Setting | V4 | V5 |
+|---|---|---|
+| Kp (permille per mm/s error) |0.6|1.0|
+| Ki (permille per mm/s error per second) |0.8|3.0|
+| Integral bounds (permille) |+/-80|+/-140|
+
+Keep feedforward,100mm/s^2 ramp, filtered speed,25% PWM cap, bounded breakaway,
+all guards, calibration/flash layout, test phases and optical steering identical.
+Conditional integration blocks further windup into upper/lower saturation but
+allows opposite-sign error to unwind it. A zero request resets PI and outputs0.
+No derivative term, motor rating assumption, automatic gain tuning or braking
+polarity reversal. Shared dual_wheel_bench/dual_logic.h is unchanged.
+The new PI is used in profiles1/2/3; physically validate profile3 BEFORE resuming
+line tests. More correction could cause oscillation, so no improvement is claimed
+until measured. Host checks validate bounds and correction behaviour, not the robot.
+
+### Next test: repeat the V4 offline profile3 run
+
+Use the SAME mat, load/power bank, wheel condition and placement as V4.
+Flash firmware/buddy23_analog_line_follow_v5.uf2; open PuTTY115200,8N1,flow None.
+Press h: confirm V5 and valid1 calibration; select3, press k. No recalibration
+needed if sensors/mounting haven't changed. Do NOT recapture endpoints solely
+because the firmware changed. Remove computer USB before applying bank power.
+On roughly1m square clear floor, wait5s, hold BOTH3s, release BOTH, wait1s,
+tap/release GP21;2s countdown then forward/left/right sequence. Either button
+stops. Wait3s after stopping, remove bank, reconnect computer, open PuTTY, p.
+Send the full log and whether startup/curves were smooth or jerky. Video optional.
+The line does not steer profile3; identical6s/450mm limits. Do not run line tests
+next until these wheel-response results have been compared.
 
 ## V4: isolate wheel-speed response before adding steering PID
 
@@ -109,7 +157,7 @@ Use only one power source, bank OR computer USB. Never overlap them.
 
 ## First stage: CALIBRATE ONLY, no f/buttons yet
 
-Computer USB only, flash firmware/buddy23_analog_line_follow_v4.uf2 with BOOTSEL.
+Computer USB only, flash firmware/buddy23_analog_line_follow_v5.uf2 with BOOTSEL.
 PuTTY Serial115200,8N1,flow None. All keys are lowercase, no Enter needed.
 Keep the sensors at final mat height, fixed spacing/lighting, no pot adjustment.
 

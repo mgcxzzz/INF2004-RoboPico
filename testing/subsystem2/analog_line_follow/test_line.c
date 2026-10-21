@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include "line_logic.h"
+#include "wheel_control.h"
 #include "../dual_wheel_bench/dual_logic.h"
 #include "../line_motion_integration/logic.h"
 int main(void) {
@@ -24,17 +25,48 @@ int main(void) {
     assert(!response.stop && response.decision==7 && response.target[0]==95 && response.target[1]==35);
     response=response_demand(5999999);assert(!response.stop);
     response=response_demand(6000000);assert(response.stop && !response.target[0] && !response.target[1]);
-    /* Through all three stages the unchanged PI/ramp/kick remains bounded. */
+    /* Through all three stages the V5 PI/ramp/kick remains bounded. */
     WheelPI response_pi[2]={{0}};LineBreakaway response_kick[2]={{0}};
     for(uint64_t us=0;us<RESPONSE_US;us+=10000) {
         response=response_demand(us);
         for(unsigned w=0;w<2;++w) {
             float feedback=w==0?47.0f:36.0f;
-            int32_t pwm=pi_step(&response_pi[w],w,1,response.target[w],feedback,0.01f);
+            int32_t pwm=line_speed_step(&response_pi[w],w,response.target[w],feedback,0.01f);
             pwm=line_breakaway(&response_kick[w],us,response.target[w],response_pi[w].ramp,feedback,pwm);
             assert(pwm>=0 && pwm<=PWM_LIMIT);
         }
     }
+    /* Fixed measured errors from the V4 equal-speed stage: the new controller
+       must increase effort faster, without a feedforward or PWM-cap change. */
+    for(unsigned w=0;w<2;++w) {
+        WheelPI old={.ramp=65},tuned={.ramp=65};
+        int32_t old_u=0,new_u=0;
+        for(unsigned i=0;i<100;++i) {
+            float measured=w==0?52.0f:40.0f;
+            old_u=pi_step(&old,w,1,65,measured,0.01f);
+            new_u=line_speed_step(&tuned,w,65,measured,0.01f);
+        }
+        assert(new_u>old_u && new_u<=PWM_LIMIT);
+        float before=tuned.integral;
+        for(unsigned i=0;i<50;++i) (void)line_speed_step(&tuned,w,35,65,0.01f);
+        assert(tuned.integral<before); /* overspeed removes accumulated effort */
+        assert(line_speed_step(&tuned,w,0,90,0.01f)==0 && !tuned.ramp && !tuned.integral);
+        tuned=(WheelPI){.ramp=95,.integral=130};
+        float held=tuned.integral;
+        assert(line_speed_step(&tuned,w,95,0,0.01f)==250 && tuned.integral==held);
+        (void)line_speed_step(&tuned,w,95,120,0.01f);
+        assert(tuned.integral<held); /* saturation cannot prevent unwinding */
+        tuned=(WheelPI){.ramp=35,.integral=-130};held=tuned.integral;
+        assert(line_speed_step(&tuned,w,35,120,0.01f)==0 && tuned.integral==held);
+        (void)line_speed_step(&tuned,w,35,0,0.01f);assert(tuned.integral>held);
+        tuned=(WheelPI){0};
+        for(unsigned i=0;i<10000;++i) {
+            float dt=i%2?0.013f:0.007f;
+            int32_t u=line_speed_step(&tuned,w,i%300<150?95:35,i%200<100?0:150,dt);
+            assert(u>=0 && u<=250 && fabsf(tuned.integral)<=140);
+        }
+    }
+    puts("PASS: V5 stronger underspeed correction, overspeed unwinding, zero reset, both saturation bounds and variable-step PWM bounds");
     LineRearm ready={0};
     line_rearm_step(&ready,0,true,true,false);assert(!ready.ready);
     line_rearm_step(&ready,999999,true,true,false);assert(!ready.ready);
