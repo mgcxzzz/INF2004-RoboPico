@@ -23,7 +23,7 @@ enum { HOLD=21, STOP=20, PWM_TOP=999, TRACE_ROWS=100 };
 static const uint ma[2]={8,10}, mb[2]={9,11}, ea[2]={0,4}, eb[2]={1,5};
 static volatile BenchEncoder enc[2];
 static volatile DualGuard guard={.consumed=true};
-static volatile bool offline_running;
+static volatile unsigned run_mode=LINE_USB_HOLD;
 static volatile int32_t origin[2], cut_ticks[2];
 static volatile uint32_t initial_invalid[2], cut_invalid[2];
 static LineCalibration calibration;
@@ -31,7 +31,9 @@ static AnalogTracker tracker;
 static AnalogDemand demand;
 static uint16_t analog_raw[2];
 static float adc_filtered[2], path_mm;
-static bool one_run;
+static LineRearm rearm;
+static unsigned last_start_block;
+static uint32_t runs;
 static uint8_t profile;
 static LineBreakaway breakaway[2];
 _Static_assert(AL_KICK_PWM<=PWM_LIMIT,"Breakaway must remain inside motor PWM cap");
@@ -151,8 +153,8 @@ static bool safety_tick(struct repeating_timer *t) {
     (void)t;
     bool active=guard.active;
     uint64_t now=time_us_64();
-    guard_tick(&guard,now,offline_running ? true : !gpio_get(HOLD),!gpio_get(STOP));
-    if(guard.active && offline_running && !gpio_get(HOLD)) guard_stop(&guard,now,WHY_BUTTON);
+    guard_tick(&guard,now,run_mode==LINE_USB_HOLD ? !gpio_get(HOLD) : true,!gpio_get(STOP));
+    if(guard.active && run_mode!=LINE_USB_HOLD && !gpio_get(HOLD)) guard_stop(&guard,now,WHY_BUTTON);
     if(!guard.active) {
         outputs_off();
         if(active) capture_cutoff();
@@ -168,18 +170,21 @@ static const char *reason_name(uint8_t r) {
     return r<sizeof(names)/sizeof(names[0]) ? names[r] : "unknown";
 }
 static void help(void) {
-    puts("\nBUDDY23 ANALOG LINE FOLLOW v2 | SDK bench, NOT RTOS NAV | DRIVE OFF on boot");
+    puts("\nBUDDY23 ANALOG LINE FOLLOW v3 | SDK bench, NOT RTOS NAV | DRIVE OFF on boot");
     puts("GP26/ADC0 LEFT A0; GP28/ADC2 RIGHT A0; sensor supply3.3V; UART OFF.");
     puts("Calibrate, stopped and GP21 released: w=BOTH WHITE; l=LEFT BLACK; r=RIGHT BLACK.");
     puts("Wait1s on each surface before key. w clears old black calibration; k=saves calibration/profile.");
     puts("Place LEFT spot at RIGHT-HAND edge of black (robot perspective), RIGHT spot on white.");
-    puts("Start requires left normalized250..750 and right<200; aim left near500.");
+    puts("Start accepts left level150..1000, right<=450; aim left near500 for smoother starts.");
     puts("Hold GP21 then f=follow; release GP21, GP20 or s stops. No b/l/r motor commands.");
+    puts("g=USB HANDS-FREE follow: both buttons released,2s countdown, no need to hold GP21.");
+    puts("Either button / s / USB disconnect stops hands-free; either button cancels countdown.");
     puts("Profile1(default):150mm/3s. Profile2:600mm/12s. 1/2 select stopped; k saves for offline.");
     puts("BANK ONLY: hold BOTH3s; release BOTH; wait1s; GP21 tap/release;2s countdown.");
-    puts("Either button stops offline. One accepted run per boot; no automatic restart.");
+    puts("Repeat runs: release BOTH, wait for settling/save then1s estimated standstill; ready=1.");
+    puts("Then request f/g again or repeat bank button sequence. No automatic restart.");
     puts("Speeds35..95mm/s, PWM cap25%; PI and breakaway assistance are provisional.");
-    puts("V2 breakaway:25% for up to120ms/control tick; ends at20mm/s,100ms cooldown.");
+    puts("Breakaway:25% for up to120ms/control tick; ends at20mm/s,100ms cooldown.");
     puts("Both-white recovery bounded650ms/40mm; both-dark120ms stops. No branch turns or barcode.");
     puts("p=saved run; h=help. Wait3s after stop before switching power sources, then p.");
     printf("CAL mask=%u white=%u,%u black=%u,%u valid=%u profile=%u restored=%u\n",
@@ -225,7 +230,7 @@ static void dump(void) {
     if(flash_loaded) puts("RESTORED: CRC-verified analog-line calibration/log.");
     if(save_failed) puts("WARNING: flash save failed; this RAM log is not persistent.");
     printf("RUN: key=%c mode=%s rows=%u dropped=%u settling=%u\n",recorded_key,
-        recorded_offline ? "offline" : "USB hold",trace_count,trace_dropped,trace_settling);
+        recorded_offline ? "offline" : recorded_key=='g' ? "USB hands-free" : "USB hold",trace_count,trace_dropped,trace_settling);
     printf("CAL white=%u,%u black=%u,%u profile=%u\n",calibration.white[0],calibration.white[1],calibration.black[0],calibration.black[1],profile+1);
     puts("ms,active,L_mm,R_mm,progress_mm,heading_deg,L_mm_s,R_mm_s,PWM_L,PWM_R,ADC_L,ADC_R,levelL_1000,levelR_1000,targetL,targetR,decision");
     for(unsigned i=0;i<trace_count;++i) {
@@ -248,17 +253,19 @@ static void dump(void) {
            (double)r,(double)heading_deg(l,r),il,ir);
     puts("END RUN LOG. Distances/headings are encoder estimates, not external measurements.");
 }
-static bool start_run(bool offline) {
-    if(one_run || trace_settling || !calibration_valid(&calibration)) return false;
+static bool start_run(unsigned mode) {
     uint16_t left=line_level(analog_raw[0],calibration.white[0],calibration.black[0]);
     uint16_t right=line_level(analog_raw[1],calibration.white[1],calibration.black[1]);
-    if(left<250 || left>750 || right>=200) return false;
+    last_start_block=line_start_block(guard.active,trace_settling,calibration_valid(&calibration),
+        !gpio_get(STOP),rearm.ready,left,right,!gpio_get(HOLD),mode);
+    if(last_start_block) return false;
     uint64_t now=time_us_64();
     uint32_t irq=save_and_disable_interrupts();
-    bool ok=guard_start(&guard,now,offline || !gpio_get(HOLD),!gpio_get(STOP));
+    bool ok=guard_start(&guard,now,mode!=LINE_USB_HOLD || !gpio_get(HOLD),!gpio_get(STOP));
     if(ok) {
-        one_run=true;guard.deadline_us=now+(profile?12000000u:3000000u);
-        trace_interval_us=profile?150000:50000;offline_running=offline;
+        ++runs;rearm=(LineRearm){0};run_mode=mode;
+        guard.deadline_us=now+(profile?12000000u:3000000u);
+        trace_interval_us=profile?150000:50000;
         for(unsigned w=0;w<2;++w) {
             origin[w]=previous[w]=enc[w].position;initial_invalid[w]=enc[w].invalid;
             velocity[w]=0;output[w]=0;pi[w]=(WheelPI){0};
@@ -267,12 +274,24 @@ static bool start_run(bool offline) {
         tracker=(AnalogTracker){0};path_mm=0;
         demand=analog_demand(&tracker,&calibration,analog_raw[0],analog_raw[1],now,0);
         outputs_off();trace_count=trace_dropped=0;
-        recorded_key='f';recorded_offline=offline;trace_settling=false;
+        recorded_key=mode==LINE_USB_FREE?'g':'f';recorded_offline=mode==LINE_BANK;trace_settling=false;
         flash_loaded=false;save_failed=false;last_control=last_trace=now;
     }
     restore_interrupts(irq);
+    if(!ok) last_start_block=START_GUARD;
     if(ok) add_trace(now);
     return ok;
+}
+static void report_start_block(void) {
+    static const char *const text[]={"none","run already active","wait for settling/log save",
+        "capture valid w/l/r calibration","release GP20","release both buttons; wait for save and1s standstill",
+        "left sensor sees white: move onto edge/black (level>=150)",
+        "right sensor too dark: move it toward white (level<=450)","hold GP21 for f",
+        "release GP21 for hands-free/offline start","release/repress GP21 and wait for cooldown"};
+    printf("START rejected: %s | ready=%u levelL=%u levelR=%u\n",
+        last_start_block<sizeof(text)/sizeof(text[0])?text[last_start_block]:"unknown",rearm.ready,
+        line_level(analog_raw[0],calibration.white[0],calibration.black[0]),
+        line_level(analog_raw[1],calibration.white[1],calibration.black[1]));
 }
 static void control_step(uint64_t now) {
     uint64_t elapsed=now-last_control;if(elapsed<CONTROL_PERIOD_US) return;
@@ -343,8 +362,8 @@ int main(void) {
     analog_raw[0]=read_adc(0);analog_raw[1]=read_adc(2);
     adc_filtered[0]=analog_raw[0];adc_filtered[1]=analog_raw[1];
     stdio_init_all();load_log();last_control=time_us_64();
-    bool old_connected=false;uint8_t raw_buttons=0,buttons=0;
-    uint64_t changed=0,last_status=0,last_adc=0;uint32_t seen_stops=0;
+    bool old_connected=false,usb_pending=false;uint8_t raw_buttons=0,buttons=0;
+    uint64_t changed=0,last_status=0,last_adc=0,usb_start_at=0;uint32_t seen_stops=0;
     BenchArm arm={0};
     while(true) {
         uint64_t now=time_us_64();bool connected=stdio_usb_connected(),host=tud_mounted();
@@ -357,32 +376,53 @@ int main(void) {
             for(unsigned w=0;w<2;++w) adc_filtered[w]+=0.35f*(analog_raw[w]-adc_filtered[w]);
         }
         if(connected!=old_connected) {
+            usb_pending=false;
             if(guard.active) { uint32_t irq=save_and_disable_interrupts();kill(now,WHY_USB);restore_interrupts(irq); }
             if(connected) { arm.state=ARM_IDLE;help();if(trace_count) dump(); }
             old_connected=connected;
         }
-        if(host && guard.active && offline_running) {
+        if(host && guard.active && run_mode==LINE_BANK) {
             uint32_t irq=save_and_disable_interrupts();kill(now,WHY_USB);restore_interrupts(irq);
         }
-        bool launch=bench_arm_step(&arm,(uint32_t)now,host,one_run || trace_settling || guard.active,buttons&1,buttons&2);
-        if(launch) (void)start_run(true);
+        line_rearm_step(&rearm,now,!hold && !stop,fabsf(velocity[0])<5 && fabsf(velocity[1])<5,
+            guard.active || trace_settling || stop);
+        bool launch=bench_arm_step(&arm,(uint32_t)now,host,usb_pending || trace_settling || guard.active,buttons&1,buttons&2);
+        if(launch) (void)start_run(LINE_BANK);
         int ch=connected?getchar_timeout_us(0):PICO_ERROR_TIMEOUT;
         if(ch=='h') help();
         else if(ch=='p') dump();
         else if(ch=='s') {
-            arm.state=ARM_IDLE;uint32_t irq=save_and_disable_interrupts();kill(now,WHY_SERIAL);restore_interrupts(irq);
-        } else if(ch=='w' || ch=='l' || ch=='r') calibrate(ch);
+            usb_pending=false;arm.state=ARM_IDLE;uint32_t irq=save_and_disable_interrupts();kill(now,WHY_SERIAL);restore_interrupts(irq);
+        } else if(ch=='w' || ch=='l' || ch=='r') { usb_pending=false;calibrate(ch); }
         else if(ch=='k' || ch=='1' || ch=='2') {
+            usb_pending=false;
             if(guard.active || trace_settling || hold || stop) puts("CONFIG rejected: stop/release both buttons.");
             else if(ch=='k') { save_log();puts(save_failed?"SAVE FAILED":"CALIBRATION/PROFILE SAVED; bank-only requires fresh button sequence."); }
             else { profile=ch=='2';printf("PROFILE %u selected; k saves for power-bank boot.\n",profile+1); }
         } else if(ch=='f') {
-            bool ok=start_run(false);
-            puts(ok?"FOLLOW accepted":"START rejected: valid w/l/r calibration, left edge level250..750, right white<200, hold GP21, GP20 released, one run/boot.");
+            usb_pending=false;bool ok=start_run(LINE_USB_HOLD);
+            if(ok) puts("FOLLOW accepted: USB hold GP21.");else report_start_block();
+        } else if(ch=='g') {
+            if(usb_pending) puts("USB countdown already pending; s/either button cancels.");
+            else {
+                last_start_block=line_start_block(guard.active,trace_settling,calibration_valid(&calibration),stop,
+                    rearm.ready,line_level(analog_raw[0],calibration.white[0],calibration.black[0]),
+                    line_level(analog_raw[1],calibration.white[1],calibration.black[1]),hold,LINE_USB_FREE);
+                if(last_start_block) report_start_block();
+                else { usb_pending=true;usb_start_at=time_us_64()+2000000;puts("USB HANDS-FREE: starts in2s; release robot/buttons. s/either button cancels."); }
+            }
+        }
+        if(usb_pending) {
+            if(line_countdown_cancel(connected,hold,stop)) { usb_pending=false;puts("USB countdown cancelled."); }
+            else if(time_us_64()>=usb_start_at) {
+                usb_pending=false;
+                if(start_run(LINE_USB_FREE)) puts("FOLLOW accepted: USB hands-free; either button/s stops.");
+                else report_start_block();
+            }
         }
         control_step(time_us_64());now=time_us_64();
         if(guard.stops!=seen_stops) {
-            seen_stops=guard.stops;stopped_us=now;trace_settling=true;offline_running=false;
+            seen_stops=guard.stops;stopped_us=now;trace_settling=true;run_mode=LINE_USB_HOLD;
             add_trace(now);last_trace=now;
             if(connected) printf("STOP: %s; wait3s then p\n",reason_name(guard.reason));
         }
@@ -396,10 +436,10 @@ int main(void) {
         if(connected && now-last_status>=200000) {
             uint16_t nl=line_level(analog_raw[0],calibration.white[0],calibration.black[0]);
             uint16_t nr=line_level(analog_raw[1],calibration.white[1],calibration.black[1]);
-            printf("ANALOG: L=%u R=%u levelL=%u levelR=%u cal=%u active=%u targets=%d,%d PWM=%ld,%ld arm=%u\n",
+            printf("ANALOG: L=%u R=%u levelL=%u levelR=%u cal=%u active=%u targets=%d,%d PWM=%ld,%ld arm=%u ready=%u pending=%u runs=%" PRIu32 "\n",
                 analog_raw[0],analog_raw[1],nl,nr,calibration_valid(&calibration),guard.active,
                 guard.active?demand.target[0]:0,guard.active?demand.target[1]:0,
-                guard.active?(long)output[0]:0,guard.active?(long)output[1]:0,arm.state);
+                guard.active?(long)output[0]:0,guard.active?(long)output[1]:0,arm.state,rearm.ready,usb_pending,runs);
             last_status=now;
         }
         sleep_ms(1);

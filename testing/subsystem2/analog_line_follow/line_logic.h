@@ -7,6 +7,36 @@ typedef struct { uint16_t white[2],black[2]; uint8_t mask; } LineCalibration;
 enum { AL_EDGE, AL_RIGHT_GUARD, AL_BOTH_BLACK, AL_SEEK_LEFT, AL_LOST };
 typedef struct { uint64_t white_since,both_since; uint32_t white_mm; bool white,both; } AnalogTracker;
 typedef struct { int16_t target[2]; uint16_t level[2]; uint8_t decision; bool stop; } AnalogDemand;
+enum { LINE_USB_HOLD, LINE_BANK, LINE_USB_FREE };
+enum { START_OK,START_ACTIVE,START_SETTLING,START_CAL,START_GP20,START_REARM,
+       START_LEFT_WHITE,START_RIGHT_DARK,START_HOLD_GP21,START_RELEASE_GP21,START_GUARD };
+typedef struct { uint64_t since; bool timing,ready; } LineRearm;
+/* Readiness is permission for a NEW explicit request, never auto-start.
+ * Holding GP21 after readiness is allowed for the original USB hold mode. */
+static inline void line_rearm_step(LineRearm *r,uint64_t now,bool released,bool stationary,bool busy) {
+    if(busy || !stationary) { *r=(LineRearm){0};return; }
+    if(r->ready) return;
+    if(!released) { r->timing=false;return; }
+    if(!r->timing) { r->timing=true;r->since=now; }
+    if(now-r->since>=1000000) r->ready=true;
+}
+static inline unsigned line_start_block(bool active,bool settling,bool valid,bool stop,
+                                        bool ready,uint16_t left,uint16_t right,bool hold,unsigned mode) {
+    if(active) return START_ACTIVE;
+    if(settling) return START_SETTLING;
+    if(!valid) return START_CAL;
+    if(stop) return START_GP20;
+    if(!ready) return START_REARM;
+    /* Full left black is now permitted. All-white / right-dark still reject. */
+    if(left<150) return START_LEFT_WHITE;
+    if(right>450) return START_RIGHT_DARK;
+    if(mode==LINE_USB_HOLD && !hold) return START_HOLD_GP21;
+    if(mode!=LINE_USB_HOLD && hold) return START_RELEASE_GP21;
+    return START_OK;
+}
+static inline bool line_countdown_cancel(bool connected,bool held,bool stop) {
+    return !connected || held || stop;
+}
 enum { AL_KICK_PWM=250, AL_KICK_US=120000, AL_KICK_COOLDOWN_US=100000 };
 typedef struct { uint64_t end_us,cooldown_until; bool active; } LineBreakaway;
 /* Forward-only floor breakaway. Independent drive-off guards still own the

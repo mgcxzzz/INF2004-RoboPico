@@ -38,3 +38,18 @@ stops were previously checked on raised wheels; its offline start remains open.
 - User later reported centred left-black raw491..494, right-white134..137.
   Old black388 clips normalized left to1000; ADC itself is not saturated.
   Left black calibration needs recapturing at final height. Do not hardcode493.
+
+## V2 follow-up evidence
+
+- Offline profile1: white127/131, black444/578,80rows/dropped0,3s time stop,
+  settled L120.92/R118.10mm (average119.51mm). Invalid0/0. Startup250permille
+  pulses moved it; actual speed reached about50..58mm/s near the end.
+  Sensor-dependent targets included73/57 then57/73: feedback steering active.
+- USB hold f: white127/131, black301/310,76rows/dropped0; GP21 release2.816s;
+  settled L100.87/R97.61mm (average99.24mm), invalid0/0. Left level varied from
+  above700 through white114/57 then recovered to293/603. Target42/88 at2.179s
+  reflected left recovery; later targets reversed as it returned into black.
+- User suspects holding GP21 presses on chassis and affects centring. Plausible
+  load/height/cable effects, not established from logs without external motion.
+- User requested looser starts and repeat runs without power cycling. V3 adds
+  these and optional g hands-free USB countdown. Saved calibration unchanged.

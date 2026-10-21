@@ -4,6 +4,45 @@
 #include "../dual_wheel_bench/dual_logic.h"
 #include "../line_motion_integration/logic.h"
 int main(void) {
+    LineRearm ready={0};
+    line_rearm_step(&ready,0,true,true,false);assert(!ready.ready);
+    line_rearm_step(&ready,999999,true,true,false);assert(!ready.ready);
+    line_rearm_step(&ready,1000000,true,true,false);assert(ready.ready);
+    /* GP21 can be held AFTER readiness for f. Readiness alone never starts. */
+    line_rearm_step(&ready,1100000,false,true,false);assert(ready.ready);
+    assert(line_start_block(false,false,true,false,ready.ready,1000,0,true,LINE_USB_HOLD)==START_OK);
+    assert(line_start_block(false,false,true,false,true,150,450,false,LINE_USB_FREE)==START_OK);
+    assert(line_start_block(false,false,true,false,true,1000,0,false,LINE_BANK)==START_OK);
+    assert(line_start_block(false,false,true,false,true,149,0,true,LINE_USB_HOLD)==START_LEFT_WHITE);
+    assert(line_start_block(false,false,true,false,true,1000,451,true,LINE_USB_HOLD)==START_RIGHT_DARK);
+    assert(line_start_block(false,false,true,false,true,1000,1000,true,LINE_USB_HOLD)==START_RIGHT_DARK);
+    assert(line_start_block(false,false,false,false,true,500,0,true,LINE_USB_HOLD)==START_CAL);
+    assert(line_start_block(true,false,true,false,true,500,0,true,LINE_USB_HOLD)==START_ACTIVE);
+    assert(line_start_block(false,true,true,false,true,500,0,true,LINE_USB_HOLD)==START_SETTLING);
+    assert(line_start_block(false,false,true,true,true,500,0,true,LINE_USB_HOLD)==START_GP20);
+    assert(line_start_block(false,false,true,false,false,500,0,true,LINE_USB_HOLD)==START_REARM);
+    assert(line_start_block(false,false,true,false,true,500,0,false,LINE_USB_HOLD)==START_HOLD_GP21);
+    assert(line_start_block(false,false,true,false,true,500,0,true,LINE_USB_FREE)==START_RELEASE_GP21);
+    assert(!line_countdown_cancel(true,false,false));
+    assert(line_countdown_cancel(false,false,false));
+    assert(line_countdown_cancel(true,true,false));
+    assert(line_countdown_cancel(true,false,true));
+    /* Repeat an actual guard start/stop cycle without reboot. Each new request
+       needs settling to finish and a fresh stationary/released interval. */
+    DualGuard repeat={0};
+    assert(guard_start(&repeat,1100000,true,false));
+    ready=(LineRearm){0};
+    line_rearm_step(&ready,1200000,false,true,true);assert(!ready.ready);
+    guard_tick(&repeat,1210000,false,false);assert(!repeat.active && !repeat.consumed);
+    line_rearm_step(&ready,2210000,true,true,true);assert(!ready.ready); /* still settling */
+    line_rearm_step(&ready,2220000,false,true,false);assert(!ready.ready); /* GP21 held */
+    line_rearm_step(&ready,2230000,true,false,false);assert(!ready.ready); /* wheel moving */
+    line_rearm_step(&ready,2300000,true,true,false);assert(!ready.ready);
+    line_rearm_step(&ready,3299999,true,true,false);assert(!ready.ready);
+    line_rearm_step(&ready,3300000,true,true,false);assert(ready.ready);
+    assert(guard_start(&repeat,3300000,true,false) && repeat.generation==2);
+    guard_tick(&repeat,3310000,true,true);assert(!repeat.active && repeat.reason==WHY_GP20);
+    line_rearm_step(&ready,3310000,true,true,true);assert(!ready.ready);
     LineBreakaway kick={0};
     assert(line_breakaway(&kick,0,65,19,0,100)==100 && !kick.active);
     assert(line_breakaway(&kick,200000,65,20,0,100)==250 && kick.active && kick.end_us==320000);
@@ -79,5 +118,5 @@ int main(void) {
     assert(!bench_arm_step(&arm,3500000,0,0,1,0));
     assert(!bench_arm_step(&arm,4000000,0,0,0,0));
     assert(bench_arm_step(&arm,6000000,0,0,0,0));
-    puts("PASS: 25% breakaway duration/speed exit/cooldown/off/normal PI/jitter; separate calibration, edge steering, bounded recovery/crossing, targets, release/stop/stale guards, offline sequence");
+    puts("PASS: loose start/full-black/both-dark refusal; repeat rearm/guard cycles; hands-free countdown cancellation; 25% pulse/cooldown; calibration/steering/loss/stop bounds; offline sequence");
 }

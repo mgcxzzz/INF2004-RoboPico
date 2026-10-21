@@ -1,10 +1,40 @@
-# Analog left-edge line following bench v2
+# Analog left-edge line following bench v3
 
 Standalone hardware test: GP26/GP28 analog sensors -> line error -> Buddy2
 encoder PI speed control -> both motors. It is NOT the real RTOS Navigation
 Coordinator/S3 task integration. That build's bank-only startup remains unresolved.
 No barcode, GP19 use, junction branch turn, obstacle module, radio or IMU.
 Boots DRIVE OFF; calibrating, printing, saving and switching power never start it.
+
+## V3: repeat runs, looser start and optional USB hands-free mode
+
+User requested repeat tests without power cycling and less restrictive starting
+alignment. Left-on-black level1000 previously failed the250..750 gate. The new
+start gate permits LEFT150..1000 and RIGHT0..450, with valid calibration. Thus
+left full black starts, but all-white, only-right-black and both-dark reject.
+This changes only the gate, not normalization, edge target500 or calibration.
+The controller may make a stronger initial correction when starting on full black.
+
+New runs require settling/save complete, both buttons released, and estimated
+wheel speeds below5mm/s continuously for1second. ready=1 indicates this gate.
+Holding GP21 after readiness supports f; a stop/active run/wheel movement clears
+readiness. Readiness alone NEVER starts drive. Each repeat needs f, g, or a fresh
+bank-only both-button/tap sequence. Record p before the next run replaces its log.
+No power cycle is needed between accepted runs. UART and GPIO wiring unchanged.
+
+USB hands-free: select1 for first short test, release both, wait ready=1, send g.
+A2second countdown precedes movement; release the robot before it starts. Either
+button or s cancels countdown/stops motion; USB/DTR disconnect also cancels/stops.
+Start conditions are rechecked at countdown expiry; rejection prints its exact
+reason and current levels. Calibration/profile changes cancel a pending countdown.
+The same3s/150mm or12s/600mm profile limits and independent timer still apply.
+This avoids pressing on the chassis during a floor test. Give the USB cable slack.
+The original f requires GP21 held; releasing it stops. Bank mode stays bank-only.
+
+Live ANALOG adds ready, pending and runs (runtime accepted-run counter). Log key=g
+means USB hands-free; key=f is USB hold or bank as labelled in mode. Flash record
+layout/magic/version is unchanged: saved V1/V2 calibration and logs remain readable.
+Software checks passed; new repeat/hands-free behaviour still needs hardware tests.
 
 ## V2 floor-start adjustment
 
@@ -31,7 +61,7 @@ Use only one power source, bank OR computer USB. Never overlap them.
 
 ## First stage: CALIBRATE ONLY, no f/buttons yet
 
-Computer USB only, flash firmware/buddy23_analog_line_follow_v2.uf2 with BOOTSEL.
+Computer USB only, flash firmware/buddy23_analog_line_follow_v3.uf2 with BOOTSEL.
 PuTTY Serial115200,8N1,flow None. All keys are lowercase, no Enter needed.
 Keep the sensors at final mat height, fixed spacing/lighting, no pot adjustment.
 
@@ -68,8 +98,8 @@ then stops. Analog readings still cannot locate a line outside both sensor spots
 This fixed recovery is only appropriate near the calibrated right-hand edge;
 if positioned on the opposite edge its correction will be wrong.
 
-Starting requires valid calibration, levelL250..750, levelR<200, GP20 released,
-one run not already consumed and no settling. Treat persistent start rejection
+Starting requires valid calibration, levelL150..1000, levelR<=450, GP20 released,
+settling complete and ready=1 after the stationary/released interval. Treat persistent start rejection
 as a diagnostic, not a reason to increase sensitivity or bypass the checks.
 
 ## Raised steering/stop stage, only after CAL review
@@ -79,8 +109,8 @@ Do not change calibration height just to raise wheels.
 HoldGP21 and send f. Start on the calibrated edge, then vary the surface under
 LEFT slightly each way to check correction direction. ReleaseGP21 to stop;
 GP20 or serial s also stop. All motion is forwards, no on-the-spot pivot.
-Wait3 seconds, press p for the complete run. One accepted run per boot.
-Restart by power cycle, no BOOTSEL: saved calibration loads automatically.
+Wait3 seconds, release both buttons and press p for the complete run. When
+ready=1, request another f/g without unplugging. Saved calibration remains in use.
 
 ## Offline floor stage, later after raised checks
 
@@ -111,7 +141,7 @@ Positive wheel speed means forwards on both motors; right PWM polarity inverted.
 Hardware1ms timer cuts on buttons, run deadline or100ms late control loop.
 10ms target control (actual elapsed time),25% PWM cap, encoder invalid>=8,
 reverse feedback<-20mm/s50ms and no movement under demand500ms stop the run.
-V2 bounded25%/120ms forward breakaway pulses, end at20mm/s,100ms cooldown; floor tuning
+Bounded25%/120ms forward breakaway pulses, end at20mm/s,100ms cooldown; floor tuning
 still needed. Main loop floating point cannot override a timer cutoff: generation
 and active flags are rechecked with interrupts masked before committing PWM.
 
