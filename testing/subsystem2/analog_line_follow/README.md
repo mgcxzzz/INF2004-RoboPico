@@ -1,5 +1,8 @@
 # Analog line following bench v11
 
+Working V11 setup, successful recovery results and the proposed next experiment
+are recorded in [BASELINE_AND_JUNCTION_PLAN.md](BASELINE_AND_JUNCTION_PLAN.md).
+
 Standalone hardware test: GP26/GP28 analog sensors -> line error -> Buddy2
 encoder PI speed control -> both motors. It is NOT the real RTOS Navigation
 Coordinator/S3 task integration. That build's bank-only startup remains unresolved.
@@ -26,7 +29,9 @@ subsequently clarified that this was a SUCCESSFUL physical run, not the intended
 failure example. Its normal10s timer stop must not be reported as a line-loss
 failure. It is archived as successful user-observed evidence; do not infer a
 failed bend or a need for more PWM from it. V11 is the previously requested
-adaptive-steering experiment and still needs its own physical evaluation.
+adaptive-steering experiment. Subsequent successful V11 recovery runs in both
+directions are recorded in BASELINE_AND_JUNCTION_PLAN.md; continuous-course
+bend and junction validation remain separate physical tests.
 
 Profile6 now maps the magnitude of calibrated difference (L-R) progressively:
 

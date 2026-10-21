@@ -1,6 +1,8 @@
 # Analog line-follow V11 - 21 October 2026
 
-Compiled and software-verified; adaptive steering physical test pending.
+Compiled and software-verified. Subsequent user tests confirmed recovery in both
+directions; see ../BASELINE_AND_JUNCTION_PLAN.md and the archived V11 logs.
+Continuous-course bends and junction operation remain unvalidated.
 
 Profile6 adaptive forward speed by normalized absolute L-R difference:
 0..80 ->inner/outer45/45;250 ->40/50;500 ->25/50;1000 ->0/45mm/s.
