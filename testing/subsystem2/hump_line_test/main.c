@@ -18,6 +18,7 @@
 #include "../line_motion_integration/logic.h"
 #include "hardware/adc.h"
 #include "hump_record.h"
+#include "hump_navigation.h"
 
 enum { HOLD=21, STOP=20, PWM_TOP=999, TRACE_ROWS=HUMP_ROWS };
 _Static_assert(HUMP_RUN_US/HUMP_TRACE_US+1000000/HUMP_TRACE_US+3<=TRACE_ROWS,
@@ -29,7 +30,7 @@ static volatile unsigned run_mode=LINE_USB_HOLD;
 static volatile int32_t origin[2], cut_ticks[2];
 static volatile uint32_t initial_invalid[2], cut_invalid[2];
 static LineCalibration calibration;
-static SymmetricTracker symmetric;
+static HumpNavigation navigation;
 static AnalogDemand demand;
 static uint16_t analog_raw[2];
 static float adc_filtered[2], path_mm;
@@ -37,7 +38,7 @@ static LineRearm rearm;
 static unsigned last_start_block;
 static uint32_t runs;
 static uint8_t profile,recorded_profile;
-static unsigned recorded_version=3;
+static unsigned recorded_version=4;
 static HumpWheel controller[2];
 static uint8_t calibration_source;
 static int32_t previous[2], output[2];
@@ -82,7 +83,7 @@ static void save_log(void) {
     if(guard.active || !calibration_valid(&calibration) || !storage_fits()) { save_failed=true;return; }
     outputs_off();memset(&saved,0,sizeof(saved));SavedLog *v=&saved.data;
     v->magic=HUMP_MAGIC;v->version=1;v->count=trace_count;v->dropped=trace_dropped;
-    v->firmware=trace_count ? recorded_version : 3;
+    v->firmware=trace_count ? recorded_version : 4;
     v->duration=guard.duration_us;v->reason=guard.reason;v->key=recorded_key;v->offline=recorded_offline;
     v->profile=profile;v->recorded_profile=recorded_profile;v->imported=calibration_source;v->calibration=calibration;
     for(unsigned w=0;w<2;++w) { v->cutoff[w]=cut_ticks[w]-origin[w];v->invalid[w]=cut_invalid[w]; }
@@ -136,16 +137,21 @@ static bool safety_tick(struct repeating_timer *t) {
 static const char *reason_name(uint8_t r) {
     static const char *const names[]={"none","GP20 pressed","GP21 released","10s test limit","serial s",
         "USB connection changed","control loop late","no encoder movement under drive","encoder direction mismatch",
-        "invalid encoder transitions","500mm path limit","GP21 stop pressed","unused","line not recovered"};
+        "invalid encoder transitions","500mm path limit","GP21 stop pressed","unused","line not recovered",
+        "weak IR carry-through 1s limit","weak IR carry-through 25mm limit","weak IR heading limit"};
     return r<sizeof(names)/sizeof(names[0])?names[r]:"unknown";
 }
 static void help(void) {
-    puts("\nBUDDY23 HUMP LINE v3 | isolated SDK test | DRIVE OFF on boot");
+    puts("\nBUDDY23 HUMP LINE v4 | isolated SDK test | DRIVE OFF on boot");
     puts("Front A0: LEFT GP26, RIGHT GP28; same3.3V/common ground. GP19/IMU unused.");
     puts("Normal V11 symmetric line steering45/45mm/s, slowing the inner wheel for correction.");
     puts("1=normal30% cap; 2=underspeed assistance up to42%; k saves. No faster cruise target.");
     puts("Assist requires visible line, target>=20, ramp reached target, deficit>=15mm/s for100ms.");
-    puts("V3 scales all PWM by1.20, including breakaway and extra effort up to180permille; reduces when speed recovers, clears on overspeed.");
+    puts("Same1.20x PWM; extra up to180permille; reduces when speed recovers, clears on overspeed.");
+    puts("V4 profile2: after150ms reliable moving tracking, weak IR may carry<=1s/25mm using encoder heading.");
+    puts("Carry targets40/40 with heading correction32..48; assist stays eligible;8deg drift stops.");
+    puts("Both levels>=400/difference<=350 for80ms restores optics. Decision16=carry,17=confirm.");
+    puts("STRAIGHT HUMPS ONLY: this cannot distinguish sensor lift from actually leaving the stripe.");
     puts("This is NOT a hump/IMU detector. Forward-only; reducing PWM does not actively brake.");
     puts("Cal stopped/released: w=BOTH WHITE, l=LEFT BLACK, r=RIGHT BLACK. Wait1s before capture.");
     puts("f=USB hold GP21; g=USB hands-free2s countdown; s/either button stops hands-free.");
@@ -199,6 +205,7 @@ static void dump(void) {
     printf("HUMP LINE v%u: key=%c mode=%s rows=%u dropped=%u settling=%u\n",recorded_version,recorded_key,
         recorded_offline ? "offline" : recorded_key=='g' ? "USB hands-free" : "USB hold",trace_count,trace_dropped,trace_settling);
     printf("TEST: straight line + load assistance | profile=%u cap_permille=%u\n",recorded_profile+1,recorded_version<3?hump_base_ceiling(recorded_profile):hump_ceiling(recorded_profile));
+    if(recorded_version>=4) puts("NAV: decision16=encoder carry,17=line confirmation; weak window<=1s/25mm,heading<=8deg");
     printf("CAL white=%u,%u black=%u,%u profile=%u\n",calibration.white[0],calibration.white[1],calibration.black[0],calibration.black[1],recorded_profile+1);
     puts("ms,active,L_mm,R_mm,progress_mm,heading_deg,L_mm_s,R_mm_s,PWM_L,PWM_R,ADC_L,ADC_R,levelL_1000,levelR_1000,targetL,targetR,extra_L,extra_R,decision");
     for(unsigned i=0;i<trace_count;++i) {
@@ -233,15 +240,15 @@ static bool start_run(unsigned mode) {
     if(ok) {
         ++runs;rearm=(LineRearm){0};run_mode=mode;
         recorded_profile=profile;
-        recorded_version=3;
+        recorded_version=4;
         guard.deadline_us=now+HUMP_RUN_US;
         trace_interval_us=HUMP_TRACE_US;
         for(unsigned w=0;w<2;++w) {
             origin[w]=previous[w]=enc[w].position;initial_invalid[w]=enc[w].invalid;
             velocity[w]=0;output[w]=0;controller[w]=(HumpWheel){0};bad_direction_us[w]=no_motion_us[w]=0;
         }
-        symmetric=(SymmetricTracker){0};path_mm=0;
-        demand=symmetric_demand(&symmetric,&calibration,analog_raw[0],analog_raw[1],now,0);
+        navigation=(HumpNavigation){0};path_mm=0;
+        demand=hump_navigation_step(&navigation,&calibration,analog_raw[0],analog_raw[1],now,0,0,0,0,profile).demand;
         outputs_off();trace_count=trace_dropped=0;
         recorded_key=mode==LINE_USB_FREE?'g':'f';recorded_offline=mode==LINE_BANK;trace_settling=false;
         flash_loaded=false;save_failed=false;last_control=last_trace=now;
@@ -277,13 +284,16 @@ static void control_step(uint64_t now) {
     }
     if(!active) return;
     path_mm+=step;
-    demand=symmetric_demand(&symmetric,&calibration,(uint16_t)adc_filtered[0],(uint16_t)adc_filtered[1],now,(uint32_t)path_mm);
-    uint8_t failure=demand.stop?WHY_LOST:WHY_NONE;int32_t next[2];
+    float heading=heading_deg(raw_to_mm(0,(int64_t)e[0].position-origin[0]),
+                              raw_to_mm(1,(int64_t)e[1].position-origin[1]));
+    HumpNavigationOutput navigation_output=hump_navigation_step(&navigation,&calibration,
+        (uint16_t)adc_filtered[0],(uint16_t)adc_filtered[1],now,path_mm,heading,velocity[0],velocity[1],profile);
+    demand=navigation_output.demand;
+    uint8_t failure=navigation_output.reason?navigation_output.reason:demand.stop?WHY_LOST:WHY_NONE;int32_t next[2];
     if(path_mm>=HUMP_RUN_MM) failure=WHY_TARGET;
-    bool visible=!demand.stop && demand.decision!=SYM_RECOVER_LEFT && demand.decision!=SYM_RECOVER_RIGHT &&
-                 (demand.level[0]>=400 || demand.level[1]>=400);
+    bool assist_allowed=navigation_output.assist_allowed;
     for(unsigned w=0;w<2;++w) {
-        next[w]=hump_wheel_step(&controller[w],w,demand.target[w],velocity[w],dt,now,profile,visible);
+        next[w]=hump_wheel_step(&controller[w],w,demand.target[w],velocity[w],dt,now,profile,assist_allowed);
         bad_direction_us[w]=velocity[w]<-20?bad_direction_us[w]+elapsed:0;
         if(bad_direction_us[w]>=50000) failure=WHY_DIRECTION;
         no_motion_us[w]=demand.target[w]>=20 && controller[w].pi.ramp>=20 && llabs(delta[w])<2?no_motion_us[w]+elapsed:0;
@@ -404,13 +414,13 @@ int main(void) {
         if(connected && now-last_status>=200000) {
             uint16_t nl=line_level(analog_raw[0],calibration.white[0],calibration.black[0]);
             uint16_t nr=line_level(analog_raw[1],calibration.white[1],calibration.black[1]);
-            printf("HUMP: L=%u R=%u levelL=%u levelR=%u cal=%u active=%u targets=%d,%d PWM=%ld,%ld extra=%u,%u arm=%u ready=%u pending=%u runs=%" PRIu32 "\n",
+            printf("HUMP: L=%u R=%u levelL=%u levelR=%u cal=%u active=%u targets=%d,%d PWM=%ld,%ld extra=%u,%u decision=%u carry=%u arm=%u ready=%u pending=%u runs=%" PRIu32 "\n",
                 analog_raw[0],analog_raw[1],nl,nr,calibration_valid(&calibration),guard.active,
                 guard.active?demand.target[0]:0,guard.active?demand.target[1]:0,
                 guard.active?(long)output[0]:0,guard.active?(long)output[1]:0,
                 guard.active?(unsigned)effort_scale20((int32_t)(controller[0].extra+0.5f)):0,
                 guard.active?(unsigned)effort_scale20((int32_t)(controller[1].extra+0.5f)):0,
-                arm.state,rearm.ready,usb_pending,runs);
+                demand.decision,navigation.active,arm.state,rearm.ready,usb_pending,runs);
             last_status=now;
         }
         sleep_ms(1);

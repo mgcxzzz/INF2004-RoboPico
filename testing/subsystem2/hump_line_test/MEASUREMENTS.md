@@ -95,3 +95,31 @@ The user also requested the same change for junction V9; junction V10 is the
 separate derivative, with forward30%, turn42%, peak48% at most150ms.
 Both new versions require physical verification. Check flat behaviour, the
 known small hump, then orange; test the flat junction separately.
+
+## Received V3 orange result, photos/video, and V4
+
+Junction V10 was reported working. Its log reached phase9 near90deg, phase6
+after about4s alignment, then optical loss late in outgoing travel. No change
+to junction code or artifact is made for this V4 experiment.
+
+Hump V3 stopped at5406ms, mean wheel distance180.03mm, reason `line not
+recovered`, invalid transitions0/0. At3679ms right PWM328/extra85 demonstrated
+load effort. By4948ms levels51/338 no longer met the400 eligibility threshold,
+and both extra values were0. At5329ms levels110/189 accompanied near-zero wheel
+speeds. At5406ms levels39/132 triggered all-white handling without recent
+trustworthy direction memory. This was not a42% saturation or stall-reason stop.
+
+User says the right wheel was still climbing and front spots were slightly
+off but mostly over black. Close-ups show the tilted chassis/sensor plane and
+stripe offset; user reports one spot displaced and the other raised. Selected
+frames from `video_2026-10-22_18-58-38.mp4` were inspected (8.61s,513 frames).
+Video/LEDs alone do not measure analog reflectance, clearance, current, or slip.
+
+V4 adds a profile2-only recent-centred, bounded weak-signal carry using encoder
+heading, keeping assistance eligible while weak. Limits1s/25mm/8deg; targets
+40 with heading differential capped8; both levels>=400/difference<=350 for80ms
+returns optics. Qualification and all limits are documented in README.md.
+The replay test of sampled V3 readings continues through the old5406ms optical
+stop with an active carry grant; it does not predict physical climbing success.
+No V4 physical result has been received. Test from a centred flat approach,
+film the orange hump, stop before the junction/edge, and send the full V4 log.

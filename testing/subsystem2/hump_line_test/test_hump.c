@@ -100,6 +100,9 @@ static void storage_and_import(void) {
     assert(hump_record_valid(&v) && hump_record_firmware(&v)==3);
     v.firmware=4;
     v.crc=log_crc((const uint8_t *)&v+offsetof(HumpSavedLog,count),sizeof(v)-offsetof(HumpSavedLog,count));
+    assert(hump_record_valid(&v) && hump_record_firmware(&v)==4);
+    v.firmware=5;
+    v.crc=log_crc((const uint8_t *)&v+offsetof(HumpSavedLog,count),sizeof(v)-offsetof(HumpSavedLog,count));
     assert(!hump_record_valid(&v)); /* unsupported future revision */
     v.firmware=2;
     v.crc=log_crc((const uint8_t *)&v+offsetof(HumpSavedLog,count),sizeof(v)-offsetof(HumpSavedLog,count));
@@ -137,6 +140,6 @@ int main(void) {
     baseline_equivalence();requested_slowdown_is_not_load();load_assistance_and_removal();
     slow_uphill_wheel_regression();
     storage_and_import();optical_and_stop_guards();
-    puts("PASS: baseline/V11 equivalence, intended slowdown, stalled20/32->20 regression, scaled30%/42% assistance/removal, V1/V2/V3 record/import/guards");
+    puts("PASS: baseline/V11 equivalence, intended slowdown, stalled20/32->20 regression, scaled30%/42% assistance/removal, V1/V2/V3/V4 record/import/guards");
     return 0;
 }

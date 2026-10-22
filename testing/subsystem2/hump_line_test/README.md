@@ -1,4 +1,4 @@
-# Hump line test V3
+# Hump line test V4
 
 Isolated Buddy2/Buddy3 Pico W SDK experiment, 2026-10-22. Uses the working
 V11 symmetric front-sensor steering with a selectable wheel-load response.
@@ -16,14 +16,43 @@ and assistance. This is a20% relative increase, not20 percentage points.
 Example: PWM150 ->180; normal ceiling250 ->300; assisted350 ->420.
 The speed PI can reduce duty as speed recovers. This does not promise20%
 higher speed or a fixed20% rise in steady measured PWM. Targets and all
-stop/optical guards are unchanged. Zero commands remain off.
+stop guards remain. V4 adds the bounded optical carry exception below. Zero commands remain off.
+
+## V4 bounded weak-signal carry
+
+Profile2 alone may carry through a short weak signal on a STRAIGHT hump:
+
+- Arm after both levels>=400, difference<=150, and both measured wheel speeds
+  >=15mm/s remain true for150ms. Update the trusted encoder heading while good.
+- The last trusted observation must be no older than1s at entry.
+- Enter when BOTH levels<400, provided encoder heading remains within8deg
+  of that trusted heading. This begins before an all-white stop.
+- Use40/40mm/s targets with a bounded heading correction (each target32..48),
+  keeping the existing independent wheel PI and load-assistance eligibility.
+- Stop after1s OR25mm absolute encoder path OR heading error>8deg. All usual
+  stall/button/deadline/direction/invalid-edge guards still apply.
+- Return to normal optical tracking only after both levels>=400 and their
+  difference<=350 for80ms. That confirmation consumes the same carry budget.
+- One-sensor hits/flickering black cannot restart the window. A new carry needs
+  a fresh150ms of good moving alignment. Unknown/stale startup loss cannot carry.
+
+Decision16=encoder carry;17=line confirmation. New STOP reasons identify time,
+distance or heading bounds. Live status includes `carry` and `decision`.
+The carry clock runs at the10ms control cadence; independent late-loop cutoff
+still removes drive if control is delayed. Encoder heading/path are estimates,
+not external position measurements; slip cannot be distinguished from movement.
+The robot can move up to25mm after actually losing the stripe, so provide flat
+runout and stop manually before an edge. No higher PWM or faster normal cruise
+is added in V4. A prolonged sensor lift or large lateral error still needs a
+mounting/height solution. Future IMU roll/pitch can help gate this terrain mode;
+it does not locate the stripe. Profile1 retains V3 optical behaviour.
 
 ## What changes
 
 | Setting | Profile 1 | Profile 2 |
 |---|---|---|
 | Nominal centred speed | 45/45 mm/s | 45/45 mm/s |
-| Line steering | V11 symmetric | Same V11 symmetric |
+| Line steering | V11 symmetric | V11 symmetric plus bounded weak-signal carry |
 | Ordinary PWM ceiling | 300 permille (30%) | 300 permille (30%) |
 | Extra load effort | None | Up to 180 permille added; total capped at 420 (42%) |
 
@@ -32,7 +61,7 @@ restore the existing requested speed, without raising the cruise target.
 Each wheel uses its own request and encoder speed. An intentional slower
 inner-wheel request does not itself qualify as a load deficit.
 
-Assistance requires a visible line (at least one normalized level >=400),
+Outside V4 carry, assistance requires a visible line (at least one normalized level >=400),
 no line-loss recovery, target >=20 mm/s, and the speed ramp at its requested
 target (within 0.5 mm/s). A deficit >=15 mm/s sustained for 100 ms qualifies.
 Physical extra output rises at900 permille/s to a maximum180. With deficit
@@ -48,11 +77,11 @@ policy; speed feedback would still control the wheels. No ramp dimensions
 or assumed position are used by the controller. One wheel climbing changes
 roll and sensor height; the line readings must also be inspected.
 
-## V3 test: flat, small black, then orange
+## V4 test: flat approach, then the orange hump
 
-1. Flash `firmware/buddy23_hump_line_v3.uf2` using BOOTSEL.
+1. Flash `firmware/buddy23_hump_line_v4.uf2` using BOOTSEL.
 2. Open PuTTY (115200, 8N1, flow control None), press `h`, and confirm
-   `BUDDY23 HUMP LINE v3`, `valid=1`. On first use it imports the existing
+   `BUDDY23 HUMP LINE v4`, `valid=1`. On first use it imports the existing
    V9 front calibration (`source=1`) or V11 calibration (`source=2`).
 3. Keep the same sensor height and adjacent mounting. Put both front sensing
    points over the straight black strip. Select `2`, then `k` while stopped
@@ -62,7 +91,7 @@ roll and sensor height; the line readings must also be inspected.
    release both, wait 1 second, tap/release GP21, then let the 2-second
    countdown finish. Either button stops the run.
 5. Start centred on flat with both normalized levels high and similar, then
-   approach the small black hump under the RIGHT wheel. Press GP20 after
+   approach the orange hump under the RIGHT wheel after a short flat checkout. Press GP20 after
    clearing the hump, before a junction or mat edge. Wait 3 seconds after
    stopping before changing to computer power, open PuTTY, and press `p`
    for the log.
@@ -99,8 +128,8 @@ that every hump height, slope, or surface is traversable.
   checks, 1 ms independent button/deadline/late-control cutoff, and USB-change
   stop. Assistance must act within the retained stall window.
 - Ordinary loss recovery retains V11's output policy and bounded search.
-- Software tests verify caps and logic. V3 physical hump capability remains
-  unverified until user tests.
+- Software tests verify caps and logic. V4 physical hump capability remains
+  unverified until user tests; the supplied V3 video/photos do not establish V4 performance.
 - Prior V9 junction and V11 UF2 artifacts are preserved. V11 source is unchanged. Before eventual
   integration, repeat flat, both bend directions, junction approach/turn/
   alignment, and line-loss checks with the new policy.
@@ -116,8 +145,8 @@ replaces its own sector; V9 cannot read revision10 and needs recalibration
 if rolling back after that save.
 
 If a valid hump record already exists, it takes precedence over the legacy
-record on future boots. V1/V2 hump calibration/log remains readable; an old run
-retains its recorded revision until a new V3 run replaces it. Saving selection alone retains
+record on future boots. V1/V2/V3 hump calibration/log remains readable; an old run
+retains its recorded revision until a new V4 run replaces it. Saving selection alone retains
 the recorded run revision. Recapture `w/l/r` if calibration must change.
 
 ## Build and checks
@@ -132,5 +161,5 @@ gcc -std=c11 -Wall -Wextra -Werror -O2 test_hump.c -lm -o test_hump
 python verify_firmware.py
 ```
 
-See `BUILD_V3.md` for the artifact hash and `MEASUREMENTS.md` for the failed
+See `BUILD_V4.md` for the artifact hash and `MEASUREMENTS.md` for the failed
 V9 hump run that motivated this separate test.

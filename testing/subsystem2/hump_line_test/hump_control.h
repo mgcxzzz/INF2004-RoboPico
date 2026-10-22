@@ -17,10 +17,11 @@ static inline unsigned hump_base_ceiling(unsigned profile) { return profile==HUM
 static inline unsigned hump_ceiling(unsigned profile) { return (unsigned)effort_scale20((int32_t)hump_base_ceiling(profile)); }
 /* Extra effort is a bounded response to commanded-wheel underspeed, not a
  * detector of inclines. No known ramp height/length, IMU or faster speed target.
- * Only a currently visible line permits assistance; white-loss recovery uses
- * ordinary effort (also scaled1.20x by V3). Overspeed reduces/coasts drive. */
+ * Assistance requires a line-confidence grant, or V4's explicitly bounded
+ * straight-hump carry grant. Ordinary optical search has no such grant.
+ * All effort is scaled1.20x. Overspeed reduces/coasts drive. */
 static inline int32_t hump_unscaled_wheel_step(HumpWheel *p,unsigned w,int16_t wanted,float speed,
-                                      float dt,uint64_t now,unsigned profile,bool visible) {
+                                      float dt,uint64_t now,unsigned profile,bool load_allowed) {
     if(wanted<=0) { *p=(HumpWheel){0};return 0; }
     if(profile!=HUMP_ASSIST) {
         p->extra=0;p->qualifying=false;
@@ -33,7 +34,7 @@ static inline int32_t hump_unscaled_wheel_step(HumpWheel *p,unsigned w,int16_t w
        Wait until the existing speed ramp has reached the current request. */
     /* Include slow steering requests down to the existing blocked-wheel guard's
        20 mm/s floor. A smaller request keeps ordinary effort; zero stays off. */
-    bool eligible=visible && wanted>=20 && fabsf(p->pi.ramp-wanted)<0.5f;
+    bool eligible=load_allowed && wanted>=20 && fabsf(p->pi.ramp-wanted)<0.5f;
     if(!eligible || error<=-3) { p->extra=0;p->qualifying=false; }
     else if(error>=15) {
         if(!p->qualifying) { p->qualifying=true;p->deficit_since=now; }
