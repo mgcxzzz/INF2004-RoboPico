@@ -83,3 +83,15 @@ prove the remaining mechanical/power/traction load can be overcome.
 Next physical check: small black hump, centred flat approach, stop manually
 after clearing it and before any junction. Inspect both wheels and sensor
 contact; send the complete V2 trace. No V2 physical run has been received yet.
+
+## User report after V2, and V3 experiment
+
+User confirmed V2 clears the small black hump but fails on the steeper orange
+fixture. No orange V2 log was supplied, so its exact stop cause/PWM/traction
+cannot be established. User requested a20% increase in PWM everywhere.
+V3 scales all computed outputs1.20x: ordinary limit30%, assisted42%, extra180
+permille. Targets and guards are retained; the geometry is not hardcoded.
+The user also requested the same change for junction V9; junction V10 is the
+separate derivative, with forward30%, turn42%, peak48% at most150ms.
+Both new versions require physical verification. Check flat behaviour, the
+known small hump, then orange; test the flat junction separately.

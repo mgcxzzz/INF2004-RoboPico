@@ -18,7 +18,7 @@
 #include "../line_motion_integration/logic.h"
 #include "hardware/adc.h"
 #include "../analog_line_follow/line_logic.h"
-#include "signed_wheel.h"
+#include "boosted_wheel.h"
 #include "junction_logic.h"
 
 enum { HOLD=21, STOP=20, PWM_TOP=999, TRACE_ROWS=100 };
@@ -34,7 +34,7 @@ static LineCalibration calibration;
 static Junction junction;
 static SideCalibration side_cal;
 static uint8_t test_mode=1,recorded_mode=1;
-static uint8_t recorded_version=9;
+static uint8_t recorded_version=10;
 static bool imported_front;
 static AnalogDemand demand;
 static uint16_t analog_raw[2];
@@ -108,7 +108,7 @@ static void outputs_off(void);
 static bool storage_fits(void) { return (uintptr_t)&__flash_binary_end<=XIP_BASE+LOG_OFFSET; }
 static bool stored_valid(const SavedLog *v) {
     return v->magic==LOG_MAGIC && v->version==1 && v->count<=TRACE_ROWS &&
-        v->selected_mode>=1 && v->selected_mode<=3 && v->mode>=1 && v->mode<=3 && v->firmware<=9 &&
+        v->selected_mode>=1 && v->selected_mode<=3 && v->mode>=1 && v->mode<=3 && v->firmware<=10 &&
         calibration_valid(&v->calibration) && side_valid(&v->side) &&
         v->crc==log_crc((const uint8_t *)v+offsetof(SavedLog,count),sizeof(*v)-offsetof(SavedLog,count));
 }
@@ -143,7 +143,7 @@ static void save_log(void) {
     v->magic=LOG_MAGIC;v->version=1;v->count=trace_count;v->dropped=trace_dropped;
     v->duration=guard.duration_us;v->reason=guard.reason;v->key=recorded_key;
     v->offline=recorded_offline;v->mode=recorded_mode;v->selected_mode=test_mode;
-    v->firmware=trace_count?recorded_version:9;
+    v->firmware=trace_count?recorded_version:10;
     v->calibration=calibration;v->side=side_cal;v->junction=junction;
     for(unsigned w=0;w<2;++w) { v->cutoff[w]=cut_ticks[w]-origin[w];v->invalid[w]=cut_invalid[w]; }
     memcpy(v->rows,trace,sizeof(trace));
@@ -193,9 +193,9 @@ static bool safety_tick(struct repeating_timer *t) {
         /* Bound the stronger start pulse even if the main control is delayed.
            Only integer arithmetic in this ISR; global late-loop cutoff retained. */
         for(unsigned w=0;w<2;++w) {
-            int32_t capped=junction_peak_cap(output[w],peak_until[w],now);
+            int32_t capped=boosted_junction_peak_cap(output[w],peak_until[w],now);
             if(capped!=output[w]) {
-                output[w]=capped;DualLevels v=junction_levels(w,capped,true);
+                output[w]=capped;DualLevels v=boosted_junction_levels(w,capped,true);
                 pwm_set_both_levels(pwm_gpio_to_slice_num(ma[w]),v.a,v.b);
             }
         }
@@ -222,7 +222,7 @@ static const char *phase_name(unsigned phase) {
     return phase<sizeof(names)/sizeof(names[0])?names[phase]:"unknown";
 }
 static void help(void) {
-    puts("\nBUDDY23 JUNCTION LEFT v9 | isolated SDK test, NO BARCODE | DRIVE OFF on boot");
+    puts("\nBUDDY23 JUNCTION LEFT v10 | isolated SDK test, NO BARCODE | DRIVE OFF on boot");
     puts("Front analog: GP26 LEFT A0 / GP28 RIGHT A0; offset D0 GP19; 3.3V/common GND.");
     puts("Front calibration: w=BOTH WHITE, l=LEFT BLACK, r=RIGHT BLACK; wait1s before capture.");
     puts("Offset polarity: o=capture GP19 over WHITE, b=capture GP19 over BLACK. Motors remain OFF.");
@@ -236,10 +236,10 @@ static void help(void) {
     puts("Approx geometry: side92mm ahead of rear-wheel axle; measured stripe midpoint+92mm centres axle.");
     puts("Mode2 reverses LEFT wheel, RIGHT forward. Mode3 leaves LEFT unpowered and needs longer outgoing line.");
     puts("Mode3: leave old line; either>=400 for30ms at75..110deg starts phase9 slow alignment.");
-    puts("Forward PWM cap25%, turn sustained35%, one start pulse40% up to150ms (1ms timer clamp).");
-    puts("V9 retains the pivot/forward PI reset; same speed targets and PWM limits.");
+    puts("Forward PWM cap30%, turn sustained42%, one start pulse48% up to150ms (1ms timer clamp).");
+    puts("V10 applies1.20x PWM everywhere; V9 speed targets, PI transition reset and guards retained.");
     puts("Alignment window6s/180mm; normal follow10s starts AFTER alignment. Trace500ms.");
-    puts("V9: phase9 forward20..35mm/s,25% cap; both>=400/difference<=350 for80ms starts follow10s.");
+    puts("V10: phase9 forward20..35mm/s,30% cap; both>=400/difference<=350 for80ms starts follow10s.");
     puts("Approach<=450mm/12s; whole run<=35s/900mm. No voltage or motor speed target increase.");
     puts("Allow about450mm additional line after alignment for the10s follow. No barcode/other offset marks.");
     puts("p=dump saved log, h=help. Wait3s after stop before switching power; never use two sources together.");
@@ -289,6 +289,7 @@ static void dump(void) {
     if(save_failed) puts("WARNING: flash save failed; RAM log only.");
     printf("JUNCTION LEFT v%u: key=%c mode=%s test=%u rows=%u dropped=%u settling=%u\n",recorded_version,recorded_key,
         recorded_offline?"offline":recorded_key=='g'?"USB hands-free":"USB hold",recorded_mode,trace_count,trace_dropped,trace_settling);
+    if(recorded_version>=10) puts("PWM: relative_scale=1.20 forward_cap=300 turn_cap=420 peak_cap=480");
     printf("CAL white=%u,%u black=%u,%u SIDE white=%u black=%u | side_ahead_mm=92\n",
         calibration.white[0],calibration.white[1],calibration.black[0],calibration.black[1],side_cal.white,side_cal.black);
     puts("ms,active,phase,side_raw,L_mm,R_mm,progress_mm,heading_deg,L_mm_s,R_mm_s,PWM_L,PWM_R,ADC_L,ADC_R,levelL,levelR,targetL,targetR,decision");
@@ -325,7 +326,7 @@ static bool start_run(unsigned mode) {
     uint64_t now=time_us_64();uint32_t irq=save_and_disable_interrupts();
     bool ok=guard_start(&guard,now,mode!=LINE_USB_HOLD || !gpio_get(HOLD),!gpio_get(STOP));
     if(ok) {
-        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=9;
+        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=10;
         guard.deadline_us=now+J_RUN_US;trace_interval_us=J_TRACE_US;
         for(unsigned w=0;w<2;++w) {
             origin[w]=previous[w]=enc[w].position;initial_invalid[w]=enc[w].invalid;
@@ -378,7 +379,7 @@ static void control_step(uint64_t now) {
                  (junction.rolling?demand.target[0]==0:demand.target[0]<0);
     for(unsigned w=0;w<2;++w) {
         int sign=demand.target[w]>0?1:demand.target[w]<0?-1:0;
-        next[w]=junction_wheel_step(&controller[w],w,demand.target[w],velocity[w],dt,now,turning);
+        next[w]=boosted_junction_step(&controller[w],w,demand.target[w],velocity[w],dt,now,turning);
         float along=velocity[w]*sign;
         bad_direction_us[w]=sign && along<-20?bad_direction_us[w]+elapsed:0;
         if(bad_direction_us[w]>=50000) failure=WHY_DIRECTION;
@@ -392,8 +393,8 @@ static void control_step(uint64_t now) {
         else {
             for(unsigned w=0;w<2;++w) {
                 peak_until[w]=turning?controller[w].peak_end_us:0;
-                output[w]=junction_peak_cap(next[w],peak_until[w],time_us_64());
-                DualLevels v=junction_levels(w,output[w],turning);
+                output[w]=boosted_junction_peak_cap(next[w],peak_until[w],time_us_64());
+                DualLevels v=boosted_junction_levels(w,output[w],turning);
                 pwm_set_both_levels(pwm_gpio_to_slice_num(ma[w]),v.a,v.b);
             }
             guard.last_control_us=now;
@@ -498,8 +499,8 @@ int main(void) {
         }
         uint8_t before_phase=junction.phase;
         control_step(time_us_64());now=time_us_64();
-        uint8_t peak_mask=(output[0]>J_TURN_PWM_LIMIT || output[0]<-J_TURN_PWM_LIMIT?1:0)
-                        |(output[1]>J_TURN_PWM_LIMIT || output[1]<-J_TURN_PWM_LIMIT?2:0);
+        uint8_t peak_mask=(output[0]>J_BOOST_TURN || output[0]<-J_BOOST_TURN?1:0)
+                        |(output[1]>J_BOOST_TURN || output[1]<-J_BOOST_TURN?2:0);
         if(guard.active && (junction.phase!=before_phase || peak_mask!=last_peak_mask)) {
             add_trace(now);last_trace=now;
             if(connected && junction.phase!=before_phase) printf("PHASE %u: %s\n",junction.phase,phase_name(junction.phase));

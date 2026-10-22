@@ -31,7 +31,7 @@ static inline unsigned hump_record_firmware(const HumpSavedLog *v) {
     return v->firmware ? v->firmware : 1;
 }
 static inline bool hump_record_valid(const HumpSavedLog *v) {
-    return v->magic==HUMP_MAGIC && v->version==1 && v->firmware<=2 && v->count<=HUMP_ROWS &&
+    return v->magic==HUMP_MAGIC && v->version==1 && v->firmware<=3 && v->count<=HUMP_ROWS &&
         v->profile<=HUMP_ASSIST && v->recorded_profile<=HUMP_ASSIST && calibration_valid(&v->calibration) &&
         v->crc==log_crc((const uint8_t *)v+offsetof(HumpSavedLog,count),sizeof(*v)-offsetof(HumpSavedLog,count));
 }
@@ -51,7 +51,7 @@ typedef struct {
 _Static_assert(sizeof(HumpLegacyJunction)==3792 && offsetof(HumpLegacyJunction,rows)==192,
                "Legacy V1..V9 junction layout changed");
 static inline bool hump_import_junction(const HumpLegacyJunction *v,LineCalibration *c) {
-    if(v->magic!=0x314e434au || v->version!=1 || v->count>100 || v->firmware>9 ||
+    if(v->magic!=0x314e434au || v->version!=1 || v->count>100 || v->firmware>10 ||
        v->selected_mode<1 || v->selected_mode>3 || v->mode<1 || v->mode>3 ||
        !calibration_valid(&v->calibration) || !side_valid(&v->side) ||
        v->crc!=log_crc((const uint8_t *)v+offsetof(HumpLegacyJunction,count),sizeof(*v)-offsetof(HumpLegacyJunction,count))) return false;

@@ -1,4 +1,43 @@
-# Junction detection, centring and left turn - V9
+# Junction detection, centring and left turn - V10
+
+V10 is V9 plus a20% relative PWM increase throughout the test. All speed
+requests, junction geometry, optical thresholds and timing guards are unchanged.
+The1.20x multiplier applies after the existing PI/breakaway calculation:
+
+| Phase | V9 ceiling | V10 ceiling |
+|---|---|---|
+| Approach, centring, alignment, outgoing following, recovery |25%|30%|
+| Sustained rolling/in-place turn |35%|42%|
+| One turn-start pulse, at most150ms |40%|48%|
+
+The independent1ms timer caps the scaled peak to42% at its existing deadline.
+It does not multiply an already-scaled command again. Zero stays off and logs
+show physical scaled PWM. The speed PI can lower PWM as speed recovers; this
+does not promise20% higher speed or torque. This version does not add Hump
+V3's separate underspeed-assistance policy.
+
+## V10 quick start
+
+1. Flash `firmware/buddy23_junction_left_v10.uf2`, press `h`, confirm V10,
+   `valid=1` and `side_valid=1`. Existing V9 calibration imports automatically.
+2. Press `3`, then `k` for rolling left. Start centred on a straight line with
+   the offset sensor on white and no barcode/other offset marks.
+3. Use `g` with USB for a hands-free2s countdown, or the existing bank sequence:
+   wait5s, both buttons3s, release, wait1s, tap/release GP21, countdown2s.
+4. Expected phases1 ->2 ->4 ->9 ->6 ->7. Alignment remains6s/180mm; outgoing
+   tracing starts its own10s timer after alignment. Stop before a mat edge.
+5. Wait3s after stopping, switch sources separately and press `p`. Send the
+   complete fresh V10 log. Test the flat junction first before combining loads.
+
+Existing V9 records retain their revision label until a V10 run replaces them.
+V9 and V10 UF2 artifacts are both retained. V10 saves in its existing final
+sector, replacing its old record. Reflashed V9 cannot read revision10; recapture
+front/side calibration if rolling back after a save. The Hump record in the
+penultimate sector is preserved by this image. See `BUILD_V10.md`.
+Physical V10 testing is pending.
+
+## V9 baseline history (settings below describe V9)
+
 
 Separate SDK test on the Buddy2 branch. Uses the successful V11 symmetric
 front controller and an existing offset digital sensor. No new sensor, barcode

@@ -12,9 +12,9 @@ static void baseline_equivalence(void) {
             int32_t expected=line_speed_step(&ref,w,wanted,speed,0.01f);
             expected=line_breakaway(&kick,now,wanted,ref.ramp,speed,expected);
             int32_t actual=hump_wheel_step(&p,w,wanted,speed,0.01f,now,mode,false);
-            assert(actual==expected && p.extra==0);
+            assert(actual==effort_scale20(expected) && p.extra==0);
             DualLevels a=hump_levels(w,actual,mode),b=dual_levels(w,expected);
-            assert(a.a==b.a && a.b==b.b);
+            assert(a.a==effort_scale20(b.a) && a.b==effort_scale20(b.b));
         }
     }
 }
@@ -39,9 +39,9 @@ static void load_assistance_and_removal(void) {
         uint64_t now=1000000+n*10000;
         int32_t l=hump_wheel_step(&left,0,45,45,0.01f,now,HUMP_ASSIST,true);
         int32_t r=hump_wheel_step(&right,1,45,0,0.01f,now,HUMP_ASSIST,true);
-        assert(l<=250 && left.extra==0 && r<=350 && right.extra<=150);
+        assert(l<=300 && left.extra==0 && r<=420 && right.extra<=150);
         if(n<10) assert(right.extra==0);
-        if(r>250 && !raised) { raised=true;first=now; }
+        if(r>300 && !raised) { raised=true;first=now; }
         DualLevels bridge=hump_levels(1,r,HUMP_ASSIST);
         assert(bridge.b==r && bridge.a==0); /* no hidden shared25% clamp */
     }
@@ -55,7 +55,7 @@ static void load_assistance_and_removal(void) {
     assert(right.extra==0); /* recovered speed removes extra over300ms */
     right.extra=150;
     int32_t u=hump_wheel_step(&right,1,45,0,0.01f,2000000,HUMP_ASSIST,false);
-    assert(right.extra==0 && u<=250); /* no extra during optical loss recovery */
+    assert(right.extra==0 && u<=300); /* no extra during optical loss recovery */
     right.extra=150;
     assert(hump_wheel_step(&right,1,0,0,0.01f,2010000,HUMP_ASSIST,true)==0);
     assert(right.pi.ramp==0 && right.pi.integral==0 && !right.kick.active && right.extra==0);
@@ -76,13 +76,13 @@ static void slow_uphill_wheel_regression(void) {
             uint64_t now=1000000+n*10000;
             int32_t u=hump_wheel_step(&stalled,w,20,0,0.01f,now,HUMP_ASSIST,true);
             (void)hump_wheel_step(&healthy,1-w,49,49,0.01f,now,HUMP_ASSIST,true);
-            assert(u<=350 && stalled.extra<=150 && healthy.extra==0);
+            assert(u<=420 && stalled.extra<=150 && healthy.extra==0);
             if(n<10) assert(stalled.extra==0);
-            if(u>250) raised=true;
+            if(u>300) raised=true;
         }
         assert(raised && stalled.extra==150); /* before500ms guard expires */
         int32_t u=hump_wheel_step(&stalled,w,19,0,0.01f,1510000,HUMP_ASSIST,true);
-        assert(u<=250 && stalled.extra==0 && !stalled.qualifying);
+        assert(u<=300 && stalled.extra==0 && !stalled.qualifying);
         assert(hump_wheel_step(&stalled,w,0,0,0.01f,1520000,HUMP_ASSIST,true)==0);
     }
 }
@@ -97,6 +97,9 @@ static void storage_and_import(void) {
     assert(hump_record_valid(&v) && hump_record_firmware(&v)==2);
     v.firmware=3;
     v.crc=log_crc((const uint8_t *)&v+offsetof(HumpSavedLog,count),sizeof(v)-offsetof(HumpSavedLog,count));
+    assert(hump_record_valid(&v) && hump_record_firmware(&v)==3);
+    v.firmware=4;
+    v.crc=log_crc((const uint8_t *)&v+offsetof(HumpSavedLog,count),sizeof(v)-offsetof(HumpSavedLog,count));
     assert(!hump_record_valid(&v)); /* unsupported future revision */
     v.firmware=2;
     v.crc=log_crc((const uint8_t *)&v+offsetof(HumpSavedLog,count),sizeof(v)-offsetof(HumpSavedLog,count));
@@ -105,6 +108,9 @@ static void storage_and_import(void) {
         .mode=3,.selected_mode=3,.side={0,1,3},.count=15};
     old.crc=log_crc((const uint8_t *)&old+offsetof(HumpLegacyJunction,count),sizeof(old)-offsetof(HumpLegacyJunction,count));
     LineCalibration c={0};assert(hump_import_junction(&old,&c) && memcmp(&c,&cal,sizeof(c))==0);
+    old.firmware=10;
+    old.crc=log_crc((const uint8_t *)&old+offsetof(HumpLegacyJunction,count),sizeof(old)-offsetof(HumpLegacyJunction,count));
+    assert(hump_import_junction(&old,&c));
     old.rows[12]++;assert(!hump_import_junction(&old,&c));old.rows[12]--;
     uint8_t flash[8192],final_before[4096];memset(flash,0xff,sizeof(flash));
     memcpy(flash+4096,&old,sizeof(old));memcpy(final_before,flash+4096,4096);
@@ -131,6 +137,6 @@ int main(void) {
     baseline_equivalence();requested_slowdown_is_not_load();load_assistance_and_removal();
     slow_uphill_wheel_regression();
     storage_and_import();optical_and_stop_guards();
-    puts("PASS: baseline/V11 equivalence, intended slowdown, stalled20/32->20 regression, bounded35% assistance/removal, V1/V2 record/import/guards");
+    puts("PASS: baseline/V11 equivalence, intended slowdown, stalled20/32->20 regression, scaled30%/42% assistance/removal, V1/V2/V3 record/import/guards");
     return 0;
 }

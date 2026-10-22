@@ -37,7 +37,7 @@ static LineRearm rearm;
 static unsigned last_start_block;
 static uint32_t runs;
 static uint8_t profile,recorded_profile;
-static unsigned recorded_version=2;
+static unsigned recorded_version=3;
 static HumpWheel controller[2];
 static uint8_t calibration_source;
 static int32_t previous[2], output[2];
@@ -82,7 +82,7 @@ static void save_log(void) {
     if(guard.active || !calibration_valid(&calibration) || !storage_fits()) { save_failed=true;return; }
     outputs_off();memset(&saved,0,sizeof(saved));SavedLog *v=&saved.data;
     v->magic=HUMP_MAGIC;v->version=1;v->count=trace_count;v->dropped=trace_dropped;
-    v->firmware=trace_count ? recorded_version : 2;
+    v->firmware=trace_count ? recorded_version : 3;
     v->duration=guard.duration_us;v->reason=guard.reason;v->key=recorded_key;v->offline=recorded_offline;
     v->profile=profile;v->recorded_profile=recorded_profile;v->imported=calibration_source;v->calibration=calibration;
     for(unsigned w=0;w<2;++w) { v->cutoff[w]=cut_ticks[w]-origin[w];v->invalid[w]=cut_invalid[w]; }
@@ -140,12 +140,12 @@ static const char *reason_name(uint8_t r) {
     return r<sizeof(names)/sizeof(names[0])?names[r]:"unknown";
 }
 static void help(void) {
-    puts("\nBUDDY23 HUMP LINE v2 | isolated SDK test | DRIVE OFF on boot");
+    puts("\nBUDDY23 HUMP LINE v3 | isolated SDK test | DRIVE OFF on boot");
     puts("Front A0: LEFT GP26, RIGHT GP28; same3.3V/common ground. GP19/IMU unused.");
     puts("Normal V11 symmetric line steering45/45mm/s, slowing the inner wheel for correction.");
-    puts("1=baseline25% cap; 2=underspeed assistance up to35%; k saves. No faster cruise target.");
+    puts("1=normal30% cap; 2=underspeed assistance up to42%; k saves. No faster cruise target.");
     puts("Assist requires visible line, target>=20, ramp reached target, deficit>=15mm/s for100ms.");
-    puts("Extra effort ramps up to150permille; reduces when speed recovers, clears on overspeed.");
+    puts("V3 scales all PWM by1.20, including breakaway and extra effort up to180permille; reduces when speed recovers, clears on overspeed.");
     puts("This is NOT a hump/IMU detector. Forward-only; reducing PWM does not actively brake.");
     puts("Cal stopped/released: w=BOTH WHITE, l=LEFT BLACK, r=RIGHT BLACK. Wait1s before capture.");
     puts("f=USB hold GP21; g=USB hands-free2s countdown; s/either button stops hands-free.");
@@ -183,7 +183,7 @@ static void add_trace(uint64_t now) {
     r->ms=(uint16_t)((now-guard.start_us)/1000);
     r->active=guard.active;
     r->decision=demand.decision;
-    for(unsigned w=0;w<2;++w) { r->adc[w]=analog_raw[w];r->level[w]=demand.level[w];r->target[w]=guard.active?demand.target[w]:0;r->extra[w]=(uint16_t)(controller[w].extra+0.5f); }
+    for(unsigned w=0;w<2;++w) { r->adc[w]=analog_raw[w];r->level[w]=demand.level[w];r->target[w]=guard.active?demand.target[w]:0;r->extra[w]=(uint16_t)effort_scale20((int32_t)(controller[w].extra+0.5f)); }
     for(unsigned w=0;w<2;++w) {
         r->ticks[w]=(int32_t)((int64_t)enc[w].position-origin[w]);
         r->pwm[w]=guard.active ? (int16_t)output[w] : 0;
@@ -198,7 +198,7 @@ static void dump(void) {
     if(save_failed) puts("WARNING: flash save failed; this RAM log is not persistent.");
     printf("HUMP LINE v%u: key=%c mode=%s rows=%u dropped=%u settling=%u\n",recorded_version,recorded_key,
         recorded_offline ? "offline" : recorded_key=='g' ? "USB hands-free" : "USB hold",trace_count,trace_dropped,trace_settling);
-    printf("TEST: straight line + load assistance | profile=%u cap_permille=%u\n",recorded_profile+1,hump_ceiling(recorded_profile));
+    printf("TEST: straight line + load assistance | profile=%u cap_permille=%u\n",recorded_profile+1,recorded_version<3?hump_base_ceiling(recorded_profile):hump_ceiling(recorded_profile));
     printf("CAL white=%u,%u black=%u,%u profile=%u\n",calibration.white[0],calibration.white[1],calibration.black[0],calibration.black[1],recorded_profile+1);
     puts("ms,active,L_mm,R_mm,progress_mm,heading_deg,L_mm_s,R_mm_s,PWM_L,PWM_R,ADC_L,ADC_R,levelL_1000,levelR_1000,targetL,targetR,extra_L,extra_R,decision");
     for(unsigned i=0;i<trace_count;++i) {
@@ -233,7 +233,7 @@ static bool start_run(unsigned mode) {
     if(ok) {
         ++runs;rearm=(LineRearm){0};run_mode=mode;
         recorded_profile=profile;
-        recorded_version=2;
+        recorded_version=3;
         guard.deadline_us=now+HUMP_RUN_US;
         trace_interval_us=HUMP_TRACE_US;
         for(unsigned w=0;w<2;++w) {
@@ -408,7 +408,8 @@ int main(void) {
                 analog_raw[0],analog_raw[1],nl,nr,calibration_valid(&calibration),guard.active,
                 guard.active?demand.target[0]:0,guard.active?demand.target[1]:0,
                 guard.active?(long)output[0]:0,guard.active?(long)output[1]:0,
-                guard.active?(unsigned)(controller[0].extra+0.5f):0,guard.active?(unsigned)(controller[1].extra+0.5f):0,
+                guard.active?(unsigned)effort_scale20((int32_t)(controller[0].extra+0.5f)):0,
+                guard.active?(unsigned)effort_scale20((int32_t)(controller[1].extra+0.5f)):0,
                 arm.state,rearm.ready,usb_pending,runs);
             last_status=now;
         }

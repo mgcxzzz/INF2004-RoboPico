@@ -2,6 +2,7 @@
 #define HUMP_CONTROL_H
 #include "../analog_line_follow/wheel_control.h"
 #include "../analog_line_follow/symmetric_logic.h"
+#include "../effort_scale.h"
 
 enum { HUMP_BASELINE,HUMP_ASSIST,HUMP_PWM_MAX=350,HUMP_EXTRA_MAX=150,
        HUMP_QUALIFY_US=100000,HUMP_RUN_US=10000000,HUMP_RUN_MM=500,HUMP_TRACE_US=125000 };
@@ -12,12 +13,13 @@ typedef struct {
     float extra;
     bool qualifying;
 } HumpWheel;
-static inline unsigned hump_ceiling(unsigned profile) { return profile==HUMP_ASSIST?HUMP_PWM_MAX:PWM_LIMIT; }
+static inline unsigned hump_base_ceiling(unsigned profile) { return profile==HUMP_ASSIST?HUMP_PWM_MAX:PWM_LIMIT; }
+static inline unsigned hump_ceiling(unsigned profile) { return (unsigned)effort_scale20((int32_t)hump_base_ceiling(profile)); }
 /* Extra effort is a bounded response to commanded-wheel underspeed, not a
  * detector of inclines. No known ramp height/length, IMU or faster speed target.
- * Only a currently visible line permits assistance; white-loss recovery keeps
- * V11's ordinary output. Positive commands only: overspeed reduces/coasts drive. */
-static inline int32_t hump_wheel_step(HumpWheel *p,unsigned w,int16_t wanted,float speed,
+ * Only a currently visible line permits assistance; white-loss recovery uses
+ * ordinary effort (also scaled1.20x by V3). Overspeed reduces/coasts drive. */
+static inline int32_t hump_unscaled_wheel_step(HumpWheel *p,unsigned w,int16_t wanted,float speed,
                                       float dt,uint64_t now,unsigned profile,bool visible) {
     if(wanted<=0) { *p=(HumpWheel){0};return 0; }
     if(profile!=HUMP_ASSIST) {
@@ -51,7 +53,11 @@ static inline int32_t hump_wheel_step(HumpWheel *p,unsigned w,int16_t wanted,flo
     if(kicked>out) out=kicked;
     return out;
 }
-/* Shared dual_levels clips25%; map the test's35% ceiling explicitly.
+static inline int32_t hump_wheel_step(HumpWheel *p,unsigned w,int16_t wanted,float speed,
+                                      float dt,uint64_t now,unsigned profile,bool visible) {
+    return effort_scale20(hump_unscaled_wheel_step(p,w,wanted,speed,dt,now,profile,visible));
+}
+/* Shared dual_levels clips25%; map physical30%/42% ceilings explicitly.
  * Negative values cannot command reverse in this forward-only experiment. */
 static inline DualLevels hump_levels(unsigned w,int32_t pwm,unsigned profile) {
     DualLevels v={0};if(w>1) return v;
