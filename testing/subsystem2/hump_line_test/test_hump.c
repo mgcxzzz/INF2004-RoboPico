@@ -103,6 +103,9 @@ static void storage_and_import(void) {
     assert(hump_record_valid(&v) && hump_record_firmware(&v)==4);
     v.firmware=5;
     v.crc=log_crc((const uint8_t *)&v+offsetof(HumpSavedLog,count),sizeof(v)-offsetof(HumpSavedLog,count));
+    assert(hump_record_valid(&v) && hump_record_firmware(&v)==5);
+    v.firmware=6;
+    v.crc=log_crc((const uint8_t *)&v+offsetof(HumpSavedLog,count),sizeof(v)-offsetof(HumpSavedLog,count));
     assert(!hump_record_valid(&v)); /* unsupported future revision */
     v.firmware=2;
     v.crc=log_crc((const uint8_t *)&v+offsetof(HumpSavedLog,count),sizeof(v)-offsetof(HumpSavedLog,count));
@@ -133,6 +136,11 @@ static void optical_and_stop_guards(void) {
     guard_tick(&g,1001000,false,false);assert(!g.active && g.reason==WHY_RELEASE);
     g=(DualGuard){0};assert(guard_start(&g,1000000,true,false));
     guard_tick(&g,1100000,true,false);assert(!g.active && g.reason==WHY_LATE);
+    g=(DualGuard){0};assert(guard_start(&g,1000000,true,false));g.deadline_us=1000000+HUMP_RUN_US;
+    g.last_control_us=16999999;
+    guard_tick(&g,16999999,true,false);assert(g.active);
+    guard_tick(&g,17000000,true,false);assert(!g.active && g.reason==WHY_LIMIT);
+    assert(HUMP_RUN_US/HUMP_TRACE_US+1000000/HUMP_TRACE_US+3<=HUMP_ROWS);
     assert(profile_start_block(5,false,false,true,false,true,1000,1000,false,LINE_BANK)==START_OK);
     assert(profile_start_block(5,false,false,true,false,true,0,0,false,LINE_BANK)==START_LINE_ABSENT);
 }
@@ -140,6 +148,6 @@ int main(void) {
     baseline_equivalence();requested_slowdown_is_not_load();load_assistance_and_removal();
     slow_uphill_wheel_regression();
     storage_and_import();optical_and_stop_guards();
-    puts("PASS: baseline/V11 equivalence, intended slowdown, stalled20/32->20 regression, scaled30%/42% assistance/removal, V1/V2/V3/V4 record/import/guards");
+    puts("PASS: baseline/V11 equivalence, intended slowdown, stalled20/32->20 regression, scaled30%/42% assistance/removal, V1/V2/V3/V4/V5 record/import/guards");
     return 0;
 }

@@ -123,3 +123,21 @@ The replay test of sampled V3 readings continues through the old5406ms optical
 stop with an active carry grant; it does not predict physical climbing success.
 No V4 physical result has been received. Test from a centred flat approach,
 film the orange hump, stop before the junction/edge, and send the full V4 log.
+
+## V5 six-second carry request
+
+User cannot add a ground-following sensor mount and requested a longer no-line
+allowance, explicitly clarifying BOTH WHITE. The final requested duration is
+6s (superseding a proposed2s). No new complete V4 failure log was supplied, so
+we cannot identify whether a particular V4 stop was carry time, distance,
+heading, stall, or unarmed optical loss.
+
+V5 sets armed carry to6s and240mm, retaining8deg heading and500ms blocked-wheel
+cutoffs. Entry still occurs when both levels<400 after recent centred moving
+tracking; continuous both-white<150 is included, without restarting the clock.
+The old25mm bound would otherwise stop around0.625s at the40mm/s mean target.
+Whole-run16s/500mm and trace200ms allow a late carry more time while fitting
+the same saved record. Normal targets and30%/42% PWM are unchanged. Ordinary
+unarmed loss remains650ms/25mm with recent direction, otherwise immediate stop.
+This is not proof of remaining on the stripe or clearing the hump. Physical
+V5 tests are pending; send the full saved log including STOP.

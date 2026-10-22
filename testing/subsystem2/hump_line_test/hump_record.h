@@ -31,7 +31,7 @@ static inline unsigned hump_record_firmware(const HumpSavedLog *v) {
     return v->firmware ? v->firmware : 1;
 }
 static inline bool hump_record_valid(const HumpSavedLog *v) {
-    return v->magic==HUMP_MAGIC && v->version==1 && v->firmware<=4 && v->count<=HUMP_ROWS &&
+    return v->magic==HUMP_MAGIC && v->version==1 && v->firmware<=5 && v->count<=HUMP_ROWS &&
         v->profile<=HUMP_ASSIST && v->recorded_profile<=HUMP_ASSIST && calibration_valid(&v->calibration) &&
         v->crc==log_crc((const uint8_t *)v+offsetof(HumpSavedLog,count),sizeof(*v)-offsetof(HumpSavedLog,count));
 }

@@ -7,7 +7,7 @@
  * true heading under slip. A recent centred observation grants one bounded
  * carry-through; weak/flickering readings cannot renew its distance or timer. */
 enum { HUMP_CARRY=16,HUMP_REACQUIRE=17,
-       HUMP_CARRY_US=1000000,HUMP_CARRY_MM=25,HUMP_GOOD_US=150000,
+       HUMP_CARRY_US=6000000,HUMP_CARRY_MM=240,HUMP_GOOD_US=150000,
        HUMP_RECENT_US=1000000,HUMP_REACQUIRE_US=80000,
        HUMP_WHY_TIME=14,HUMP_WHY_DISTANCE=15,HUMP_WHY_HEADING=16 };
 #define HUMP_HEADING_MAX 8.0f

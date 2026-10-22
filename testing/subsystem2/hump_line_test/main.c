@@ -38,7 +38,7 @@ static LineRearm rearm;
 static unsigned last_start_block;
 static uint32_t runs;
 static uint8_t profile,recorded_profile;
-static unsigned recorded_version=4;
+static unsigned recorded_version=5;
 static HumpWheel controller[2];
 static uint8_t calibration_source;
 static int32_t previous[2], output[2];
@@ -83,7 +83,7 @@ static void save_log(void) {
     if(guard.active || !calibration_valid(&calibration) || !storage_fits()) { save_failed=true;return; }
     outputs_off();memset(&saved,0,sizeof(saved));SavedLog *v=&saved.data;
     v->magic=HUMP_MAGIC;v->version=1;v->count=trace_count;v->dropped=trace_dropped;
-    v->firmware=trace_count ? recorded_version : 4;
+    v->firmware=trace_count ? recorded_version : 5;
     v->duration=guard.duration_us;v->reason=guard.reason;v->key=recorded_key;v->offline=recorded_offline;
     v->profile=profile;v->recorded_profile=recorded_profile;v->imported=calibration_source;v->calibration=calibration;
     for(unsigned w=0;w<2;++w) { v->cutoff[w]=cut_ticks[w]-origin[w];v->invalid[w]=cut_invalid[w]; }
@@ -135,20 +135,26 @@ static bool safety_tick(struct repeating_timer *t) {
     return true;
 }
 static const char *reason_name(uint8_t r) {
-    static const char *const names[]={"none","GP20 pressed","GP21 released","10s test limit","serial s",
+    if(recorded_version<5) {
+        if(r==WHY_LIMIT) return "10s test limit";
+        if(r==HUMP_WHY_TIME) return "weak IR carry-through 1s limit";
+        if(r==HUMP_WHY_DISTANCE) return "weak IR carry-through 25mm limit";
+    }
+    static const char *const names[]={"none","GP20 pressed","GP21 released","16s test limit","serial s",
         "USB connection changed","control loop late","no encoder movement under drive","encoder direction mismatch",
         "invalid encoder transitions","500mm path limit","GP21 stop pressed","unused","line not recovered",
-        "weak IR carry-through 1s limit","weak IR carry-through 25mm limit","weak IR heading limit"};
+        "no-line carry-through 6s limit","no-line carry-through 240mm limit","weak IR heading limit"};
     return r<sizeof(names)/sizeof(names[0])?names[r]:"unknown";
 }
 static void help(void) {
-    puts("\nBUDDY23 HUMP LINE v4 | isolated SDK test | DRIVE OFF on boot");
+    puts("\nBUDDY23 HUMP LINE v5 | isolated SDK test | DRIVE OFF on boot");
     puts("Front A0: LEFT GP26, RIGHT GP28; same3.3V/common ground. GP19/IMU unused.");
     puts("Normal V11 symmetric line steering45/45mm/s, slowing the inner wheel for correction.");
     puts("1=normal30% cap; 2=underspeed assistance up to42%; k saves. No faster cruise target.");
-    puts("Assist requires visible line, target>=20, ramp reached target, deficit>=15mm/s for100ms.");
+    puts("Outside carry, assist requires visible line, target>=20, ramp reached target, deficit>=15mm/s for100ms.");
     puts("Same1.20x PWM; extra up to180permille; reduces when speed recovers, clears on overspeed.");
-    puts("V4 profile2: after150ms reliable moving tracking, weak IR may carry<=1s/25mm using encoder heading.");
+    puts("V5 profile2: after150ms reliable moving tracking, signal loss INCLUDING BOTH WHITE may carry<=6s/240mm.");
+    puts("Timer starts on carry entry (both levels<400), includes all-white levels<150; not renewed by flicker.");
     puts("Carry targets40/40 with heading correction32..48; assist stays eligible;8deg drift stops.");
     puts("Both levels>=400/difference<=350 for80ms restores optics. Decision16=carry,17=confirm.");
     puts("STRAIGHT HUMPS ONLY: this cannot distinguish sensor lift from actually leaving the stripe.");
@@ -156,7 +162,7 @@ static void help(void) {
     puts("Cal stopped/released: w=BOTH WHITE, l=LEFT BLACK, r=RIGHT BLACK. Wait1s before capture.");
     puts("f=USB hold GP21; g=USB hands-free2s countdown; s/either button stops hands-free.");
     puts("BANK: wait5s, hold BOTH3s, release BOTH, wait1s, tap/release GP21,2s countdown.");
-    puts("Same500ms feedback stall, buttons/USB/late-loop/encoder kills; run10s/500mm maximum.");
+    puts("Same500ms feedback stall, buttons/USB/late-loop/encoder kills; run16s/500mm maximum, trace200ms.");
     puts("Repeat after save/settling and1s standstill, ready1. No automatic restart.");
     puts("p=saved hump log; wait3s after stop/save before switching power sources separately.");
     puts("Hump saves use penultimate flash sector; final V9 junction record is read-only/preserved.");
@@ -205,7 +211,8 @@ static void dump(void) {
     printf("HUMP LINE v%u: key=%c mode=%s rows=%u dropped=%u settling=%u\n",recorded_version,recorded_key,
         recorded_offline ? "offline" : recorded_key=='g' ? "USB hands-free" : "USB hold",trace_count,trace_dropped,trace_settling);
     printf("TEST: straight line + load assistance | profile=%u cap_permille=%u\n",recorded_profile+1,recorded_version<3?hump_base_ceiling(recorded_profile):hump_ceiling(recorded_profile));
-    if(recorded_version>=4) puts("NAV: decision16=encoder carry,17=line confirmation; weak window<=1s/25mm,heading<=8deg");
+    if(recorded_version>=4) printf("NAV: decision16=encoder carry,17=line confirmation; signal-loss window<=%us/%umm,heading<=8deg\n",
+                                  recorded_version>=5?6u:1u,recorded_version>=5?240u:25u);
     printf("CAL white=%u,%u black=%u,%u profile=%u\n",calibration.white[0],calibration.white[1],calibration.black[0],calibration.black[1],recorded_profile+1);
     puts("ms,active,L_mm,R_mm,progress_mm,heading_deg,L_mm_s,R_mm_s,PWM_L,PWM_R,ADC_L,ADC_R,levelL_1000,levelR_1000,targetL,targetR,extra_L,extra_R,decision");
     for(unsigned i=0;i<trace_count;++i) {
@@ -240,7 +247,7 @@ static bool start_run(unsigned mode) {
     if(ok) {
         ++runs;rearm=(LineRearm){0};run_mode=mode;
         recorded_profile=profile;
-        recorded_version=4;
+        recorded_version=5;
         guard.deadline_us=now+HUMP_RUN_US;
         trace_interval_us=HUMP_TRACE_US;
         for(unsigned w=0;w<2;++w) {

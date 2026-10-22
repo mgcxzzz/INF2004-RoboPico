@@ -30,12 +30,17 @@ static void bounded_loss(void) {
     HumpNavigation n=carrying();
     HumpNavigationOutput o=step(&n,39,132,1700000,15,2.5f);
     assert(!o.demand.stop && o.assist_allowed && o.demand.decision==HUMP_CARRY);
-    o=step(&n,0,0,2199999,34.999f,2.5f);
+    /* Continuously BOTH WHITE past the old1s and proposed2s cutoffs. */
+    o=step(&n,0,0,2200000,30,2.5f);
+    assert(!o.demand.stop && o.assist_allowed);
+    o=step(&n,0,0,3200000,70,2.5f);
+    assert(!o.demand.stop && o.assist_allowed);
+    o=step(&n,0,0,7199999,249.999f,2.5f);
     assert(!o.demand.stop);
-    o=step(&n,0,0,2200000,34.999f,2.5f);
+    o=step(&n,0,0,7200000,249.999f,2.5f);
     assert(o.demand.stop && o.reason==HUMP_WHY_TIME && !o.assist_allowed);
     assert(o.demand.target[0]==0 && o.demand.target[1]==0);
-    n=carrying();o=step(&n,0,0,1210000,35,2.5f);
+    n=carrying();o=step(&n,0,0,1210000,250,2.5f);
     assert(o.demand.stop && o.reason==HUMP_WHY_DISTANCE);
     n=carrying();o=step(&n,0,0,1210000,10,10.5f);
     assert(!o.demand.stop && o.demand.target[0]==32 && o.demand.target[1]==48);
@@ -69,14 +74,28 @@ static void reacquisition_and_flicker(void) {
     assert(!n.active && !n.armed && !o.demand.stop && o.demand.decision==SYM_STRAIGHT);
     o=step(&n,0,0,1390000,18,2.5f);assert(o.demand.stop); /* no immediate blind rearm */
     n=carrying();
-    for(unsigned k=0;k<90;++k) {
+    for(unsigned k=0;k<590;++k) {
         /* One sensor black or brief both-black flashes cannot extend deadline. */
         unsigned l=k%6<3?900:0,r=k%6<2?900:0;
         o=step(&n,l,r,1210000+k*10000,11,2.5f);
         assert(n.active && !o.demand.stop && n.carry_since==1200000);
     }
-    o=step(&n,900,900,2200000,11,2.5f);
+    o=step(&n,900,900,7200000,11,2.5f);
     assert(o.demand.stop && o.reason==HUMP_WHY_TIME);
+    n=carrying();
+    o=step(&n,900,900,6200000,210,2.5f);
+    assert(n.active && o.demand.decision==HUMP_REACQUIRE);
+    o=step(&n,900,900,6280000,213,2.5f);
+    assert(!n.active && !o.demand.stop); /* reacquisition in the extended window */
+}
+static void ordinary_white_rules_unchanged(void) {
+    HumpNavigation n={0};
+    HumpNavigationOutput o=step(&n,900,0,1000000,0,0);
+    assert(!n.armed && !n.active);
+    o=step(&n,0,0,1010000,1,0);
+    assert(!o.demand.stop && !n.active && !o.assist_allowed);
+    o=step(&n,0,0,1659999,20,0);assert(!o.demand.stop);
+    o=step(&n,0,0,1660000,20,0);assert(o.demand.stop); /* unarmed fallback650ms */
 }
 static void normal_equivalence_and_assistance(void) {
     for(unsigned profile=0;profile<=1;++profile) {
@@ -134,7 +153,7 @@ static void orange_v3_log_regression(void) {
 }
 int main(void) {
     bounded_loss();eligibility();reacquisition_and_flicker();normal_equivalence_and_assistance();
-    orange_v3_log_regression();
-    puts("PASS: weak-IR carry/assist, recent moving alignment gate, heading sign/8deg,1s/25mm bounds,80ms reacquisition, no flicker renewal, baseline equivalence");
+    orange_v3_log_regression();ordinary_white_rules_unchanged();
+    puts("PASS: both-white carry past1s/2s, exact6s/240mm bounds,8deg heading,80ms reacquisition after5s, no flicker renewal, unarmed650ms fallback retained");
     return 0;
 }
