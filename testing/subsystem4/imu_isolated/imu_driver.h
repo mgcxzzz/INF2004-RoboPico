@@ -7,7 +7,7 @@ typedef bool (*ImuRead)(void *,uint8_t,uint8_t,uint8_t *,size_t);
 typedef bool (*ImuWrite)(void *,uint8_t,uint8_t,uint8_t);
 typedef struct { void *ctx;ImuRead read;ImuWrite write; } ImuBus;
 typedef struct {
-    bool acc_id_ok,mag_id_ok,acc_on,mag_on;
+    bool acc_id_read,mag_id_read,acc_id_ok,mag_id_ok,acc_on,mag_on;
     uint8_t acc_id,mag_id[3];
     uint32_t errors;
 } ImuDevice;
@@ -17,11 +17,13 @@ static inline bool imu_write_check(ImuBus b,uint8_t addr,uint8_t reg,uint8_t v) 
 }
 static inline ImuDevice imu_configure(ImuBus b) {
     ImuDevice d={0};
-    if(b.read(b.ctx,IMU_A,0x0f,&d.acc_id,1)) d.acc_id_ok=d.acc_id==0x33;
+    d.acc_id_read=b.read(b.ctx,IMU_A,0x0f,&d.acc_id,1);
+    if(d.acc_id_read) d.acc_id_ok=d.acc_id==0x33;
     else ++d.errors;
     /* H43 is the documented magnetic identity. 0x33 is also used by other
        compatible ST accelerometers: report compatibility, not unique identity. */
-    if(b.read(b.ctx,IMU_M,0x0a,d.mag_id,3)) d.mag_id_ok=memcmp(d.mag_id,"H43",3)==0;
+    d.mag_id_read=b.read(b.ctx,IMU_M,0x0a,d.mag_id,3);
+    if(d.mag_id_read) d.mag_id_ok=memcmp(d.mag_id,"H43",3)==0;
     else ++d.errors;
     if(d.acc_id_ok) {
         /* Power down first; disable FIFO, high-pass and interrupt routes;

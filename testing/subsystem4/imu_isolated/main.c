@@ -23,15 +23,29 @@ static ImuStats run_stats,cal_stats;
 static bool streaming=true,reference_valid,cal_active,cal_bad;
 static Vec3 reference;
 static uint64_t cal_start;
+static struct { bool valid;uint8_t addr,reg;const char *phase;int result; } last_io;
+
+static bool io_failed(uint8_t addr,uint8_t reg,const char *phase,int result) {
+    last_io.valid=true;last_io.addr=addr;last_io.reg=reg;last_io.phase=phase;last_io.result=result;
+    return false;
+}
+static void print_io_failure(void) {
+    if(last_io.valid) printf("I2C_LAST_FAILURE: addr=0x%02x reg=0x%02x phase=%s result=%d kind=%s\n",
+        last_io.addr,last_io.reg,last_io.phase,last_io.result,
+        last_io.result==PICO_ERROR_TIMEOUT?"timeout":"nack_abort_or_short_transfer");
+}
 
 static bool read_reg(void *ctx,uint8_t addr,uint8_t reg,uint8_t *data,size_t n) {
     (void)ctx;
-    return i2c_write_timeout_us(i2c1,addr,&reg,1,true,I2C_TIMEOUT_US)==1 &&
-           i2c_read_timeout_us(i2c1,addr,data,n,false,I2C_TIMEOUT_US)==(int)n;
+    int rc=i2c_write_timeout_us(i2c1,addr,&reg,1,true,I2C_TIMEOUT_US);
+    if(rc!=1) return io_failed(addr,reg,"register_pointer",rc);
+    rc=i2c_read_timeout_us(i2c1,addr,data,n,false,I2C_TIMEOUT_US);
+    return rc==(int)n || io_failed(addr,reg,"data_read",rc);
 }
 static bool write_reg(void *ctx,uint8_t addr,uint8_t reg,uint8_t value) {
     (void)ctx;uint8_t b[2]={reg,value};
-    return i2c_write_timeout_us(i2c1,addr,b,2,false,I2C_TIMEOUT_US)==2;
+    int rc=i2c_write_timeout_us(i2c1,addr,b,2,false,I2C_TIMEOUT_US);
+    return rc==2 || io_failed(addr,reg,"config_write",rc);
 }
 static int32_t age_ms(const Sensor *s,uint64_t now) {
     if(!s->seen) return -1;
@@ -45,13 +59,14 @@ static bool mag_valid(uint64_t now) {
     return device.mag_on && mag.seen && mag.io_ok && !mag.clip && now-mag.last_us<=500000;
 }
 static void identity(void) {
-    printf("DEVICE: A_addr=0x19 A_id=0x%02x expected=0x33 acc_cfg=%u | M_addr=0x1e M_id=%02x,%02x,%02x expected=48,34,33 mag_cfg=%u init_errors=%" PRIu32 "\n",
-        device.acc_id,device.acc_on,device.mag_id[0],device.mag_id[1],device.mag_id[2],device.mag_on,device.errors);
+    printf("DEVICE: A_addr=0x19 A_id_read=%u A_id=0x%02x expected=0x33 acc_cfg=%u | M_addr=0x1e M_id_read=%u M_id=%02x,%02x,%02x expected=48,34,33 mag_cfg=%u init_errors=%" PRIu32 "\n",
+        device.acc_id_read,device.acc_id,device.acc_on,device.mag_id_read,device.mag_id[0],device.mag_id[1],device.mag_id[2],device.mag_on,device.errors);
+    print_io_failure();
     if(!device.acc_on || !device.mag_on)
         puts("CHECK: missing/unsupported ID or failed config readback; h/i remain usable. Send DEVICE + SCAN output. Do not infer a dead IMU from a missing address alone.");
 }
 static void help(void) {
-    puts("\nBUDDY4 IMU ISOLATED v1 | GP8..11 held LOW | motors=OFF always");
+    puts("\nBUDDY4 IMU ISOLATED v2 | GP8..11 held LOW | motors=OFF always");
     puts("GY-511 wiring: 3.3V/GND, SDA=GP2 SCL=GP3, I2C1=100kHz; USB console only.");
     puts("Supported: LSM303DLHC-compatible A_id33 + magnetic H43; parts tested independently.");
     puts("Acceleration: +/-2g HR,50Hz; magnetometer:+/-1.3gauss,30Hz; poll5ms; print5Hz.");
@@ -62,26 +77,33 @@ static void help(void) {
     puts("tilt_ref is angle from captured gravity direction, not yaw. Moving readings include acceleration.");
     puts("No gyro, heading calibration, hump-height estimator, motor control or offline flash logging.");
     puts("MAG units=uT factory nominal sensitivity, uncalibrated; chassis/magnets may distort/saturate.");
-    puts("A_valid/M_valid include age/I2C/clip checks. No sample -> nan,age=-1. Pausing output still samples.");
+    puts("A_valid/M_valid include age/I2C/clip checks. Invalid values -> NA; no sample -> age=-1.");
+    puts("ID_read=0 means ID bytes were NOT received; displayed zero bytes are placeholders.");
+    puts("init_errors and sampling errors are separate; zero sampling errors does not prove startup succeeded.");
     puts("Fresh sample counters/rates differ from5Hz printing. Diagnostic commands can interrupt sampling.");
     identity();
 }
 static void scan(void) {
     if(cal_active) { cal_active=false;puts("CAL cancelled by scan."); }
     puts("SCAN: I2C1 GP2/GP3 100kHz, 7-bit addresses (read probes, no config writes)");
-    unsigned found=0;
+    unsigned found=0,nack_abort=0,timeouts=0,short_read=0;
     printf("BUS: SDA=%u SCL=%u before scan\n",gpio_get(SDA_PIN),gpio_get(SCL_PIN));
     for(uint8_t addr=8;addr<0x78;++addr) {
         uint8_t b;
-        if(i2c_read_timeout_us(i2c1,addr,&b,1,false,I2C_TIMEOUT_US)==1) {
+        int rc=i2c_read_timeout_us(i2c1,addr,&b,1,false,I2C_TIMEOUT_US);
+        if(rc==1) {
             printf("SCAN: ACK 0x%02x\n",addr);++found;
-        }
+        } else if(rc==PICO_ERROR_TIMEOUT) ++timeouts;
+        else if(rc<0) ++nack_abort;
+        else ++short_read;
     }
     printf("SCAN: found=%u expected A=0x19 M=0x1e; SDA=%u SCL=%u\n",found,gpio_get(SDA_PIN),gpio_get(SCL_PIN));
+    printf("SCAN_RESULTS: nack_or_abort=%u timeouts=%u short_reads=%u (absent addresses normally nack)\n",nack_abort,timeouts,short_read);
     /* A read probe can leave magnetic data locked. Drain all six axes. */
     if(device.mag_on) (void)imu_read_mag(bus);
 }
 static void configure(void) {
+    last_io.valid=false;
     device=imu_configure(bus);
     acc=(Sensor){0};mag=(Sensor){0};
     run_stats=(ImuStats){0};cal_stats=(ImuStats){0};cal_active=reference_valid=false;
@@ -99,12 +121,13 @@ static void mark_sample(Sensor *s,uint64_t now) {
 }
 static void finish_calibration(bool timeout) {
     cal_active=false;Vec3 sd=imu_stats_std(&cal_stats);
+    char sx[24],sy[24],sz[24];imu_format(sx,sd.x,cal_stats.n>=2,4);imu_format(sy,sd.y,cal_stats.n>=2,4);imu_format(sz,sd.z,cal_stats.n>=2,4);
     if(!timeout && imu_reference_ok(&cal_stats,cal_bad)) {
         reference=cal_stats.mean;reference_valid=true;
         printf("CAL: OK samples=%" PRIu32 " mean_g=%.4f,%.4f,%.4f std_g=%.4f,%.4f,%.4f reference=RAM_ONLY\n",
             cal_stats.n,(double)reference.x,(double)reference.y,(double)reference.z,(double)sd.x,(double)sd.y,(double)sd.z);
-    } else printf("CAL: REJECTED samples=%" PRIu32 " timeout=%u bad_io_clip_or_gap=%u norm=%.4f std_g=%.4f,%.4f,%.4f old_reference_retained=%u\n",
-        cal_stats.n,timeout,cal_bad,(double)imu_norm(cal_stats.mean),(double)sd.x,(double)sd.y,(double)sd.z,reference_valid);
+    } else printf("CAL: REJECTED samples=%" PRIu32 " timeout=%u bad_io_clip_or_gap=%u norm=%.4f std_g=%s,%s,%s old_reference_retained=%u\n",
+        cal_stats.n,timeout,cal_bad,(double)imu_norm(cal_stats.mean),sx,sy,sz,reference_valid);
 }
 static void sample(uint64_t now) {
     uint64_t elapsed=now-last_poll;if(elapsed<POLL_US) return;
@@ -144,27 +167,33 @@ static void sample(uint64_t now) {
 }
 static void summary(void) {
     Vec3 sd=imu_stats_std(&run_stats);
-    printf("RAW: A_xyz16=%d,%d,%d (HR left-justified) M_xyz=%d,%d,%d statusA=0x%02x statusM=0x%02x\n",
-        acc.raw[0],acc.raw[1],acc.raw[2],mag.raw[0],mag.raw[1],mag.raw[2],acc.status,mag.status);
-    printf("SUMMARY: A_n=%" PRIu32 " M_n=%" PRIu32 " A_errors=%" PRIu32 " M_errors=%" PRIu32
+    if(acc.seen) printf("RAW_A: xyz16=%d,%d,%d (HR left-justified) status=0x%02x last_received_sample\n",acc.raw[0],acc.raw[1],acc.raw[2],acc.status);
+    else puts("RAW_A: NO_SAMPLE");
+    if(mag.seen) printf("RAW_M: xyz=%d,%d,%d status=0x%02x last_received_sample\n",mag.raw[0],mag.raw[1],mag.raw[2],mag.status);
+    else puts("RAW_M: NO_SAMPLE");
+    printf("SUMMARY: acc_cfg=%u mag_cfg=%u init_errors=%" PRIu32 " A_n=%" PRIu32 " M_n=%" PRIu32 " A_errors=%" PRIu32 " M_errors=%" PRIu32
         " A_overruns=%" PRIu32 " A_clips=%" PRIu32 " HR_lowbits_nonzero=%" PRIu32
         " M_locks=%" PRIu32 " M_overflows=%" PRIu32 " A_max_gap_ms=%.2f M_max_gap_ms=%.2f poll_max_ms=%.2f late_polls=%" PRIu32 " motors=OFF\n",
-        acc.count,mag.count,acc.errors,mag.errors,acc_overruns,acc_clips,low_bits,mag_locks,mag_overflows,
+        device.acc_on,device.mag_on,device.errors,acc.count,mag.count,acc.errors,mag.errors,acc_overruns,acc_clips,low_bits,mag_locks,mag_overflows,
         (double)(acc.max_gap_us/1000.0f),(double)(mag.max_gap_us/1000.0f),(double)(poll_max_us/1000.0f),late_polls);
-    if(run_stats.n) printf("ACC_STATS: n=%" PRIu32 " mean_g=%.4f,%.4f,%.4f std_g=%.4f,%.4f,%.4f norm_min=%.4f norm_max=%.4f (includes all movement since r/boot)\n",
+    char sx[24],sy[24],sz[24];imu_format(sx,sd.x,run_stats.n>=2,4);imu_format(sy,sd.y,run_stats.n>=2,4);imu_format(sz,sd.z,run_stats.n>=2,4);
+    if(run_stats.n) printf("ACC_STATS: n=%" PRIu32 " mean_g=%.4f,%.4f,%.4f std_g=%s,%s,%s norm_min=%.4f norm_max=%.4f (includes all movement since r/boot)\n",
         run_stats.n,(double)run_stats.mean.x,(double)run_stats.mean.y,(double)run_stats.mean.z,
-        (double)sd.x,(double)sd.y,(double)sd.z,(double)run_stats.norm_min,(double)run_stats.norm_max);
+        sx,sy,sz,(double)run_stats.norm_min,(double)run_stats.norm_max);
+    print_io_failure();
 }
 static void print_sample(uint64_t now) {
     bool av=acc_valid(now),mv=mag_valid(now);
-    Vec3 a=acc.seen?acc.value:(Vec3){NAN,NAN,NAN};
-    Vec3 m=mag.seen?mag.value:(Vec3){NAN,NAN,NAN};
-    if(mag.clip) m=(Vec3){NAN,NAN,NAN};
-    printf("IMU: seq=%" PRIu32 " ms=%" PRIu64 " A_valid=%u ageA=%" PRId32 " acc_g=%.3f,%.3f,%.3f norm=%.3f roll=%.1f pitch=%.1f tilt_ref=%.1f cal=%u busy=%u M_valid=%u ageM=%" PRId32 " mag_uT=%.1f,%.1f,%.1f A_n=%" PRIu32 " M_n=%" PRIu32 " errors=%" PRIu32 ",%" PRIu32 " motors=OFF\n",
-        seq++,now/1000,av,age_ms(&acc,now),(double)a.x,(double)a.y,(double)a.z,(double)imu_norm(a),
-        (double)(av?imu_roll(a):NAN),(double)(av?imu_pitch(a):NAN),
-        (double)(av && reference_valid?imu_tilt(a,reference):NAN),reference_valid,cal_active,
-        mv,age_ms(&mag,now),(double)m.x,(double)m.y,(double)m.z,acc.count,mag.count,acc.errors,mag.errors);
+    Vec3 a=acc.value,m=mag.value;
+    char ax[24],ay[24],az[24],norm[24],roll[24],pitch[24],tilt[24],mx[24],my[24],mz[24];
+    imu_format(ax,a.x,av,3);imu_format(ay,a.y,av,3);imu_format(az,a.z,av,3);
+    imu_format(norm,imu_norm(a),av,3);imu_format(roll,imu_roll(a),av,1);imu_format(pitch,imu_pitch(a),av,1);
+    imu_format(tilt,av && reference_valid?imu_tilt(a,reference):0,av && reference_valid,1);
+    imu_format(mx,m.x,mv,1);imu_format(my,m.y,mv,1);imu_format(mz,m.z,mv,1);
+    printf("IMU: seq=%" PRIu32 " ms=%" PRIu64 " state=%s A_valid=%u ageA=%" PRId32 " acc_g=%s,%s,%s norm=%s roll=%s pitch=%s tilt_ref=%s cal=%u busy=%u M_valid=%u ageM=%" PRId32 " mag_uT=%s,%s,%s A_n=%" PRIu32 " M_n=%" PRIu32 " init_errors=%" PRIu32 " sample_errors=%" PRIu32 ",%" PRIu32 " motors=OFF\n",
+        seq++,now/1000,!device.acc_on && !device.mag_on?"NO_CONFIGURED_DEVICE":av && mv?"READING":"PARTIAL_OR_STALE",
+        av,age_ms(&acc,now),ax,ay,az,norm,roll,pitch,tilt,reference_valid,cal_active,
+        mv,age_ms(&mag,now),mx,my,mz,acc.count,mag.count,device.errors,acc.errors,mag.errors);
 }
 int main(void) {
     /* First application action: disable both motor bridges and keep them LOW.

@@ -1,4 +1,4 @@
-# Buddy 4 isolated IMU USB test V1
+# Buddy 4 isolated IMU USB test V2
 
 Standalone Pico W SDK diagnostic firmware for the existing GY-511. Added under
 `testing/subsystem4/imu_isolated/` on `codex/buddy2-left-motor-test`.
@@ -11,7 +11,7 @@ This is an isolated hardware check, not the final terrain algorithm or RTOS inte
 
 | GY-511 label | Robo Pico / Pico W connection |
 |---|---|
-| VCC | 3.3 V |
+| VIN | Grove 2 3V3 |
 | GND | Common GND |
 | SDA | GP2, I2C1 SDA |
 | SCL | GP3, I2C1 SCL |
@@ -19,15 +19,19 @@ This is an isolated hardware check, not the final terrain algorithm or RTOS inte
 Use the existing wiring, with power off before changing connections. Do not
 substitute GP0/GP1 (the encoder wiring). Pin numbers here are GPIO labels, not
 physical header positions. Module interrupt pins are not used.
+For the pictured GY-511 with separate VIN and 3.3V pins, use **VIN as the
+power input**, and leave its 3.3V regulator-output pin unused. Do not connect
+both power pins. Follow labels at each end, not assumed wire colours/order.
+[Module pinout](https://electropeak.com/learn/interfacing-gy-511-lsm303-3d-compass-and-accelerometer-with-arduino/).
 
 ## First test and what to send
 
 1. Hold BOOTSEL while connecting the Pico's own USB socket to the computer.
-   Copy `firmware/buddy4_imu_isolated_v1.uf2` to RPI-RP2. It should reboot and
+   Copy `firmware/buddy4_imu_isolated_v2.uf2` to RPI-RP2. It should reboot and
    expose a USB serial COM port. A BOOTSEL drive is not the serial port.
 2. Open PuTTY on the new COM port: 115200, 8N1, flow control None. Use computer
    USB power for this test, with the separate power-bank input disconnected.
-3. Press `h`. Confirm `BUDDY4 IMU ISOLATED v1`, `motors=OFF always`, and the
+3. Press `h`. Confirm `BUDDY4 IMU ISOLATED v2`, `motors=OFF always`, and the
    `DEVICE` line. There is no motor start command or button sequence.
 4. Press `i` once. Expected 7-bit addresses are `0x19` (acceleration) and `0x1e`
    (magnetic). Expected IDs are acceleration `0x33` and magnetic bytes
@@ -62,9 +66,9 @@ Send that log before drawing conclusions about a hump estimator.
 - Magnetic overflow reports invalid magnetic data (`M_valid=0`, `nan` values,
   rising `M_overflows`). This can be local magnetic interference or range
   saturation; it is not by itself proof of a dead module.
-- Old acceleration/magnetic values remain visible for diagnosis after an I2C
-  failure, with validity cleared or age increasing. Do not use those old numbers
-  as new measurements. No-data values are `nan`.
+- Invalid, stale, saturated or absent readings display `NA`, with validity cleared
+  and the corresponding last-read age. Raw previously received values are available
+  through `p`; a part with no received samples displays `NO_SAMPLE`.
 
 ## Follow-up manual checks after the flat log
 
@@ -155,5 +159,27 @@ The image excludes the final two 4 KiB flash sectors used by the hump and
 junction tests, and there are no application flash erase/program calls. Existing
 Buddy2/3 calibration records are retained when this UF2 is flashed normally.
 
-See `firmware/BUILD_V1.md` for artifact identity and software verification.
-Physical operation remains unverified until the user's tests are supplied.
+## V2 diagnostic correction after the first hardware log
+
+The first user V1 log found no devices, with `init_errors=2`, no successful
+samples and both configuration flags false. Its `nan/inf` values were invalid
+placeholders, not measured acceleration or magnetism. Zero sampling-error counts
+occurred because unconfigured sensors were never sampled; initialization failed
+before that stage.
+
+V2 explicitly reports `NO_CONFIGURED_DEVICE`, ID-read success flags, initialization
+errors alongside sampling errors, transaction failure phase/code, and scan
+timeout versus NACK/abort counts. Missing/non-finite values are formatted as
+literal `NA` without using the Pico floating-point formatter. Sensor register
+settings, pins and motor-off behaviour are unchanged.
+
+This diagnostic change does not establish or repair the cause of absent bus
+responses. GP2/GP3 indicator lights and idle-high bus lines do not prove that
+power and ground reach the module. Check the four physical connections first.
+After correcting wiring with power off and reconnecting, use `r`, `i`, `h`, `p`.
+If `found=0` persists, a photo and module-side supply-voltage measurement are
+more useful than attempting gravity calibration.
+
+See `firmware/BUILD_V2.md` for current artifact identity and software verification.
+V1's artifact/build record are retained. Working physical sensor communication
+has not yet been demonstrated. See `MEASUREMENTS.md` for the received evidence.

@@ -4,6 +4,14 @@
 #include <stdint.h>
 #include <math.h>
 #include <string.h>
+#include <stdio.h>
+
+/* Never send NaN/Inf to Pico's small floating-point formatter. Missing, stale,
+   clipped and uncalibrated values are explicitly textual NA. */
+static inline void imu_format(char out[24],float v,bool valid,unsigned precision) {
+    if(valid && isfinite(v)) (void)snprintf(out,24,"%.*f",(int)precision,(double)v);
+    else strcpy(out,"NA");
+}
 
 typedef struct { float x,y,z; } Vec3;
 typedef struct { uint32_t n;Vec3 mean,m2;float norm_min,norm_max; } ImuStats;

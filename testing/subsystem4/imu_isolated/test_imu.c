@@ -22,12 +22,12 @@ static Fake recognised(void) {
 }
 static void test_configuration(void) {
     Fake f=recognised();ImuBus b={&f,read_fake,write_fake};ImuDevice d=imu_configure(b);
-    assert(d.acc_on && d.mag_on && !d.errors && f.writes==10);
+    assert(d.acc_id_read && d.mag_id_read && d.acc_on && d.mag_on && !d.errors && f.writes==10);
     assert(f.a[0x20]==0x47 && f.a[0x23]==0x88 && f.m[0]==0x14 && f.m[1]==0x20 && f.m[2]==0);
     f=recognised();f.a[0x0f]=0x49;memset(f.m+0x0a,0,3);d=imu_configure(b);
     assert(!d.acc_on && !d.mag_on && f.writes==0); /* unknown IDs are never configured */
     f=recognised();f.fail_reg=0x0a;d=imu_configure(b);
-    assert(d.acc_on && !d.mag_on && d.errors==1); /* partial device failure stays visible */
+    assert(d.acc_id_read && !d.mag_id_read && d.acc_on && !d.mag_on && d.errors==1); /* partial device failure stays visible */
     f=recognised();f.corrupt_reg=0x23;d=imu_configure(b);
     assert(!d.acc_on && d.mag_on && d.errors==1); /* failed readback */
     f=recognised();f.fail_reg=0x20;d=imu_configure(b);
@@ -68,8 +68,19 @@ static void test_reference(void) {
     s=(ImuStats){0};for(unsigned i=0;i<99;++i) imu_stats_add(&s,(Vec3){0,0,1});
     assert(!imu_reference_ok(&s,false));
 }
+static void test_missing_value_output(void) {
+    char out[24];
+    imu_format(out,1.0f,true,3);assert(strcmp(out,"1.000")==0);
+    imu_format(out,0.0f,false,3);assert(strcmp(out,"NA")==0);
+    imu_format(out,NAN,true,3);assert(strcmp(out,"NA")==0);
+    imu_format(out,INFINITY,true,1);assert(strcmp(out,"NA")==0);
+    imu_format(out,-INFINITY,true,1);assert(strcmp(out,"NA")==0);
+    Fake f={.fail_reg=0x0f,.corrupt_reg=-1};
+    ImuDevice d=imu_configure((ImuBus){&f,read_fake,write_fake});
+    assert(!d.acc_id_read && !d.acc_on && !d.mag_on && f.writes==0 && d.errors==1);
+}
 int main(void) {
-    test_configuration();test_data();test_reference();
-    puts("PASS: IDs/config readback/partial failures; endian/XZY/sign/scales; fresh/lock/failure semantics; tilt and stationary-reference rejection");
+    test_configuration();test_data();test_reference();test_missing_value_output();
+    puts("PASS: IDs/read failures/config/partial failures; endian/XZY/scales; fresh/lock/failure; tilt/reference; invalid/nonfinite output=NA");
     return 0;
 }
