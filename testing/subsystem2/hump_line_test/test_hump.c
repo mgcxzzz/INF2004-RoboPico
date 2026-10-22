@@ -65,11 +65,42 @@ static void load_assistance_and_removal(void) {
         if(pwm<=0) assert(v.a==0 && v.b==0);
     }
 }
+static void slow_uphill_wheel_regression(void) {
+    /* Reproduce V1's near-crest right target32 ->20 while encoders stop.
+       Also exercise a settled20 request, both wheel channels, and the19 floor. */
+    for(unsigned w=0;w<2;++w) for(unsigned transition=0;transition<2;++transition) {
+        HumpWheel stalled={.pi={.ramp=transition?32:20,.integral=60}};
+        HumpWheel healthy={.pi={.ramp=49,.integral=60}};
+        bool raised=false;
+        for(unsigned n=0;n<50;++n) {
+            uint64_t now=1000000+n*10000;
+            int32_t u=hump_wheel_step(&stalled,w,20,0,0.01f,now,HUMP_ASSIST,true);
+            (void)hump_wheel_step(&healthy,1-w,49,49,0.01f,now,HUMP_ASSIST,true);
+            assert(u<=350 && stalled.extra<=150 && healthy.extra==0);
+            if(n<10) assert(stalled.extra==0);
+            if(u>250) raised=true;
+        }
+        assert(raised && stalled.extra==150); /* before500ms guard expires */
+        int32_t u=hump_wheel_step(&stalled,w,19,0,0.01f,1510000,HUMP_ASSIST,true);
+        assert(u<=250 && stalled.extra==0 && !stalled.qualifying);
+        assert(hump_wheel_step(&stalled,w,0,0,0.01f,1520000,HUMP_ASSIST,true)==0);
+    }
+}
 static const LineCalibration cal={{184,184},{3464,3692},7};
 static void storage_and_import(void) {
     HumpSavedLog v={.magic=HUMP_MAGIC,.version=1,.calibration=cal,.profile=HUMP_ASSIST};
     v.crc=log_crc((const uint8_t *)&v+offsetof(HumpSavedLog,count),sizeof(v)-offsetof(HumpSavedLog,count));
-    assert(hump_record_valid(&v));v.calibration.black[0]++;assert(!hump_record_valid(&v));
+    assert(hump_record_valid(&v) && hump_record_firmware(&v)==1); /* V1 zero padding */
+    v.firmware=2;
+    assert(!hump_record_valid(&v)); /* revision is CRC protected */
+    v.crc=log_crc((const uint8_t *)&v+offsetof(HumpSavedLog,count),sizeof(v)-offsetof(HumpSavedLog,count));
+    assert(hump_record_valid(&v) && hump_record_firmware(&v)==2);
+    v.firmware=3;
+    v.crc=log_crc((const uint8_t *)&v+offsetof(HumpSavedLog,count),sizeof(v)-offsetof(HumpSavedLog,count));
+    assert(!hump_record_valid(&v)); /* unsupported future revision */
+    v.firmware=2;
+    v.crc=log_crc((const uint8_t *)&v+offsetof(HumpSavedLog,count),sizeof(v)-offsetof(HumpSavedLog,count));
+    v.calibration.black[0]++;assert(!hump_record_valid(&v));
     HumpLegacyJunction old={.magic=0x314e434au,.version=1,.firmware=9,.calibration=cal,
         .mode=3,.selected_mode=3,.side={0,1,3},.count=15};
     old.crc=log_crc((const uint8_t *)&old+offsetof(HumpLegacyJunction,count),sizeof(old)-offsetof(HumpLegacyJunction,count));
@@ -98,7 +129,8 @@ static void optical_and_stop_guards(void) {
 }
 int main(void) {
     baseline_equivalence();requested_slowdown_is_not_load();load_assistance_and_removal();
+    slow_uphill_wheel_regression();
     storage_and_import();optical_and_stop_guards();
-    puts("PASS: baseline/V11 equivalence, intended slowdown, per-wheel bounded35% assistance/removal, record/import/guards");
+    puts("PASS: baseline/V11 equivalence, intended slowdown, stalled20/32->20 regression, bounded35% assistance/removal, V1/V2 record/import/guards");
     return 0;
 }

@@ -29,7 +29,9 @@ static inline int32_t hump_wheel_step(HumpWheel *p,unsigned w,int16_t wanted,flo
     float error=p->pi.ramp-speed;
     /* A requested acceleration/deceleration is not itself evidence of load.
        Wait until the existing speed ramp has reached the current request. */
-    bool eligible=visible && wanted>=30 && fabsf(p->pi.ramp-wanted)<0.5f;
+    /* Include slow steering requests down to the existing blocked-wheel guard's
+       20 mm/s floor. A smaller request keeps ordinary effort; zero stays off. */
+    bool eligible=visible && wanted>=20 && fabsf(p->pi.ramp-wanted)<0.5f;
     if(!eligible || error<=-3) { p->extra=0;p->qualifying=false; }
     else if(error>=15) {
         if(!p->qualifying) { p->qualifying=true;p->deficit_since=now; }

@@ -37,6 +37,7 @@ static LineRearm rearm;
 static unsigned last_start_block;
 static uint32_t runs;
 static uint8_t profile,recorded_profile;
+static unsigned recorded_version=2;
 static HumpWheel controller[2];
 static uint8_t calibration_source;
 static int32_t previous[2], output[2];
@@ -68,6 +69,7 @@ static void load_log(void) {
     if(hump_record_valid(v)) {
         memcpy(trace,v->rows,sizeof(trace));trace_count=v->count;trace_dropped=v->dropped;
         recorded_key=v->key;recorded_offline=v->offline;profile=v->profile;recorded_profile=v->recorded_profile;
+        recorded_version=hump_record_firmware(v);
         guard.duration_us=v->duration;guard.reason=v->reason;calibration=v->calibration;calibration_source=v->imported;
         for(unsigned w=0;w<2;++w) { origin[w]=0;cut_ticks[w]=v->cutoff[w];cut_invalid[w]=v->invalid[w]; }
         flash_loaded=true;return;
@@ -80,6 +82,7 @@ static void save_log(void) {
     if(guard.active || !calibration_valid(&calibration) || !storage_fits()) { save_failed=true;return; }
     outputs_off();memset(&saved,0,sizeof(saved));SavedLog *v=&saved.data;
     v->magic=HUMP_MAGIC;v->version=1;v->count=trace_count;v->dropped=trace_dropped;
+    v->firmware=trace_count ? recorded_version : 2;
     v->duration=guard.duration_us;v->reason=guard.reason;v->key=recorded_key;v->offline=recorded_offline;
     v->profile=profile;v->recorded_profile=recorded_profile;v->imported=calibration_source;v->calibration=calibration;
     for(unsigned w=0;w<2;++w) { v->cutoff[w]=cut_ticks[w]-origin[w];v->invalid[w]=cut_invalid[w]; }
@@ -137,11 +140,11 @@ static const char *reason_name(uint8_t r) {
     return r<sizeof(names)/sizeof(names[0])?names[r]:"unknown";
 }
 static void help(void) {
-    puts("\nBUDDY23 HUMP LINE v1 | isolated SDK test | DRIVE OFF on boot");
+    puts("\nBUDDY23 HUMP LINE v2 | isolated SDK test | DRIVE OFF on boot");
     puts("Front A0: LEFT GP26, RIGHT GP28; same3.3V/common ground. GP19/IMU unused.");
     puts("Normal V11 symmetric line steering45/45mm/s, slowing the inner wheel for correction.");
     puts("1=baseline25% cap; 2=underspeed assistance up to35%; k saves. No faster cruise target.");
-    puts("Assist requires visible line, target>=30, ramp reached target, deficit>=15mm/s for100ms.");
+    puts("Assist requires visible line, target>=20, ramp reached target, deficit>=15mm/s for100ms.");
     puts("Extra effort ramps up to150permille; reduces when speed recovers, clears on overspeed.");
     puts("This is NOT a hump/IMU detector. Forward-only; reducing PWM does not actively brake.");
     puts("Cal stopped/released: w=BOTH WHITE, l=LEFT BLACK, r=RIGHT BLACK. Wait1s before capture.");
@@ -193,7 +196,7 @@ static void dump(void) {
     if(!trace_count) { puts("No recorded run yet."); return; }
     if(flash_loaded) puts("RESTORED: CRC-verified hump calibration/log.");
     if(save_failed) puts("WARNING: flash save failed; this RAM log is not persistent.");
-    printf("HUMP LINE v1: key=%c mode=%s rows=%u dropped=%u settling=%u\n",recorded_key,
+    printf("HUMP LINE v%u: key=%c mode=%s rows=%u dropped=%u settling=%u\n",recorded_version,recorded_key,
         recorded_offline ? "offline" : recorded_key=='g' ? "USB hands-free" : "USB hold",trace_count,trace_dropped,trace_settling);
     printf("TEST: straight line + load assistance | profile=%u cap_permille=%u\n",recorded_profile+1,hump_ceiling(recorded_profile));
     printf("CAL white=%u,%u black=%u,%u profile=%u\n",calibration.white[0],calibration.white[1],calibration.black[0],calibration.black[1],recorded_profile+1);
@@ -230,6 +233,7 @@ static bool start_run(unsigned mode) {
     if(ok) {
         ++runs;rearm=(LineRearm){0};run_mode=mode;
         recorded_profile=profile;
+        recorded_version=2;
         guard.deadline_us=now+HUMP_RUN_US;
         trace_interval_us=HUMP_TRACE_US;
         for(unsigned w=0;w<2;++w) {

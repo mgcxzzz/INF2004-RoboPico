@@ -49,4 +49,37 @@ First verify a flat straight. Then test the small black hump, noting:
 5. Does speed recover and effort reduce after returning to the flat?
 
 Software compilation and simulated checks do not answer these physical
-questions. No hump V1 physical result has been received yet.
+questions.
+
+## Received V1 results and V2 correction
+
+The user reported one successful traversal of the small black hump followed
+by a short flat segment. The later stop may have been near a junction; that
+explanation is not established by the physical report alone.
+
+On the repeat run, the user saw the robot stop climbing near the crest.
+Both front sensors appeared white briefly; the 125 ms trace can miss a brief
+event. The recorded stop reason was encoder stall, not optical line loss.
+
+| ms | L/R speed mm/s | L/R target mm/s | L/R PWM permille | L/R extra | L/R normalized IR |
+|---|---|---|---|---|---|
+| 2924 | 39.1 / 40.3 | 45 / 45 | 154 / 162 | 0 / 0 | 830 / 897 |
+| 3051 | 4.2 / 4.3 | 50 / 32 | 250 / 250 | 0 / 0 | 539 / 923 |
+| 3178 | 0.1 / 0.1 | 50 / 32 | 304 / 209 | 72 / 16 | 537 / 923 |
+| 3305 | 1.4 / 0.0 | 49 / 20 | 350 / 250 | 150 / 0 | 320 / 906 |
+| 3433 | 0.0 / 0.0 | 49 / 20 | 350 / 184 | 150 / 0 | 319 / 906 |
+
+Stop at 3488 ms: `no encoder movement under drive`, distances 63.31/63.76 mm,
+invalid transitions 0/0. V1's assistance floor was 30 mm/s: reducing the
+right target to 20 cleared its load grant despite the stalled wheel.
+
+V2 lowers that floor to 20, matching the existing blocked-wheel guard and
+breakaway minimum. It retains deficit15, qualification100 ms, PWM350 maximum,
+and stall500 ms. Requests below20 retain ordinary effort. A zero request
+still switches off immediately. No sensor or steering thresholds change.
+The left wheel already stopped at PWM350, so this correction alone does not
+prove the remaining mechanical/power/traction load can be overcome.
+
+Next physical check: small black hump, centred flat approach, stop manually
+after clearing it and before any junction. Inspect both wheels and sensor
+contact; send the complete V2 trace. No V2 physical run has been received yet.

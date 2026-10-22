@@ -4,7 +4,7 @@ import hashlib
 import struct
 
 root = Path(__file__).resolve().parent
-artifact = root / "firmware/buddy23_hump_line_v1.uf2"
+artifact = root / "firmware/buddy23_hump_line_v2.uf2"
 data = artifact.read_bytes()
 assert len(data) % 512 == 0
 count = len(data) // 512
@@ -18,9 +18,9 @@ for index in range(count):
     assert address == 0x10000000 + index * 256
     assert address + size <= 0x101FE000, "Reserved hump or junction sector would be overwritten"
     payload.extend(block[32:32 + size])
-assert b"BUDDY23 HUMP LINE v1" in payload
-assert b"HUMP LINE v1: key=" in payload
-built = root / "build/buddy23_hump_line_v1.uf2"
+assert b"BUDDY23 HUMP LINE v2" in payload
+assert b"HUMP LINE v%u: key=" in payload
+built = root / "build/buddy23_hump_line_v2.uf2"
 if built.exists():
     assert built.read_bytes() == data
 print(f"PASS: {count} sequential RP2040 blocks; end=0x{0x10000000+len(payload):08x}; reserved sectors excluded")

@@ -1,8 +1,15 @@
-# Hump line test V1
+# Hump line test V2
 
 Isolated Buddy2/Buddy3 Pico W SDK experiment, 2026-10-22. Uses the working
 V11 symmetric front-sensor steering with a selectable wheel-load response.
 No junction execution, barcode decoding, IMU, RTOS, or production integration.
+
+V2 fixes V1 assistance dropping out when steering requests 20..29 mm/s.
+The failed near-crest run commanded the uphill right wheel to 20 mm/s, below
+V1's 30 mm/s assistance floor. V2 uses the existing 20 mm/s stall-guard floor.
+Requests 1..19 retain ordinary output; zero immediately resets and switches off.
+Targets, sensor thresholds, 35% ceiling and 500 ms stall cutoff are unchanged.
+A wheel already stalled at 35% can still fail from load, drag or supply limits.
 
 ## What changes
 
@@ -19,7 +26,7 @@ Each wheel uses its own request and encoder speed. An intentional slower
 inner-wheel request does not itself qualify as a load deficit.
 
 Assistance requires a visible line (at least one normalized level >=400),
-no line-loss recovery, target >=30 mm/s, and the speed ramp at its requested
+no line-loss recovery, target >=20 mm/s, and the speed ramp at its requested
 target (within 0.5 mm/s). A deficit >=15 mm/s sustained for 100 ms qualifies.
 Extra output then rises at 750 permille/s to a maximum of 150. With deficit
 <=5 mm/s it decays at 500 permille/s. Overspeed of >=3 mm/s clears it
@@ -34,11 +41,11 @@ policy; speed feedback would still control the wheels. No ramp dimensions
 or assumed position are used by the controller. One wheel climbing changes
 roll and sensor height; the line readings must also be inspected.
 
-## First physical test: flat straight only
+## V2 retry: small black hump
 
-1. Flash `firmware/buddy23_hump_line_v1.uf2` using BOOTSEL.
+1. Flash `firmware/buddy23_hump_line_v2.uf2` using BOOTSEL.
 2. Open PuTTY (115200, 8N1, flow control None), press `h`, and confirm
-   `BUDDY23 HUMP LINE v1`, `valid=1`. On first use it imports the existing
+   `BUDDY23 HUMP LINE v2`, `valid=1`. On first use it imports the existing
    V9 front calibration (`source=1`) or V11 calibration (`source=2`).
 3. Keep the same sensor height and adjacent mounting. Put both front sensing
    points over the straight black strip. Select `2`, then `k` while stopped
@@ -47,17 +54,18 @@ roll and sensor height; the line readings must also be inspected.
    rolling test: wait 5 seconds after boot, hold both buttons for 3 seconds,
    release both, wait 1 second, tap/release GP21, then let the 2-second
    countdown finish. Either button stops the run.
-5. Run on the flat straight first. Check smooth forward movement and the
-   stop button. Stop before the mat ends. Wait 3 seconds after stopping
-   before changing to computer power, open PuTTY, and press `p` for the log.
+5. Start centred on flat with both normalized levels high and similar, then
+   approach the small black hump under the RIGHT wheel. Press GP20 after
+   clearing the hump, before a junction or mat edge. Wait 3 seconds after
+   stopping before changing to computer power, open PuTTY, and press `p`
+   for the log.
 
 Use one power source at a time. The test ends after 10 seconds or a 500 mm
 encoder path, whichever comes first. Optical line loss and existing stall
 protection may end it earlier. It allows repeat runs after saving/settling
 and 1 second stopped with both buttons released; a fresh sequence is needed.
 
-Once the flat log is checked, repeat with the small black hump under the
-RIGHT drive wheel and film wheel/sensor behaviour. Test the orange hump only
+Film wheel/sensor behaviour during the small-hump retry. Test the orange hump only
 after the small one passes. Success on either fixture does not establish
 that every hump height, slope, or surface is traversable.
 
@@ -84,7 +92,7 @@ that every hump height, slope, or surface is traversable.
   checks, 1 ms independent button/deadline/late-control cutoff, and USB-change
   stop. Assistance must act within the retained stall window.
 - Ordinary loss recovery retains V11's output policy and bounded search.
-- Software tests verify caps and logic. Physical hump capability remains
+- Software tests verify caps and logic. V2 physical hump capability remains
   unverified until user tests.
 - Proven V9 junction and V11 source/artifacts are unchanged. Before eventual
   integration, repeat flat, both bend directions, junction approach/turn/
@@ -99,7 +107,9 @@ The image is checked to end before both reserved sectors. No flash-nuke.
 Reflashing the existing V9 UF2 should retain its original record.
 
 If a valid hump record already exists, it takes precedence over the legacy
-record on future boots. Recapture `w/l/r` if calibration must change.
+record on future boots. V1 hump calibration/log remains readable; an old run
+is labelled V1 until a new V2 run replaces it. Saving selection alone retains
+the recorded run revision. Recapture `w/l/r` if calibration must change.
 
 ## Build and checks
 
@@ -113,5 +123,5 @@ gcc -std=c11 -Wall -Wextra -Werror -O2 test_hump.c -lm -o test_hump
 python verify_firmware.py
 ```
 
-See `BUILD_V1.md` for the artifact hash and `MEASUREMENTS.md` for the failed
+See `BUILD_V2.md` for the artifact hash and `MEASUREMENTS.md` for the failed
 V9 hump run that motivated this separate test.

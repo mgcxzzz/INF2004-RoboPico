@@ -16,6 +16,7 @@ typedef struct {
 } HumpTrace;
 typedef struct {
     uint32_t magic,version,crc,count,dropped;
+    uint32_t firmware; /* Uses V1's zero-filled alignment padding. */
     uint64_t duration;
     int32_t cutoff[2];uint32_t invalid[2];
     uint8_t reason,key,offline,profile,recorded_profile,imported;
@@ -24,8 +25,13 @@ typedef struct {
 } HumpSavedLog;
 _Static_assert(sizeof(HumpTrace)==36 && sizeof(HumpSavedLog)==3664,"Unexpected hump flash ABI");
 _Static_assert(offsetof(HumpSavedLog,rows)==64,"Unexpected hump row offset");
+_Static_assert(offsetof(HumpSavedLog,firmware)==20 && offsetof(HumpSavedLog,duration)==24,
+               "Hump V1 compatibility changed");
+static inline unsigned hump_record_firmware(const HumpSavedLog *v) {
+    return v->firmware ? v->firmware : 1;
+}
 static inline bool hump_record_valid(const HumpSavedLog *v) {
-    return v->magic==HUMP_MAGIC && v->version==1 && v->count<=HUMP_ROWS &&
+    return v->magic==HUMP_MAGIC && v->version==1 && v->firmware<=2 && v->count<=HUMP_ROWS &&
         v->profile<=HUMP_ASSIST && v->recorded_profile<=HUMP_ASSIST && calibration_valid(&v->calibration) &&
         v->crc==log_crc((const uint8_t *)v+offsetof(HumpSavedLog,count),sizeof(*v)-offsetof(HumpSavedLog,count));
 }
