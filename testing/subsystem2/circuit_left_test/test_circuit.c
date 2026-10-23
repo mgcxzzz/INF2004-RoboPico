@@ -4,6 +4,8 @@
 #include "circuit_logic.h"
 #include "circuit_wheel.h"
 #include "circuit_record.h"
+#include "circuit_capture.h"
+#include "circuit_feedback.h"
 static const LineCalibration cal={{184,184},{3464,3692},7};
 static CircuitInput initial(void) {
     return (CircuitInput){.now=1000,.adc={3464,3692}};
@@ -78,7 +80,7 @@ static void detection_and_bounds(void) {
     i.wheel[0]=i.wheel[1]=45;i.path=45;i.speed[0]=i.speed[1]=100;
     assert(circuit_step(&c,&cal,&i,3).stop && c.reason==C_APPROACH_FAST);
     i=initial();circuit_begin(&c,&i);i.adc[0]=i.adc[1]=184;
-    assert(circuit_step(&c,&cal,&i,1).stop && c.reason==J_LINE_LOST);
+    assert(circuit_step(&c,&cal,&i,1).stop && c.reason==C_LOSS_NO_DIRECTION);
 }
 static void wheel_caps(void) {
     for(unsigned profile=1;profile<=3;++profile) for(unsigned w=0;w<2;++w) {
@@ -130,7 +132,7 @@ static void same_corrections_and_cruise(void) {
         assert(!c.fast && d.target[0]==0 && d.target[1]==45);
         i.adc[0]=184;i.now+=10000;d=circuit_step(&c,&cal,&i,profile);
         assert(!d.stop && !c.fast && d.target[0]==0 && d.target[1]==45);
-        i.now+=650000;assert(circuit_step(&c,&cal,&i,profile).stop);
+        i.now+=C_LOSS_US;assert(circuit_step(&c,&cal,&i,profile).stop && c.reason==C_LOSS_TIME);
         /* Balanced but weak signals never earn fast cruise. */
         i=initial();i.adc[0]=300;i.adc[1]=300;circuit_begin(&c,&i);
         (void)circuit_step(&c,&unit,&i,profile);i.now+=1000000;
@@ -160,7 +162,7 @@ static void curve_after_branch(void) {
         i.adc[0]=i.adc[1]=184;i.now+=10000;
         d=circuit_step(&c,&cal,&i,profile);assert(!d.stop);
         i.now+=160000;d=circuit_step(&c,&cal,&i,profile);assert(!d.stop);
-        i.now+=490000;assert(circuit_step(&c,&cal,&i,profile).stop);
+        i.now+=C_LOSS_US-160000;assert(circuit_step(&c,&cal,&i,profile).stop);
     }
     /* Noise / no persistent outgoing signal cannot count as a completed turn. */
     Circuit c;CircuitInput i=initial();circuit_begin(&c,&i);c.busy=true;
@@ -174,6 +176,7 @@ static void records(void) {
     s.crc=log_crc((uint8_t *)&s+offsetof(CircuitSaved,count),sizeof(s)-offsetof(CircuitSaved,count));
     assert(circuit_record_valid(&s));s.rows[100].adc[0]^=1;assert(!circuit_record_valid(&s));
     s.rows[100].adc[0]^=1;s.version=2;assert(circuit_record_valid(&s));
+    s.version=3;assert(circuit_record_valid(&s));
     CircuitLegacy old={.magic=0x314e434a,.version=1,.calibration=cal,.side={0,1,3},.mode=3,.selected_mode=3,.firmware=10};
     old.crc=log_crc((uint8_t *)&old+offsetof(CircuitLegacy,count),sizeof(old)-offsetof(CircuitLegacy,count));
     LineCalibration imported={0};SideCalibration side={0};assert(circuit_import(&old,&imported,&side));
@@ -183,9 +186,93 @@ static void records(void) {
     for(unsigned n=0;n<C_ROWS*3+123;++n) { ring[head]=n;head=(head+1)%C_ROWS;if(count<C_ROWS) ++count; }
     for(unsigned n=0;n<count;++n) assert(ring[(head+C_ROWS-count+n)%C_ROWS]==(uint64_t)(C_ROWS*2+123+n));
 }
+static void weak_signal_recovery(void) {
+    const LineCalibration unit={{100,100},{1100,1100},7};
+    CircuitTracker t={0};SymmetricTracker old={0};AnalogDemand d;
+    /* Reproduce the observed strong -> weak right-only -> both-white pattern.
+       The old policy forgets the right correction; V3 retains it. */
+    for(uint64_t now=11780000;now<=12800000;now+=10000) {
+        uint16_t l=now<12031000?160:now<12281000?14:0;
+        uint16_t r=now<12031000?559:now<12281000?287:now<12532000?305:now<12782000?309:234;
+        d=circuit_line_demand(&t,&unit,100+l,100+r,now,100);
+        AnalogDemand before=symmetric_demand(&old,&unit,100+l,100+r,now,100);
+        assert(!d.stop && !before.stop);
+    }
+    uint64_t white=12805000;
+    assert(symmetric_demand(&old,&unit,100,220,white,101).stop);
+    d=circuit_line_demand(&t,&unit,100,220,white,101);
+    assert(!d.stop && d.decision==SYM_RECOVER_RIGHT && d.target[0]==45 && d.target[1]==0);
+    d=circuit_line_demand(&t,&unit,100,100,white+C_LOSS_US-1,140);assert(!d.stop);
+    d=circuit_line_demand(&t,&unit,100,100,white+C_LOSS_US,140);
+    assert(d.stop && t.loss_reason==C_LOSS_TIME);
+    t=(CircuitTracker){0};(void)circuit_line_demand(&t,&unit,600,100,1000,0);
+    (void)circuit_line_demand(&t,&unit,100,100,2000,0);
+    d=circuit_line_demand(&t,&unit,100,100,3000,50);
+    assert(d.stop && t.loss_reason==C_LOSS_DISTANCE);
+    t=(CircuitTracker){0};d=circuit_line_demand(&t,&unit,100,100,1000,0);
+    assert(d.stop && t.loss_reason==C_LOSS_NO_DIRECTION);
+    t=(CircuitTracker){0};(void)circuit_line_demand(&t,&unit,600,100,1000,0);
+    d=circuit_line_demand(&t,&unit,100,100,1000+C_MEMORY_US+1,0);
+    assert(d.stop && t.loss_reason==C_LOSS_NO_DIRECTION);
+    /* Weak flashes and alternating signs cannot immediately invent a direction. */
+    t=(CircuitTracker){0};(void)circuit_line_demand(&t,&unit,100,350,1000,0);
+    (void)circuit_line_demand(&t,&unit,350,100,30000,0);
+    d=circuit_line_demand(&t,&unit,100,100,31000,0);assert(d.stop);
+    t=(CircuitTracker){0};(void)circuit_line_demand(&t,&unit,100,350,1000,0);
+    (void)circuit_line_demand(&t,&unit,100,350,31000,0);
+    d=circuit_line_demand(&t,&unit,100,100,41000,0);assert(!d.stop && d.target[0]==45 && d.target[1]==0);
+    /* Reacquisition resets the white episode and can choose the other direction. */
+    (void)circuit_line_demand(&t,&unit,600,100,50000,1);
+    d=circuit_line_demand(&t,&unit,100,100,60000,1);assert(!d.stop && d.target[0]==0 && d.target[1]==45);
+}
+static void capture_effort(void) {
+    CircuitCapture s={0};CircuitInput i=initial();i.path=100;
+    AnalogDemand d={.level={935,0},.target={3,45}};
+    assert(circuit_capture_outer(&s,&i,C_FOLLOW,&d)==-1);
+    circuit_capture_begin(&s,i.now,i.path);
+    assert(circuit_capture_outer(&s,&i,J_ACQUIRE,&d)==1);
+    d.target[0]=18;assert(circuit_capture_outer(&s,&i,C_FOLLOW,&d)==1); /* hysteresis */
+    d.target[0]=21;assert(circuit_capture_outer(&s,&i,C_FOLLOW,&d)==-1);
+    d.target[0]=18;assert(circuit_capture_outer(&s,&i,C_FOLLOW,&d)==-1);
+    d.target[0]=3;assert(circuit_capture_outer(&s,&i,C_FOLLOW,&d)==1);
+    d.level[0]=0;assert(circuit_capture_outer(&s,&i,C_FOLLOW,&d)==-1); /* never blind */
+    d.level[0]=935;i.now=s.since+C_CAPTURE_US;
+    assert(circuit_capture_outer(&s,&i,C_FOLLOW,&d)==-1 && !s.window);
+    circuit_capture_begin(&s,i.now,i.path);i.path+=C_CAPTURE_MM;
+    assert(circuit_capture_outer(&s,&i,C_FOLLOW,&d)==-1 && !s.window);
+    circuit_capture_begin(&s,i.now,i.path);d.target[0]=d.target[1]=30;i.speed[0]=i.speed[1]=20;
+    (void)circuit_capture_outer(&s,&i,C_FOLLOW,&d);i.now+=C_ROLLING_US;
+    assert(circuit_capture_outer(&s,&i,C_FOLLOW,&d)==-1 && !s.window);
+    for(unsigned w=0;w<2;++w) {
+        SignedWheel p={0};circuit_capture_prepare(&p);
+        for(unsigned n=0;n<100;++n) {
+            int pwm=circuit_wheel_step(&p,w,45,0,.01f,1000+(uint64_t)n*10000,true,1);
+            assert(pwm>300 && pwm<=420 && !p.peak_active && !p.peak_end_us);
+        }
+        /* Inner target remains ordinary low-speed effort, with no turn floor. */
+        p=(SignedWheel){0};int inner=circuit_wheel_step(&p,w,3,0,.01f,1000,false,1);
+        assert(inner<100);
+    }
+}
+static void cumulative_feedback(void) {
+    CircuitFeedback s={0};
+    /* One tick per20ms would fail V2's per10ms <2 criterion despite moving. */
+    for(unsigned n=0;n<300;++n) assert(!circuit_stalled(&s,1000+(uint64_t)n*10000,n/2,45,45));
+    uint64_t last=s.since;int64_t ticks=s.anchor;
+    assert(!circuit_stalled(&s,last+C_STALL_US-1,ticks,45,45));
+    assert(circuit_stalled(&s,last+C_STALL_US,ticks,45,45));
+    assert(!circuit_stalled(&s,last+C_STALL_US+1,ticks,3,3) && !s.watching);
+    s=(CircuitFeedback){0};assert(!circuit_stalled(&s,1000,0,45,45));
+    for(unsigned n=1;n<75;++n) assert(!circuit_stalled(&s,1000+(uint64_t)n*10000,n%2,45,45));
+    assert(circuit_stalled(&s,751000,1,45,45)); /* sub-threshold jitter */
+    s=(CircuitFeedback){0};assert(!circuit_stalled(&s,1000,0,45,45));
+    assert(!circuit_stalled(&s,601000,4,45,45));
+    assert(!circuit_stalled(&s,1201000,8,45,45)); /* separated forward bursts count */
+}
 int main(void) {
     for(unsigned p=1;p<=3;++p) circuit_simulation(p);
     detection_and_bounds();wheel_caps();records();same_corrections_and_cruise();curve_after_branch();
-    puts("PASS:12 turns/profile; full steering error sweep; centred cruise dwell/exit; one-sensor branch handover; bounded recovery; detection, PWM, V1/V2 records and ring wrap.");
+    weak_signal_recovery();capture_effort();cumulative_feedback();
+    puts("PASS:12 turns/profile; steering parity/cruise; observed weak-signal regression;2s/50mm bounds; scoped capture effort/no new peak; cumulative feedback/stall; V1-V3 records/CRC/ring.");
     return 0;
 }

@@ -17,6 +17,8 @@
 #include "../line_motion_integration/logic.h"
 #include "circuit_wheel.h"
 #include "circuit_record.h"
+#include "circuit_capture.h"
+#include "circuit_feedback.h"
 
 enum { HOLD=21,STOP=20,PWM_TOP=999 };
 static const uint ma[2]={8,10},mb[2]={9,11},ea[2]={0,4},eb[2]={1,5};
@@ -31,14 +33,17 @@ static LineCalibration calibration;
 static SideCalibration side_cal;
 static Circuit circuit;
 static uint8_t test_mode=1,recorded_mode=1;
-static uint8_t recorded_version=2;
+static uint8_t recorded_version=3;
 static bool last_fast;
+static CircuitCapture capture;
+static CircuitFeedback feedback[2];
+static int capture_outer=-1;
 static AnalogDemand demand;
 static SignedWheel controller[2];
 static LineRearm rearm;
 static uint16_t analog_raw[2];
 static float adc_filtered[2],velocity[2];
-static uint64_t bad_direction_us[2],no_motion_us[2],last_control,last_trace,stopped_us;
+static uint64_t bad_direction_us[2],last_control,last_trace,stopped_us;
 static unsigned last_start_block;
 static uint32_t runs;
 static char recorded_key='-';
@@ -101,7 +106,7 @@ static const char *reason_name(unsigned r) {
     case WHY_NONE:return "none";case WHY_GP20:return "GP20 pressed";
     case WHY_RELEASE:return "GP21 released";case WHY_SERIAL:return "serial s";
     case WHY_USB:return "USB connection changed";case WHY_LATE:return "control loop late";
-    case WHY_FEEDBACK:return "no encoder movement under drive";
+    case WHY_FEEDBACK:return recorded_version>=3?"no forward encoder progress for750ms under drive":"no encoder movement under drive";
     case WHY_DIRECTION:return "encoder direction mismatch";case WHY_ENCODER:return "invalid encoder transitions";
     case WHY_BUTTON:return "GP21 stop pressed";case J_BAD_STRIPE:return "cross-arm width or centring timeout";
     case J_CENTRE_DRIFT:return "centring drift / rolling inner-wheel movement";
@@ -109,7 +114,11 @@ static const char *reason_name(unsigned r) {
     case J_PATH_LIMIT:return "junction manoeuvre path limit";case J_LINE_LOST:return "line not recovered";
     case J_ALIGN_TIMEOUT:return "outgoing-line alignment timeout";
     case C_APPROACH_FAST:return "junction approach too fast; use a slower profile";
-    case C_BAD_PROFILE:return "invalid profile";default:return "other guard";
+    case C_BAD_PROFILE:return "invalid profile";
+    case C_LOSS_NO_DIRECTION:return "line not recovered: no recent direction";
+    case C_LOSS_TIME:return "line not recovered:2s recovery expired";
+    case C_LOSS_DISTANCE:return "line not recovered:50mm recovery limit";
+    default:return "other guard";
     }
 }
 static const char *phase_name(unsigned p) {
@@ -138,7 +147,7 @@ static void save_log(void) {
         save_failed=true;return;
     }
     outputs_off();memset(&saved,0,sizeof(saved));CircuitSaved *v=&saved.data;
-    v->magic=C_MAGIC;v->version=trace_count?recorded_version:2;v->count=trace_count;v->summary_count=summary_count;v->overwritten=trace_dropped;
+    v->magic=C_MAGIC;v->version=trace_count?recorded_version:3;v->count=trace_count;v->summary_count=summary_count;v->overwritten=trace_dropped;
     v->duration_us=guard.duration_us;v->reason=guard.reason;v->key=recorded_key;v->offline=recorded_offline;
     v->profile=test_mode;v->recorded_profile=recorded_mode;v->imported=imported_front;
     v->calibration=calibration;v->side=side_cal;v->turns=circuit.turns;v->ignored=circuit.ignored;
@@ -157,15 +166,18 @@ static void reset_log(void) {
     trace_count=trace_head=trace_dropped=summary_count=summary_head=0;
     guard.duration_us=0;guard.reason=0;circuit=(Circuit){0};
     for(unsigned w=0;w<2;++w) { cut_ticks[w]=0;cut_invalid[w]=0; }
-    flash_loaded=false;recorded_key='-';recorded_version=2;
+    flash_loaded=false;recorded_key='-';recorded_version=3;
 }
 static void help(void) {
-    puts("\nBUDDY23 CIRCUIT LEFT v2 | NO BARCODE/IMU/HUMP | motors OFF on boot");
+    puts("\nBUDDY23 CIRCUIT LEFT v3 | NO BARCODE/IMU/HUMP | motors OFF on boot");
     puts("Every qualified straight cross -> rolling LEFT -> align -> follow indefinitely.");
     puts("Profiles1/2/3 cruise45/90/135mm/s only when both>=400/diff<=80 for300ms.");
     puts("Correction/recovery targets and30% forward cap match profile1. Fast cruise caps30/36/42%.");
     puts("Turn45/55/65 then30/35/40;42% sustained,48% start pulse<=150ms. Test profile1 FIRST.");
     puts("Branch handover: normal curve following immediately; either>=400 for150ms confirms completion.");
+    puts("V3: both-white recovery<=2s/50mm; direction memory1.5s; weak>=200/diff>=150 consistent30ms refreshes it.");
+    puts("Post-turn visible near-pivot: OUTER wheel turn effort<=42%, no fresh peak, at most3s/45mm.");
+    puts("Feedback:4 accumulated forward ticks (~0.32mm) renew progress;750ms without progress stops.");
     puts("w=both front WHITE, l=left BLACK, r=right BLACK; o=side WHITE,b=side BLACK;k=save.");
     puts("1/2/3 selects profile; k saves. Front A0 GP26/GP28; side D0 GP19;3.3V/common GND.");
     puts("Start facing along line, front sees black, side on white, straight gap before cross.");
@@ -203,7 +215,8 @@ static void add_trace(uint64_t now) {
     for(unsigned w=0;w<2;++w) r->pwm[w]=active?(int16_t)output[w]:0;
     restore_interrupts(irq);
     r->path10=trace_path10(path_mm(ticks));r->turns=circuit.turns;r->phase=circuit.phase;
-    r->side=(uint8_t)gpio_get(19);r->decision=demand.decision;
+    r->side=(uint8_t)gpio_get(19);
+    r->decision=(uint8_t)(demand.decision | (active && capture_outer>=0?(capture_outer+1)<<5:0));
     for(unsigned w=0;w<2;++w) {
         r->wheel10[w]=trace_mm10(wheel_mm(w,ticks[w]));r->speed10[w]=(int16_t)(velocity[w]*10);
         r->adc[w]=analog_raw[w];r->level[w]=demand.level[w];r->target[w]=active?demand.target[w]:0;
@@ -231,13 +244,13 @@ static void dump(void) {
     printf("CIRCUIT LEFT v%u: key=%c mode=%s profile=%u rows=%lu overwritten=%lu turn_summaries=%lu\n",
         recorded_version,recorded_key,recorded_offline?"offline":recorded_key=='g'?"USB hands-free":"USB hold",recorded_mode,
         (unsigned long)trace_count,(unsigned long)trace_dropped,(unsigned long)summary_count);
-    puts("ms,active,phase,side_raw,distance_mm,L_mm,R_mm,L_mm_s,R_mm_s,PWM_L,PWM_R,ADC_L,ADC_R,levelL,levelR,targetL,targetR,decision,lefts");
+    puts("ms,active,phase,side_raw,distance_mm,L_mm,R_mm,L_mm_s,R_mm_s,PWM_L,PWM_R,ADC_L,ADC_R,levelL,levelR,targetL,targetR,decision,lefts,assist");
     for(unsigned n=0;n<trace_count;++n) {
         CircuitTrace *r=&trace[(trace_head+C_ROWS-trace_count+n)%C_ROWS];
-        printf("%" PRIu64 ",%u,%u,%u,%.1f,%.1f,%.1f,%.1f,%.1f,%d,%d,%u,%u,%u,%u,%d,%d,%u,%lu\n",
+        printf("%" PRIu64 ",%u,%u,%u,%.1f,%.1f,%.1f,%.1f,%.1f,%d,%d,%u,%u,%u,%u,%d,%d,%u,%lu,%u\n",
             r->ms,r->active,r->phase,r->side,(double)r->path10/10,(double)r->wheel10[0]/10,(double)r->wheel10[1]/10,
             (double)r->speed10[0]/10,(double)r->speed10[1]/10,r->pwm[0],r->pwm[1],r->adc[0],r->adc[1],
-            r->level[0],r->level[1],r->target[0],r->target[1],r->decision,(unsigned long)r->turns);
+            r->level[0],r->level[1],r->target[0],r->target[1],r->decision&31,(unsigned long)r->turns,r->decision>>5);
     }
     puts("TURN_SUMMARIES: number,elapsed_ms,distance_mm,follow_ms,centre_ms,turn_ms,alignment_ms,rotation_deg");
     for(unsigned n=0;n<summary_count;++n) {
@@ -262,12 +275,13 @@ static bool start_run(unsigned mode) {
     uint64_t now=time_us_64();uint32_t irq=save_and_disable_interrupts();
     bool ok=guard_start(&guard,now,mode!=LINE_USB_HOLD || !gpio_get(HOLD),!gpio_get(STOP));
     if(ok) {
-        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=2;last_fast=false;
+        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=3;last_fast=false;
+        capture=(CircuitCapture){0};capture_outer=-1;
         guard.deadline_us=UINT64_MAX;guard.duration_us=0;
         for(unsigned w=0;w<2;++w) {
             enc[w].position=0;total_ticks[w]=cut_ticks[w]=0;initial_invalid[w]=enc[w].invalid;cut_invalid[w]=0;
             velocity[w]=0;output[w]=0;peak_until[w]=0;controller[w]=(SignedWheel){0};
-            bad_direction_us[w]=no_motion_us[w]=0;
+            bad_direction_us[w]=0;feedback[w]=(CircuitFeedback){0};
         }
         CircuitInput input={.now=now,.adc={analog_raw[0],analog_raw[1]},.side_black=false};
         circuit_begin(&circuit,&input);demand=circuit_step(&circuit,&calibration,&input,recorded_mode);
@@ -296,19 +310,24 @@ static void control_step(uint64_t now) {
     CircuitInput input={.now=now,.wheel={wheel_mm(0,ticks[0]),wheel_mm(1,ticks[1])},.path=path_mm(ticks),
         .speed={velocity[0],velocity[1]},.adc={(uint16_t)adc_filtered[0],(uint16_t)adc_filtered[1]},
         .side_black=gpio_get(19)==side_cal.black};
+    unsigned previous_phase=circuit.phase;
     demand=circuit_step(&circuit,&calibration,&input,recorded_mode);
+    if(previous_phase==J_TURN && circuit.phase==J_ACQUIRE) circuit_capture_begin(&capture,now,input.path);
     if(circuit.completed) add_summary(now,input.path);
     uint8_t failure=demand.stop?circuit.reason:WHY_NONE;int32_t next[2];
     bool turning=circuit.phase==J_TURN && demand.target[0]==0 && demand.target[1]>0;
     unsigned wheel_profile=circuit.fast?recorded_mode:1;
+    int previous_outer=capture_outer;
+    capture_outer=circuit_capture_outer(&capture,&input,circuit.phase,&demand);
+    bool loaded[2]={turning || capture_outer==0,turning || capture_outer==1};
+    if(capture_outer>=0 && capture_outer!=previous_outer) circuit_capture_prepare(&controller[capture_outer]);
     if(last_fast && !circuit.fast) for(unsigned w=0;w<2;++w) circuit_leave_fast(&controller[w]);
     last_fast=circuit.fast;
     for(unsigned w=0;w<2;++w) {
-        next[w]=circuit_wheel_step(&controller[w],w,demand.target[w],velocity[w],dt,now,turning,wheel_profile);
+        next[w]=circuit_wheel_step(&controller[w],w,demand.target[w],velocity[w],dt,now,loaded[w],wheel_profile);
         bad_direction_us[w]=demand.target[w]>0 && velocity[w]<-20?bad_direction_us[w]+elapsed:0;
         if(bad_direction_us[w]>=50000) failure=WHY_DIRECTION;
-        no_motion_us[w]=demand.target[w]>=20 && controller[w].pi.ramp>=20 && abs(e[w].position)<2?no_motion_us[w]+elapsed:0;
-        if(no_motion_us[w]>=500000) failure=WHY_FEEDBACK;
+        if(circuit_stalled(&feedback[w],now,w==0?-ticks[w]:ticks[w],demand.target[w],controller[w].pi.ramp)) failure=WHY_FEEDBACK;
         if(e[w].invalid-initial_invalid[w]>=8) failure=WHY_ENCODER;
     }
     irq=save_and_disable_interrupts();
@@ -318,7 +337,7 @@ static void control_step(uint64_t now) {
             for(unsigned w=0;w<2;++w) {
                 peak_until[w]=turning?controller[w].peak_end_us:0;
                 output[w]=boosted_junction_peak_cap(next[w],peak_until[w],time_us_64());
-                DualLevels v=circuit_levels(w,output[w],turning,wheel_profile);
+                DualLevels v=circuit_levels(w,output[w],loaded[w],wheel_profile);
                 pwm_set_both_levels(pwm_gpio_to_slice_num(ma[w]),v.a,v.b);
             }
             guard.last_control_us=now;
@@ -445,14 +464,14 @@ int main(void) {
             uint64_t duration=guard.active?now-guard.start_us:guard.duration_us;
             restore_interrupts(irq);
             double distance=path_mm(status_ticks);
-            printf("CIRCUIT: ms=%" PRIu64 " profile=%u phase=%u(%s) active=%u distance_mm=%.1f speed_mm_s=%.1f avg_mm_s=%.1f wheel_mm_s=%.1f,%.1f targets=%d,%d PWM=%ld,%ld ADC=%u,%u levels=%u,%u side=%u turns=%lu arm=%u ready=%u pending=%u runs=%lu\n",
+            printf("CIRCUIT: ms=%" PRIu64 " profile=%u phase=%u(%s) active=%u distance_mm=%.1f speed_mm_s=%.1f avg_mm_s=%.1f wheel_mm_s=%.1f,%.1f targets=%d,%d PWM=%ld,%ld ADC=%u,%u levels=%u,%u side=%u turns=%lu assist=%d arm=%u ready=%u pending=%u runs=%lu\n",
                 duration/1000,test_mode,circuit.phase,phase_name(circuit.phase),guard.active,distance,
                 (double)(velocity[0]+velocity[1])*0.5,duration?distance/((double)duration/1e6):0,
                 (double)velocity[0],(double)velocity[1],guard.active?demand.target[0]:0,guard.active?demand.target[1]:0,
                 guard.active?(long)output[0]:0,guard.active?(long)output[1]:0,analog_raw[0],analog_raw[1],
                 line_level(analog_raw[0],calibration.white[0],calibration.black[0]),
                 line_level(analog_raw[1],calibration.white[1],calibration.black[1]),gpio_get(19),
-                (unsigned long)circuit.turns,arm.state,rearm.ready,usb_pending,(unsigned long)runs);
+                (unsigned long)circuit.turns,guard.active?capture_outer+1:0,arm.state,rearm.ready,usb_pending,(unsigned long)runs);
             last_status=now;
         }
         sleep_ms(1);

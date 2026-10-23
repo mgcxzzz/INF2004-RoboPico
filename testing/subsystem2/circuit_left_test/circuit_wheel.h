@@ -2,6 +2,12 @@
 #define CIRCUIT_WHEEL_H
 #include "../junction_left_test/boosted_wheel.h"
 static inline unsigned circuit_forward_cap(unsigned profile) { return profile==3?420:profile==2?360:300; }
+/* Carry normal turn feedforward through a loaded capture correction, but do
+   not grant a fresh48% start pulse. Only the selected OUTER wheel calls this. */
+static inline void circuit_capture_prepare(SignedWheel *p) {
+    if(p->sign!=1) *p=(SignedWheel){.sign=1};
+    p->pi.integral=0;p->peak_used=true;p->peak_active=false;p->peak_end_us=0;
+}
 /* Remove extra cruise compensation before using the normal correction PI.
    Measured speed still controls output; this cannot stop inertia instantly. */
 static inline void circuit_leave_fast(SignedWheel *p) {

@@ -76,3 +76,62 @@ Host simulations and UF2 build/structure checks passed. Physical V2 results
 are pending. First repeat the profile 1 junction-and-loop test to check branch
 handover; then repeat profile 2 to check steering and whether stable sections
 earn fast cruise. Request the complete new saved log after each comparison.
+
+## V2 profile 1: optical handover succeeds, right wheel then stalls
+
+User supplied 54 rows, one turn summary, no overwrites. First cross at about
+6.77 s; left turn / capture completes at 11.846 s, 390.5 mm, estimated 89.1
+degrees, handover 160 ms. By 12.036 s both encoder positions stop advancing:
+L312.4 / R470.3 mm. At 12.286 s targets 1/45 mm/s, actual0/0, PWM43/300,
+levels974/2. Cutoff12.421 s is `no encoder movement under drive`.
+The left wheel's low speed is intentional. The commanded outer right wheel
+is the feedback concern. This is not a both-white line-loss timeout.
+
+## V2 profile 1: moving through weak right-only readings, then immediate line loss
+
+Another complete log: 56 rows, one turn; 12.805 s, 420.3 mm, average32.82 mm/s,
+no encoder errors. Turn completes10.952 s, 362.1 mm, estimated91.1 degrees,
+handover159 ms. Both wheels keep moving after capture; user confirms right
+wheel rotation. At11.780 s levels160/559;12.031 s14/287;12.281 s0/305;
+12.532 s0/309;12.782 s0/234;12.805 s0/120 and `line not recovered`.
+
+V2 only refreshes recovery direction with difference>=200 and a level>=400,
+and retains it for500 ms. The sampled weak interval is longer than that.
+The last active sample is only23 ms before cutoff, so a full650 ms white
+recovery attempt is incompatible with these rows. The source and sample
+pattern support stale recovery memory causing an immediate no-direction stop.
+Exact intermediate raw readings are not available. The regression test feeds
+this strong-to-weak-to-white pattern to both old and new policies: V2 stops,
+V3 requests right recovery45/0.
+
+## V2 profile 2: full left black, outer right wheel advances in bursts then stops
+
+Complete pasted log:48 rows, one turn,10.837 s,308.7 mm,average28.48 mm/s,
+invalid transitions0/0. Captures branch9.914 s,306.9 mm,estimated88.1 degrees.
+At9.780 s targets13/47, measured1.3/34.3, PWM42/107;10.030 s5/46 with
+measured0/0.1, PWM53/202. Right position389.5->392.3->392.9 mm, then unchanged
+from10.533 through10.837 s. At cutoff left level935, right0; targets3/45
+immediately beforehand, rightPWM299. STOP is encoder movement, not optical loss.
+
+User saw jerking and wheels moving. This does not establish that the right
+wheel rotated continuously during the final flat encoder interval. V2's guard
+also discards each10 ms interval with fewer than two encoder transitions, so
+sustained slow/bursty movement can be misclassified as a stall.
+
+## V3 response and pending physical validation
+
+- Directed recovery2 s/50 mm; memory1.5 s. Weak asymmetric level>=200,
+  difference>=150 must remain same sign30 ms to refresh it. White never
+  chooses a direction or renews the deadline. Stop reasons distinguish expiry,
+  distance and absent recent direction.
+- For up to3 s/45 mm after branch sighting, visible near-pivot corrections
+  retain turn feedforward only on the outer wheel,42% cap, no new48% pulse.
+  Targets/ordinary correction thresholds stay the same. Inner effort is normal.
+- Progress monitoring accumulates four FORWARD ticks (~0.32 mm) instead of
+  discarding small individual samples.750 ms with no such progress stops.
+  Tests accept slow/bursty advancement and reject true zero progress/jitter.
+- CSV adds assist0/1/2 (none/left/right) without changing flash record size.
+
+V3 software/build tests pass; physical results pending. A real wheel rotating
+steadily while logged distance is flat still warrants checking encoder signal,
+wiring and coupling. Relaxing a guard cannot restore missing encoder pulses.

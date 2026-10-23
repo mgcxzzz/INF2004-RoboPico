@@ -24,7 +24,7 @@ typedef struct {
 _Static_assert(sizeof(CircuitTrace)==48 && sizeof(CircuitSummary)==32,"Circuit trace ABI changed");
 _Static_assert(sizeof(CircuitSaved)<=C_STORE_BYTES,"Circuit saved log exceeds64KiB");
 static inline bool circuit_record_valid(const CircuitSaved *s) {
-    return s->magic==C_MAGIC && (s->version==1 || s->version==2) && s->count<=C_ROWS && s->summary_count<=C_SUMMARIES &&
+    return s->magic==C_MAGIC && s->version>=1 && s->version<=3 && s->count<=C_ROWS && s->summary_count<=C_SUMMARIES &&
         s->profile>=1 && s->profile<=3 && s->recorded_profile>=1 && s->recorded_profile<=3 &&
         calibration_valid(&s->calibration) && side_valid(&s->side) &&
         s->crc==log_crc((const uint8_t *)s+offsetof(CircuitSaved,count),sizeof(*s)-offsetof(CircuitSaved,count));

@@ -2,6 +2,7 @@
 #define CIRCUIT_LOGIC_H
 #include <stdlib.h>
 #include "../junction_left_test/junction_logic.h"
+#include "circuit_recovery.h"
 
 enum { C_FOLLOW=10,C_APPROACH_FAST=40,C_BAD_PROFILE=41,C_TRACE_US=250000,
        C_GATE_US=300000,C_WHITE_US=100000,C_CLEAR_MM=150,
@@ -12,7 +13,7 @@ typedef struct {
     float speed[2];uint16_t adc[2];bool side_black;
 } CircuitInput;
 typedef struct {
-    Junction turn;SymmetricTracker follower;
+    Junction turn;CircuitTracker follower,joining;
     bool busy,fault,completed,gate_timing,white_timing,side_last,candidate;
     bool cruise_timing,fast,join_timing;
     uint8_t reason,phase;
@@ -24,7 +25,7 @@ typedef struct {
 } Circuit;
 static inline int circuit_cruise(unsigned profile) { return profile>=1 && profile<=3?(int)profile*45:0; }
 static inline AnalogDemand circuit_follow(Circuit *c,const LineCalibration *cal,const CircuitInput *i,unsigned profile) {
-    AnalogDemand d=symmetric_demand(&c->follower,cal,i->adc[0],i->adc[1],i->now,(uint32_t)(i->path-c->follow_path));
+    AnalogDemand d=circuit_line_demand(&c->follower,cal,i->adc[0],i->adc[1],i->now,(uint32_t)(i->path-c->follow_path));
     /* V2: only a stable centred observation earns faster straight travel.
        All correcting and blind-recovery targets are the exact profile1 values. */
     c->fast=false;
@@ -46,11 +47,11 @@ static inline AnalogDemand circuit_follow(Circuit *c,const LineCalibration *cal,
    A visible branch must persist150ms before counting the junction as complete. */
 static inline AnalogDemand circuit_join(Circuit *c,const LineCalibration *cal,const JunctionInput *i) {
     Junction *j=&c->turn;
-    AnalogDemand d=symmetric_demand(&j->follower,cal,i->adc[0],i->adc[1],i->now,(uint32_t)i->path);
+    AnalogDemand d=circuit_line_demand(&c->joining,cal,i->adc[0],i->adc[1],i->now,(uint32_t)i->path);
     j->turn_degrees=j_rotation(j,i);
     if(i->now-j->phase_us>=J_ALIGN_US) j_fail(j,J_ALIGN_TIMEOUT);
     else if(i->path-j->exit_origin>=J_ALIGN_MM) j_fail(j,J_BRANCH_MISSING);
-    else if(d.stop) j_fail(j,J_LINE_LOST);
+    else if(d.stop) j_fail(j,c->joining.loss_reason?c->joining.loss_reason:J_LINE_LOST);
     bool visible=d.level[0]>=400 || d.level[1]>=400;
     if(!visible) c->join_timing=false;
     else {
@@ -71,7 +72,7 @@ static inline AnalogDemand circuit_step(Circuit *c,const LineCalibration *cal,co
     if(c->fault) { d.stop=true;return d; }
     if(!c->busy) {
         d=circuit_follow(c,cal,i,profile);
-        if(d.stop) { circuit_fail(c,J_LINE_LOST);return d; }
+        if(d.stop) { circuit_fail(c,c->follower.loss_reason?c->follower.loss_reason:J_LINE_LOST);return d; }
         bool visible=d.level[0]>=400 || d.level[1]>=400;
         bool straight=visible && i->speed[0]>=10 && i->speed[1]>=10;
         if(!straight) c->gate_timing=false;
@@ -124,6 +125,7 @@ static inline AnalogDemand circuit_step(Circuit *c,const LineCalibration *cal,co
         d=junction_step(&c->turn,cal,&local);
         if(before==J_TURN && c->turn.phase==J_ACQUIRE) {
             c->join_timing=false;
+            c->joining=(CircuitTracker){.core=c->turn.follower};
             d=circuit_join(c,cal,&local);
         }
     }
@@ -137,7 +139,7 @@ static inline AnalogDemand circuit_step(Circuit *c,const LineCalibration *cal,co
         c->align_ms=(uint16_t)((i->now-phase_start)/1000);++c->turns;c->completed=true;
         c->busy=false;c->phase=C_FOLLOW;c->gate_timing=c->white_timing=false;c->candidate=false;
         c->side_last=i->side_black;c->clear_path=i->path+C_CLEAR_MM;c->leg_since=i->now;
-        c->follower=c->turn.follower;c->follow_path=i->path;
+        c->follower=c->joining;c->follow_path=i->path;
         d=circuit_follow(c,cal,i,profile); /* resume, never the old ten-second finish */
     } else if(c->phase==J_CENTRE) {
         for(unsigned w=0;w<2;++w) if(d.target[w]>0) d.target[w]+=(int16_t)((profile-1)*5);

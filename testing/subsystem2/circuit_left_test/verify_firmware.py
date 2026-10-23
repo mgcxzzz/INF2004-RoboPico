@@ -5,8 +5,8 @@ import struct
 
 root = Path(__file__).resolve().parent
 import sys
-revision = int(sys.argv[1]) if len(sys.argv) > 1 else 2
-assert revision in (1, 2)
+revision = int(sys.argv[1]) if len(sys.argv) > 1 else 3
+assert revision in (1, 2, 3)
 artifact = root / f"firmware/buddy23_circuit_left_v{revision}.uf2"
 data = artifact.read_bytes()
 assert data and len(data) % 512 == 0
