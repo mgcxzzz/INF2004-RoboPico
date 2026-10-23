@@ -191,3 +191,38 @@ optical/junction/direction/invalid-transition/control checks remain. State
 transition rows and saved recovery/memory/feedback fields improve diagnosis.
 Speeds, ordinary optical target thresholds and V4 load effort are unchanged.
 Physical course completion remains unverified.
+
+## V5 profile 1: confirmed same bend; weak right return ignored during left search
+
+Source:logs/v5_profile1_weak_return_ignored_2026-10-23.txt.67 rows,12.628 seconds,
+420.1 mm,average33.27 mm/s. No junction detected/completed; side0, phase10
+until fault. Assist0 and feedback0 throughout. The user confirms the same
+bend as the previous video. This attachment has no new synchronized video.
+
+At9.608 seconds levels35/867 request46/8 mm/s, but measured21.5/34.6, PWM104/216.
+The requested right correction is still producing an encoder-derived left
+rotation at that sample. At9.858 seconds targets46/9, actual25.7/27.3. This
+supports command/response lag; it does not prove a particular hardware fault.
+The fixed15 mm/s load qualifier misses this substantial outer-wheel underspeed.
+
+At10.291 seconds levels460/41 commit left memory after the existing80 ms gate,
+targets30/50, actual30.2/41.0. At10.622 seconds142/90 enter left recovery.
+At10.873 seconds right243/left0 are ignored by V5's >=300 reacquisition gate;
+it still requests0/45, actual3.6/36.5. At11.123 seconds0/141, then both0.
+No confirmation attempt is logged in that final episode. Left travel stops
+at326.4 mm while right advances to513.7 mm. Cutoff12.628 seconds is2 s loss
+expiry. This is an optical recovery failure, not missing encoder progress.
+A243 reading is a candidate line return, not proof of black or exact duration.
+
+V6 changes: sustained asymmetric >=200 return can guide a35 mm/s relative-
+balance probe after30 ms and confirm after120 ms, without resetting the loss
+budget beforehand. Weak166 flashes remain insufficient. Weak reversal is now
+allowed after120 ms; strong reversal remains80 ms. Visible faint steering also
+uses balance rather than absolute darkness. Ordinary correction deceleration
+is400 instead of100 mm/s²; a low-target overspeeding inner wheel coasts.
+Loaded-curve qualification is below70% of target for120 ms, ending on outer
+overspeed above target+5. Existing effort caps and explicit junction turns
+remain. Tests mirror the latest faint-return and wheel-response cases.
+
+V5 warning-only encoder progress is retained. Physical improvement and course
+completion remain pending; no simulation establishes they are guaranteed.

@@ -16,7 +16,23 @@ static inline void circuit_leave_fast(SignedWheel *p) {
 }
 static inline int32_t circuit_wheel_step(SignedWheel *p,unsigned w,int16_t wanted,float speed,
                                         float dt,uint64_t now,bool turning,unsigned profile) {
-    if(turning || profile==1) return boosted_junction_step(p,w,wanted,speed,dt,now,turning);
+    if(turning) return boosted_junction_step(p,w,wanted,speed,dt,now,true);
+    if(profile==1) {
+        /* Shared historical controller remains unchanged. In this circuit,
+           a falling correction target needs400 rather than100mm/s^2 ramp
+           deceleration. Remove retained positive I while actually overspeed. */
+        if(wanted>0 && p->sign==1 && p->pi.ramp>wanted) {
+            p->pi.ramp=fmaxf((float)wanted,p->pi.ramp-300.0f*dt);
+            if(speed>wanted+5 && p->pi.integral>0) p->pi.integral=0;
+        }
+        int32_t out=boosted_junction_step(p,w,wanted,speed,dt,now,false);
+        /* A low-speed inner wheel must coast instead of continuing to push
+           through a correction while still faster than its new target. */
+        if(wanted>0 && wanted<=15 && speed>wanted+5) {
+            p->pi.integral=0;return 0;
+        }
+        return out;
+    }
     if(wanted<=0) { *p=(SignedWheel){0};return 0; }
     if(p->sign!=1) *p=(SignedWheel){.sign=1};
     if(p->was_turning) p->pi.integral=0;

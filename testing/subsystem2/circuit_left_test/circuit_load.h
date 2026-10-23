@@ -19,13 +19,13 @@ static inline int circuit_load_outer(CircuitLoad *s,const CircuitInput *i,unsign
         d->target[inner]<=(s->active?20:12);
     if(s->active) {
         if(!eligible || outer!=s->outer || i->now-s->since>=C_LOAD_US ||
-           i->path-s->path>=C_LOAD_MM) {
+           i->path-s->path>=C_LOAD_MM || i->speed[outer]>d->target[outer]+5) {
             s->active=s->timing=false;s->cooldown_until=i->now+C_LOAD_COOLDOWN_US;
             return -1;
         }
         return (int)outer;
     }
-    if(!eligible || i->now<s->cooldown_until || i->speed[outer]>=15) {
+    if(!eligible || i->now<s->cooldown_until || i->speed[outer]>=0.70f*d->target[outer]) {
         s->timing=false;return -1;
     }
     if(!s->timing || outer!=s->outer) {

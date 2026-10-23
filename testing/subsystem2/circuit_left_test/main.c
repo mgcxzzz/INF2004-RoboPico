@@ -34,7 +34,7 @@ static LineCalibration calibration;
 static SideCalibration side_cal;
 static Circuit circuit;
 static uint8_t test_mode=1,recorded_mode=1;
-static uint8_t recorded_version=5;
+static uint8_t recorded_version=6;
 static bool last_fast;
 static CircuitCapture capture;
 static CircuitLoad load;
@@ -152,7 +152,7 @@ static void save_log(void) {
         save_failed=true;return;
     }
     outputs_off();memset(&saved,0,sizeof(saved));CircuitSaved *v=&saved.data;
-    v->magic=C_MAGIC;v->version=trace_count?recorded_version:5;v->count=trace_count;v->summary_count=summary_count;v->overwritten=trace_dropped;
+    v->magic=C_MAGIC;v->version=trace_count?recorded_version:6;v->count=trace_count;v->summary_count=summary_count;v->overwritten=trace_dropped;
     v->duration_us=guard.duration_us;v->reason=guard.reason;v->key=recorded_key;v->offline=recorded_offline;
     v->profile=test_mode;v->recorded_profile=recorded_mode;v->imported=imported_front;
     v->calibration=calibration;v->side=side_cal;v->turns=circuit.turns;v->ignored=circuit.ignored;
@@ -171,10 +171,10 @@ static void reset_log(void) {
     trace_count=trace_head=trace_dropped=summary_count=summary_head=0;
     guard.duration_us=0;guard.reason=0;circuit=(Circuit){0};
     for(unsigned w=0;w<2;++w) { cut_ticks[w]=0;cut_invalid[w]=0; }
-    flash_loaded=false;recorded_key='-';recorded_version=5;
+    flash_loaded=false;recorded_key='-';recorded_version=6;
 }
 static void help(void) {
-    puts("\nBUDDY23 CIRCUIT LEFT v5 | NO BARCODE/IMU/HUMP | motors OFF on boot");
+    puts("\nBUDDY23 CIRCUIT LEFT v6 | NO BARCODE/IMU/HUMP | motors OFF on boot");
     puts("Every qualified straight cross -> rolling LEFT -> align -> follow indefinitely.");
     puts("Profiles1/2/3 cruise45/90/135mm/s only when both>=400/diff<=80 for300ms.");
     puts("Correction targets match profile1; ordinary cap30%, scoped outer assistance42%. Fast caps30/36/42%.");
@@ -182,10 +182,11 @@ static void help(void) {
     puts("Branch handover: normal curve following immediately; either>=400 for150ms confirms completion.");
     puts("Directed recovery<=2s/50mm; memory1.5s; same-sign weak>=200/diff>=150 for30ms refreshes it.");
     puts("Post-turn visible near-pivot: OUTER wheel turn effort<=42%, no fresh peak, at most3s/45mm.");
-    puts("V4: visible near-pivot outer underspeed<15mm/s for120ms -> effort<=42%, max2s/30mm, cooldown300ms.");
+    puts("V6: visible near-pivot outer speed<70% target for120ms -> effort<=42%, max2s/30mm, cooldown300ms.");
     puts("ASSIST:0=none,1/2=post-turn left/right,3/4=loaded curve left/right; targets unchanged.");
-    puts("V5: opposite recovery direction needs strong>=400/diff>=200 for80ms; weak cannot reverse it.");
-    puts("Loss clears only after>=400 for40ms or>=300 for80ms. Curve bridge150ms then usual search.");
+    puts("V6: opposite memory needs strong80ms or faint>=200/diff>=150 for120ms; faint probe after30ms.");
+    puts("Return confirms at>=400/40ms,>=300/80ms, or faint contrast/120ms; no budget reset before confirmation.");
+    puts("Correction deceleration400mm/s^2; inner target<=15 coasts when measured>target+5. No reverse/brake.");
     puts("Recent centred gap:35/35 for<=500ms/15mm; directed recovery remains<=2s/50mm.");
     puts("NO-PROGRESS:750ms warning ONLY (feedback bits1=left,2=right); no automatic encoder-progress stop.");
     puts("Manual stop, invalid/direction/control/USB checks and bounded optical/junction stops remain.");
@@ -222,8 +223,9 @@ static const CircuitTracker *current_tracker(void) {
     return circuit.phase==J_ACQUIRE?&circuit.joining:&circuit.follower;
 }
 static uint16_t trace_state(uint64_t now) {
+    unsigned probe=demand.decision==C_PROBE_LEFT?1:demand.decision==C_PROBE_RIGHT?2:0;
     return (uint16_t)(circuit_trace_phase(circuit.phase,current_tracker(),now) |
-                      (assist_code<<8) | (feedback_mask<<11));
+                      (assist_code<<8) | (feedback_mask<<11) | (probe<<13));
 }
 static void add_trace(uint64_t now) {
     CircuitTrace *r=&trace[trace_head];memset(r,0,sizeof(*r));
@@ -264,7 +266,7 @@ static void dump(void) {
     printf("CIRCUIT LEFT v%u: key=%c mode=%s profile=%u rows=%lu overwritten=%lu turn_summaries=%lu\n",
         recorded_version,recorded_key,recorded_offline?"offline":recorded_key=='g'?"USB hands-free":"USB hold",recorded_mode,
         (unsigned long)trace_count,(unsigned long)trace_dropped,(unsigned long)summary_count);
-    if(recorded_version>=5) puts("DIAG: memory0=unknown,1=left,2=right,3=recently centred; recovery/reacquire=0/1; feedback bits1=left,2=right WARNING ONLY.");
+    if(recorded_version>=5) puts("DIAG: decisions17/18=slow probe left/right; memory0=unknown,1=left,2=right,3=recently centred; recovery/reacquire=0/1; feedback bits1=left,2=right WARNING ONLY.");
     puts("ms,active,phase,side_raw,distance_mm,L_mm,R_mm,L_mm_s,R_mm_s,PWM_L,PWM_R,ADC_L,ADC_R,levelL,levelR,targetL,targetR,decision,lefts,assist,memory,recovery,reacquire,feedback");
     for(unsigned n=0;n<trace_count;++n) {
         CircuitTrace *r=&trace[(trace_head+C_ROWS-trace_count+n)%C_ROWS];
@@ -297,7 +299,7 @@ static bool start_run(unsigned mode) {
     uint64_t now=time_us_64();uint32_t irq=save_and_disable_interrupts();
     bool ok=guard_start(&guard,now,mode!=LINE_USB_HOLD || !gpio_get(HOLD),!gpio_get(STOP));
     if(ok) {
-        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=5;last_fast=false;
+        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=6;last_fast=false;
         capture=(CircuitCapture){0};load=(CircuitLoad){0};capture_outer=-1;assist_code=feedback_mask=0;
         guard.deadline_us=UINT64_MAX;guard.duration_us=0;
         for(unsigned w=0;w<2;++w) {

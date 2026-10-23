@@ -96,7 +96,7 @@ static void wheel_caps(void) {
             if(!target) assert(pwm==0);
             DualLevels v=circuit_levels(w,pwm,turn,profile);
             assert(w==0?v.a==pwm && !v.b:v.b==pwm && !v.a);
-            if(profile==1) assert(pwm==boosted_junction_step(&baseline,w,(int16_t)target,0,.01f,now,turn));
+            if(profile==1 && n<700) assert(pwm==boosted_junction_step(&baseline,w,(int16_t)target,0,.01f,now,turn));
         }
     }
     assert(boosted_junction_peak_cap(480,150000,150000)==420);
@@ -180,7 +180,8 @@ static void records(void) {
     s.version=3;assert(circuit_record_valid(&s));
     s.version=4;assert(circuit_record_valid(&s));
     s.version=5;assert(circuit_record_valid(&s));
-    s.version=6;assert(!circuit_record_valid(&s));
+    s.version=6;assert(circuit_record_valid(&s));
+    s.version=7;assert(!circuit_record_valid(&s));
     CircuitLegacy old={.magic=0x314e434a,.version=1,.calibration=cal,.side={0,1,3},.mode=3,.selected_mode=3,.firmware=10};
     old.crc=log_crc((uint8_t *)&old+offsetof(CircuitLegacy,count),sizeof(old)-offsetof(CircuitLegacy,count));
     LineCalibration imported={0};SideCalibration side={0};assert(circuit_import(&old,&imported,&side));
@@ -302,7 +303,7 @@ static void curve_load_effort(void) {
     for(unsigned gate=0;gate<7;++gate) {
         s=(CircuitLoad){0};i=initial();d=(AnalogDemand){.level={38,1000},.target={45,1}};
         unsigned phase=C_FOLLOW;bool capture=false;
-        if(gate==0) i.speed[0]=15;
+        if(gate==0) i.speed[0]=31.5f;
         if(gate==1) d.level[1]=399;
         if(gate==2) d.target[1]=13;
         if(gate==3) d.target[0]=29;
@@ -348,10 +349,14 @@ static void robust_recovery(void) {
         uint64_t since=t.core.white_since;
         d=circuit_line_demand(&t,&unit,100+observations[2][0],100+observations[2][1],14790000,4);
         assert(!d.stop && t.core.white && t.core.white_since==since && t.core.recovery==direction);
-        for(uint64_t now=14800000;now<14950000;now+=10000) {
+        for(uint64_t now=14800000;now<14850000;now+=10000) {
             d=circuit_line_demand(&t,&unit,100+observations[3][0],100+observations[3][1],now,5);
-            assert(!d.stop && t.core.white && t.core.direction==direction && d.target[outer]>d.target[1-outer]);
+            assert(!d.stop && t.core.white && t.core.direction==direction);
+            if(now<14830000) assert(d.target[outer]>d.target[1-outer]);
+            else assert(d.target[outer]<d.target[1-outer]); /* slow evidence-guided probe */
         }
+        d=circuit_line_demand(&t,&unit,100,100,14850000,5);
+        assert(!d.stop && t.core.white && t.core.recovery==direction && t.core.white_since==since);
         d=circuit_line_demand(&t,&unit,100+observations[4][0],100+observations[4][1],14950000,5);
         assert(!d.stop && t.core.white && t.reacquire_timing);
         d=circuit_line_demand(&t,&unit,100+observations[4][0],100+observations[4][1],14989000,5);
@@ -422,10 +427,78 @@ static void robust_recovery(void) {
         assert((side&1)==raw && ((side>>1)&3)==warning);
     }
 }
+static void v5_response_regression(void) {
+    const LineCalibration unit={{100,100},{1100,1100},7};
+    for(unsigned mirror=0;mirror<2;++mirror) {
+        CircuitTracker t={0};AnalogDemand d;unsigned new_outer=mirror?1:0;
+        uint16_t strong[2]={460,41},faint[2]={0,243};
+        if(mirror) { strong[0]=41;strong[1]=460;faint[0]=243;faint[1]=0; }
+        (void)circuit_line_demand(&t,&unit,100+strong[0],100+strong[1],10291000,0);
+        (void)circuit_line_demand(&t,&unit,242,190,10622000,1);
+        assert(t.core.white);uint64_t loss=t.core.white_since;
+        d=circuit_line_demand(&t,&unit,100+faint[0],100+faint[1],10873000,5);
+        assert(!d.stop && t.core.white && t.reacquire_timing);
+        d=circuit_line_demand(&t,&unit,100+faint[0],100+faint[1],10902999,6);
+        assert(d.decision!=C_PROBE_LEFT && d.decision!=C_PROBE_RIGHT);
+        d=circuit_line_demand(&t,&unit,100+faint[0],100+faint[1],10903000,6);
+        assert(!d.stop && t.core.white && t.core.white_since==loss);
+        assert(d.decision==(mirror?C_PROBE_LEFT:C_PROBE_RIGHT));
+        assert(d.target[new_outer]==35 && d.target[1-new_outer]==0);
+        d=circuit_line_demand(&t,&unit,100+faint[0],100+faint[1],10993000,8);
+        assert(!d.stop && !t.core.white && t.core.direction==(mirror?1:-1));
+        assert(d.target[new_outer]==35 && d.target[1-new_outer]==0);
+        /* Faint confirmation now gives a matching direction on the next loss. */
+        d=circuit_line_demand(&t,&unit,100,100,11003000,9);
+        assert(!d.stop && t.core.recovery==(mirror?1:-1));
+        /* If a weak return disappears before confirmation, its probe does
+           not reset the original recovery deadline or commit weak memory. */
+        t=(CircuitTracker){0};
+        (void)circuit_line_demand(&t,&unit,100+strong[0],100+strong[1],1000,0);
+        (void)circuit_line_demand(&t,&unit,100,100,11000,1);
+        (void)circuit_line_demand(&t,&unit,100+faint[0],100+faint[1],21000,2);
+        d=circuit_line_demand(&t,&unit,100+faint[0],100+faint[1],51000,3);
+        assert(d.target[new_outer]==35 && t.core.white);
+        d=circuit_line_demand(&t,&unit,100,100,61000,4);
+        assert(t.core.white_since==11000 && t.core.direction==(mirror?-1:1));
+        d=circuit_line_demand(&t,&unit,100,100,11000+C_LOSS_US,5);
+        assert(d.stop && t.loss_reason==C_LOSS_TIME);
+    }
+    /* Alternating faint signs cannot accumulate probe/weak confirmation dwell. */
+    CircuitTracker jitter={0};
+    (void)circuit_line_demand(&jitter,&unit,1000,100,1000,0);
+    (void)circuit_line_demand(&jitter,&unit,100,100,11000,1);
+    for(unsigned n=0;n<20;++n) {
+        AnalogDemand d=circuit_line_demand(&jitter,&unit,n%2?350:100,n%2?100:350,21000+n*10000,2);
+        assert(!d.stop && jitter.core.white && d.decision!=C_PROBE_LEFT && d.decision!=C_PROBE_RIGHT);
+    }
+    for(unsigned w=0;w<2;++w) {
+        /* V5 powered the inner wheel while measured34.6, requested8mm/s.
+           V6 coasts it immediately, ramping45->8 in under100ms. */
+        SignedWheel p={.sign=1,.pi={.ramp=45,.integral=100}};
+        int pwm=circuit_wheel_step(&p,w,8,34.6f,.01f,1000,false,1);
+        assert(pwm==0 && p.pi.integral==0 && p.pi.ramp==41);
+        for(unsigned n=1;n<10;++n)
+            assert(circuit_wheel_step(&p,w,8,34.6f,.01f,1000+n*10000,false,1)==0);
+        assert(p.pi.ramp==8);
+        assert(circuit_wheel_step(&p,w,8,6,.01f,111000,false,1)>0); /* resumes near target */
+        /* Explicit loaded junction-turn controller remains byte-for-byte behavior. */
+        SignedWheel current={0},baseline={0};
+        for(unsigned n=0;n<100;++n)
+            assert(circuit_wheel_step(&current,w,45,20,.01f,n*10000,true,1)==
+                   boosted_junction_step(&baseline,w,45,20,.01f,n*10000,true));
+    }
+    /* Relative underspeed catches21.5 vs46; V5's fixed15 missed this load. */
+    CircuitLoad load={0};CircuitInput i=initial();i.speed[0]=21.5f;
+    AnalogDemand d={.level={35,867},.target={46,8}};
+    assert(circuit_load_outer(&load,&i,C_FOLLOW,&d,false)==-1);
+    i.now+=C_LOAD_QUALIFY_US;assert(circuit_load_outer(&load,&i,C_FOLLOW,&d,false)==0);
+    i.speed[0]=52;assert(circuit_load_outer(&load,&i,C_FOLLOW,&d,false)==-1);
+    assert(!load.active); /* no loaded feedforward after overspeed */
+}
 int main(void) {
     for(unsigned p=1;p<=3;++p) circuit_simulation(p);
     detection_and_bounds();wheel_caps();records();same_corrections_and_cruise();curve_after_branch();
-    weak_signal_recovery();capture_effort();cumulative_feedback();curve_load_effort();robust_recovery();
-    puts("PASS:12 turns/profile; steering parity/cruise; observed weak-signal regression;2s/50mm bounds; scoped capture effort/no new peak; cumulative feedback/stall; V1-V5 records/CRC/ring; curve load bounds; mirrored V4 worn-gap sequences, qualified reacquisition/reversal and straight bridging.");
+    weak_signal_recovery();capture_effort();cumulative_feedback();curve_load_effort();robust_recovery();v5_response_regression();
+    puts("PASS:12 turns/profile; steering parity/cruise; observed weak-signal regression;2s/50mm bounds; scoped capture effort/no new peak; cumulative feedback/stall; V1-V6 records/CRC/ring; curve load bounds; mirrored V4 worn-gap sequences, qualified reacquisition/reversal and straight bridging; mirrored V5 faint-return, inner coast and relative-load regressions.");
     return 0;
 }

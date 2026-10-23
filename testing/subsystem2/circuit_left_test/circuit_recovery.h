@@ -4,16 +4,18 @@
 
 enum { C_LOSS_NO_DIRECTION=42,C_LOSS_TIME,C_LOSS_DISTANCE,C_LOSS_STRAIGHT,
        C_LOSS_US=2000000,C_LOSS_MM=50,C_MEMORY_US=1500000,C_WEAK_US=30000,
-       C_REVERSE_US=80000,C_REACQUIRE_STRONG_US=40000,C_REACQUIRE_WEAK_US=80000,
+       C_REVERSE_US=80000,C_WEAK_REVERSE_US=120000,C_PROBE_US=30000,
+       C_REACQUIRE_STRONG_US=40000,C_REACQUIRE_WEAK_US=80000,C_REACQUIRE_FAINT_US=120000,
        C_BRIDGE_US=150000,C_CENTRE_US=100000,C_CENTRE_MEMORY_US=400000,
-       C_STRAIGHT_GAP_US=500000,C_STRAIGHT_GAP_MM=15 };
+       C_STRAIGHT_GAP_US=500000,C_STRAIGHT_GAP_MM=15,
+       C_PROBE_LEFT=17,C_PROBE_RIGHT=18 };
 typedef struct {
     SymmetricTracker core;
-    uint64_t weak_since,reverse_since,reacquire_since,strong_since,centre_since,centre_us;
+    uint64_t weak_since,reverse_since,reacquire_since,probe_since,medium_since,strong_since,centre_since,centre_us;
     int16_t bridge[2];
-    int8_t pending,reverse;
+    int8_t pending,reverse,probe_direction;
     uint8_t loss_reason;
-    bool weak_timing,reverse_timing,reacquire_timing,strong_timing,centre_timing,centre_valid,straight_recovery;
+    bool weak_timing,reverse_timing,reacquire_timing,probe_timing,medium_timing,strong_timing,centre_timing,centre_valid,straight_recovery;
 } CircuitTracker;
 /* 0 unknown/stale,1 left,2 right,3 recently centred. This is recovery
    confidence, not a delay on the ordinary optical steering targets. */
@@ -43,14 +45,26 @@ static inline void circuit_direction(CircuitTracker *t,int error,unsigned strong
         return;
     }
     t->reverse_timing=false;
-    /* Weak observations can seed or refresh the same direction. They cannot
-       reverse a direction chosen from a stronger observation. */
-    if(weak && (!s->direction || direction==s->direction)) {
+    /* A sustained faint return can also be real. Reverse memory only after
+       120ms of consistent weak asymmetry; shorter flashes may guide a slow
+       probe without committing the direction or restarting the loss budget. */
+    if(weak) {
         if(!t->weak_timing || t->pending!=direction) {
             t->weak_timing=true;t->pending=direction;t->weak_since=now;
         }
-        if(now-t->weak_since>=C_WEAK_US) { s->direction=direction;s->direction_us=now; }
+        unsigned dwell=s->direction && direction!=s->direction?C_WEAK_REVERSE_US:C_WEAK_US;
+        if(now-t->weak_since>=dwell) { s->direction=direction;s->direction_us=now; }
     } else { t->weak_timing=false;t->pending=0; }
+}
+/* Absolute reflectance falls on worn tape. With a credible asymmetric faint
+   return, use the left/right balance rather than treating0/243 as a tiny
+   steering error. Outer35 keeps this correction slower than normal cruising. */
+static inline void circuit_faint_targets(int error,const uint16_t level[2],int16_t target[2]) {
+    int total=level[0]+level[1];
+    symmetric_targets(error*1000/total,target);
+    int maximum=target[0]>target[1]?target[0]:target[1];
+    target[0]=(int16_t)(target[0]*35/maximum);
+    target[1]=(int16_t)(target[1]*35/maximum);
 }
 static inline AnalogDemand circuit_line_demand(CircuitTracker *t,const LineCalibration *cal,
                                                 uint16_t l,uint16_t r,uint64_t now,uint32_t mm) {
@@ -62,6 +76,12 @@ static inline AnalogDemand circuit_line_demand(CircuitTracker *t,const LineCalib
     int error=(int)d.level[0]-d.level[1],magnitude=error<0?-error:error;
     unsigned strongest=d.level[0]>d.level[1]?d.level[0]:d.level[1];
     bool low=d.level[0]<150 && d.level[1]<150;
+    bool faint=strongest>=200 && magnitude>=150;
+    int8_t observed=error>0?1:-1;
+    if(!faint) t->probe_timing=false;
+    else if(!t->probe_timing || t->probe_direction!=observed) {
+        t->probe_timing=true;t->probe_direction=observed;t->probe_since=now;
+    }
     circuit_direction(t,error,strongest,now);
     bool centred=d.level[0]>=400 && d.level[1]>=400 && magnitude<=80;
     if(!centred) t->centre_timing=false;
@@ -73,23 +93,26 @@ static inline AnalogDemand circuit_line_demand(CircuitTracker *t,const LineCalib
         unsigned memory=circuit_memory(t,now);
         s->white=true;s->white_since=now;s->white_mm=mm;
         s->recovery=memory==1?1:memory==2?-1:0;
-        t->straight_recovery=memory==3;t->reacquire_timing=t->strong_timing=false;
+        t->straight_recovery=memory==3;t->reacquire_timing=t->medium_timing=t->strong_timing=false;
     }
     if(s->white) {
         /* An isolated >=150 observation no longer ends/restarts a loss. The
            same episode and search direction persist until a credible line
            is sustained, including across weak or opposite-side flashes. */
-        if(strongest<300) t->reacquire_timing=t->strong_timing=false;
+        if(strongest<300 && !faint) t->reacquire_timing=t->medium_timing=t->strong_timing=false;
         else {
             if(!t->reacquire_timing) { t->reacquire_timing=true;t->reacquire_since=now; }
+            if(strongest<300) t->medium_timing=false;
+            else if(!t->medium_timing) { t->medium_timing=true;t->medium_since=now; }
             if(strongest<400) t->strong_timing=false;
             else if(!t->strong_timing) { t->strong_timing=true;t->strong_since=now; }
             /* Independent bands:400-threshold flicker cannot discard an
                otherwise sustained >=300 observation. */
             if((t->strong_timing && now-t->strong_since>=C_REACQUIRE_STRONG_US) ||
-               now-t->reacquire_since>=C_REACQUIRE_WEAK_US) {
+               (t->medium_timing && now-t->medium_since>=C_REACQUIRE_WEAK_US) ||
+               (t->probe_timing && now-t->probe_since>=C_REACQUIRE_FAINT_US)) {
                 s->white=false;s->recovery=0;t->straight_recovery=false;
-                t->reacquire_timing=t->strong_timing=false;
+                t->reacquire_timing=t->medium_timing=t->strong_timing=false;
             }
         }
         if(s->white) {
@@ -100,6 +123,13 @@ static inline AnalogDemand circuit_line_demand(CircuitTracker *t,const LineCalib
             else if(elapsed>=C_LOSS_US) t->loss_reason=C_LOSS_TIME;
             else if(travel>=C_LOSS_MM) t->loss_reason=C_LOSS_DISTANCE;
             if(t->loss_reason) { d.stop=true;d.decision=AL_LOST;return d; }
+            /* Unlike V5, do not blindly ignore a real weak return on the
+               other sensor. Probe using reflectance balance at reduced speed,
+               keeping the original loss deadline until confirmation succeeds. */
+            if(faint && t->probe_timing && now-t->probe_since>=C_PROBE_US) {
+                circuit_faint_targets(error,d.level,d.target);
+                d.decision=error>0?C_PROBE_LEFT:C_PROBE_RIGHT;return d;
+            }
             if(t->straight_recovery) { d.target[0]=d.target[1]=35;return d; }
             d.decision=s->recovery>0?SYM_RECOVER_LEFT:SYM_RECOVER_RIGHT;
             d.target[0]=s->recovery>0?0:45;d.target[1]=s->recovery>0?45:0;
@@ -113,6 +143,7 @@ static inline AnalogDemand circuit_line_demand(CircuitTracker *t,const LineCalib
         }
     }
     symmetric_targets(error,d.target);
+    if(strongest>=200 && strongest<400 && magnitude>=150) circuit_faint_targets(error,d.level,d.target);
     if(d.target[0]<d.target[1]) d.decision=SYM_LEFT;
     else if(d.target[0]>d.target[1]) d.decision=SYM_RIGHT;
     if(strongest>=400 && ((error>80 && s->direction>0) ||

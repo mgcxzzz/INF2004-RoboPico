@@ -1,17 +1,18 @@
-# Continuous left-turn circuit test V5
+# Continuous left-turn circuit test V6
 
 Standalone Pico W / Robo Pico SDK experiment for Buddy 2 and 3. Reuses the
 working symmetric two-sensor follower and Junction Left V10 rolling turn.
-V5 retains cruise speeds, profile 1 optical steering and V4 outer-wheel load
-assistance. It adds recovery hysteresis, confidence-qualified direction memory,
-short gap bridging, event diagnostics, and warning-only encoder progress.
+V6 retains cruise profiles, rolling junction turns and warning-only encoder
+progress. It reacts to sustained faint line returns instead of ignoring them,
+uses reduced-speed balance steering on worn tape, and improves correction
+wheel response. Normal strong-signal steering thresholds remain unchanged.
 All recovery changes work identically for left and right bends.
 Select **profile 1 first**. Profiles 2 and 3 are experimental speed targets.
 This circuit firmware has not yet been tested on the physical full course.
 
 ## Download
 
-`firmware/buddy23_circuit_left_v5.uf2` (V1–V4 remain available for comparison).
+`firmware/buddy23_circuit_left_v6.uf2` (V1–V5 remain available for comparison).
 
 Flash using BOOTSEL and the RPI-RP2 drive as usual. Open USB serial at
 115200, 8 data bits, no parity, 1 stop bit, no flow control.
@@ -52,7 +53,8 @@ All entries below are requested wheel speeds in mm/s, not guaranteed measured sp
 | 3, fastest | 135 | 40 / 35 | 65 / 40 | Same profile 1 targets | 42% |
 
 **V2 no longer multiplies steering targets by the profile number.** At every
-profile the original normalized-error thresholds and correcting speeds apply:
+profile the original normalized-error thresholds and correcting speeds apply
+when at least one level is >=400:
 
 | Absolute left/right level difference | Inner / outer wheel targets, mm/s |
 |---|---:|
@@ -61,7 +63,13 @@ profile the original normalized-error thresholds and correcting speeds apply:
 | 500 | 25 / 50 |
 | 1000 | 0 / 45 |
 
-Intermediate corrections use the existing interpolation. Only when **both
+Intermediate corrections use the existing interpolation. V6 adds a slower
+faint-line branch: if the stronger level is200–399 and difference>=150,
+steer from `(L-R)/(L+R)` using the same target shape scaled to outer35 mm/s.
+This treats0/243 as a meaningful one-sided return rather than a small error.
+It applies equally to all profiles and does not qualify for fast cruise.
+
+Only when **both
 levels are at least 400 and their difference stays at most 80 continuously
 for 300 ms** do profiles 2 and 3 request 90/90 or 135/135. If that condition
 breaks, the normal follower supplies profile 1 targets immediately. Fast cruise
@@ -96,9 +104,9 @@ points in the working placement. GP20 is STOP, GP21 is the start/hold button.
 On first boot, this firmware tries to import **both** front and side calibration
 from a valid Junction Left V1–V10 record. It defaults to speed profile 1;
 the junction's old mode 3 does **not** become speed profile 3. A valid saved
-circuit V1–V5 record takes precedence on later boots. Earlier calibration
+circuit V1–V6 record takes precedence on later boots. Earlier calibration
 and logs remain readable and retain their recorded version label. The boot
-banner identifies V5 firmware; each new V5 run is labelled V5. Check the printed `CAL` line.
+banner identifies V6 firmware; each new V6 run is labelled V6. Check the printed `CAL` line.
 
 If calibration is valid and placement/height has not changed, select `1`, then
 press `k` to save profile 1. If calibration is missing or unsuitable:
@@ -191,16 +199,23 @@ Phases: `10` follow, `2` cross approach, `4` rolling left,
   reliable curve target ratio scaled to an outer35 mm/s, if available; then
   the usual0/45 pivot search applies. No direction is guessed from white.
 - A weak flash no longer clears the loss and restarts the timer. Reacquisition
-  needs strongest level >=400 continuously40 ms, or >=300 continuously80 ms.
-  Dropping below300 restarts confirmation; crossing400 only resets the faster
-  40 ms timer, so a sustained >=300 return can still qualify after80 ms.
-  Unconfirmed weak readings keep the same loss origin and recovery direction.
+  needs >=400 for40 ms, >=300 for80 ms, or an asymmetric faint return
+  (stronger>=200, difference>=150) for120 ms. Independent timers prevent
+  threshold flicker from discarding lower-band confidence. After30 ms of
+  consistent-sign credible asymmetric return, V6 already probes toward it at outer35 mm/s,
+  using relative balance. The episode deadline does not restart until return
+  is confirmed. The faint120 ms confirmation also needs a consistent sign;
+  alternating faint signals cannot accumulate that dwell. A brief failed probe falls back to the latched search.
+  The V4 weak166 flash remains below the faint200 threshold.
 - Ordinary optical steering still responds immediately using the existing
   target table. Recovery memory requires stronger evidence before reversing:
   stronger level >=400 and difference >=200, with the opposite sign sustained
   for80 ms. Same-sign strong readings refresh immediately. Weak observations
   (stronger >=200, difference >=150) can seed/refresh a direction after30 ms,
-  but cannot reverse an existing direction. This rule is mirrored left/right.
+  with the same sign. An opposite faint observation needs120 ms to reverse
+  memory; opposite strong observations still need80 ms. This rule is mirrored
+  left/right. V5's absolute prohibition on weak reversals ignored a potential
+  real return in the latest log and is intentionally replaced.
 - Both levels >=400 and difference <=80 for100 ms establish a centred
   observation. If it is more recent than direction memory and no older than
   400 ms at loss entry, bridge straight at35/35 for at most500 ms /15 mm.
@@ -217,13 +232,21 @@ Phases: `10` follow, `2` cross approach, `4` rolling left,
   during an unconfirmed recovery episode, so blind recovery keeps its normal cap.
 - V4 also assists ordinary curve following when at least one front level is
   >=400, outer target >=30 mm/s, inner target <=12 mm/s, and outer measured
-  speed remains below15 mm/s for120 ms. It applies the same turn feedforward
+  speed remains below70% of its target for120 ms (V6). It applies the same turn feedforward
   to that outer wheel only, capped42%, with no new48% pulse. Targets do not
   change. Once active, inner target <=20 retains assistance; it ends when the
-  direction/phase changes, visibility is lost, or after2 seconds /30 mm of
+  direction/phase changes, visibility is lost, measured outer speed exceeds
+  target+5 mm/s, or after2 seconds /30 mm of
   mean encoder path. A300 ms cooldown precedes another qualification.
   Post-turn capture assistance takes priority. All three profiles get this
   load response; higher cruise speed is not needed to enable it.
+- V6 ordinary correction wheel ramps decelerate at400 mm/s² instead of100;
+  acceleration remains100 mm/s². Retained positive integral is cleared while
+  decelerating above target+5. An inner target1–15 mm/s receives PWM0 while
+  measured speed exceeds target+5, then resumes regulation near target.
+  This is coasting, not reverse or active braking. Explicit loaded junction
+  turn behavior remains unchanged. This addresses the V5 example of a right
+  wheel measured34.6 mm/s while requested8 and still receiving PWM216.
 - Local manoeuvre distance limits reset for every junction. The old single-test
   12-second approach / 450 mm and 35-second total limit do not terminate a circuit.
 
@@ -232,7 +255,8 @@ Phases: `10` follow, `2` cross approach, `4` rolling left,
 The offline CSV contains elapsed milliseconds, active state, phase, raw side
 signal, total distance, each wheel's distance and measured speed, actual PWM,
 raw ADC and normalized levels, requested wheel speeds, decision, and turn count.
-Decision 16 identifies qualified fast straight cruise; decisions 11–15 keep
+Decisions17/18 identify reduced-speed left/right probes during unconfirmed
+recovery. Decision16 identifies qualified fast straight cruise; decisions11–15 keep
 the existing normal following/correction/recovery meanings. V3 CSV appends
 `assist`: 0=ordinary effort, 1/2=post-turn left/right outer wheel,
 3/4=V4 ordinary-curve left/right outer wheel. It is packed
@@ -242,15 +266,15 @@ V5 appends:
 
 - `memory`:0 unknown/stale,1 left,2 right,3 recently centred.
 - `recovery`:1 while the current loss episode remains unconfirmed.
-- `reacquire`:1 during the40/80 ms line-return confirmation.
+- `reacquire`:1 during40/80/120 ms line-return confirmation.
 - `feedback`:warning bits1 left /2 right /3 both; warnings only, with no automatic progress stop.
 
 Unused high phase/side bits store these fields; the printed raw phase and
-side remain unchanged. V1–V4 records restore with zero/unknown new diagnostics.
+side remain unchanged. V1–V5 records restore with zero/unknown new diagnostics.
 The record structure and calibration remain compatible.
 
-V5 samples at least every250 ms **and at recovery, memory, assist, warning or
-phase transitions**. This records events missed by the previous250 ms-only
+V6 samples at least every250 ms **and at recovery, memory, assist, warning or
+phase/probe transitions**. This records events missed by the previous250 ms-only
 CSV. The latest1,200 rows retain up to approximately five minutes; frequent
 events shorten that history. Older rows are overwritten. The latest64
 completed turns retain separate timing summaries. Whole-run counters continue
@@ -284,8 +308,8 @@ entire stream for runs longer than the offline detail window.
 `test_circuit.c`: twelve successive turns (three route cycles) at each profile;
 long following beyond old limits; curve-side hit rejection; clearance lockout;
 measured-speed entry guard; missing branch timeout; controller caps/zero output;
-profile 1 ordinary wheel-controller agreement with V10; calibration import
-and V1–V5 record CRC validation; ring wrap; every normalized steering error from -1000
+profile 1 constant-target startup and explicit turn-controller agreement with V10; calibration import
+and V1–V6 record CRC validation; ring wrap; every normalized steering error from -1000
 to +1000 at every profile; fast-cruise dwell and immediate exit; one-sensor
 branch handover directly into a curve; bounded both-white recovery; reproduction
 of the observed V2 weak-right-signal stop; weak-direction qualification;
@@ -294,9 +318,11 @@ versus stopped/jittering encoder feedback; ordinary-curve load qualification,
 visibility, direction, cooldown and time/path limits using the V3 failure case;
 mirrored V4 right/left-bend loss sequences, opposite weak/short strong flashes,
 40/80 ms reacquisition,80 ms direction reversal,150 ms curvature bridge,
-straight gap time/path limits, and packed diagnostic field round trips.
+straight gap time/path limits, and packed diagnostic field round trips;
+mirrored V5 faint243 return/probe/confirmation/failure sequences; inner-wheel
+coasting and400 mm/s² deceleration; relative load qualification and overspeed exit.
 
 Build C11 host tests with warnings as errors, then the standalone Pico W CMake
-project. `verify_firmware.py` checks delivered V1–V5 UF2 identity, RP2040
-blocks and reserved flash boundaries. See `BUILD_V5.md` for this artifact's
+project. `verify_firmware.py` checks delivered V1–V6 UF2 identity, RP2040
+blocks and reserved flash boundaries. See `BUILD_V6.md` for this artifact's
 build evidence and `MEASUREMENTS.md` for the user-reported failures and the observed failures and version changes.
