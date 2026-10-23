@@ -4,7 +4,10 @@ import hashlib
 import struct
 
 root = Path(__file__).resolve().parent
-artifact = root / "firmware/buddy23_circuit_left_v1.uf2"
+import sys
+revision = int(sys.argv[1]) if len(sys.argv) > 1 else 2
+assert revision in (1, 2)
+artifact = root / f"firmware/buddy23_circuit_left_v{revision}.uf2"
 data = artifact.read_bytes()
 assert data and len(data) % 512 == 0
 count = len(data) // 512
@@ -18,9 +21,10 @@ for index in range(count):
     assert address == 0x10000000 + index * 256
     assert address + size <= 0x101E0000, "Circuit/legacy saved records would be overwritten"
     payload.extend(block[32:32 + size])
-for marker in (b"BUDDY23 CIRCUIT LEFT v1", b"SUMMARY: total_time_s=", b"CIRCUIT LEFT v1: key="):
+for marker in (f"BUDDY23 CIRCUIT LEFT v{revision}".encode(), b"SUMMARY: total_time_s=",
+               b"CIRCUIT LEFT v1: key=" if revision == 1 else b"CIRCUIT LEFT v%u: key="):
     assert marker in payload, marker
-built = root / "build/buddy23_circuit_left_v1.uf2"
+built = root / f"build/buddy23_circuit_left_v{revision}.uf2"
 if built.exists():
     assert built.read_bytes() == data
 print(f"PASS: {count} sequential RP2040 blocks; end=0x{0x10000000+len(payload):08x}; saved records excluded")

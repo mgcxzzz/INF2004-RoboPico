@@ -31,6 +31,8 @@ static LineCalibration calibration;
 static SideCalibration side_cal;
 static Circuit circuit;
 static uint8_t test_mode=1,recorded_mode=1;
+static uint8_t recorded_version=2;
+static bool last_fast;
 static AnalogDemand demand;
 static SignedWheel controller[2];
 static LineRearm rearm;
@@ -123,6 +125,7 @@ static void load_log(void) {
         trace_count=v->count;trace_head=trace_count%C_ROWS;trace_dropped=v->overwritten;
         summary_count=v->summary_count;summary_head=summary_count%C_SUMMARIES;
         recorded_key=v->key;recorded_offline=v->offline;test_mode=v->profile;recorded_mode=v->recorded_profile;
+        recorded_version=(uint8_t)v->version;
         guard.duration_us=v->duration_us;guard.reason=v->reason;
         for(unsigned w=0;w<2;++w) { cut_ticks[w]=v->ticks[w];cut_invalid[w]=v->invalid[w]; }
         calibration=v->calibration;side_cal=v->side;imported_front=v->imported;
@@ -135,7 +138,7 @@ static void save_log(void) {
         save_failed=true;return;
     }
     outputs_off();memset(&saved,0,sizeof(saved));CircuitSaved *v=&saved.data;
-    v->magic=C_MAGIC;v->version=1;v->count=trace_count;v->summary_count=summary_count;v->overwritten=trace_dropped;
+    v->magic=C_MAGIC;v->version=trace_count?recorded_version:2;v->count=trace_count;v->summary_count=summary_count;v->overwritten=trace_dropped;
     v->duration_us=guard.duration_us;v->reason=guard.reason;v->key=recorded_key;v->offline=recorded_offline;
     v->profile=test_mode;v->recorded_profile=recorded_mode;v->imported=imported_front;
     v->calibration=calibration;v->side=side_cal;v->turns=circuit.turns;v->ignored=circuit.ignored;
@@ -154,13 +157,15 @@ static void reset_log(void) {
     trace_count=trace_head=trace_dropped=summary_count=summary_head=0;
     guard.duration_us=0;guard.reason=0;circuit=(Circuit){0};
     for(unsigned w=0;w<2;++w) { cut_ticks[w]=0;cut_invalid[w]=0; }
-    flash_loaded=false;recorded_key='-';
+    flash_loaded=false;recorded_key='-';recorded_version=2;
 }
 static void help(void) {
-    puts("\nBUDDY23 CIRCUIT LEFT v1 | NO BARCODE/IMU/HUMP | motors OFF on boot");
+    puts("\nBUDDY23 CIRCUIT LEFT v2 | NO BARCODE/IMU/HUMP | motors OFF on boot");
     puts("Every qualified straight cross -> rolling LEFT -> align -> follow indefinitely.");
-    puts("Profiles1/2/3 cruise45/90/135mm/s; turn45/55/65 then30/35/40; align30/35/40.");
-    puts("Forward caps30/36/42%; turn42% sustained,48% start pulse<=150ms. Test profile1 FIRST.");
+    puts("Profiles1/2/3 cruise45/90/135mm/s only when both>=400/diff<=80 for300ms.");
+    puts("Correction/recovery targets and30% forward cap match profile1. Fast cruise caps30/36/42%.");
+    puts("Turn45/55/65 then30/35/40;42% sustained,48% start pulse<=150ms. Test profile1 FIRST.");
+    puts("Branch handover: normal curve following immediately; either>=400 for150ms confirms completion.");
     puts("w=both front WHITE, l=left BLACK, r=right BLACK; o=side WHITE,b=side BLACK;k=save.");
     puts("1/2/3 selects profile; k saves. Front A0 GP26/GP28; side D0 GP19;3.3V/common GND.");
     puts("Start facing along line, front sees black, side on white, straight gap before cross.");
@@ -223,8 +228,8 @@ static void dump(void) {
     if(!trace_count) { puts("No circuit run saved yet.");return; }
     if(flash_loaded) puts("RESTORED: CRC-verified circuit calibration/log.");
     if(save_failed) puts("FLASH SAVE FAILED: RAM log only.");
-    printf("CIRCUIT LEFT v1: key=%c mode=%s profile=%u rows=%lu overwritten=%lu turn_summaries=%lu\n",
-        recorded_key,recorded_offline?"offline":recorded_key=='g'?"USB hands-free":"USB hold",recorded_mode,
+    printf("CIRCUIT LEFT v%u: key=%c mode=%s profile=%u rows=%lu overwritten=%lu turn_summaries=%lu\n",
+        recorded_version,recorded_key,recorded_offline?"offline":recorded_key=='g'?"USB hands-free":"USB hold",recorded_mode,
         (unsigned long)trace_count,(unsigned long)trace_dropped,(unsigned long)summary_count);
     puts("ms,active,phase,side_raw,distance_mm,L_mm,R_mm,L_mm_s,R_mm_s,PWM_L,PWM_R,ADC_L,ADC_R,levelL,levelR,targetL,targetR,decision,lefts");
     for(unsigned n=0;n<trace_count;++n) {
@@ -257,7 +262,7 @@ static bool start_run(unsigned mode) {
     uint64_t now=time_us_64();uint32_t irq=save_and_disable_interrupts();
     bool ok=guard_start(&guard,now,mode!=LINE_USB_HOLD || !gpio_get(HOLD),!gpio_get(STOP));
     if(ok) {
-        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;
+        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=2;last_fast=false;
         guard.deadline_us=UINT64_MAX;guard.duration_us=0;
         for(unsigned w=0;w<2;++w) {
             enc[w].position=0;total_ticks[w]=cut_ticks[w]=0;initial_invalid[w]=enc[w].invalid;cut_invalid[w]=0;
@@ -295,8 +300,11 @@ static void control_step(uint64_t now) {
     if(circuit.completed) add_summary(now,input.path);
     uint8_t failure=demand.stop?circuit.reason:WHY_NONE;int32_t next[2];
     bool turning=circuit.phase==J_TURN && demand.target[0]==0 && demand.target[1]>0;
+    unsigned wheel_profile=circuit.fast?recorded_mode:1;
+    if(last_fast && !circuit.fast) for(unsigned w=0;w<2;++w) circuit_leave_fast(&controller[w]);
+    last_fast=circuit.fast;
     for(unsigned w=0;w<2;++w) {
-        next[w]=circuit_wheel_step(&controller[w],w,demand.target[w],velocity[w],dt,now,turning,recorded_mode);
+        next[w]=circuit_wheel_step(&controller[w],w,demand.target[w],velocity[w],dt,now,turning,wheel_profile);
         bad_direction_us[w]=demand.target[w]>0 && velocity[w]<-20?bad_direction_us[w]+elapsed:0;
         if(bad_direction_us[w]>=50000) failure=WHY_DIRECTION;
         no_motion_us[w]=demand.target[w]>=20 && controller[w].pi.ramp>=20 && abs(e[w].position)<2?no_motion_us[w]+elapsed:0;
@@ -310,7 +318,7 @@ static void control_step(uint64_t now) {
             for(unsigned w=0;w<2;++w) {
                 peak_until[w]=turning?controller[w].peak_end_us:0;
                 output[w]=boosted_junction_peak_cap(next[w],peak_until[w],time_us_64());
-                DualLevels v=circuit_levels(w,output[w],turning,recorded_mode);
+                DualLevels v=circuit_levels(w,output[w],turning,wheel_profile);
                 pwm_set_both_levels(pwm_gpio_to_slice_num(ma[w]),v.a,v.b);
             }
             guard.last_control_us=now;

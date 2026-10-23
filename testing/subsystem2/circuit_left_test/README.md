@@ -1,13 +1,15 @@
-# Continuous left-turn circuit test V1
+# Continuous left-turn circuit test V2
 
 Standalone Pico W / Robo Pico SDK experiment for Buddy 2 and 3. Reuses the
 working symmetric two-sensor follower and Junction Left V10 rolling turn.
+V2 separates faster straight cruising from correction speed, and hands a
+confirmed outgoing branch to the normal curve follower immediately.
 Select **profile 1 first**. Profiles 2 and 3 are experimental speed targets.
 This circuit firmware has not yet been tested on the physical full course.
 
 ## Download
 
-`firmware/buddy23_circuit_left_v1.uf2`
+`firmware/buddy23_circuit_left_v2.uf2` (V1 is also retained for comparison).
 
 Flash using BOOTSEL and the RPI-RP2 drive as usual. Open USB serial at
 115200, 8 data bits, no parity, 1 stop bit, no flow control.
@@ -41,19 +43,40 @@ right turns and U-turns are not part of this test.
 
 All entries below are requested wheel speeds in mm/s, not guaranteed measured speeds.
 
-| Profile | Centred cruise | Cross approach / final approach | Rolling left: early / late | Alignment base / range | Forward PWM cap |
-|---|---:|---:|---:|---:|---:|
-| 1, usual | 45 | 30 / 25 | 45 / 30 | 30 / 20–35 | 30% |
-| 2, faster | 90 | 35 / 30 | 55 / 35 | 35 / 25–40 | 36% |
-| 3, fastest | 135 | 40 / 35 | 65 / 40 | 40 / 30–45 | 42% |
+| Profile | Stable centred cruise | Cross approach / final approach | Rolling left: early / late | Corrections and outgoing branch following | Fast-cruise PWM cap |
+|---|---:|---:|---:|---|---:|
+| 1, usual | 45 | 30 / 25 | 45 / 30 | Profile 1 targets | 30% |
+| 2, faster | 90 | 35 / 30 | 55 / 35 | Same profile 1 targets | 36% |
+| 3, fastest | 135 | 40 / 35 | 65 / 40 | Same profile 1 targets | 42% |
 
-Normal line-steering wheel targets scale by 1, 2 or 3 while preserving the
-existing steering ratio. Strong corrections already slow the inner wheel,
-potentially to zero. Optical blind recovery stays at the tested 0/45 mm/s.
-The rolling left turn leaves the left wheel unpowered and moves the right
-wheel forward; late turning begins at the existing estimated 65 degrees.
-Turn output remains capped at 42%, with one start pulse up to 48% for at
-most 150 ms. The encoder wheel-speed PI can reduce output when over speed.
+**V2 no longer multiplies steering targets by the profile number.** At every
+profile the original normalized-error thresholds and correcting speeds apply:
+
+| Absolute left/right level difference | Inner / outer wheel targets, mm/s |
+|---|---:|
+| At most 80 | 45 / 45 before qualifying for fast cruise |
+| 250 | 40 / 50 |
+| 500 | 25 / 50 |
+| 1000 | 0 / 45 |
+
+Intermediate corrections use the existing interpolation. Only when **both
+levels are at least 400 and their difference stays at most 80 continuously
+for 300 ms** do profiles 2 and 3 request 90/90 or 135/135. If that condition
+breaks, the normal follower supplies profile 1 targets immediately. Fast cruise
+must qualify for another 300 ms before returning. Optical blind recovery also
+keeps profile 1's 0/45 targets and bounded timeout/distance policy.
+
+Correcting and branch-following phases use the profile 1 wheel controller and
+30% forward PWM cap. On leaving fast cruise, accumulated cruise compensation
+is cleared and the requested-speed ramp is capped at 50 mm/s. Higher cruise
+speeds still ramp up; actual speed cannot change instantly because of inertia.
+The higher 36/42% forward limits apply only while fast cruise is qualified.
+
+Rolling left leaves the left wheel unpowered and moves the right wheel
+forward; late turning begins at the existing estimated 65 degrees. Those
+explicit junction turn targets remain progressively faster by profile, as
+requested earlier. Turn output stays capped at 42%, with one start pulse up
+to 48% for at most 150 ms. The encoder PI can reduce output for overspeed.
 
 Higher profiles require more room to slow before a cross. Deceleration is
 requested immediately at the first qualified side edge, before its 20 ms
@@ -71,7 +94,9 @@ points in the working placement. GP20 is STOP, GP21 is the start/hold button.
 On first boot, this firmware tries to import **both** front and side calibration
 from a valid Junction Left V1–V10 record. It defaults to speed profile 1;
 the junction's old mode 3 does **not** become speed profile 3. A valid saved
-circuit record takes precedence on later boots. Check the printed `CAL` line.
+circuit V1 or V2 record takes precedence on later boots. V1 calibration and logs
+remain readable; a restored V1 log is labelled V1 even when the boot banner
+identifies V2 firmware. Each new V2 run is labelled V2. Check the printed `CAL` line.
 
 If calibration is valid and placement/height has not changed, select `1`, then
 press `k` to save profile 1. If calibration is missing or unsuitable:
@@ -140,8 +165,18 @@ Phases: `10` follow, `2` cross approach, `4` rolling left,
 - Start the rolling left 55 mm before that centre, as in the successful test.
 - Ignore the side sensor during turn/alignment. On successful alignment, resume
   following immediately and require another 150 mm before a new junction.
-- Alignment retains the tested six-second / 180 mm window. Both front levels
-  at least 400 and their difference at most 350 for 80 ms complete alignment.
+- The rolling turn must still leave the old line, then see a front level at
+  least 400 for 30 ms within its estimated 75–110 degree branch window.
+- V2 immediately uses the **normal profile 1 curve follower** at that point,
+  including its full 0–50 mm/s adaptive correction targets. It no longer waits
+  for both sensors to balance on an outgoing straight section.
+- Phase 9 confirms either front level at least 400 continuously for 150 ms,
+  then counts the turn and returns to phase 10. This confirms tracked branch
+  visibility, not exact physical centring. Normal corrections continue in phase 10.
+- The handover retains a six-second / 180 mm bound and the normal line-loss
+  policy. It does not use V1's separate 150 ms both-white alignment stop, nor
+  V1's requirement for a balanced two-sensor reading for 80 ms. This lets the
+  normal follower handle a curve beginning immediately after the cross.
 - Retain bounded turning, branch confirmation, line loss, encoder checks and
   the independent 1 ms button / late-control cutoff. A commanded moving wheel
   with inadequate encoder movement for 500 ms stops the run.
@@ -155,6 +190,8 @@ Phases: `10` follow, `2` cross approach, `4` rolling left,
 The offline CSV contains elapsed milliseconds, active state, phase, raw side
 signal, total distance, each wheel's distance and measured speed, actual PWM,
 raw ADC and normalized levels, requested wheel speeds, decision, and turn count.
+Decision 16 identifies qualified fast straight cruise; decisions 11–15 keep
+the existing normal following/correction/recovery meanings.
 It samples every 250 ms and retains the **latest approximately five minutes**
 (1,200 rows, including a few start/stop/settling samples). Older rows are
 overwritten. The latest 64 completed turns also have separate timing summaries.
@@ -188,8 +225,12 @@ entire stream for runs longer than the offline detail window.
 `test_circuit.c`: twelve successive turns (three route cycles) at each profile;
 long following beyond old limits; curve-side hit rejection; clearance lockout;
 measured-speed entry guard; missing branch timeout; controller caps/zero output;
-profile 1 agreement with V10; calibration import, CRC corruption and ring wrap.
+profile 1 wheel-controller agreement with V10; calibration import and V1/V2
+record CRC validation; ring wrap; every normalized steering error from -1000
+to +1000 at every profile; fast-cruise dwell and immediate exit; one-sensor
+branch handover directly into a curve; bounded both-white recovery.
 
 Build C11 host tests with warnings as errors, then the standalone Pico W CMake
-project. `verify_firmware.py` checks delivered UF2 identity, RP2040 blocks and
-reserved flash boundaries. See `BUILD_V1.md` for this artifact's build evidence.
+project. `verify_firmware.py` checks delivered V1 and V2 UF2 identity, RP2040
+blocks and reserved flash boundaries. See `BUILD_V2.md` for this artifact's
+build evidence and `MEASUREMENTS.md` for the user-reported V1 failures.

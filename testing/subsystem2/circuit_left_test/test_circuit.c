@@ -39,7 +39,7 @@ static void circuit_simulation(unsigned profile) {
         }
         if(c.completed) {
             ++completed;assert(c.turns==completed && c.phase==C_FOLLOW && acquire);
-            assert(c.centre_ms>0 && c.turn_ms>0 && c.align_ms>=80);
+            assert(c.centre_ms>0 && c.turn_ms>0 && c.align_ms>=150);
             next_cross=i.path+1000;acquire=false;
         }
         advance(&i,d);
@@ -97,6 +97,75 @@ static void wheel_caps(void) {
         }
     }
     assert(boosted_junction_peak_cap(480,150000,150000)==420);
+    SignedWheel p={.pi={.ramp=135,.integral=140}};
+    circuit_leave_fast(&p);assert(p.pi.ramp==50 && p.pi.integral==0);
+    for(unsigned n=0;n<100;++n) {
+        int pwm=circuit_wheel_step(&p,0,25,90,.01f,(uint64_t)n*10000,false,1);
+        assert(pwm>=0 && pwm<=300 && p.pi.ramp<=50);
+    }
+}
+static void same_corrections_and_cruise(void) {
+    /* Exact calibration lets every normalized error be exercised, including
+       the80/250/500/1000 breakpoints, without ADC quantization ambiguity. */
+    const LineCalibration unit={{100,100},{1100,1100},7};
+    for(unsigned profile=1;profile<=3;++profile) {
+        for(int error=-1000;error<=1000;++error) {
+            Circuit c;CircuitInput i=initial();circuit_begin(&c,&i);
+            i.adc[0]=(uint16_t)(100+(error>=0?1000:1000+error));
+            i.adc[1]=(uint16_t)(100+(error<=0?1000:1000-error));
+            AnalogDemand d=circuit_step(&c,&unit,&i,profile);
+            int16_t base[2];symmetric_targets(error,base);
+            assert(!d.stop && d.target[0]==base[0] && d.target[1]==base[1] && !c.fast);
+            i.now+=300000;d=circuit_step(&c,&unit,&i,profile);
+            if(profile>1 && abs(error)<=80) {
+                assert(c.fast && d.decision==C_FAST && d.target[0]==(int)profile*45 && d.target[1]==(int)profile*45);
+            } else assert(!c.fast && d.target[0]==base[0] && d.target[1]==base[1]);
+        }
+        Circuit c;CircuitInput i=initial();circuit_begin(&c,&i);
+        (void)circuit_step(&c,&cal,&i,profile);i.now+=300000;
+        (void)circuit_step(&c,&cal,&i,profile);
+        /* A single asymmetric observation drops fast mode; no lingering boost. */
+        i.adc[1]=184;i.now+=10000;
+        AnalogDemand d=circuit_step(&c,&cal,&i,profile);
+        assert(!c.fast && d.target[0]==0 && d.target[1]==45);
+        i.adc[0]=184;i.now+=10000;d=circuit_step(&c,&cal,&i,profile);
+        assert(!d.stop && !c.fast && d.target[0]==0 && d.target[1]==45);
+        i.now+=650000;assert(circuit_step(&c,&cal,&i,profile).stop);
+        /* Balanced but weak signals never earn fast cruise. */
+        i=initial();i.adc[0]=300;i.adc[1]=300;circuit_begin(&c,&i);
+        (void)circuit_step(&c,&unit,&i,profile);i.now+=1000000;
+        d=circuit_step(&c,&unit,&i,profile);assert(!c.fast && d.target[0]==45 && d.target[1]==45);
+    }
+}
+static void curve_after_branch(void) {
+    for(unsigned profile=1;profile<=3;++profile) {
+        Circuit c;CircuitInput i=initial();circuit_begin(&c,&i);c.busy=true;
+        c.phase=J_ACQUIRE;c.turn=(Junction){.phase=J_ACQUIRE,.rolling=true,.phase_us=i.now};
+        /* First outgoing observation is left-only black, never both centred.
+           Handover must finish, preserving normal steering and its loss memory. */
+        i.adc[1]=184;i.wheel[1]=TRACK_MM*3.141592653589793/2;i.path=i.wheel[1]/2;
+        c.turn.exit_origin=(float)i.path;
+        for(unsigned n=0;n<16;++n) {
+            AnalogDemand d=circuit_step(&c,&cal,&i,profile);
+            assert(!d.stop && !c.fast && d.target[0]==0 && d.target[1]==45);
+            if(n<15) assert(c.turns==0);
+            advance(&i,d);
+        }
+        assert(c.turns==1 && c.phase==C_FOLLOW && c.align_ms==150);
+        /* The next curve moves the stripe toward the right sensor. */
+        i.adc[0]=184;i.adc[1]=3692;
+        AnalogDemand d=circuit_step(&c,&cal,&i,profile);
+        assert(!d.stop && !c.fast && d.target[0]==45 && d.target[1]==0);
+        /* Both-white still has a bounded recovery;150ms alone no longer kills it. */
+        i.adc[0]=i.adc[1]=184;i.now+=10000;
+        d=circuit_step(&c,&cal,&i,profile);assert(!d.stop);
+        i.now+=160000;d=circuit_step(&c,&cal,&i,profile);assert(!d.stop);
+        i.now+=490000;assert(circuit_step(&c,&cal,&i,profile).stop);
+    }
+    /* Noise / no persistent outgoing signal cannot count as a completed turn. */
+    Circuit c;CircuitInput i=initial();circuit_begin(&c,&i);c.busy=true;
+    c.turn=(Junction){.phase=J_ACQUIRE,.phase_us=i.now};
+    i.now+=J_ALIGN_US;assert(circuit_step(&c,&cal,&i,1).stop && c.reason==J_ALIGN_TIMEOUT && !c.turns);
 }
 static void records(void) {
     static CircuitSaved s;
@@ -104,6 +173,7 @@ static void records(void) {
     s.duration_us=400000000;s.ticks[0]=-500000;s.ticks[1]=500000;s.count=C_ROWS;s.summary_count=C_SUMMARIES;
     s.crc=log_crc((uint8_t *)&s+offsetof(CircuitSaved,count),sizeof(s)-offsetof(CircuitSaved,count));
     assert(circuit_record_valid(&s));s.rows[100].adc[0]^=1;assert(!circuit_record_valid(&s));
+    s.rows[100].adc[0]^=1;s.version=2;assert(circuit_record_valid(&s));
     CircuitLegacy old={.magic=0x314e434a,.version=1,.calibration=cal,.side={0,1,3},.mode=3,.selected_mode=3,.firmware=10};
     old.crc=log_crc((uint8_t *)&old+offsetof(CircuitLegacy,count),sizeof(old)-offsetof(CircuitLegacy,count));
     LineCalibration imported={0};SideCalibration side={0};assert(circuit_import(&old,&imported,&side));
@@ -115,7 +185,7 @@ static void records(void) {
 }
 int main(void) {
     for(unsigned p=1;p<=3;++p) circuit_simulation(p);
-    detection_and_bounds();wheel_caps();records();
-    puts("PASS:12 repeated turns/profile, long follow, edge/clearance gates, approach guard, branch timeout, PWM caps, legacy/CRC and ring wrap.");
+    detection_and_bounds();wheel_caps();records();same_corrections_and_cruise();curve_after_branch();
+    puts("PASS:12 turns/profile; full steering error sweep; centred cruise dwell/exit; one-sensor branch handover; bounded recovery; detection, PWM, V1/V2 records and ring wrap.");
     return 0;
 }

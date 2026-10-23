@@ -2,6 +2,12 @@
 #define CIRCUIT_WHEEL_H
 #include "../junction_left_test/boosted_wheel.h"
 static inline unsigned circuit_forward_cap(unsigned profile) { return profile==3?420:profile==2?360:300; }
+/* Remove extra cruise compensation before using the normal correction PI.
+   Measured speed still controls output; this cannot stop inertia instantly. */
+static inline void circuit_leave_fast(SignedWheel *p) {
+    p->pi.integral=0;
+    if(p->pi.ramp>50) p->pi.ramp=50;
+}
 static inline int32_t circuit_wheel_step(SignedWheel *p,unsigned w,int16_t wanted,float speed,
                                         float dt,uint64_t now,bool turning,unsigned profile) {
     if(turning || profile==1) return boosted_junction_step(p,w,wanted,speed,dt,now,turning);
