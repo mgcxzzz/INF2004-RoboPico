@@ -1,4 +1,4 @@
-# Circuit with barcode V1
+# Circuit with barcode V2
 
 Standalone Buddy 2/3 Pico W / Robo Pico test, based on **Circuit Left V6**.
 It adds actual single-character Code 39 decoding and queued junction commands
@@ -7,9 +7,35 @@ unchanged. Motors remain off at boot.
 
 ## Firmware and behaviour
 
-Download `firmware/buddy23_circuit_with_barcode_v1.uf2` and flash using BOOTSEL
+Download `firmware/buddy23_circuit_with_barcode_v2.uf2` and flash using BOOTSEL
 and the RPI-RP2 drive. Open USB serial at 115200, 8N1, no flow control.
-Press `h` and check **BUDDY23 CIRCUIT WITH BARCODE v1**.
+Press `h` and check **BUDDY23 CIRCUIT WITH BARCODE v2**. V1's UF2 remains
+available unchanged for comparison.
+
+### V2: captured large A fix
+
+The supplied V1 run captured the complete 29-element A at 29.038–36.316 s.
+It contains roughly 8 mm narrow black bars and 2 mm narrow white gaps, with
+wide black bars up to 24.10 mm. V1 pooled both colours, rejected elements
+above 12 mm, and never recognized the start sentinel. This was a decoder
+failure despite the captured sequence matching `094,109,094` (`*A*`).
+
+V2 learns **black and white narrow/wide thresholds independently** from the
+start sentinel. Payload and stop must match those learned colour thresholds,
+three wide elements per character, a valid character and complete sentinels.
+It removes the old 12 mm element limit and 210 mm total-frame assumption:
+element plausibility is bounded at 0.35–40 mm and total frame travel is
+bounded from the learned start length, up to 600 mm. Timeout remains 20 s.
+
+The exact captured widths/timing now decode A in software replay. The actual
+following cross is 16.27 mm, narrower than some barcode bars, so V2 no longer
+requires the cross to be wider than a learned barcode bar. It confirms the
+separate stripe with 4 mm of white encoder travel before dispatching.
+Another black edge sooner cancels the candidate and preserves the command.
+
+**Test the larger A first.** Smaller F hardware testing is deferred as
+requested; its mapping and right-turn support remain. No follower speed,
+PWM or rolling-turn geometry was changed for this fix.
 
 | Decoded complete frame | Stored command | At the next qualified cross |
 |---|---|---|
@@ -18,8 +44,9 @@ Press `h` and check **BUDDY23 CIRCUIT WITH BARCODE v1**.
 | Other valid character | Logged as unsupported | No new command |
 | Invalid/incomplete frame | Logged as rejected | No new command |
 
-Both supplied print sizes are supported using **relative narrow/wide element
-widths measured with the wheel encoders**. The decoder does not identify a
+Both supplied print sizes are supported in software using **relative
+narrow/wide element widths measured with the wheel encoders**, separately
+for black bars and white gaps. The decoder does not identify a
 letter from overall barcode length or assume constant travel speed. Each of
 the three nine-element characters must have a valid narrow/wide pattern;
 start/stop `*` characters and the two narrow inter-character gaps are checked.
@@ -43,9 +70,15 @@ against [ZXing's Code39Reader table](https://github.com/zxing/zxing/blob/master/
 The offset D0 sensor measures the completed black run at its trailing edge.
 A separate cross-arm has a nominal ink width of 18–20 mm. The accepted
 **effective encoder-measured** width is 11–30 mm, allowing for the earlier
-18 mm cross tests measuring approximately 12–16 mm. It must also be wider
-than the learned barcode wide element. Barcode frame context prevents its
-individual bars from dispatching turns.
+18 mm cross tests measuring approximately 12–16 mm. Barcode frame context
+prevents its individual bars from dispatching turns. After the trailing edge,
+the detector must remain white for **4 mm of forward encoder travel**. A new
+black edge before 4 mm cancels the candidate. No fixed time is used.
+
+This short isolation check occurs before the rolling-turn start point; it
+does not wait for the axle to reach the centre. For a 16 mm measured cross,
+about 25 mm remains before the usual turn start after confirmation. Isolation
+is a heuristic, not proof against arbitrary marks or missed barcode edges.
 
 There must be a detectable white separation between the final barcode bar
 and the cross-arm. No fixed separation distance is assumed. A physically
@@ -87,7 +120,8 @@ is not a longitudinal junction offset. Line width is specified as 18 mm.
 
 The first boot imports front/side calibration from a valid Circuit Left
 V1–V6 record, otherwise from the previous junction record. A saved barcode
-record takes precedence afterward. Select `1`, then `k`, for the first test.
+record (V1 or V2) takes precedence afterward. Old saved runs retain their
+recorded version; new V2 runs are labelled V2. Select `1`, then `k`, for the first test.
 Check the `CAL` line for `valid=1`, `side_valid=1`, `profile=1`.
 
 If calibration is needed, stop and release the buttons, then:
@@ -112,20 +146,23 @@ for at most 150 ms. This version adds no higher effort limit.
 
 ## First physical tests
 
-Use **profile 1** and test the two commands separately before a full circuit:
+Use **profile 1** and test the larger A before changing other variables:
 
 1. Start centred on a straight **before** the entire barcode, with offset D0
    on white. At least one front normalized level must be 650 or higher.
 2. Drive over A. Confirm it continues past the barcode and turns left at the
    separate cross. Stop, wait five seconds, reconnect USB and press `j`.
-3. Repeat with F; confirm the right turn and outgoing branch following.
+3. Send the A report first. After A succeeds, repeat with F; confirm the
+   right turn and outgoing branch following.
 4. Repeat with the other print size and opposite scan direction as available.
 5. Only then allow repeated circuits. Unmarked crosses go straight, so the
    placed A/F instructions determine the route rather than the old all-left
    route. Try profiles 2/3 after profile 1 works.
 
-Expected event order is `START`, `DECODE` (A/L or F/R), `CROSS`, `DISPATCH`,
-`COMPLETE`. This is the expected sequence, not a recorded hardware result.
+Expected event order is `START`, `DECODE` (A/L or F/R), `CROSS_CANDIDATE`,
+`CROSS` after 4 mm white, `DISPATCH`, `COMPLETE`. A close next bar instead
+produces `CROSS_CANCEL`. This is the expected sequence, not a recorded
+V2 hardware result.
 Send `j` output first, including `STOP` and `SUMMARY`. If decoding fails,
 the measured `RUN` widths and `BAD_FRAME` patterns help diagnose it; `p`
 provides the full wheel/front-sensor log as well.
@@ -162,7 +199,8 @@ preserved. Flashing with a separate full-chip erase would erase those records.
 
 ## Verification and limitations
 
-See `BUILD_V1.md` for host tests, Pico build and UF2 hash. The software tests
+See `BUILD_V2.md` for host tests, Pico build and UF2 hash; `BUILD_V1.md`
+retains historical evidence. The software tests
 cover measured PDF fixtures, A/F at both sizes/directions, malformed frames,
 variable travel speed, pending commands and alternating left/right turns.
 **Physical barcode scanning and the mirrored right turn still require lab

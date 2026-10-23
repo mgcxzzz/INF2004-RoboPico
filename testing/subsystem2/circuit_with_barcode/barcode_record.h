@@ -17,7 +17,7 @@ typedef struct {
 _Static_assert(sizeof(BarcodeTrace)==56 && sizeof(BarcodeSummary)==40,"Barcode trace ABI changed");
 _Static_assert(sizeof(BarcodeSaved)<=C_STORE_BYTES,"Barcode record exceeds64KiB");
 static inline bool barcode_record_valid(const BarcodeSaved *s) {
-    return s->magic==B_MAGIC && s->version==1 && s->count<=B_ROWS && s->summary_count<=C_SUMMARIES &&
+    return s->magic==B_MAGIC && s->version>=1 && s->version<=2 && s->count<=B_ROWS && s->summary_count<=C_SUMMARIES &&
         s->event_count<=B_EVENTS && s->profile>=1 && s->profile<=3 && s->recorded_profile>=1 && s->recorded_profile<=3 &&
         calibration_valid(&s->calibration) && side_valid(&s->side) &&
         s->crc==log_crc((const uint8_t *)s+offsetof(BarcodeSaved,count),sizeof(*s)-offsetof(BarcodeSaved,count));

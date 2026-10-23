@@ -38,7 +38,7 @@ static BarcodeNav nav;
 static BarcodeCapture side_capture;
 static uint32_t last_nav_event;
 static uint8_t test_mode=1,recorded_mode=1;
-static uint8_t recorded_version=1;
+static uint8_t recorded_version=2;
 static bool last_fast;
 static CircuitCapture capture;
 static CircuitLoad load;
@@ -146,7 +146,7 @@ static void load_log(void) {
         trace_count=v->count;trace_head=trace_count%B_ROWS;trace_dropped=v->overwritten;
         summary_count=v->summary_count;summary_head=summary_count%C_SUMMARIES;
         recorded_key=v->key;recorded_offline=v->offline;test_mode=v->profile;recorded_mode=v->recorded_profile;
-        recorded_version=1;guard.duration_us=v->duration_us;guard.reason=v->reason;
+        recorded_version=(uint8_t)v->version;guard.duration_us=v->duration_us;guard.reason=v->reason;
         for(unsigned w=0;w<2;++w) { cut_ticks[w]=v->ticks[w];cut_invalid[w]=v->invalid[w]; }
         calibration=v->calibration;side_cal=v->side;imported_front=v->imported;
         circuit.turns=v->turns;circuit.ignored=v->ignored;
@@ -167,7 +167,7 @@ static void save_log(void) {
         save_failed=true;return;
     }
     outputs_off();memset(&saved,0,sizeof(saved));BarcodeSaved *v=&saved.data;
-    v->magic=B_MAGIC;v->version=1;v->count=trace_count;v->summary_count=summary_count;v->overwritten=trace_dropped;
+    v->magic=B_MAGIC;v->version=recorded_version;v->count=trace_count;v->summary_count=summary_count;v->overwritten=trace_dropped;
     v->duration_us=guard.duration_us;v->reason=guard.reason;v->key=recorded_key;v->offline=recorded_offline;
     v->profile=test_mode;v->recorded_profile=recorded_mode;v->imported=imported_front;
     v->calibration=calibration;v->side=side_cal;v->turns=circuit.turns;v->ignored=circuit.ignored;
@@ -190,14 +190,15 @@ static void reset_log(void) {
     trace_count=trace_head=trace_dropped=summary_count=summary_head=0;
     guard.duration_us=0;guard.reason=0;circuit=(Circuit){0};nav=(BarcodeNav){0};
     for(unsigned w=0;w<2;++w) { cut_ticks[w]=0;cut_invalid[w]=0; }
-    flash_loaded=false;recorded_key='-';recorded_version=1;
+    flash_loaded=false;recorded_key='-';recorded_version=2;
 }
 static void help(void) {
-    puts("\nBUDDY23 CIRCUIT WITH BARCODE v1 | Code39 *A* LEFT / *F* RIGHT | motors OFF on boot");
+    puts("\nBUDDY23 CIRCUIT WITH BARCODE v2 | Code39 *A* LEFT / *F* RIGHT | motors OFF on boot");
     puts("V6 line follower/correction retained. Read A/F at either print size, in either scan direction.");
-    puts("Complete *X* frame required. Encoder-distance widths, adaptive narrow/wide; no time-based size assumption.");
+    puts("Complete *X* frame required. Encoder-distance widths; separate BLACK/WHITE narrow/wide learned from start sentinel.");
     puts("GP19 D0 sampled1ms,2ms debounce; front A0 GP26/GP28;3.3V/common GND. Side white/black calibration required.");
     puts("A/F pending until next separate11..30mm effective cross stripe on a straight; consume command ONCE.");
+    puts("Cross requires4mm WHITE after trailing edge; a closer next bar cancels the candidate, preserving pending.");
     puts("Barcode bars cannot directly trigger turns. No pending command -> cross straight. Unknown codes are logged/ignored.");
     puts("Scan/pending approach uses usual45mm/s; unmarked stable cruising profiles1/2/3 request45/90/135.");
     puts("Rolling LEFT: left off/right forward. RIGHT: right off/left forward. Side ahead92mm; start55mm before centre.");
@@ -282,7 +283,8 @@ static const char *event_name(unsigned type) {
     case B_RUN:return "RUN";case B_FRAME_START:return "START";case B_DECODE:return "DECODE";
     case B_BAD_FRAME:return "BAD_FRAME";case B_CROSS:return "CROSS";case B_NO_COMMAND:return "NO_COMMAND_STRAIGHT";
     case B_DISPATCH:return "DISPATCH";case B_COMPLETE:return "COMPLETE";case B_GATE_REJECT:return "CROSS_GATE_REJECT";
-    case B_QUEUE_OVERFLOW:return "EDGE_OVERFLOW";default:return "OTHER";
+    case B_QUEUE_OVERFLOW:return "EDGE_OVERFLOW";case B_CROSS_CANDIDATE:return "CROSS_CANDIDATE";
+    case B_CROSS_CANCEL:return "CROSS_CANCEL";default:return "OTHER";
     }
 }
 static void dump_events(void) {
@@ -338,7 +340,7 @@ static bool start_run(unsigned mode) {
     uint64_t now=time_us_64();uint32_t irq=save_and_disable_interrupts();
     bool ok=guard_start(&guard,now,mode!=LINE_USB_HOLD || !gpio_get(HOLD),!gpio_get(STOP));
     if(ok) {
-        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=1;last_fast=false;
+        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=2;last_fast=false;
         capture=(CircuitCapture){0};load=(CircuitLoad){0};capture_outer=-1;assist_code=feedback_mask=0;
         guard.deadline_us=UINT64_MAX;guard.duration_us=0;
         for(unsigned w=0;w<2;++w) {

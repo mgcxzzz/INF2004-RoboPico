@@ -4,6 +4,7 @@
 #include "barcode_capture.h"
 #include "../circuit_left_test/circuit_wheel.h"
 #include "fixtures/pdf_runs.h"
+#include "fixtures/captured_a.h"
 static const LineCalibration cal={{184,184},{3464,3692},7};
 static uint16_t encoding(char code) {
     for(unsigned p=0;p<512;++p) if(barcode_character((uint16_t)p)==code) return (uint16_t)p;
@@ -46,6 +47,18 @@ static void decoder_tests(void) {
         for(unsigned j=0;j<29;++j) reverse[j]=pdf_widths[page][28-j];
         assert(read_frame(reverse,pdf_codes[page]).reverse);
     }
+    /* Actual large A has8mm narrow black vs2mm narrow white. The preceding
+       V1 global-width classifier rejects it; independent colour learning
+       must decode the measured data, including its uneven final gaps. */
+    (void)read_frame(captured_a_widths,'A');double reversed[29];
+    for(unsigned n=0;n<29;++n) reversed[n]=captured_a_widths[28-n];
+    assert(read_frame(reversed,'A').reverse);
+    for(unsigned size=0;size<2;++size) for(unsigned reverse=0;reverse<2;++reverse)
+        for(unsigned letter=0;letter<2;++letter) {
+            double biased[29],base=size?6:3;make_frame(letter?'F':'A',base,3,reverse,biased);
+            for(unsigned n=0;n<29;++n) biased[n]+=n%2?-base*2/3:base/3;
+            (void)read_frame(biased,letter?'F':'A');
+        }
     /* No symbol is decoded from one wide stripe, a malformed stop or noise. */
     BarcodeReader r;barcode_reader_reset(&r,false,1000,0);
     (void)barcode_reader_edge(&r,true,2000,20);
@@ -96,14 +109,63 @@ static void queue_tests(void) {
     n.allow_cross=true;mm+=200;now+=5000000;
     double wheel[2]={mm,mm};barcode_nav_edge(&n,now,wheel,true);
     mm+=18;now+=400000;wheel[0]=wheel[1]=mm;barcode_nav_edge(&n,now,wheel,false);
-    assert(n.cross_ready && n.cross_gate && n.cross_width==18 && n.pending=='F');
+    assert(n.cross_candidate && !n.cross_ready && n.cross_gate && n.cross_width==18 && n.pending=='F');
+    barcode_cross_confirm(&n,now+100000,mm+3.99,true);assert(!n.cross_ready);
+    barcode_cross_confirm(&n,now+110000,mm+4,true);assert(n.cross_ready && !n.cross_candidate);
     /* An incomplete frame's oversized run is rejected rather than dispatched. */
     barcode_nav_begin(&n,&i);double w[29];make_frame('A',3,3,false,w);mm=20;now=100000;
     wheel[0]=wheel[1]=mm;barcode_nav_edge(&n,now,wheel,true);
     for(unsigned j=0;j<9;++j) { mm+=w[j];now+=100000;wheel[0]=wheel[1]=mm;barcode_nav_edge(&n,now,wheel,j%2==1); }
     assert(n.reader.frame);mm+=3;now+=100000;wheel[0]=wheel[1]=mm;barcode_nav_edge(&n,now,wheel,true);
-    mm+=18;now+=400000;wheel[0]=wheel[1]=mm;barcode_nav_edge(&n,now,wheel,false);
+    mm+=45;now+=1000000;wheel[0]=wheel[1]=mm;barcode_nav_edge(&n,now,wheel,false);
     assert(!n.cross_ready && n.rejected==1);
+}
+static void captured_a_replay(void) {
+    BarcodeNav n;CircuitInput i={.now=1000};barcode_nav_begin(&n,&i);n.allow_cross=true;
+    double mm=793.09,wheel[2]={mm,mm};uint64_t now=29038000;
+    barcode_nav_edge(&n,now,wheel,true);
+    for(unsigned run=0;run<29;++run) {
+        double next=mm+captured_a_widths[run];uint64_t end=(uint64_t)captured_a_ms[run]*1000;
+        /* Replay10ms control-time expiry checks as well as the raw edges.
+           This catches the former210mm total-frame limit. */
+        for(uint64_t t=now+10000;t<end;t+=10000) {
+            double pos=mm+(next-mm)*(double)(t-now)/(double)(end-now);
+            assert(!barcode_reader_expire(&n.reader,t,pos));
+        }
+        now=end;mm=next;wheel[0]=wheel[1]=mm;
+        barcode_nav_edge(&n,now,wheel,run%2==1);
+        if(run<28) assert(!n.pending);
+        assert(!n.cross_ready && !n.cross_candidate);
+    }
+    assert(n.pending=='A' && n.decoded_a==1 && !n.rejected);
+    unsigned starts=0,decodes=0,crosses=0;
+    for(unsigned j=0;j<n.event_count;++j) {
+        starts+=n.events[j].type==B_FRAME_START;decodes+=n.events[j].type==B_DECODE;
+        crosses+=n.events[j].type==B_CROSS || n.events[j].type==B_CROSS_CANDIDATE;
+        if(n.events[j].type==B_DECODE) {
+            assert(n.events[j].pattern[0]==0x094 && n.events[j].pattern[1]==0x109 && n.events[j].pattern[2]==0x094);
+            printf("CAPTURE REPLAY: DECODE A/LEFT at%.3fs; patterns094,109,094; span%.2fmm\n",(double)n.events[j].ms/1000,(double)n.events[j].width100/100);
+        }
+    }
+    assert(starts==1 && decodes==1 && !crosses);
+    /* The actual following cross measures16.27mm, LESS than a wide barcode
+       bar. It must qualify independently after its113.29mm white gap. */
+    mm+=113.29;now=39228000;wheel[0]=wheel[1]=mm;barcode_nav_edge(&n,now,wheel,true);
+    mm+=16.27;now=39880000;wheel[0]=wheel[1]=mm;barcode_nav_edge(&n,now,wheel,false);
+    assert(n.cross_candidate && !n.cross_ready && n.pending=='A');
+    barcode_cross_confirm(&n,now+100000,mm+4,true);assert(n.cross_ready);
+    Circuit c;i=(CircuitInput){.now=now+100000,.path=mm+4,.wheel={mm+4,mm+4},.adc={3464,3692},.speed={30,30}};
+    circuit_begin(&c,&i);(void)barcode_circuit_step(&c,&n,&cal,&i,1);
+    assert(c.busy && n.action=='A' && !n.pending && c.phase==J_CENTRE);
+    puts("CAPTURE REPLAY: following16.27mm cross confirmed after4mm white; dispatched A/LEFT once.");
+    /* A second black bar inside the white confirmation cancels a candidate
+       and retains the instruction, rather than forcing a turn mid-barcode. */
+    barcode_nav_begin(&n,&i);n.pending='A';mm+=200;now+=5000000;
+    wheel[0]=wheel[1]=mm;barcode_nav_edge(&n,now,wheel,true);
+    mm+=18;now+=400000;wheel[0]=wheel[1]=mm;barcode_nav_edge(&n,now,wheel,false);
+    assert(n.cross_candidate);mm+=3;now+=100000;wheel[0]=wheel[1]=mm;
+    barcode_nav_edge(&n,now,wheel,true);
+    assert(!n.cross_ready && !n.cross_candidate && n.pending=='A');
 }
 static void navigation_simulation(unsigned profile) {
     Circuit c;BarcodeNav nav;CircuitInput i={.now=1000,.adc={3464,3692}};
@@ -171,11 +233,12 @@ static void no_command_and_record(void) {
     static BarcodeSaved s;s.magic=B_MAGIC;s.version=1;s.profile=s.recorded_profile=1;s.calibration=cal;s.side=(SideCalibration){0,1,3};
     s.count=B_ROWS;s.event_count=B_EVENTS;s.summary_count=C_SUMMARIES;
     s.crc=log_crc((uint8_t *)&s+offsetof(BarcodeSaved,count),sizeof(s)-offsetof(BarcodeSaved,count));
-    assert(barcode_record_valid(&s));s.events[10].code^=1;assert(!barcode_record_valid(&s));
+    assert(barcode_record_valid(&s));s.version=2;assert(barcode_record_valid(&s));
+    s.events[10].code^=1;assert(!barcode_record_valid(&s));
     printf("record_bytes=%zu trace=%zu summary=%zu\n",sizeof(s),sizeof(BarcodeTrace),sizeof(BarcodeSummary));
 }
 int main(void) {
-    decoder_tests();capture_tests();queue_tests();no_command_and_record();
+    decoder_tests();capture_tests();queue_tests();captured_a_replay();no_command_and_record();
     for(unsigned p=1;p<=3;++p) navigation_simulation(p);
     puts("PASS: PDF A/Z measured fixtures; A/F both sizes and directions; speed/jitter/framing rejection; D0 debounce/overflow; queued A/F;12 alternating turns/profile; mirrored acquisition; no-command straight; CRC/flash ABI.");
     return 0;

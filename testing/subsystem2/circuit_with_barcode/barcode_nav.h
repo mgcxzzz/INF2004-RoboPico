@@ -3,14 +3,14 @@
 #include "../circuit_left_test/circuit_logic.h"
 #include "barcode_scan.h"
 
-enum { B_CROSS_MIN_MM=11,B_CROSS_MAX_MM=30,B_SIDE_AHEAD_MM=92,B_EDGE_FAILURE=46 };
+enum { B_CROSS_MIN_MM=11,B_CROSS_MAX_MM=30,B_CROSS_WHITE_MM=4,B_SIDE_AHEAD_MM=92,B_EDGE_FAILURE=46 };
 typedef struct {
     BarcodeReader reader;BarcodeEvent events[B_EVENTS];
     uint32_t event_count,event_head,event_overwritten,event_sequence;
     uint32_t decoded_a,decoded_f,unsupported,rejected,lefts,rights,straight_crosses;
     uint64_t start_us,leading_us,cross_us;
-    double leading_wheel[2],cross_wheel[2],cross_width;
-    bool leading_gate,cross_gate,cross_ready,busy,allow_cross;
+    double leading_wheel[2],cross_wheel[2],cross_width,cross_trailing_mm;
+    bool leading_gate,cross_gate,cross_ready,cross_candidate,busy,allow_cross;
     char pending,action,last_code;
 } BarcodeNav;
 static inline void barcode_event(BarcodeNav *n,unsigned type,uint64_t now,double mm,double width,
@@ -27,11 +27,24 @@ static inline void barcode_nav_begin(BarcodeNav *n,const CircuitInput *i) {
     *n=(BarcodeNav){.start_us=i->now};
     barcode_reader_reset(&n->reader,i->side_black,i->now,(i->wheel[0]+i->wheel[1])*.5);
 }
+static inline void barcode_cross_confirm(BarcodeNav *n,uint64_t now,double mm,bool white) {
+    if(n->cross_candidate && white && mm-n->cross_trailing_mm>=B_CROSS_WHITE_MM) {
+        n->cross_candidate=false;n->cross_ready=true;
+        barcode_event(n,B_CROSS,now,mm,n->cross_width,n->pending,n->pending=='A'?'L':n->pending=='F'?'R':'-',0,NULL);
+    }
+}
 static inline void barcode_nav_edge(BarcodeNav *n,uint64_t now,const double wheel[2],bool black) {
     double mm=(wheel[0]+wheel[1])*.5;
     if(n->busy) { barcode_reader_reset(&n->reader,black,now,mm);return; }
     bool was_frame=n->reader.frame;
     if(black && !n->reader.black) {
+        /* Confirm by encoder travel, even if this next edge arrives between
+           control ticks. A new bar inside4mm cancels, never consumes pending. */
+        barcode_cross_confirm(n,now,mm,true);
+        if(n->cross_candidate) {
+            n->cross_candidate=false;
+            barcode_event(n,B_CROSS_CANCEL,now,mm,mm-n->cross_trailing_mm,n->pending,0,0,NULL);
+        }
         memcpy(n->leading_wheel,wheel,sizeof(n->leading_wheel));n->leading_us=now;n->leading_gate=n->allow_cross;
     }
     BarcodeRead r=barcode_reader_edge(&n->reader,black,now,mm);
@@ -45,17 +58,15 @@ static inline void barcode_nav_edge(BarcodeNav *n,uint64_t now,const double whee
         else ++n->unsupported;
         barcode_event(n,B_DECODE,now,mm,mm-r.start,r.code,r.code=='A'?'L':r.code=='F'?'R':'-',r.reverse,r.pattern);
     }
-    /* A complete barcode is required before queuing a route command. Its
-       constituent bars never dispatch a turn. Cross uses a separate wider
-       black run, measured only after its trailing edge is known. */
+    /* A complete barcode is required before queuing a route command. Frame
+       context protects its bars, even when they are wider than the cross.
+       Cross uses a separate isolated black run after its trailing edge. */
     if(r.completed_black && !was_frame && !(r.events&(1u<<B_FRAME_START)) &&
        n->reader.history_count<=2 && r.width>=B_CROSS_MIN_MM && r.width<=B_CROSS_MAX_MM) {
-        double min_width=n->reader.wide>0?fmax(11.0,n->reader.wide*1.20):11.0;
-        if(r.width<min_width) return;
         n->cross_width=r.width;n->cross_us=n->leading_us;
         memcpy(n->cross_wheel,n->leading_wheel,sizeof(n->cross_wheel));
-        n->cross_gate=n->leading_gate;n->cross_ready=true;
-        barcode_event(n,B_CROSS,now,mm,r.width,n->pending,n->pending=='A'?'L':n->pending=='F'?'R':'-',0,NULL);
+        n->cross_gate=n->leading_gate;n->cross_candidate=true;n->cross_trailing_mm=mm;
+        barcode_event(n,B_CROSS_CANDIDATE,now,mm,r.width,n->pending,n->pending=='A'?'L':n->pending=='F'?'R':'-',0,NULL);
     }
 }
 static inline void barcode_mirror_tracker(CircuitTracker *t) {
@@ -85,6 +96,7 @@ static inline AnalogDemand barcode_circuit_step(Circuit *c,BarcodeNav *n,const L
     if(c->fault) { d.stop=true;return d; }
     double mean=(i->wheel[0]+i->wheel[1])*.5;
     if(!c->busy) {
+        barcode_cross_confirm(n,i->now,mean,!i->side_black);
         if(barcode_reader_expire(&n->reader,i->now,mean)) {
             ++n->rejected;barcode_event(n,B_BAD_FRAME,i->now,mean,mean-n->reader.start_mm,'?',0,1,NULL);
         }
