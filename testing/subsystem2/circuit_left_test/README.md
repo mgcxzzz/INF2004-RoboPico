@@ -1,16 +1,16 @@
-# Continuous left-turn circuit test V3
+# Continuous left-turn circuit test V4
 
 Standalone Pico W / Robo Pico SDK experiment for Buddy 2 and 3. Reuses the
 working symmetric two-sensor follower and Junction Left V10 rolling turn.
-V3 retains V2 faster straight cruising with profile 1 correction targets and
-immediate curve-following handover. It adds longer directed recovery, bounded
-outer-wheel capture effort and accumulated encoder-progress monitoring.
+V4 retains the existing cruise speeds, profile 1 steering targets, directed
+recovery and post-turn capture assistance. It also applies bounded outer-wheel
+effort to a visible sharp correction that slows down anywhere on the circuit.
 Select **profile 1 first**. Profiles 2 and 3 are experimental speed targets.
 This circuit firmware has not yet been tested on the physical full course.
 
 ## Download
 
-`firmware/buddy23_circuit_left_v3.uf2` (V1 and V2 remain available for comparison).
+`firmware/buddy23_circuit_left_v4.uf2` (V1–V3 remain available for comparison).
 
 Flash using BOOTSEL and the RPI-RP2 drive as usual. Open USB serial at
 115200, 8 data bits, no parity, 1 stop bit, no flow control.
@@ -68,7 +68,7 @@ must qualify for another 300 ms before returning. Optical blind recovery also
 keeps the 0/45 targets; V3 extends directed recovery to 2 seconds / 50 mm.
 
 Ordinary correcting and branch-following phases use the profile 1 wheel
-controller and 30% forward PWM cap, with the short post-turn exception below. On leaving fast cruise, accumulated cruise compensation
+controller and 30% forward PWM cap, with the bounded outer-wheel exceptions below. On leaving fast cruise, accumulated cruise compensation
 is cleared and the requested-speed ramp is capped at 50 mm/s. Higher cruise
 speeds still ramp up; actual speed cannot change instantly because of inertia.
 The higher 36/42% forward limits apply only while fast cruise is qualified.
@@ -95,9 +95,9 @@ points in the working placement. GP20 is STOP, GP21 is the start/hold button.
 On first boot, this firmware tries to import **both** front and side calibration
 from a valid Junction Left V1–V10 record. It defaults to speed profile 1;
 the junction's old mode 3 does **not** become speed profile 3. A valid saved
-circuit V1, V2 or V3 record takes precedence on later boots. Earlier calibration
+circuit V1–V4 record takes precedence on later boots. Earlier calibration
 and logs remain readable and retain their recorded version label. The boot
-banner identifies V3 firmware; each new V3 run is labelled V3. Check the printed `CAL` line.
+banner identifies V4 firmware; each new V4 run is labelled V4. Check the printed `CAL` line.
 
 If calibration is valid and placement/height has not changed, select `1`, then
 press `k` to save profile 1. If calibration is missing or unsuitable:
@@ -191,7 +191,7 @@ Phases: `10` follow, `2` cross approach, `4` rolling left,
   difference >=150) must keep the same sign for 30 ms to refresh direction.
   Steering target thresholds are unchanged. Both-white does not refresh memory
   or restart its own deadline. STOP distinguishes no-direction, time and distance.
-- Only for the first 3 seconds / 45 mm after optical branch confirmation, a
+- For the first 3 seconds / 45 mm after optical branch confirmation, a
   visible near-pivot correction can retain turn feedforward on its OUTER wheel.
   The outer target must be >=30 mm/s and the inner <=12 to enter (<=20 to
   retain). The wheel-speed target is unchanged. Effort is capped at 42%; no
@@ -199,6 +199,15 @@ Phases: `10` follow, `2` cross approach, `4` rolling left,
 - This assistance ends after both commanded wheels >=15 mm/s are measured
   moving >=10 mm/s for 100 ms, or its time/path bound. No assistance is applied
   while both front readings are below400, so blind recovery keeps its normal cap.
+- V4 also assists ordinary curve following when at least one front level is
+  >=400, outer target >=30 mm/s, inner target <=12 mm/s, and outer measured
+  speed remains below15 mm/s for120 ms. It applies the same turn feedforward
+  to that outer wheel only, capped42%, with no new48% pulse. Targets do not
+  change. Once active, inner target <=20 retains assistance; it ends when the
+  direction/phase changes, visibility is lost, or after2 seconds /30 mm of
+  mean encoder path. A300 ms cooldown precedes another qualification.
+  Post-turn capture assistance takes priority. All three profiles get this
+  load response; higher cruise speed is not needed to enable it.
 - Local manoeuvre distance limits reset for every junction. The old single-test
   12-second approach / 450 mm and 35-second total limit do not terminate a circuit.
 
@@ -209,7 +218,8 @@ signal, total distance, each wheel's distance and measured speed, actual PWM,
 raw ADC and normalized levels, requested wheel speeds, decision, and turn count.
 Decision 16 identifies qualified fast straight cruise; decisions 11–15 keep
 the existing normal following/correction/recovery meanings. V3 CSV appends
-`assist`: 0=ordinary effort, 1=left outer wheel, 2=right outer wheel. It is packed
+`assist`: 0=ordinary effort, 1/2=post-turn left/right outer wheel,
+3/4=V4 ordinary-curve left/right outer wheel. It is packed
 into unused high decision bits in flash; the printed decision remains separate,
 so record size and calibration compatibility are unchanged.
 It samples every 250 ms and retains the **latest approximately five minutes**
@@ -246,14 +256,15 @@ entire stream for runs longer than the offline detail window.
 long following beyond old limits; curve-side hit rejection; clearance lockout;
 measured-speed entry guard; missing branch timeout; controller caps/zero output;
 profile 1 ordinary wheel-controller agreement with V10; calibration import
-and V1/V2/V3 record CRC validation; ring wrap; every normalized steering error from -1000
+and V1–V4 record CRC validation; ring wrap; every normalized steering error from -1000
 to +1000 at every profile; fast-cruise dwell and immediate exit; one-sensor
 branch handover directly into a curve; bounded both-white recovery; reproduction
 of the observed V2 weak-right-signal stop; weak-direction qualification;
 scoped capture effort with no extra peak; cumulative slow/bursty progress
-versus stopped/jittering encoder feedback.
+versus stopped/jittering encoder feedback; ordinary-curve load qualification,
+visibility, direction, cooldown and time/path limits using the V3 failure case.
 
 Build C11 host tests with warnings as errors, then the standalone Pico W CMake
-project. `verify_firmware.py` checks delivered V1, V2 and V3 UF2 identity, RP2040
-blocks and reserved flash boundaries. See `BUILD_V3.md` for this artifact's
-build evidence and `MEASUREMENTS.md` for the user-reported failures and the V3 diagnostic changes.
+project. `verify_firmware.py` checks delivered V1–V4 UF2 identity, RP2040
+blocks and reserved flash boundaries. See `BUILD_V4.md` for this artifact's
+build evidence and `MEASUREMENTS.md` for the user-reported failures and the observed failures and version changes.

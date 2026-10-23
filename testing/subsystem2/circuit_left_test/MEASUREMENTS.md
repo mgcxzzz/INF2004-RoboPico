@@ -135,3 +135,28 @@ sustained slow/bursty movement can be misclassified as a stall.
 V3 software/build tests pass; physical results pending. A real wheel rotating
 steadily while logged distance is flat still warrants checking encoder signal,
 wiring and coupling. Relaxing a guard cannot restore missing encoder pulses.
+
+## V3 profile 3: ordinary-curve outer left wheel lacks progress
+
+Latest complete attachment:69 rows,16.185 seconds,485.7 mm,average30.01 mm/s,
+zero completed turns, side0 and assist0 throughout. This run never entered a
+junction manoeuvre. At15.293 seconds levels14/1000, targets45/0, PWM146/0.
+At15.544 seconds levels33/1000, targets45/1, actual1.3/0 mm/s, PWM300/50.
+At15.794 seconds positions471.5/499.8 mm remain unchanged;16.044 seconds
+left advances only0.1 mm. Cutoff16.185 seconds is the750 ms forward-progress
+watchdog. Invalid encoder transitions0/0. Right level is1000 at the stop.
+
+The inner right wheel is intentionally almost stopped. It is the outer left
+wheel, requested45 mm/s, that lacks sufficient measured progress at the normal
+30% correction cap. Profile3's42% fast-cruise cap does not apply in this state;
+V3 capture assistance only applies after a junction. Worn tape may separately
+weaken readings, but both-white did not cause this particular cutoff. Logs
+cannot distinguish friction, a snag, and an encoder that fails to report real
+rotation. User-reported white patches do not establish that distinction.
+
+V4 response: qualify ordinary visible sharp-correction underspeed for120 ms;
+apply existing turn effort to only the outer wheel, capped42%, no new peak.
+Keep steering targets, cruise profiles,750 ms progress guard and2 s/50 mm
+blind recovery. Bound each load episode to2 s/30 mm with300 ms cooldown.
+Software regression reproduces this left45/right1 demand and exercises both
+wheel directions and limits. Physical validation is pending.

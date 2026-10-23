@@ -6,6 +6,7 @@
 #include "circuit_record.h"
 #include "circuit_capture.h"
 #include "circuit_feedback.h"
+#include "circuit_load.h"
 static const LineCalibration cal={{184,184},{3464,3692},7};
 static CircuitInput initial(void) {
     return (CircuitInput){.now=1000,.adc={3464,3692}};
@@ -177,6 +178,8 @@ static void records(void) {
     assert(circuit_record_valid(&s));s.rows[100].adc[0]^=1;assert(!circuit_record_valid(&s));
     s.rows[100].adc[0]^=1;s.version=2;assert(circuit_record_valid(&s));
     s.version=3;assert(circuit_record_valid(&s));
+    s.version=4;assert(circuit_record_valid(&s));
+    s.version=5;assert(!circuit_record_valid(&s));
     CircuitLegacy old={.magic=0x314e434a,.version=1,.calibration=cal,.side={0,1,3},.mode=3,.selected_mode=3,.firmware=10};
     old.crc=log_crc((uint8_t *)&old+offsetof(CircuitLegacy,count),sizeof(old)-offsetof(CircuitLegacy,count));
     LineCalibration imported={0};SideCalibration side={0};assert(circuit_import(&old,&imported,&side));
@@ -269,10 +272,59 @@ static void cumulative_feedback(void) {
     assert(!circuit_stalled(&s,601000,4,45,45));
     assert(!circuit_stalled(&s,1201000,8,45,45)); /* separated forward bursts count */
 }
+static void curve_load_effort(void) {
+    /* Latest V3 failure: ordinary curve, left requested45 but almost stopped;
+       right sees full black and is intentionally requested only1mm/s. */
+    CircuitLoad s={0};CircuitInput i=initial();i.speed[0]=1.3f;
+    AnalogDemand d={.level={38,1000},.target={45,1}};
+    assert(circuit_load_outer(&s,&i,C_FOLLOW,&d,false)==-1);
+    i.now+=C_LOAD_QUALIFY_US-1;
+    assert(circuit_load_outer(&s,&i,C_FOLLOW,&d,false)==-1);
+    ++i.now;assert(circuit_load_outer(&s,&i,C_FOLLOW,&d,false)==0);
+    i.speed[0]=45;d.target[1]=20;
+    assert(circuit_load_outer(&s,&i,C_FOLLOW,&d,false)==0); /* hold through brief recovery */
+    i.path=C_LOAD_MM;assert(circuit_load_outer(&s,&i,C_FOLLOW,&d,false)==-1);
+    d.target[1]=1;i.speed[0]=0;i.now+=C_LOAD_COOLDOWN_US-1;
+    assert(circuit_load_outer(&s,&i,C_FOLLOW,&d,false)==-1 && !s.timing);
+    ++i.now;assert(circuit_load_outer(&s,&i,C_FOLLOW,&d,false)==-1 && s.timing);
+    i.now+=C_LOAD_QUALIFY_US;assert(circuit_load_outer(&s,&i,C_FOLLOW,&d,false)==0);
+    i.now+=C_LOAD_US;assert(circuit_load_outer(&s,&i,C_FOLLOW,&d,false)==-1);
+    for(unsigned gate=0;gate<7;++gate) {
+        s=(CircuitLoad){0};i=initial();d=(AnalogDemand){.level={38,1000},.target={45,1}};
+        unsigned phase=C_FOLLOW;bool capture=false;
+        if(gate==0) i.speed[0]=15;
+        if(gate==1) d.level[1]=399;
+        if(gate==2) d.target[1]=13;
+        if(gate==3) d.target[0]=29;
+        if(gate==4) phase=J_TURN;
+        if(gate==5) capture=true;
+        if(gate==6) d.stop=true;
+        assert(circuit_load_outer(&s,&i,phase,&d,capture)==-1);
+        i.now+=C_LOAD_QUALIFY_US;
+        assert(circuit_load_outer(&s,&i,phase,&d,capture)==-1 && !s.active);
+    }
+    s=(CircuitLoad){0};i=initial();d=(AnalogDemand){.level={1000,0},.target={1,45}};
+    assert(circuit_load_outer(&s,&i,C_FOLLOW,&d,false)==-1);
+    i.now+=C_LOAD_QUALIFY_US;assert(circuit_load_outer(&s,&i,C_FOLLOW,&d,false)==1);
+    d.level[0]=0;assert(circuit_load_outer(&s,&i,C_FOLLOW,&d,false)==-1); /* never blind */
+    for(unsigned profile=1;profile<=3;++profile) {
+        SignedWheel p={0};circuit_capture_prepare(&p);
+        int pwm=circuit_wheel_step(&p,0,45,1.3f,.01f,i.now,true,profile);
+        assert(pwm>300 && pwm<=420 && !p.peak_active && !p.peak_end_us);
+    }
+    /* Swapping the required direction restarts qualification, never boosts both. */
+    s=(CircuitLoad){0};i=initial();d=(AnalogDemand){.level={1000,0},.target={1,45}};
+    (void)circuit_load_outer(&s,&i,C_FOLLOW,&d,false);i.now+=C_LOAD_QUALIFY_US-1;
+    d=(AnalogDemand){.level={0,1000},.target={45,1}};
+    assert(circuit_load_outer(&s,&i,C_FOLLOW,&d,false)==-1);
+    ++i.now;assert(circuit_load_outer(&s,&i,C_FOLLOW,&d,false)==-1);
+    i.now+=C_LOAD_QUALIFY_US;assert(circuit_load_outer(&s,&i,C_FOLLOW,&d,false)==0);
+    assert(circuit_load_outer(&s,&i,C_FOLLOW,&d,true)==-1); /* capture takes priority */
+}
 int main(void) {
     for(unsigned p=1;p<=3;++p) circuit_simulation(p);
     detection_and_bounds();wheel_caps();records();same_corrections_and_cruise();curve_after_branch();
-    weak_signal_recovery();capture_effort();cumulative_feedback();
-    puts("PASS:12 turns/profile; steering parity/cruise; observed weak-signal regression;2s/50mm bounds; scoped capture effort/no new peak; cumulative feedback/stall; V1-V3 records/CRC/ring.");
+    weak_signal_recovery();capture_effort();cumulative_feedback();curve_load_effort();
+    puts("PASS:12 turns/profile; steering parity/cruise; observed weak-signal regression;2s/50mm bounds; scoped capture effort/no new peak; cumulative feedback/stall; V1-V4 records; qualified curve load effort/bounds/CRC/ring.");
     return 0;
 }
