@@ -8,6 +8,8 @@
 enum { B_RUN=1,B_FRAME_START,B_DECODE,B_BAD_FRAME,B_CROSS,B_NO_COMMAND,
        B_DISPATCH,B_COMPLETE,B_GATE_REJECT,B_QUEUE_OVERFLOW,B_CROSS_CANDIDATE,B_CROSS_CANCEL,
        B_EVENTS=192,B_ROWS=1000,B_EDGE_QUEUE=256 };
+enum { B_REJECT_WIDTH=1,B_REJECT_SEPARATION=2,B_REJECT_COUNT=4,
+       B_REJECT_GAP=8,B_REJECT_PATTERN=16,B_REJECT_TIMEOUT=32,B_REJECT_RUN=64 };
 typedef struct {
     uint64_t ms;uint32_t path10;int32_t width100;uint32_t number;
     uint16_t pattern[3];uint8_t type,code,action,flags;
@@ -55,25 +57,27 @@ static inline BarcodeGroup barcode_group(const double *w) {
         g.pattern=(uint16_t)((g.pattern<<1)|(w[n]>g.threshold[n%2]));
     g.valid=true;return g;
 }
-static inline bool barcode_classify(const double *w,const BarcodeGroup *reference,uint16_t *pattern) {
+static inline bool barcode_classify(const double *w,const BarcodeGroup *reference,uint16_t *pattern,unsigned *rejection) {
     unsigned wide_count=0;*pattern=0;
     double max_narrow[2]={0},min_wide[2]={1e9,1e9};
     for(unsigned n=0;n<9;++n) {
         unsigned colour=n%2;bool wide=w[n]>reference->threshold[colour];
         *pattern=(uint16_t)((*pattern<<1)|wide);
-        if(w[n]<0.35 || w[n]>40) return false;
+        if(w[n]<0.35 || w[n]>40) *rejection|=B_REJECT_WIDTH;
         if(wide) {
             ++wide_count;min_wide[colour]=fmin(min_wide[colour],w[n]);
-            if(w[n]<reference->wide[colour]*.55 || w[n]>reference->wide[colour]*1.8) return false;
+            if(w[n]<reference->wide[colour]*.55 || w[n]>reference->wide[colour]*1.8) *rejection|=B_REJECT_WIDTH;
         } else {
             max_narrow[colour]=fmax(max_narrow[colour],w[n]);
-            if(w[n]<reference->narrow[colour]*(colour?.25:.45) ||
-               (!colour && w[n]>reference->narrow[colour]*1.8)) return false;
+            /* Learned colour threshold already defines the narrow class.
+               Do not impose a second limit based on the sentinel's mean:
+               partly shortened edge bars can bias that mean substantially. */
         }
     }
     for(unsigned colour=0;colour<2;++colour)
-        if(max_narrow[colour]>0 && min_wide[colour]<max_narrow[colour]*1.5) return false;
-    return wide_count==3;
+        if(max_narrow[colour]>0 && min_wide[colour]<max_narrow[colour]*1.5) *rejection|=B_REJECT_SEPARATION;
+    if(wide_count!=3) *rejection|=B_REJECT_COUNT;
+    return !*rejection;
 }
 typedef struct {
     double widths[29],history[9],edge_mm,start_mm,max_frame_mm;
@@ -82,7 +86,7 @@ typedef struct {
     uint8_t count,history_count;bool initialized,black,frame,reverse;
 } BarcodeReader;
 typedef struct {
-    unsigned events;bool completed_black,reverse;double width,start,end;
+    unsigned events,rejection;bool completed_black,reverse;double width,start,end;
     char code;uint16_t pattern[3];
 } BarcodeRead;
 static inline void barcode_reader_reset(BarcodeReader *r,bool black,uint64_t now,double mm) {
@@ -99,7 +103,7 @@ static inline BarcodeRead barcode_reader_edge(BarcodeReader *r,bool black,uint64
     result.completed_black=previous;result.width=width;result.start=r->edge_mm;result.end=mm;
     r->black=black;r->edge_mm=mm;r->edge_us=now;result.events=1u<<B_RUN;
     if(width<0.35 || (width>40 && r->frame)) {
-        if(r->frame) result.events|=1u<<B_BAD_FRAME;
+        if(r->frame) { result.events|=1u<<B_BAD_FRAME;result.rejection=B_REJECT_RUN; }
         r->frame=false;r->count=r->history_count=0;return result;
     }
     if(r->frame) {
@@ -107,15 +111,18 @@ static inline BarcodeRead barcode_reader_edge(BarcodeReader *r,bool black,uint64
         if(r->count<29) return result;
         bool good=true;
         for(unsigned n=0;n<3;++n) {
-            uint16_t pattern=0;
-            if(!barcode_classify(r->widths+n*10,&r->reference,&pattern)) good=false;
+            uint16_t pattern=0;unsigned rejection=0;
+            if(!barcode_classify(r->widths+n*10,&r->reference,&pattern,&rejection)) good=false;
+            result.rejection|=rejection;
             result.pattern[n]=r->reverse?barcode_reverse9(pattern):pattern;
         }
         for(unsigned n=9;n<=19;n+=10)
             if(r->widths[n]<fmax(.35,r->reference.narrow[1]*.25) ||
-               r->widths[n]>r->reference.threshold[1]) good=false;
+               r->widths[n]>r->reference.threshold[1]) { good=false;result.rejection|=B_REJECT_GAP; }
         char code=barcode_character(result.pattern[1]);
-        if(result.pattern[0]!=0x094 || result.pattern[2]!=0x094 || code=='?' || code=='*') good=false;
+        if(result.pattern[0]!=0x094 || result.pattern[2]!=0x094 || code=='?' || code=='*') {
+            good=false;result.rejection|=B_REJECT_PATTERN;
+        }
         result.start=r->start_mm;result.reverse=r->reverse;result.code=good?code:'?';
         result.events|=1u<<(good?B_DECODE:B_BAD_FRAME);
         r->frame=false;r->count=r->history_count=0;return result;

@@ -1,4 +1,4 @@
-# Circuit with barcode V2
+# Circuit with barcode V3
 
 Standalone Buddy 2/3 Pico W / Robo Pico test, based on **Circuit Left V6**.
 It adds actual single-character Code 39 decoding and queued junction commands
@@ -7,10 +7,48 @@ unchanged. Motors remain off at boot.
 
 ## Firmware and behaviour
 
-Download `firmware/buddy23_circuit_with_barcode_v2.uf2` and flash using BOOTSEL
+Download `firmware/buddy23_circuit_with_barcode_v3.uf2` and flash using BOOTSEL
 and the RPI-RP2 drive. Open USB serial at 115200, 8N1, no flow control.
-Press `h` and check **BUDDY23 CIRCUIT WITH BARCODE v2**. V1's UF2 remains
-available unchanged for comparison.
+Press `h` and check **BUDDY23 CIRCUIT WITH BARCODE v3**. V1/V2 UF2 files
+remain available unchanged for comparison.
+
+### V3: remove conflicting narrow-element limits
+
+The next physical A run recognized its starting sentinel but rejected the
+frame at 33.062 s. The narrow black mean learned from that start was 4.64 mm,
+so V2's additional mean-based limit rejected later narrow bars above 8.35 mm,
+including 9.34, 9.65 and 9.38 mm. They were still below the independently
+learned black narrow/wide threshold of 11.60 mm. The following cross was
+correctly confirmed, but there was no queued command.
+
+V3 uses the learned colour threshold to classify narrow elements without
+another mean-based narrow-size limit. It retains absolute element bounds,
+wide-element plausibility, class separation, exactly three wide elements,
+valid character lookup, both sentinels, inter-character gap checks and frame
+time/travel limits. It does not force an uncertain reading to A.
+
+Both recorded large A sequences now decode `094,109,094` and queue A in
+software replay. Their following 16.27/15.75 mm crosses confirm after 4 mm
+white and dispatch left once. This is software evidence; test the larger A
+again in profile 1 before proceeding to the smaller F.
+
+For completed rejected frames, `BAD_FRAME` now prints complete nine-bit
+patterns instead of partial patterns cut off at the first failed check.
+Its `flags` column identifies rejection reasons; values combine:
+
+| Flag | Meaning |
+|---:|---|
+| 1 | Element width/plausibility |
+| 2 | Narrow/wide class separation |
+| 4 | Character does not have three wide elements |
+| 8 | Inter-character white gap |
+| 16 | Sentinel or character pattern |
+| 32 | Frame time/travel expiry |
+| 64 | Invalid run before frame completion |
+
+This legend applies to V3 runs. Earlier saved runs retain their original
+version and flag meanings. Speeds, PWM, calibration and the V2 4 mm junction
+confirmation are retained.
 
 ### V2: captured large A fix
 
@@ -120,8 +158,8 @@ is not a longitudinal junction offset. Line width is specified as 18 mm.
 
 The first boot imports front/side calibration from a valid Circuit Left
 V1–V6 record, otherwise from the previous junction record. A saved barcode
-record (V1 or V2) takes precedence afterward. Old saved runs retain their
-recorded version; new V2 runs are labelled V2. Select `1`, then `k`, for the first test.
+record (V1–V3) takes precedence afterward. Old saved runs retain their
+recorded version; new V3 runs are labelled V3. Select `1`, then `k`, for the first test.
 Check the `CAL` line for `valid=1`, `side_valid=1`, `profile=1`.
 
 If calibration is needed, stop and release the buttons, then:
@@ -162,7 +200,7 @@ Use **profile 1** and test the larger A before changing other variables:
 Expected event order is `START`, `DECODE` (A/L or F/R), `CROSS_CANDIDATE`,
 `CROSS` after 4 mm white, `DISPATCH`, `COMPLETE`. A close next bar instead
 produces `CROSS_CANCEL`. This is the expected sequence, not a recorded
-V2 hardware result.
+V3 hardware result.
 Send `j` output first, including `STOP` and `SUMMARY`. If decoding fails,
 the measured `RUN` widths and `BAD_FRAME` patterns help diagnose it; `p`
 provides the full wheel/front-sensor log as well.
@@ -199,8 +237,8 @@ preserved. Flashing with a separate full-chip erase would erase those records.
 
 ## Verification and limitations
 
-See `BUILD_V2.md` for host tests, Pico build and UF2 hash; `BUILD_V1.md`
-retains historical evidence. The software tests
+See `BUILD_V3.md` for host tests, Pico build and UF2 hash; `BUILD_V1.md` and
+`BUILD_V2.md` retain historical evidence. The software tests
 cover measured PDF fixtures, A/F at both sizes/directions, malformed frames,
 variable travel speed, pending commands and alternating left/right turns.
 **Physical barcode scanning and the mirrored right turn still require lab

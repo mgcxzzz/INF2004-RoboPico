@@ -38,7 +38,7 @@ static BarcodeNav nav;
 static BarcodeCapture side_capture;
 static uint32_t last_nav_event;
 static uint8_t test_mode=1,recorded_mode=1;
-static uint8_t recorded_version=2;
+static uint8_t recorded_version=3;
 static bool last_fast;
 static CircuitCapture capture;
 static CircuitLoad load;
@@ -190,12 +190,13 @@ static void reset_log(void) {
     trace_count=trace_head=trace_dropped=summary_count=summary_head=0;
     guard.duration_us=0;guard.reason=0;circuit=(Circuit){0};nav=(BarcodeNav){0};
     for(unsigned w=0;w<2;++w) { cut_ticks[w]=0;cut_invalid[w]=0; }
-    flash_loaded=false;recorded_key='-';recorded_version=2;
+    flash_loaded=false;recorded_key='-';recorded_version=3;
 }
 static void help(void) {
-    puts("\nBUDDY23 CIRCUIT WITH BARCODE v2 | Code39 *A* LEFT / *F* RIGHT | motors OFF on boot");
+    puts("\nBUDDY23 CIRCUIT WITH BARCODE v3 | Code39 *A* LEFT / *F* RIGHT | motors OFF on boot");
     puts("V6 line follower/correction retained. Read A/F at either print size, in either scan direction.");
     puts("Complete *X* frame required. Encoder-distance widths; separate BLACK/WHITE narrow/wide learned from start sentinel.");
+    puts("V3 narrow elements use learned colour thresholds; no conflicting sentinel-mean narrow limits.");
     puts("GP19 D0 sampled1ms,2ms debounce; front A0 GP26/GP28;3.3V/common GND. Side white/black calibration required.");
     puts("A/F pending until next separate11..30mm effective cross stripe on a straight; consume command ONCE.");
     puts("Cross requires4mm WHITE after trailing edge; a closer next bar cancels the candidate, preserving pending.");
@@ -291,6 +292,8 @@ static void dump_events(void) {
     if(guard.active || trace_settling) { puts("Stop and wait for RUN SAVED before j/p.");return; }
     printf("BARCODE_EVENTS: rows=%lu overwritten=%lu (RUN width_mm; COMPLETE width field=rotation_deg)\n",
         (unsigned long)nav.event_count,(unsigned long)nav.event_overwritten);
+    if(recorded_version>=3)
+        puts("BAD_FRAME flags:1=width,2=class separation,4=wide count,8=character gap,16=pattern,32=timeout,64=bad run; values combine. Complete frames show all9-bit patterns.");
     puts("number,ms,distance_mm,event,width_mm,code,action,flags,pattern_start,pattern_data,pattern_stop");
     for(unsigned k=0;k<nav.event_count;++k) {
         BarcodeEvent *e=&nav.events[(nav.event_head+B_EVENTS-nav.event_count+k)%B_EVENTS];
@@ -340,7 +343,7 @@ static bool start_run(unsigned mode) {
     uint64_t now=time_us_64();uint32_t irq=save_and_disable_interrupts();
     bool ok=guard_start(&guard,now,mode!=LINE_USB_HOLD || !gpio_get(HOLD),!gpio_get(STOP));
     if(ok) {
-        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=2;last_fast=false;
+        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=3;last_fast=false;
         capture=(CircuitCapture){0};load=(CircuitLoad){0};capture_outer=-1;assist_code=feedback_mask=0;
         guard.deadline_us=UINT64_MAX;guard.duration_us=0;
         for(unsigned w=0;w<2;++w) {

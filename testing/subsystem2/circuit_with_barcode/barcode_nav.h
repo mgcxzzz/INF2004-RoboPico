@@ -50,7 +50,7 @@ static inline void barcode_nav_edge(BarcodeNav *n,uint64_t now,const double whee
     BarcodeRead r=barcode_reader_edge(&n->reader,black,now,mm);
     if(r.events&(1u<<B_RUN)) barcode_event(n,B_RUN,now,mm,r.width,0,0,r.completed_black,NULL);
     if(r.events&(1u<<B_FRAME_START)) barcode_event(n,B_FRAME_START,now,mm,mm-r.start,0,0,n->reader.reverse,NULL);
-    if(r.events&(1u<<B_BAD_FRAME)) { ++n->rejected;barcode_event(n,B_BAD_FRAME,now,mm,mm-r.start,'?',0,0,r.pattern); }
+    if(r.events&(1u<<B_BAD_FRAME)) { ++n->rejected;barcode_event(n,B_BAD_FRAME,now,mm,mm-r.start,'?',0,r.rejection,r.pattern); }
     if(r.events&(1u<<B_DECODE)) {
         n->last_code=r.code;
         if(r.code=='A') { ++n->decoded_a;n->pending='A'; }
@@ -98,7 +98,7 @@ static inline AnalogDemand barcode_circuit_step(Circuit *c,BarcodeNav *n,const L
     if(!c->busy) {
         barcode_cross_confirm(n,i->now,mean,!i->side_black);
         if(barcode_reader_expire(&n->reader,i->now,mean)) {
-            ++n->rejected;barcode_event(n,B_BAD_FRAME,i->now,mean,mean-n->reader.start_mm,'?',0,1,NULL);
+            ++n->rejected;barcode_event(n,B_BAD_FRAME,i->now,mean,mean-n->reader.start_mm,'?',0,B_REJECT_TIMEOUT,NULL);
         }
         /* Slow scanning and the approach with a pending command; encoding
            remains distance-based even as measured speed changes. */
