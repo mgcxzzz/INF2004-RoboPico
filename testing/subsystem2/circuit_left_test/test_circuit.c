@@ -132,7 +132,7 @@ static void same_corrections_and_cruise(void) {
         AnalogDemand d=circuit_step(&c,&cal,&i,profile);
         assert(!c.fast && d.target[0]==0 && d.target[1]==45);
         i.adc[0]=184;i.now+=10000;d=circuit_step(&c,&cal,&i,profile);
-        assert(!d.stop && !c.fast && d.target[0]==0 && d.target[1]==45);
+        assert(!d.stop && !c.fast && d.target[0]==0 && d.target[1]==35);
         i.now+=C_LOSS_US;assert(circuit_step(&c,&cal,&i,profile).stop && c.reason==C_LOSS_TIME);
         /* Balanced but weak signals never earn fast cruise. */
         i=initial();i.adc[0]=300;i.adc[1]=300;circuit_begin(&c,&i);
@@ -179,7 +179,8 @@ static void records(void) {
     s.rows[100].adc[0]^=1;s.version=2;assert(circuit_record_valid(&s));
     s.version=3;assert(circuit_record_valid(&s));
     s.version=4;assert(circuit_record_valid(&s));
-    s.version=5;assert(!circuit_record_valid(&s));
+    s.version=5;assert(circuit_record_valid(&s));
+    s.version=6;assert(!circuit_record_valid(&s));
     CircuitLegacy old={.magic=0x314e434a,.version=1,.calibration=cal,.side={0,1,3},.mode=3,.selected_mode=3,.firmware=10};
     old.crc=log_crc((uint8_t *)&old+offsetof(CircuitLegacy,count),sizeof(old)-offsetof(CircuitLegacy,count));
     LineCalibration imported={0};SideCalibration side={0};assert(circuit_import(&old,&imported,&side));
@@ -204,7 +205,7 @@ static void weak_signal_recovery(void) {
     uint64_t white=12805000;
     assert(symmetric_demand(&old,&unit,100,220,white,101).stop);
     d=circuit_line_demand(&t,&unit,100,220,white,101);
-    assert(!d.stop && d.decision==SYM_RECOVER_RIGHT && d.target[0]==45 && d.target[1]==0);
+    assert(!d.stop && d.decision==SYM_RECOVER_RIGHT && d.target[0]>d.target[1]);
     d=circuit_line_demand(&t,&unit,100,100,white+C_LOSS_US-1,140);assert(!d.stop);
     d=circuit_line_demand(&t,&unit,100,100,white+C_LOSS_US,140);
     assert(d.stop && t.loss_reason==C_LOSS_TIME);
@@ -224,9 +225,18 @@ static void weak_signal_recovery(void) {
     t=(CircuitTracker){0};(void)circuit_line_demand(&t,&unit,100,350,1000,0);
     (void)circuit_line_demand(&t,&unit,100,350,31000,0);
     d=circuit_line_demand(&t,&unit,100,100,41000,0);assert(!d.stop && d.target[0]==45 && d.target[1]==0);
-    /* Reacquisition resets the white episode and can choose the other direction. */
-    (void)circuit_line_demand(&t,&unit,600,100,50000,1);
-    d=circuit_line_demand(&t,&unit,100,100,60000,1);assert(!d.stop && d.target[0]==0 && d.target[1]==45);
+    /* Strong opposite readings need both reacquisition and direction dwell.
+       One flash must not cancel the recovery episode or reverse its search. */
+    uint64_t origin=t.core.white_since;
+    d=circuit_line_demand(&t,&unit,600,100,50000,1);
+    assert(!d.stop && t.core.white && t.core.white_since==origin && t.core.recovery==-1);
+    d=circuit_line_demand(&t,&unit,600,100,90000,1);
+    assert(!d.stop && !t.core.white && t.core.direction==-1); /* steering is already left */
+    assert(d.target[0]<d.target[1]);
+    d=circuit_line_demand(&t,&unit,600,100,130000,1);
+    assert(!d.stop && t.core.direction==1);
+    d=circuit_line_demand(&t,&unit,100,100,140000,1);
+    assert(!d.stop && d.decision==SYM_RECOVER_LEFT && d.target[0]<d.target[1]);
 }
 static void capture_effort(void) {
     CircuitCapture s={0};CircuitInput i=initial();i.path=100;
@@ -321,10 +331,101 @@ static void curve_load_effort(void) {
     i.now+=C_LOAD_QUALIFY_US;assert(circuit_load_outer(&s,&i,C_FOLLOW,&d,false)==0);
     assert(circuit_load_outer(&s,&i,C_FOLLOW,&d,true)==-1); /* capture takes priority */
 }
+static void robust_recovery(void) {
+    const LineCalibration unit={{100,100},{1100,1100},7};
+    CircuitTracker t={0};AnalogDemand d;
+    /* The V4 right-bend case AND its mirrored left-bend case must obey
+       identical rules. These are sensor sequences, not course coordinates. */
+    for(unsigned mirror=0;mirror<2;++mirror) {
+        t=(CircuitTracker){0};unsigned outer=mirror?1:0;int direction=mirror?1:-1;
+        uint16_t observations[][2]={{105,831},{75,66},{166,0},{250,0},{800,0},{79,27},{0,900}};
+        if(mirror) for(unsigned n=0;n<7;++n) {
+            uint16_t v=observations[n][0];observations[n][0]=observations[n][1];observations[n][1]=v;
+        }
+        (void)circuit_line_demand(&t,&unit,100+observations[0][0],100+observations[0][1],14039000,0);
+        d=circuit_line_demand(&t,&unit,100+observations[1][0],100+observations[1][1],14539000,1);
+        assert(!d.stop && t.core.white && t.core.recovery==direction && d.target[outer]>d.target[1-outer]);
+        uint64_t since=t.core.white_since;
+        d=circuit_line_demand(&t,&unit,100+observations[2][0],100+observations[2][1],14790000,4);
+        assert(!d.stop && t.core.white && t.core.white_since==since && t.core.recovery==direction);
+        for(uint64_t now=14800000;now<14950000;now+=10000) {
+            d=circuit_line_demand(&t,&unit,100+observations[3][0],100+observations[3][1],now,5);
+            assert(!d.stop && t.core.white && t.core.direction==direction && d.target[outer]>d.target[1-outer]);
+        }
+        d=circuit_line_demand(&t,&unit,100+observations[4][0],100+observations[4][1],14950000,5);
+        assert(!d.stop && t.core.white && t.reacquire_timing);
+        d=circuit_line_demand(&t,&unit,100+observations[4][0],100+observations[4][1],14989000,5);
+        assert(!d.stop && t.core.white && t.core.direction==direction);
+        d=circuit_line_demand(&t,&unit,100+observations[5][0],100+observations[5][1],15042000,6);
+        assert(!d.stop && t.core.white && !t.reacquire_timing && t.core.white_since==since);
+        assert(d.target[outer]==45 && d.target[1-outer]==0);
+        d=circuit_line_demand(&t,&unit,100+observations[6][0],100+observations[6][1],15100000,7);
+        assert(!d.stop && t.core.white);
+        (void)circuit_line_demand(&t,&unit,100+observations[6][0],100+observations[6][1],15139999,7);
+        assert(t.core.white);
+        d=circuit_line_demand(&t,&unit,100+observations[6][0],100+observations[6][1],15140000,8);
+        assert(!d.stop && !t.core.white && !t.reacquire_timing && d.target[outer]>d.target[1-outer]);
+        (void)circuit_line_demand(&t,&unit,100,100,15150000,9);
+        assert(t.core.white_since==15150000 && t.core.recovery==direction);
+        d=circuit_line_demand(&t,&unit,100+observations[2][0],100+observations[2][1],15150000+C_LOSS_US,9);
+        assert(d.stop && t.loss_reason==C_LOSS_TIME);
+    }
+    /* Real right-to-left curves still steer immediately; memory reverses80ms later. */
+    t=(CircuitTracker){0};(void)circuit_line_demand(&t,&unit,100,1000,1000,0);
+    d=circuit_line_demand(&t,&unit,1000,100,11000,0);
+    assert(d.target[0]<d.target[1] && t.core.direction==-1);
+    (void)circuit_line_demand(&t,&unit,1000,100,90999,1);assert(t.core.direction==-1);
+    (void)circuit_line_demand(&t,&unit,1000,100,91000,1);assert(t.core.direction==1);
+    /* Medium line needs80ms to clear loss; flicker cannot accumulate dwell. */
+    (void)circuit_line_demand(&t,&unit,100,100,101000,1);
+    (void)circuit_line_demand(&t,&unit,450,100,111000,1);
+    (void)circuit_line_demand(&t,&unit,100,100,150000,1);
+    (void)circuit_line_demand(&t,&unit,450,100,161000,1);
+    (void)circuit_line_demand(&t,&unit,450,100,240999,2);assert(t.core.white);
+    (void)circuit_line_demand(&t,&unit,450,100,241000,2);assert(!t.core.white);
+    /* Continuous >=300 return qualifies even when it crosses400 repeatedly. */
+    t=(CircuitTracker){0};(void)circuit_line_demand(&t,&unit,100,1000,1000,0);
+    (void)circuit_line_demand(&t,&unit,100,100,11000,1);
+    for(unsigned n=0;n<=8;++n) {
+        d=circuit_line_demand(&t,&unit,100,(uint16_t)(100+(n%2?410:390)),21000+n*10000,2);
+        assert(!d.stop && (n==8?!t.core.white:t.core.white));
+    }
+    /* Curved-gap bridge preserves reliable curvature and reduces speed150ms. */
+    t=(CircuitTracker){0};(void)circuit_line_demand(&t,&unit,200,900,1000,0);
+    d=circuit_line_demand(&t,&unit,100,100,11000,1);
+    assert(d.target[0]==35 && d.target[1]>0 && d.target[1]<35);
+    d=circuit_line_demand(&t,&unit,100,100,11000+C_BRIDGE_US,2);
+    assert(d.target[0]==45 && d.target[1]==0);
+    /* A recently centred robot can bridge a short straight worn patch without
+       inventing a left/right turn. It still stops at a bounded gap. */
+    t=(CircuitTracker){0};(void)circuit_line_demand(&t,&unit,1000,1000,1000,0);
+    (void)circuit_line_demand(&t,&unit,1000,1000,101000,1);
+    assert(circuit_memory(&t,101000)==3);
+    d=circuit_line_demand(&t,&unit,100,100,111000,2);
+    assert(!d.stop && t.straight_recovery && d.target[0]==35 && d.target[1]==35);
+    d=circuit_line_demand(&t,&unit,100,100,610999,10);assert(!d.stop);
+    d=circuit_line_demand(&t,&unit,100,100,611000,10);
+    assert(d.stop && t.loss_reason==C_LOSS_STRAIGHT);
+    t=(CircuitTracker){0};(void)circuit_line_demand(&t,&unit,1000,1000,1000,0);
+    (void)circuit_line_demand(&t,&unit,1000,1000,101000,1);
+    (void)circuit_line_demand(&t,&unit,100,100,111000,2);
+    d=circuit_line_demand(&t,&unit,100,100,121000,17);
+    assert(d.stop && t.loss_reason==C_LOSS_STRAIGHT);
+    /* Verify diagnostics fit the existing byte fields and preserve raw phase/side. */
+    t.core.direction=-1;t.core.direction_us=200000;t.centre_valid=false;
+    t.core.white=true;t.reacquire_timing=true;
+    unsigned packed=circuit_trace_phase(C_FOLLOW,&t,200000);
+    assert((packed&15)==C_FOLLOW && ((packed>>4)&3)==2 && (packed&64) && (packed&128));
+    assert(circuit_trace_phase(J_TURN,&t,200000)==J_TURN);
+    for(unsigned raw=0;raw<2;++raw) for(unsigned warning=0;warning<4;++warning) {
+        unsigned side=circuit_trace_side(raw,warning);
+        assert((side&1)==raw && ((side>>1)&3)==warning);
+    }
+}
 int main(void) {
     for(unsigned p=1;p<=3;++p) circuit_simulation(p);
     detection_and_bounds();wheel_caps();records();same_corrections_and_cruise();curve_after_branch();
-    weak_signal_recovery();capture_effort();cumulative_feedback();curve_load_effort();
-    puts("PASS:12 turns/profile; steering parity/cruise; observed weak-signal regression;2s/50mm bounds; scoped capture effort/no new peak; cumulative feedback/stall; V1-V4 records; qualified curve load effort/bounds/CRC/ring.");
+    weak_signal_recovery();capture_effort();cumulative_feedback();curve_load_effort();robust_recovery();
+    puts("PASS:12 turns/profile; steering parity/cruise; observed weak-signal regression;2s/50mm bounds; scoped capture effort/no new peak; cumulative feedback/stall; V1-V5 records/CRC/ring; curve load bounds; mirrored V4 worn-gap sequences, qualified reacquisition/reversal and straight bridging.");
     return 0;
 }

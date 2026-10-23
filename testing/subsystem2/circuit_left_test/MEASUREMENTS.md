@@ -160,3 +160,34 @@ Keep steering targets, cruise profiles,750 ms progress guard and2 s/50 mm
 blind recovery. Bound each load episode to2 s/30 mm with300 ms cooldown.
 Software regression reproduces this left45/right1 demand and exercises both
 wheel directions and limits. Physical validation is pending.
+
+## V4 profile 1: bend loss, recovery reverses, optical timeout
+
+Source saved in logs/v4_profile1_recovery_reversal_2026-10-23.txt.72 rows,
+17.010 seconds,530.0 mm,average31.16 mm/s. No cross detected, no completed
+turns; phase10 and side0 until fault. Final stop is directed recovery2 s
+expiry, not encoder feedback. Video shows the front pair leaving the bend
+and the robot pivoting left onto the white inside the curve. The video has no
+shared clock marker, so alignment with log times is approximate.
+
+At14.039 seconds levels105/831 request47/13 (right). At14.539 seconds75/66
+request45/0 (right recovery). At14.790 seconds166/0 briefly return to normal
+42/48. At15.042 seconds79/27 request0/45 (left recovery), continuing until
+17.010 seconds. Right travel517.0->590.2 mm; left stays469.8 mm. Encoder yaw
+indicates about38 degrees of additional left rotation. Assist0 throughout
+this final episode. The exact intermediate reading which changed memory is
+not recorded by250 ms sampling; do not claim the166 reading alone did so.
+
+V5 responds symmetrically: opposite memory needs strong80 ms confirmation;
+weak blips cannot reverse it, and only credible40/80 ms line return ends a
+loss episode. Brief gaps retain reliable curvature at reduced speed before
+pivoting; a recently centred gap has a separate short straight bridge. Tests
+exercise this right-bend sequence and its exact left-bend mirror, including
+weak and short strong opposite flashes, real return and new-loss budgets.
+
+The user explicitly requested removal of the no-progress automatic stop.
+V5 retains its750 ms detector as warning bits only. Manual stop and bounded
+optical/junction/direction/invalid-transition/control checks remain. State
+transition rows and saved recovery/memory/feedback fields improve diagnosis.
+Speeds, ordinary optical target thresholds and V4 load effort are unchanged.
+Physical course completion remains unverified.

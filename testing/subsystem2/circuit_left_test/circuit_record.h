@@ -5,6 +5,16 @@
 #include "../dual_wheel_bench/log_store.h"
 enum { C_ROWS=1200,C_SUMMARIES=64,C_STORE_BYTES=65536 };
 #define C_MAGIC 0x31524343u
+/* V5 uses unused phase/side bits for diagnostics without changing the record
+   ABI. Older rows have zero high bits. Printed phase and side remain raw. */
+static inline uint8_t circuit_trace_phase(unsigned phase,const CircuitTracker *t,uint64_t now) {
+    if(phase!=C_FOLLOW && phase!=J_ACQUIRE) return (uint8_t)phase;
+    return (uint8_t)(phase | (circuit_memory(t,now)<<4) | (t->core.white?64:0) |
+                     (t->reacquire_timing?128:0));
+}
+static inline uint8_t circuit_trace_side(unsigned raw,unsigned feedback) {
+    return (uint8_t)((raw&1) | ((feedback&3)<<1));
+}
 typedef struct {
     uint64_t ms;uint32_t path10;int32_t wheel10[2];
     int16_t speed10[2],pwm[2],target[2];uint16_t level[2],adc[2];
@@ -24,7 +34,7 @@ typedef struct {
 _Static_assert(sizeof(CircuitTrace)==48 && sizeof(CircuitSummary)==32,"Circuit trace ABI changed");
 _Static_assert(sizeof(CircuitSaved)<=C_STORE_BYTES,"Circuit saved log exceeds64KiB");
 static inline bool circuit_record_valid(const CircuitSaved *s) {
-    return s->magic==C_MAGIC && s->version>=1 && s->version<=4 && s->count<=C_ROWS && s->summary_count<=C_SUMMARIES &&
+    return s->magic==C_MAGIC && s->version>=1 && s->version<=5 && s->count<=C_ROWS && s->summary_count<=C_SUMMARIES &&
         s->profile>=1 && s->profile<=3 && s->recorded_profile>=1 && s->recorded_profile<=3 &&
         calibration_valid(&s->calibration) && side_valid(&s->side) &&
         s->crc==log_crc((const uint8_t *)s+offsetof(CircuitSaved,count),sizeof(*s)-offsetof(CircuitSaved,count));
