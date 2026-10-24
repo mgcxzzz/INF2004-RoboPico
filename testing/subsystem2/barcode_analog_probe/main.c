@@ -1,5 +1,5 @@
-/* Stationary diagnostic: barcode A0 temporarily replaces front-left A0 on
- * GP26. D0 stays on GP19. No PWM, motion commands, flash writes or decoder. */
+/* Stationary diagnostic: barcode A0 -> GP27/ADC1, Pico W physical pin32.
+ * Front sensors unchanged. GP19/D0 unused. No PWM, motion or flash writes. */
 #include <stdio.h>
 #include <stdint.h>
 #include <inttypes.h>
@@ -8,18 +8,18 @@
 #include "pico/stdio_usb.h"
 #include "hardware/adc.h"
 
-enum { ANALOG_PIN=26, DIGITAL_PIN=19 };
+enum { ANALOG_PIN=27 };
+_Static_assert(ANALOG_PIN==27,"Barcode A0 must match GP27 / ADC1");
 typedef struct {
-    uint32_t n, high;
+    uint32_t n;
     uint16_t lo, hi;
     uint64_t sum, squares;
 } Stats;
 static Stats empty_stats(void) {
     return (Stats){.lo=4095};
 }
-static void add_sample(Stats *s, uint16_t a, bool d) {
+static void add_sample(Stats *s, uint16_t a) {
     ++s->n;
-    s->high+=d;
     s->sum+=a;
     s->squares+=(uint32_t)a*a;
     if(a<s->lo) s->lo=a;
@@ -34,9 +34,9 @@ static void print_stats(const char *kind, const char *label, const Stats *s,
     double mean=(double)s->sum/s->n;
     double variance=(double)s->squares/s->n-mean*mean;
     printf("%s: label=%s start_ms=%" PRIu64 " end_ms=%" PRIu64
-           " n=%" PRIu32 " ADC_mean=%.1f min=%u max=%u sd=%.1f D0_high_pct=%.1f motors=OFF\n",
+           " n=%" PRIu32 " ADC_mean=%.1f min=%u max=%u sd=%.1f motors=OFF\n",
            kind,label,start/1000,end/1000,s->n,mean,s->lo,s->hi,
-           sqrt(variance>0?variance:0),100.0*s->high/s->n);
+           sqrt(variance>0?variance:0));
 }
 static const char *label_for(int ch) {
     switch(ch) {
@@ -48,8 +48,8 @@ static const char *label_for(int ch) {
     }
 }
 static void help(void) {
-    puts("\nBUDDY23 BARCODE ANALOG PROBE v1 | motors=OFF always");
-    puts("Barcode A0 -> GP26/ADC0 (disconnect front-left A0 first). Barcode D0 -> GP19.");
+    puts("\nBUDDY23 BARCODE ANALOG PROBE v2 | motors=OFF always");
+    puts("Barcode A0 -> GP27/ADC1 (Pico W physical pin32). Front sensors unchanged; GP19/D0 unused.");
     puts("Sensor VCC=3.3V, common GND. Do not connect a 5V output to the ADC.");
     puts("USB-only stationary test. No motor-start command, calibration save or barcode decoding.");
     puts("Live ADC windows every100ms, nominal1kHz sampling; raw0..4095. No black polarity assumed.");
@@ -61,8 +61,7 @@ int main(void) {
     for(unsigned pin=8;pin<=11;++pin) {
         gpio_init(pin);gpio_put(pin,0);gpio_set_dir(pin,GPIO_OUT);
     }
-    gpio_init(DIGITAL_PIN);gpio_set_dir(DIGITAL_PIN,GPIO_IN);gpio_disable_pulls(DIGITAL_PIN);
-    adc_init();adc_gpio_init(ANALOG_PIN);adc_select_input(0);(void)adc_read();
+    adc_init();adc_gpio_init(ANALOG_PIN);adc_select_input(ANALOG_PIN-26);(void)adc_read();
     stdio_init_all();
     bool was_connected=false, capturing=false, have_last=false;
     const char *capture_label="NONE", *last_label="NONE";
@@ -94,9 +93,9 @@ int main(void) {
         }
         now=time_us_64();
         if(connected&&now>=next_sample) {
-            uint16_t a=adc_read();bool d=gpio_get(DIGITAL_PIN);
-            add_sample(&live,a,d);
-            if(capturing) add_sample(&capture,a,d);
+            uint16_t a=adc_read();
+            add_sample(&live,a);
+            if(capturing) add_sample(&capture,a);
             next_sample=now+1000;
         }
         if(capturing&&now-capture_start>=1000000) {

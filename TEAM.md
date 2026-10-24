@@ -71,8 +71,8 @@ fixed.
 | GP20 | | |
 | GP21 | | |
 | GP22 | | |
-| GP26 | Buddy 2/3 standalone tests | Front-left A0; temporarily barcode A0 in `barcode_analog_probe` (front-left signal disconnected; one source only) |
-| GP27 | | (ADC1 capable) |
+| GP26 | Buddy 2/3 standalone tests | Front-left A0 (legacy barcode analogue probe V1 temporarily reused it; V2 leaves it unchanged) |
+| GP27 | Buddy 2/3 standalone tests | Barcode A0 / ADC1, Pico W physical pin 32, `barcode_analog_probe` V2 |
 | GP28 | | (ADC2 capable) |
 
 ## 3. Peripherals

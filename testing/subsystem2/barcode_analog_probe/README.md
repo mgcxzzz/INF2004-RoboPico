@@ -1,66 +1,68 @@
-# Barcode analogue probe V1
+# Barcode analogue probe V2: direct Pico W GP27 connection
 
-Stationary USB diagnostic for the existing offset IR module. The 141 mm A
-produced merged D0 black runs, and narrow white gaps remain D0=1 even while
-stationary. This test measures whether A0 retains contrast in those gaps.
-It does not decode letters or drive the robot. Existing circuit firmware is unchanged.
+Stationary USB diagnostic for the existing offset IR module. V2 uses the spare
+ADC1 input on GP27, so both front line sensor Grove connections remain unchanged.
+The current digital setting reportedly detects white gaps and wide black bars
+but misses narrow black bars. Measure the actual narrow gap/bar contrast before
+changing the driving decoder. This firmware does not decode or drive motors.
 
-## Power off before wiring
+## Wiring: disconnect all power first
 
-For this isolated test, temporarily reuse the known front-left ADC connection.
-Disconnect the **front-left sensor's A0 signal from GP26** first. Never connect
-two sensor outputs together. Leave its power and the right sensor's wiring alone.
+Move the existing barcode signal wire at BOTH ends:
 
-| Offset barcode module | Board connection |
-|---|---|
-| A0 (analogue output) | GP26 / ADC0, temporarily replacing front-left A0 |
-| D0 (digital output) | Keep existing GP19 connection for comparison |
-| VCC | 3.3 V |
-| GND | Common GND |
+- Module end: **D0 -> A0** (analogue output).
+- Pico W end: **GP19 / physical pin 25 -> GP27 / physical pin 32**.
+- Keep barcode VCC at **3V3 / physical pin 36** and its existing common GND.
+- Leave both front IR Grove connections unchanged. D0 is unused for V2;
+  no extra D0 comparison wire is needed.
 
-GP19 cannot read analogue voltage. Moving D0 to an ADC input does not produce
-an analogue measurement: use the module's actual **A0** pin. Verify pin labels
-and Grove signal positions, rather than assuming cable colours. Supply the
-module at 3.3 V for this direct test; do not apply a 5 V output to the Pico ADC.
-This temporary pin assignment is not the final integrated wiring.
+GP27 means the GPIO label, **not physical header pin 27**. Verify against the
+[official Pico W pinout](https://datasheets.raspberrypi.com/picow/PicoW-A4-Pinout.pdf).
+GP19 cannot measure analogue voltage. Merely moving D0 to GP27 still gives a
+binary signal; the sensor end must use A0. Supply the module at 3.3 V for this
+direct ADC test; never apply a 5 V output to the Pico ADC.
+
+The attached older system diagram labels the front modules D0/GP6/GP7; that is
+not the newer A0/GP26/GP28 line-following wiring. Follow the actual working front
+wiring and leave it unchanged. GP27 is separate from GP26 and GP28.
 
 ## Run
 
-1. Flash `firmware/buddy23_barcode_analog_probe_v1.uf2` using BOOTSEL.
-2. Use computer USB, open serial at 115200, 8N1, flow control None. Press `h`
-   and verify **BUDDY23 BARCODE ANALOG PROBE v1**. No button can start motors.
-3. Keep the sensor at its normal mounted height and angle, with the same
-   lighting. Move the whole robot by hand; do not lift the module between tests.
-4. Centre the offset sensing point over broad white, hold still, press `w`.
-   Wait for its one-second `CAPTURE` result.
-5. Repeat on broad black with `b`.
-6. On the actual 141 mm barcode, centre the sensing point over the narrowest
-   white gap, hold still and press `g`. Then adjacent black bar, press `n`.
-   Repeat the gap/bar pair at least three times, including gaps that D0 misses.
-7. Send the `CAPTURE` lines with a note about any difficulty positioning the
-   sensor. `p` repeats the last capture. Serial text/RAM only: no offline storage.
+1. Flash `firmware/buddy23_barcode_analog_probe_v2.uf2` using BOOTSEL.
+2. Use computer USB and serial at 115200, 8N1, flow control None. Press `h` and
+   verify **BUDDY23 BARCODE ANALOG PROBE v2** and **GP27/ADC1**. Motors stay off.
+3. Keep the sensor at normal mounted height/angle and the same lighting.
+   Move the whole robot by hand, then hold it stationary for each capture.
+4. Broad white: press `w`; wait for one-second `CAPTURE` result.
+5. Broad black: press `b`.
+6. Narrowest white gap on the actual 141 mm barcode: press `g`.
+7. Adjacent narrow black bar: press `n`. Repeat g/n at least three times,
+   including bars/gaps that D0 could not distinguish. Send the CAPTURE lines.
 
-`ADC_mean`, `min`, `max`, `sd` are raw 12-bit readings (0..4095).
-`D0_high_pct` reports the fraction of samples whose GP19 input was high, not
-an assumed black percentage. Sampling is nominally 1 kHz, live windows 100 ms;
-USB output can reduce the achieved rate, and `n` shows the actual sample count.
-No smoothing or black/white threshold is applied to A0. No calibration imported.
+`p` reprints the last result. ADC_mean/min/max/sd are raw 12-bit values
+(0..4095), not normalized blackness. No black polarity is assumed. Sampling is
+nominally 1 kHz, live windows 100 ms; USB output can reduce the achieved rate,
+and `n` in each result is the actual sample count. No offline storage: save the
+serial text before switching power. No smoothing or threshold is applied.
 
-A repeatable separation between narrow-gap and adjacent-bar readings, larger
-than noise and positioning variation, supports a software threshold/hysteresis
-trial. Broad white/black contrast alone is insufficient. Overlapping narrow-gap
-and bar readings mean A0 may not resolve this print at the current optical
-footprint/height. Analogue output cannot guarantee recovery of missing detail.
+A repeatable narrow-gap/bar separation greater than noise/positioning variation
+supports a software threshold/hysteresis trial. Broad white/black contrast alone
+is insufficient. Overlap means A0 may not resolve this print with the current
+height/optical footprint. Analogue output does not guarantee recovery.
 
-Before using Circuit With Barcode V3 again: power off, remove barcode A0 from
-GP26, restore front-left A0 to GP26, leave barcode D0 on GP19, then flash V3.
-This probe performs no flash erase/program itself; it does not import or modify
-the saved circuit calibration/log banks.
+## Return to the digital circuit firmware
 
-## Isolation and verification
+Power off, move the barcode wire back **A0 -> D0** and **GP27 -> GP19**, then
+flash Circuit With Barcode V3. Do not use V3's unchanged digital code with the
+signal on GP27. Both front sensors stay connected throughout this V2 test.
 
-Only this standalone executable owns ADC0/GP26 and input GP19 for the test.
-GPIO8..11 are configured output LOW before USB initialization and held LOW.
-No PWM setup, motor-start path, encoder interrupts, radio or flash writes exist.
-Build using Pico SDK 2.2.0, Pico W, C11, Release, `-Wall -Wextra -Werror`.
-Build results and artifact hash are recorded in `BUILD_V1.md`.
+V1 UF2 remains available unchanged, but uses GP26 temporarily and requires
+front-left disconnection. **Use V2 for the GP27 wiring described above.**
+
+## Isolation
+
+Only this standalone executable owns ADC1/GP27. GPIO8..11 are output LOW before
+USB initialization and held LOW. No GP19, front ADC input, motor PWM, encoder
+interrupt, radio or flash-write routine is used. Saved circuit calibration/log
+banks are not imported or modified. Pico W / SDK 2.2.0 / C11 / Release /
+`-Wall -Wextra -Werror`. See BUILD_V2.md for build/UF2 evidence.
