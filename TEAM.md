@@ -71,7 +71,7 @@ fixed.
 | GP20 | | |
 | GP21 | | |
 | GP22 | | |
-| GP26 | | (ADC0 capable) |
+| GP26 | Buddy 2/3 standalone tests | Front-left A0; temporarily barcode A0 in `barcode_analog_probe` (front-left signal disconnected; one source only) |
 | GP27 | | (ADC1 capable) |
 | GP28 | | (ADC2 capable) |
 
