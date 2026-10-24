@@ -1,86 +1,103 @@
-# Barcode analogue probe V3: GP27 white/black calibration
+# Barcode analogue probe V4: saved calibration and raw distance sweep
 
-Stationary USB diagnostic for the existing offset IR module. V2/V3 use the spare
-ADC1 input on GP27, so both front line sensor Grove connections remain unchanged.
-The current digital setting reportedly detects white gaps and wide black bars
-but misses narrow black bars. Measure the actual narrow gap/bar contrast before
-changing the driving decoder. This firmware does not decode or drive motors.
+Motors-off USB diagnostic. Barcode A0 -> GP27 / ADC1 (Pico W physical pin32),
+3.3 V and common GND; D0/GP19 unused. Leave both front Grove connections and
+existing encoder wiring unchanged. V4 measures the full analogue profile before
+choosing a threshold. It does not decode, line-follow or execute junction turns.
 
-## Wiring: disconnect all power first
+## Why capture a full A?
 
-Move the existing barcode signal wire at BOTH ends:
+The broad calibration passed (white469, black3943.5), but the labelled narrow
+white gaps read3077/3081 while narrow black bars read2250/1966. This reverses the
+broad ordering. A motion trace can reveal whether sensing footprint, alignment,
+bar/gap widths or transient response accounts for this. Four separate ADC levels
+are not assumed: narrow/wide describe spatial widths, not fixed voltage levels.
+No reading is forced to A. Both missing gaps and missing bars remain measurable.
 
-- Module end: **D0 -> A0** (analogue output).
-- Pico W end: **GP19 / physical pin 25 -> GP27 / physical pin 32**.
-- Keep barcode VCC at **3V3 / physical pin 36** and its existing common GND.
-- Leave both front IR Grove connections unchanged. D0 is unused for V2/V3;
-  no extra D0 comparison wire is needed.
+## Save calibration once
 
-GP27 means the GPIO label, **not physical header pin 27**. Verify against the
-[official Pico W pinout](https://datasheets.raspberrypi.com/picow/PicoW-A4-Pinout.pdf).
-GP19 cannot measure analogue voltage. Merely moving D0 to GP27 still gives a
-binary signal; the sensor end must use A0. Supply the module at 3.3 V for this
-direct ADC test; never apply a 5 V output to the Pico ADC.
+1. Flash `firmware/buddy23_barcode_analog_probe_v4.uf2`; open computer USB serial
+   115200 / 8N1 / no flow control. Press h: verify V4 and GP27/ADC1, motors OFF.
+2. At normal mounted height, broad white on the actual barcode paper: w, hold
+   still for one second. On a wide black bar on that paper: b, hold still.
+3. Check CAL `mask=3 valid=1`, then keep still and press **k**. Expect
+   `CAL SAVED: CRC/readback verified` and `saved=1`.
+4. After a power cycle, c should show `valid=1 saved=1 restored=1` and matching
+   references. Recalibrate if height, lighting, paper or mounting changes.
 
-The attached older system diagram labels the front modules D0/GP6/GP7; that is
-not the newer A0/GP26/GP28 line-following wiring. Follow the actual working front
-wiring and leave it unchanged. GP27 is separate from GP26 and GP28.
+V3 calibration was RAM-only and is lost when resetting to flash V4: recapture
+once. V4 does not hardcode earlier values or import the front sensor calibration.
+Broad reference checks: >=500 samples/capture, >=100-count mean separation,
+>=6x largest reference SD. Normalized white0 / black1000 / invalid-1, either
+voltage polarity. g/n still capture narrow gap/bar without changing references.
+A new w resets the black reference; press k only after a valid new w/b pair.
 
-## Run
+## Record the whole small A by hand, with wheels rolling
 
-1. Flash `firmware/buddy23_barcode_analog_probe_v3.uf2` using BOOTSEL.
-2. Use computer USB and serial at 115200, 8N1, flow control None. Press `h` and
-   verify **BUDDY23 BARCODE ANALOG PROBE v3** and **GP27/ADC1**. Motors stay off.
-3. Keep the sensor at normal mounted height/angle and the same lighting.
-   Move the whole robot by hand, then hold it stationary for each capture.
-4. Broad white: press `w`; wait for the one-second CAL/CAPTURE result. This
-   sets the white reference and clears the previous black reference.
-5. Broad black: press `b`; wait for CAL with `mask=3 valid=1`. White must be
-   captured first. Do not use the narrow bar for this broad black reference.
-6. Narrowest white gap on the actual 141 mm barcode: press `g`.
-7. Adjacent narrow black bar: press `n`. Repeat g/n at least three times,
-   including bars/gaps that D0 could not distinguish. Send the CAPTURE lines.
+1. Keep USB connected and enable your terminal's file logging before the dump.
+2. Put the offset sensing point on blank paper **20 mm before the first bar**.
+   Align the robot so that a straight forward push takes that point through
+   all bars. Keep all wheels on the surface at normal height; do not lift,
+   rotate or slide the robot sideways during the scan.
+3. Press **f**. Wait two seconds for **SWEEP_BEGIN**. Then roll the whole robot
+   steadily forward by hand across A and onto blank paper about20 mm beyond it.
+   Aim for roughly5-10 seconds for the pass; exact constant speed is not needed
+   because encoder distance is logged. Avoid backwards motion and tyre slip.
+4. Press **s** after the passage, or recording ends automatically after20 seconds.
+5. Press **p** to print ANALOG_SWEEP and all samples. Send the entire output
+   through END ANALOG_SWEEP, and identify the barcode as A plus its print length.
+6. Repeat f/roll/s/p for a second pass if possible. Each new started sweep
+   replaces the previous RAM sweep; save the output first.
 
-`p` reprints the last result plus calibration; `c` prints calibration;
-`r` resets RAM calibration. Each reference capture needs at least 500 samples
-in its one-second window. A completed reference uses the measured mean and
-standard deviation. A calibration is valid when both references exist, their
-mean separation is at least 100 raw ADC counts, and at least six times the
-larger reference SD. These are diagnostic checks, not a barcode accuracy claim.
+**Motors never run in this firmware.** f starts recording, not driving. Encoder
+inputs GP0/GP1 (left) and GP4/GP5 (right) measure the hand-rolled motion. Raw
+quadrature signs are left negative/right positive for forward, matching the
+working circuit firmware. Conversion uses the same provisional calibration:
+200 mm circumference, left2524.05/right2528.30 counts per revolution. Wheel
+slip and angle make these estimates inaccurate: roll straight with wheels turning.
 
-`level_1000` normalizes measured means: white reference=0, black reference=1000,
-clipped to that range, regardless of voltage polarity. `-1` means no valid
-calibration. A new white capture invalidates the old black reference. Gap/bar
-captures measure results without changing either reference. Keep the screw,
-height and lighting unchanged throughout calibration and the comparison.
+## Data and controls
 
-ADC_mean/min/max/sd remain raw 12-bit values (0..4095). Sampling is nominally
-1 kHz, live windows 100 ms; USB output can reduce achieved rate. `n` in each
-result is the actual sample count. Raw voltage polarity is learned from the
-references. There is no black/white decision threshold or barcode decoder yet.
+500 Hz nominal acquisition (2 ms interval), up to10,000 rows/20 seconds. Raw
+12-bit ADC values and signed encoder ticks are buffered in RAM. No live stream,
+float formatting, flash save or barcode decode occurs during the sweep.
+Actual timestamps, largest sampling interval, missed slots and invalid encoder
+transitions are reported. The data can show collapsed modulation rather than
+pretending a missing bar/gap was detected. Motion thresholds will be evaluated
+against distance and full known *A* framing after the trace is collected.
 
-**Calibration is RAM only.** No `k` save; recalibrate after power-off. Save the
-serial CAL/CAPTURE lines before switching power. Reopening serial without
-power cycling keeps calibration in RAM. No offline drive/log mode exists.
+| Key | Action |
+|---|---|
+| w / b | One-second white / black calibration captures |
+| k | Save valid calibration; stationary and no active capture/sweep |
+| c | Print calibration and saved/restored status |
+| g / n | One-second narrow white gap / adjacent narrow black bar capture |
+| f | Arm2seconds, then raw hand-rolled sweep; motors remain OFF |
+| s | Stop sweep / cancel arming |
+| p | Dump last completed sweep (not a stationary capture) |
+| q | Reprint last stationary capture plus calibration |
+| v | Toggle100ms LIVE windows; default OFF to reduce serial noise |
+| r | Clear current RAM references only; saved flash copy remains |
+| h | Help |
 
-A repeatable narrow-gap/bar separation greater than noise/positioning variation
-supports a software threshold/hysteresis trial. Broad white/black contrast alone
-is insufficient. Overlap means A0 may not resolve this print with the current
-height/optical footprint. Analogue output does not guarantee recovery.
+Calibration survives power-off after k. **Sweep samples remain RAM-only:** dump
+with p before power-off. Reopening serial without power-off preserves the sweep.
+USB disconnect stops recording; if power stays on, recorded RAM data remains.
+No offline powered run exists. Current circuit V3 still expects D0 on GP19:
+power off and restore both signal ends before using that firmware.
 
-## Return to the digital circuit firmware
+## Storage and isolation
 
-Power off, move the barcode wire back **A0 -> D0** and **GP27 -> GP19**, then
-flash Circuit With Barcode V3. Do not use V3's unchanged digital code with the
-signal on GP27. Both front sensors stay connected throughout this V2 test.
+GP8..11 held LOW before USB and continuously. No PWM setup or motor-start path.
+ADC1 belongs solely to this loop. Encoder ISRs only update quadrature counters.
+The persistent record is specific to GP27/ADC1, versioned and CRC32 checked.
+Two alternating4KiB sectors at flash offsets0x1c0000 and0x1c1000 (Pico W2MiB)
+retain the previous valid slot during an update. k erases the alternate sector,
+programs one256-byte page and verifies CRC and byte-for-byte readback. Latest
+valid sequence loads at boot; invalid records are ignored. Existing barcode
+bank0x1d0000, circuit bank0x1e0000 and legacy tail records are not written.
+Binary-end check rejects writes if the firmware overlaps these probe slots.
+A future full-chip erase or other firmware using these slots can remove records.
 
-V1 UF2 remains available unchanged, but uses GP26 temporarily and requires
-front-left disconnection. V2 also uses GP27 but has no reference calibration. **Use V3 for this test.**
-
-## Isolation
-
-Only this standalone executable owns ADC1/GP27. GPIO8..11 are output LOW before
-USB initialization and held LOW. No GP19, front ADC input, motor PWM, encoder
-interrupt, radio or flash-write routine is used. Saved circuit calibration/log
-banks are not imported or modified. Pico W / SDK 2.2.0 / C11 / Release /
-`-Wall -Wextra -Werror`. See BUILD_V3.md for build/UF2 evidence.
+V1/V2/V3 UF2 remain unchanged. See BUILD_V4.md for build/UF2 evidence. V4 has
+not been physically tested; verify calibration restore and hand-scan readings.
