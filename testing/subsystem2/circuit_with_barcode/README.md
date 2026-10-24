@@ -1,9 +1,46 @@
-# Circuit with barcode V5: lower-contrast front calibration + automatic GP27
+# Circuit with barcode V6: explicit startup without a black-placement gate
 
 Driving test: existing Circuit Left V6 follower and mirrored junction turns,
 now reading offset A0 on GP27. **No manual barcode white/black calibration.**
 Front line sensors still require their existing calibration, imported from the
 saved barcode/circuit record when available. Motors stay off until started.
+
+## V6 startup change
+
+V6 removes only the front normalized-black>=650 requirement that produced
+START reason11. It does not change the line follower or copy a different
+robot's steering, sensor mapping, junction detector or turn geometry.
+
+Starting still requires valid front calibration (both spans>=50 and all three
+captures), inactive/settled state, ready=1 after one second stationary with
+buttons released, GP20 released, and the correct GP21 state. USB g starts a
+2s countdown with both buttons released; f requires GP21 held. Power-bank
+arming remains unchanged. h identifies V6; rejection diagnostics now print
+front_valid, front levels and optical_start_gate=OFF. Barcode calibration
+is independent and is not required for startup.
+
+Place the front sensing spots on the line before requesting a run. Removing
+this gate does not give an all-white start a direction to search: existing
+running line-loss checks still apply, and all-white without direction memory
+can stop immediately. Calibration must match the normal resting height;
+loosening a start gate cannot correct unrepresentative black references.
+
+Use firmware/buddy23_circuit_with_barcode_v6.uf2. V1-V5 binaries are retained.
+Saved records1-6 are supported with the same layout. Speed profiles, PWM,
+analogue barcode decoding and the old92mm side-ahead geometry are unchanged.
+The replacement offset-to-axle measurement is still needed before judging
+junction positioning with the repositioned module.
+
+## Raised-height detection and the supplied line-following document
+
+The groupmate normalizes (raw-white)/(black-white) to0..1. This firmware
+already uses the equivalent0..1000 scale:0/0.5/1 maps to0/500/1000. Changing
+the display scale cannot restore contrast lost at a new mounting height.
+Use measured references from this robot in its normal resting posture; do not
+copy the other robot's default200/2400 references. V6 does not adopt the
+groupmate's P steering, speed schedule, edge placement, automatic spin
+calibration, junction classifier or recovery sweeps. Existing bend-following
+logic is retained at the user's explicit request.
 
 ## V5 raised-front-sensor trial
 
@@ -30,8 +67,8 @@ version5 with the same V4 motion layout; V1-V4 records remain readable.
 
 ## Firmware and wiring
 
-Use `firmware/buddy23_circuit_with_barcode_v5.uf2` (driving firmware), not the
-separate motors-off analogue probe. V1-V4 UF2 remain unchanged. Historical
+Use `firmware/buddy23_circuit_with_barcode_v6.uf2` (driving firmware), not the
+separate motors-off analogue probe. V1-V5 UF2 remain unchanged. Historical
 digital V3 instructions are archived in README_V3.md.
 
 | Sensor connection | Pin |
@@ -51,8 +88,8 @@ from the timer ISR. Actual sampling gaps over10ms are diagnostic events.
 
 ## First physical test: small A, profile1
 
-1. Flash V5 and open USB serial115200/8N1/no flow control. h must show
-   **BUDDY23 CIRCUIT WITH BARCODE v5 | AUTO ANALOG GP27**.
+1. Flash V6 and open USB serial115200/8N1/no flow control. h must show
+   **BUDDY23 CIRCUIT WITH BARCODE v6 | AUTO ANALOG GP27**.
 2. Check `CAL FRONT ... valid=1`. Existing front calibration should import.
    **Do not press w/b to calibrate the barcode.** If the FRONT references are
    invalid, w/l/r capture front white/left-black/right-black, then k saves them.

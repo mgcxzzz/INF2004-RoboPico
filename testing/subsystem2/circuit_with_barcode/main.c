@@ -18,6 +18,7 @@
 #include "../circuit_left_test/circuit_wheel.h"
 #include "barcode_record.h"
 #include "barcode_analog.h"
+#include "barcode_start.h"
 #include "../circuit_left_test/circuit_capture.h"
 #include "../circuit_left_test/circuit_feedback.h"
 #include "../circuit_left_test/circuit_load.h"
@@ -39,7 +40,7 @@ static BarcodeAnalog side_analog;
 static uint16_t side_adc;static uint64_t last_side_sample;static bool status_enabled;
 static uint32_t last_nav_event;
 static uint8_t test_mode=1,recorded_mode=1;
-static uint8_t recorded_version=5;
+static uint8_t recorded_version=6;
 static bool last_fast;
 static CircuitCapture capture;
 static CircuitLoad load;
@@ -190,12 +191,12 @@ static void reset_log(void) {
     trace_count=trace_head=trace_dropped=summary_count=summary_head=0;
     guard.duration_us=0;guard.reason=0;circuit=(Circuit){0};nav=(BarcodeNav){0};
     for(unsigned w=0;w<2;++w) { cut_ticks[w]=0;cut_invalid[w]=0; }
-    flash_loaded=false;recorded_key='-';recorded_version=5;
+    flash_loaded=false;recorded_key='-';recorded_version=6;
 }
 static void help(void) {
-    puts("\nBUDDY23 CIRCUIT WITH BARCODE v5 | AUTO ANALOG GP27 | *A* LEFT / *F* RIGHT | motors OFF on boot");
-    puts("V5 front minimum span50 ADC counts; measured low-contrast test. Same line gains, speed/PWM and auto barcode reader.");
-    puts("V6 line follower/correction retained. Read A/F at either print size, in either scan direction.");
+    puts("\nBUDDY23 CIRCUIT WITH BARCODE v6 | AUTO ANALOG GP27 | *A* LEFT / *F* RIGHT | motors OFF on boot");
+    puts("V6 removes front black>=650 START gate; front minimum span50 ADC counts. Same line gains, speed/PWM and barcode reader.");
+    puts("Circuit Left V6 follower/correction retained. Read A/F at either print size, in either scan direction.");
     puts("No manual barcode calibration.31 raw-ADC thresholds128..3968;32-count hysteresis;2ms debounce;black HIGH.");
     puts("Need TWO neighbouring thresholds agreeing on complete Code39 *X* frame. Unknown/ambiguous frames never force A/F.");
     puts("BARCODE A0 -> GP27/ADC1;GP19/D0 UNUSED. Front A0 GP26/GP28 unchanged;3.3V/common GND.");
@@ -340,18 +341,15 @@ static void dump(void) {
     dump_events();puts("END BARCODE CIRCUIT LOG. Distances/headings are encoder estimates, not external measurements.");
 }
 static unsigned start_block(unsigned mode) {
-    unsigned why=profile_start_block(5,guard.active,trace_settling,calibration_valid(&calibration),!gpio_get(STOP),
-        rearm.ready,line_level(analog_raw[0],calibration.white[0],calibration.black[0]),
-        line_level(analog_raw[1],calibration.white[1],calibration.black[1]),!gpio_get(HOLD),mode);
-    if(why) return why;
-    return 0;
+    return barcode_start_block(guard.active,trace_settling,calibration_valid(&calibration),!gpio_get(STOP),
+        rearm.ready,!gpio_get(HOLD),mode);
 }
 static bool start_run(unsigned mode) {
     last_start_block=start_block(mode);if(last_start_block) return false;
     uint64_t now=time_us_64();uint32_t irq=save_and_disable_interrupts();
     bool ok=guard_start(&guard,now,mode!=LINE_USB_HOLD || !gpio_get(HOLD),!gpio_get(STOP));
     if(ok) {
-        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=5;last_fast=false;
+        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=6;last_fast=false;
         capture=(CircuitCapture){0};load=(CircuitLoad){0};capture_outer=-1;assist_code=feedback_mask=0;
         guard.deadline_us=UINT64_MAX;guard.duration_us=0;
         for(unsigned w=0;w<2;++w) {
@@ -372,8 +370,10 @@ static bool start_run(unsigned mode) {
     return ok;
 }
 static void report_start_block(void) {
-    printf("START rejected: reason=%u ready=%u legacy_side_field_valid=%u side_ADC=%u. Need valid FRONT calibration, front black>=650, buttons released (hold GP21 for f). Barcode A0 requires no manual calibration.\n",
-        last_start_block,rearm.ready,side_valid(&side_cal),side_adc);
+    printf("START rejected: reason=%u ready=%u front_valid=%u levels=%u,%u optical_start_gate=OFF. Need valid FRONT calibration, inactive/settled robot, ready=1, GP20 released; GP21 held for f or released for g/bank. Barcode A0 requires no manual calibration.\n",
+        last_start_block,rearm.ready,calibration_valid(&calibration),
+        line_level(analog_raw[0],calibration.white[0],calibration.black[0]),
+        line_level(analog_raw[1],calibration.white[1],calibration.black[1]));
 }
 static void control_step(uint64_t now) {
     uint64_t elapsed=now-last_control;if(elapsed<CONTROL_PERIOD_US) return;last_control=now;
