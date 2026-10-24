@@ -31,17 +31,21 @@ static void decode_z(BarcodeNav *nav,BarcodeAnalog *a,CircuitInput *i,unsigned s
     assert(!nav->cross_ready && !nav->cross_candidate);
 }
 static bool black_at(double x,double y) {return fabs(y)<=9 || fabs(x)<=9;}
-static void kinematic_trial(unsigned size,bool reverse,bool hide_return) {
+static void kinematic_trial(unsigned size,bool reverse,bool hide_return,bool lag) {
     CircuitInput i={.now=1000};Circuit c;BarcodeNav nav;BarcodeAnalog a;SmoothFollow smooth={0};
     barcode_nav_begin(&nav,&i);decode_z(&nav,&a,&i,size,reverse);circuit_begin(&c,&i);
-    double x=-250,y=0,theta=0;AnalogDemand d={.target={45,45}};
+    double x=-250,y=0,theta=0,motor[2]={45,45};AnalogDemand d={.target={45,45}};
     bool first_branch_seen=false,reverse_seen=false,completed=false;unsigned stages=0,last_stage=0;
     for(unsigned step=0;step<15000 && !completed;++step) {
-        double dl=d.target[0]*.01,dr=d.target[1]*.01;
+        for(unsigned w=0;w<2;++w) {
+            double rate=d.target[w]==0?350:500;
+            motor[w]=lag?motor[w]+clampf((float)(d.target[w]-motor[w]),(float)(-rate*.01),(float)(rate*.01)):d.target[w];
+        }
+        double dl=motor[0]*.01,dr=motor[1]*.01;
         double angle=(dr-dl)/TRACK_MM,mid=theta+angle*.5,travel=(dl+dr)*.5;
         x+=travel*cos(mid);y+=travel*sin(mid);theta+=angle;
         i.wheel[0]+=dl;i.wheel[1]+=dr;i.path+=(fabs(dl)+fabs(dr))*.5;
-        i.speed[0]=d.target[0];i.speed[1]=d.target[1];i.now+=10000;
+        i.speed[0]=(float)motor[0];i.speed[1]=(float)motor[1];i.now+=10000;
         for(unsigned w=0;w<2;++w) {
             double lateral=w?-5:5;
             bool black=black_at(x+127*cos(theta)-lateral*sin(theta),y+127*sin(theta)+lateral*cos(theta));
@@ -64,6 +68,7 @@ static void kinematic_trial(unsigned size,bool reverse,bool hide_return) {
         if(c.completed) {
             completed=true;assert(nav.uturns==1 && !nav.lefts && !nav.rights && c.turns==1 && !nav.busy && !nav.pending);
             assert(c.turn.turn_degrees>=165 && c.turn.turn_degrees<195 && c.align_ms>=150);
+            assert(c.turn_ms<6500); /* Ideal/lag fixtures, not a physical timing guarantee. */
             assert(fabs(y)<15 && x>0 && theta>2.8 && theta<3.4);
             assert(d.target[0]>=0 && d.target[1]>=0);
         }
@@ -78,7 +83,7 @@ static void kinematic_trial(unsigned size,bool reverse,bool hide_return) {
             if(e->type==B_COMPLETE) {++complete_events;assert(e->code=='Z' && e->action=='U');}
         }
         assert(complete_events==1);
-        printf("U geometry: x=%.1f y=%.1f angle=%.1f travel=%.1f\n",x,y,theta*180/3.141592653589793,i.path);
+        printf("U geometry: x=%.1f y=%.1f angle=%.1f travel=%.1f turn_ms=%u\n",x,y,theta*180/3.141592653589793,i.path,c.turn_ms);
         /* Following the next crossing after reverse travel uses cumulative
          * path for the local manoeuvre and signed positions for its geometry. */
         i.path+=200;i.wheel[0]+=200;i.wheel[1]+=200;i.now+=5000000;
@@ -93,7 +98,7 @@ static void limits_and_saved_record(void) {
     assert(barcode_travel_ticks(INT32_MIN)==2147483648ull && barcode_travel_ticks(0)==0);
     assert(barcode_travel_ticks(100)+barcode_travel_ticks(-100)==200);
     Junction j={.phase=J_TURN};BarcodeUTurn u={0};JunctionInput i={.now=1000};
-    AnalogDemand d=barcode_uturn_step(&u,&j,&cal,&i);assert(d.target[1]==45);
+    AnalogDemand d=barcode_uturn_step(&u,&j,&cal,&i);assert(d.target[1]==U_FORWARD_FAST);
     i.now+=U_SEGMENT_US;d=barcode_uturn_step(&u,&j,&cal,&i);assert(d.stop && j.reason==J_TURN_TIMEOUT);
     j=(Junction){.phase=J_TURN};u=(BarcodeUTurn){0};i=(JunctionInput){.now=1000,.wheel={13,20}};
     d=barcode_uturn_step(&u,&j,&cal,&i);assert(d.stop && j.reason==J_CENTRE_DRIFT);
@@ -105,7 +110,7 @@ static void limits_and_saved_record(void) {
     assert(!levels.a && levels.b==(unsigned)-pwm);
     static BarcodeSaved saved;saved.magic=B_MAGIC;saved.profile=saved.recorded_profile=1;
     saved.calibration=cal;saved.side=(SideCalibration){0,1,3};
-    for(unsigned version=1;version<=11;++version) {
+    for(unsigned version=1;version<=12;++version) {
         saved.version=version;saved.decoded_z=saved.uturns=version>=11?3:0;
         saved.crc=log_crc((const uint8_t *)&saved+offsetof(BarcodeSaved,count),barcode_record_crc_size(version));
         assert(barcode_record_valid(&saved));
@@ -114,7 +119,7 @@ static void limits_and_saved_record(void) {
     assert(barcode_record_crc_size(10)+8==barcode_record_crc_size(11));
 }
 int main(void) {
-    for(unsigned size=0;size<2;++size)for(unsigned rev=0;rev<2;++rev)kinematic_trial(size,rev,false);
-    kinematic_trial(0,false,true);limits_and_saved_record();
-    puts("PASS: complete analogue Z both sizes/directions; queued crossing; 90deg arm ignored; reverse quarter and settled forward rejoin; original-line geometry; missing-return/time/drift rejection; signed PWM; next junction after reverse; V1..V11 record integrity.");
+    for(unsigned size=0;size<2;++size)for(unsigned rev=0;rev<2;++rev)kinematic_trial(size,rev,false,false);
+    kinematic_trial(0,false,true,false);kinematic_trial(0,false,false,true);limits_and_saved_record();
+    puts("PASS: complete analogue Z both sizes/directions; queued crossing; 90deg arm ignored; reverse quarter and settled forward rejoin; original-line geometry; missing-return/time/drift rejection; signed PWM; next junction after reverse; V1..V12 record integrity.");
 }

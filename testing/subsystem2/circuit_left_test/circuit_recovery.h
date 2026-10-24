@@ -131,13 +131,16 @@ static inline AnalogDemand circuit_line_demand(CircuitTracker *t,const LineCalib
             /* A short worn gap still uses the proven bridge below. Once the
                gap persists, replace a one-direction timeout with alternating
                rolling searches; weak flashes do not restart this budget. */
-            if(elapsed>=LS_CONFIRM_US || t->search.active) {
+            if(line_search_ready(&t->search,now,d.level[0],d.level[1])) {
                 if(!t->search.active) line_search_begin(&t->search,now,mm,s->recovery);
                 LineSearchDemand seek=line_search_step(&t->search,now,mm,t->reacquire_timing);
                 if(seek.reason) { t->loss_reason=seek.reason;d.stop=true;d.decision=AL_LOST;return d; }
                 d.target[0]=seek.target[0];d.target[1]=seek.target[1];
                 d.decision=(uint8_t)(LS_DECISION_FIRST+seek.stage);return d;
             }
+            /* Barcode V12: after the short gap bridge, coast while the
+               continuous-white timer runs instead of pivoting for2s. */
+            if(elapsed>=LS_BRIDGE_US && strongest<200)return d;
             /* With no direction history, wait for the short confirmation
                rather than inventing a turn before the first sweep begins. */
             if(!s->recovery && !t->straight_recovery) return d;

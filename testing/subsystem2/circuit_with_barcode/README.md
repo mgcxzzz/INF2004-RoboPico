@@ -1,6 +1,6 @@
-# Circuit with barcode V11: A left, F right, Z U-turn
+# Circuit with barcode V12: A left, F right, Z U-turn
 
-Use firmware/buddy23_circuit_with_barcode_v11.uf2 on the same Pico W.
+Use firmware/buddy23_circuit_with_barcode_v12.uf2 on the same Pico W.
 For the Z trial select profile1, retaining the V9 smoothing and motor settings
 that successfully read A and F. Existing profile2 ramp experiment and
 profile3 remain available; ramp work is paused and not needed for this test.
@@ -17,6 +17,50 @@ from a partial pattern. All29 elements, valid start/data/stop and agreement of
 two neighbouring ADC thresholds are required. The next command replaces an
 older unexecuted supported command. Unknown/ambiguous reads never force a turn.
 
+## V12 faster turn and stronger recovery
+
+| Demand | V11 | V12 |
+|---|---|---|
+| U-turn forward quarter |45 then30mm/s|90/55/35mm/s, taper at60/82 degrees|
+| U-turn reverse quarter |35 then25mm/s|80/45/30mm/s, taper at150/170 degrees|
+| Measured-still pause |200ms|120ms, still requires both speeds below5mm/s|
+| Rolling search |45mm/s,30 while confirming|90mm/s,45 while confirming|
+| U-turn/search PWM |42% sustained;48% turn-only start|60% sustained;75% bounded start|
+
+The dedicated physical-PWM controller applies ONLY to Z turning and active
+search wheels. It uses300mm/s^2 acceleration,700mm/s^2 reference deceleration,
+Kp2.2/Ki6 and anti-windup. A start pulse ends at180ms or when measured along
+speed reaches min(50mm/s,80% of target), whichever occurs first. No extra20%
+multiplier is applied. The independent1ms ISR enforces the same750/600 limits.
+
+Ordinary visible-line following, smoothing, A/F decoding and left/right turn
+power remain unchanged. Z turn geometry and optical completion remain as V11.
+These higher demands still require physical tuning under scraping/slip.
+
+### Both-white recovery
+
+During ordinary following or outgoing-line alignment:
+
+- The first150ms keeps the existing short-gap bridge when direction is known.
+- After that, both-white readings command coast while a continuous2s white
+  interval is confirmed. The robot remains active and can reacquire earlier.
+- Both levels below150/1000 start the timer;150..199 is a hysteresis band;
+  either level reaching200 resets the pre-search timer. Confirmed line return
+  uses the existing40/80/120ms confidence bands.
+- Once2s is reached, alternate rolling left/right arcs. Start toward the last
+  reliable line side; no history starts left. Stage times remain350/700/1050/
+  1400/1750ms. Drive the outer wheel at90, lowering to45 while confirming a
+  return. The other output remains OFF. Search never reverses a wheel.
+- A search is bounded to5.25s or300mm accumulated travel. Brief flashes cannot
+  restart that active-search budget. Confirmed return resumes V9 smoothing.
+- Outgoing alignment now allows9s/360mm so the2s wait and a full search fit.
+  Expected white during a planned Z turn does not start ordinary recovery;
+  its own angle/time/line-confirmation limits still apply.
+
+j adds RECOVERY_WAIT(width=ms), RECOVERY_SWEEP(width=mm/s,flags=stage1..5),
+RECOVERY_FOUND and RECOVERY_FAILED(width=reason). This makes the wait and
+search visible without requiring the long p dump.
+
 ## How the U-turn works
 
 The first half reuses rolling approach geometry: the front-to-axle/offset
@@ -27,7 +71,7 @@ at the barcode or after an assumed barcode-to-junction distance.
 
 1. Right wheel forward, left OFF, to approximately90 degrees of encoder yaw.
    The crossing branch near90 degrees is deliberately ignored.
-2. Both outputs OFF; wait until measured speeds are below5mm/s for200ms.
+2. Both outputs OFF; wait until measured speeds are below5mm/s for120ms.
 3. Left wheel reverse, right OFF, continuing the same leftward yaw toward180.
    Slow the reverse wheel near the expected return line.
 4. Require prior departure from the old line,165..195 degrees of encoder yaw,
@@ -41,21 +85,20 @@ to the original longitudinal line under ideal no-slip geometry. It involves
 forward and reverse rolling arcs, so it needs clear floor around the junction.
 It does not counter-rotate both powered wheels while stationary.
 
-U-turn targets are right45 then30mm/s on the first quarter and left-35 then
--25mm/s on the reverse quarter, independent of faster profile settings.
-Existing turn power remains42% sustained/48% bounded start; no ramp boost is
-used during the junction. Signed output is enabled only for Z turning.
+V12 U-turn target tiers and power are listed above, independent of faster
+profile settings. Signed output is enabled only for Z turning. The ramp
+controller remains disabled during every junction manoeuvre.
 
 Stationary-wheel drift is limited to12mm, active-wheel travel to220mm per
 quarter, each quarter to8s and the turning/settling sequence to18s. Settle
-phases allow2s. Missing return line by195 degrees faults. The existing6s
+phases allow2s. Missing return line by195 degrees faults. The V12 9s/360mm
 outgoing alignment window and manual/USB/control/direction/invalid checks
 remain. Physical slip/drag can still require tuning; no IMU is assumed.
 
 ## Test with profile1
 
-1. Keep the mounting, wiring and saved front calibration. Flash V11, press h
-   and verify the V11 banner and valid=1. Select1, then k to retain that profile.
+1. Keep the mounting, wiring and saved front calibration. Flash V12, press h
+   and verify the V12 banner and valid=1. Select1, then k to retain that profile.
 2. Put a complete Z barcode beside a straight leading to the cross, in the
    same position used by A/F. Start the offset sensor roughly20mm before it.
 3. Start with g over USB for a2s countdown, or use the usual power-bank
@@ -80,8 +123,7 @@ Front-only w=both white,l=left black,r=right black,k=save. Keep a working saved
 calibration rather than recapturing just for this firmware. Minimum span is50.
 Barcode A0 has no manual calibration. Its63-bank search retains coarse
 128..3968/128 with +/-32 hysteresis and fine192..254/2 with +/-3 hysteresis,
-2ms confirmation and black-high polarity. Smoothing/speeds are unchanged from
-V9 for profile1. Profile2 retains V10's180mm/s experimental ramp controller;
+2ms confirmation and black-high polarity. Ordinary visible-line smoothing and cruising retain V9 for profile1. Profile2 retains V10's180mm/s experimental ramp controller;
 profile3 remains135mm/s stable cruising. Scanning/pending approach uses45.
 
 ## Logs, distance and storage
@@ -103,8 +145,8 @@ whole-run travelled-distance metric. Subsequent junctions use cumulative path
 and relative signed wheel geometry consistently.
 
 The main record appends8 bytes for Z/U counters: old64840-byte V1..V10 prefixes
-and trace56/turn-summary40 layouts remain byte-compatible; V11 is64848 bytes.
-CRC length depends on version. V1..V10 calibration/logs still load; unknown12
+and trace56/turn-summary40 layouts remain byte-compatible; V11/V12 use64848 bytes.
+CRC length depends on version. V1..V10 calibration/logs still load; unknown13
 rejects. Main bank remains0x101d0000. Raw record/address is unchanged at
 0x101b0000, separate from probe calibration0x101c0000/0x101c1000.
 
@@ -114,6 +156,6 @@ RAW_ADC_BEGIN/END counts and CRC. Wait for the footer and send a full PuTTY
 logging file if raw analysis is needed. full=1 means later run samples were
 omitted. matches_motion checks capture identity. No raw rows are overwritten.
 
-See BUILD_V11.md for build/test evidence. V11 has software and kinematic test
-coverage; physical Z U-turn success is not yet claimed. Historical V9/V10
-behaviour and build manifests remain in BUILD_V9.md and BUILD_V10.md.
+See BUILD_V12.md for build/test evidence. V12 has software and kinematic test
+coverage; physical fast U-turn/recovery success is not yet claimed. Historical
+build manifests remain in BUILD_V9.md, BUILD_V10.md and BUILD_V11.md.

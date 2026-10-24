@@ -30,6 +30,26 @@ static inline void barcode_nav_begin(BarcodeNav *n,const CircuitInput *i) {
     *n=(BarcodeNav){.start_us=i->now};
     barcode_reader_reset(&n->reader,i->side_black,i->now,(i->wheel[0]+i->wheel[1])*.5);
 }
+static inline void barcode_recovery_events(BarcodeNav *n,uint64_t now,double position,
+                                           bool was_white,bool was_waiting,bool was_search,unsigned previous_decision,
+                                           const CircuitTracker *t,const AnalogDemand *d,unsigned reason) {
+#ifdef CIRCUIT_SWEEP_SEARCH
+    if(!was_waiting && !was_search && t->search.waiting)
+        barcode_event(n,B_RECOVERY_WAIT,now,position,LS_CONFIRM_US/1000,0,'-',0,NULL);
+    if(t->search.active && (!was_search || d->decision!=previous_decision) &&
+       d->decision>=LS_DECISION_FIRST && d->decision<LS_DECISION_FIRST+5) {
+        int speed=d->target[0]>d->target[1]?d->target[0]:d->target[1];
+        barcode_event(n,B_RECOVERY_SWEEP,now,position,speed,0,d->target[1]>d->target[0]?'L':'R',
+                      d->decision-LS_DECISION_FIRST+1,NULL);
+    }
+    if(!d->stop && was_white && !t->core.white)
+        barcode_event(n,B_RECOVERY_FOUND,now,position,0,0,'-',was_search?1:0,NULL);
+    if(d->stop && was_search)barcode_event(n,B_RECOVERY_FAIL,now,position,reason,0,'-',0,NULL);
+#else
+    (void)n;(void)now;(void)position;(void)was_white;(void)was_waiting;(void)was_search;
+    (void)previous_decision;(void)t;(void)d;(void)reason;
+#endif
+}
 static inline char barcode_action(char code) {
     return code=='A'?'L':code=='F'?'R':code=='Z'?'U':'-';
 }

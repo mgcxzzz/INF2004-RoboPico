@@ -49,8 +49,14 @@ static inline AnalogDemand circuit_join(Circuit *c,const LineCalibration *cal,co
     Junction *j=&c->turn;
     AnalogDemand d=circuit_line_demand(&c->joining,cal,i->adc[0],i->adc[1],i->now,(uint32_t)i->path);
     j->turn_degrees=j_rotation(j,i);
-    if(i->now-j->phase_us>=J_ALIGN_US) j_fail(j,J_ALIGN_TIMEOUT);
-    else if(i->path-j->exit_origin>=J_ALIGN_MM) j_fail(j,J_BRANCH_MISSING);
+    uint64_t alignment_limit=J_ALIGN_US;
+    float alignment_distance=J_ALIGN_MM;
+#ifdef CIRCUIT_SWEEP_SEARCH
+    alignment_limit=LS_ALIGN_US; /* Covers2s white confirmation plus a full search. */
+    alignment_distance=LS_ALIGN_MM;
+#endif
+    if(i->now-j->phase_us>=alignment_limit) j_fail(j,J_ALIGN_TIMEOUT);
+    else if(i->path-j->exit_origin>=alignment_distance) j_fail(j,J_BRANCH_MISSING);
     else if(d.stop) j_fail(j,c->joining.loss_reason?c->joining.loss_reason:J_LINE_LOST);
     bool visible=d.level[0]>=400 || d.level[1]>=400;
     if(!visible) c->join_timing=false;

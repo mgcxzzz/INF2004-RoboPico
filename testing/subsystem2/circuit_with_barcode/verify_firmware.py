@@ -2,7 +2,7 @@ from pathlib import Path
 import hashlib
 import struct
 root=Path(__file__).resolve().parent
-artifact=root/'firmware/buddy23_circuit_with_barcode_v11.uf2'
+artifact=root/'firmware/buddy23_circuit_with_barcode_v12.uf2'
 data=artifact.read_bytes();assert data and len(data)%512==0
 count=len(data)//512;payload=bytearray()
 for n in range(count):
@@ -12,10 +12,10 @@ for n in range(count):
     assert struct.unpack_from('<I',block,508)[0]==0x0AB16F30
     assert address==0x10000000+n*256 and address+size<=0x101b0000
     payload.extend(block[32:32+size])
-for marker in [b'BUDDY23 CIRCUIT WITH BARCODE v11',b'BARCODE_EVENTS:',b'CIRCUIT WITH BARCODE v%u:',b'decoded_A=',b'Code39',b'BAD_FRAME flags:',b'AUTO ANALOG GP27',b'ANALOG_CANDIDATE',b'ANALOG_SELECT',b'MOTION_DUMP_END:',b'min_span=',b'five alternating350/700/1050/1400/1750ms sweeps',b'five rolling sweeps exhausted',b'optical_start_gate=OFF',b'V8 barcode sensitivity:63 thresholds',b'RAW_ADC_BEGIN:',b'RAW_ADC_END:',b'V9 smooth visible-line steering:',b'V10 PROFILE2 RAMP:',b'RAMP2: straight_target_mm_s=180',b'V11 Z queues U-turn',b'UTURN_STAGE',b'decoded_Z=']:
+for marker in [b'BUDDY23 CIRCUIT WITH BARCODE v12',b'BARCODE_EVENTS:',b'CIRCUIT WITH BARCODE v%u:',b'decoded_A=',b'Code39',b'BAD_FRAME flags:',b'AUTO ANALOG GP27',b'ANALOG_CANDIDATE',b'ANALOG_SELECT',b'MOTION_DUMP_END:',b'min_span=',b'five alternating350/700/1050/1400/1750ms sweeps',b'five rolling sweeps exhausted',b'optical_start_gate=OFF',b'V8 barcode sensitivity:63 thresholds',b'RAW_ADC_BEGIN:',b'RAW_ADC_END:',b'V9 smooth visible-line steering:',b'V10 PROFILE2 RAMP:',b'RAMP2: straight_target_mm_s=180',b'V11 Z queues U-turn',b'UTURN_STAGE',b'decoded_Z=',b'V12 faster Z:',b'RECOVERY_SWEEP',b'RECOVERY_WAIT',b'RECOVERY_FOUND']:
     assert marker in payload,marker
 assert b'smooth proportional line steering' not in payload
-built=root/'build/buddy23_circuit_with_barcode_v11.uf2'
+built=root/'build/buddy23_circuit_with_barcode_v12.uf2'
 assert not built.exists() or built.read_bytes()==data
 print(f'PASS: {count} RP2040 blocks; end=0x{0x10000000+len(payload):08x}; barcode/baseline records preserved')
 print(f'bytes={len(data)} sha256={hashlib.sha256(data).hexdigest()}')
@@ -43,3 +43,6 @@ print("PASS: V9 UF2 unchanged")
 
 assert hashlib.sha256((root/"firmware/buddy23_circuit_with_barcode_v10.uf2").read_bytes()).hexdigest()=="18aba75df836187437c3cd7adff2ab01e682d679173f14900ce88986b603cf05"
 print("PASS: V10 UF2 unchanged")
+
+assert hashlib.sha256((root/"firmware/buddy23_circuit_with_barcode_v11.uf2").read_bytes()).hexdigest()=="c01b659635489fa5e503c4317f3ecb23fcb781bd7e4af651f883d3b02dfc70c7"
+print("PASS: V11 UF2 unchanged")
