@@ -2,12 +2,14 @@
 #define BARCODE_NAV_H
 #include "../circuit_left_test/circuit_logic.h"
 #include "barcode_scan.h"
+#include "uturn_logic.h"
 
 enum { B_CROSS_MIN_MM=11,B_CROSS_MAX_MM=30,B_CROSS_WHITE_MM=4,B_SIDE_AHEAD_MM=92,B_EDGE_FAILURE=46 };
 typedef struct {
     BarcodeReader reader;BarcodeEvent events[B_EVENTS];
     uint32_t event_count,event_head,event_overwritten,event_sequence;
-    uint32_t decoded_a,decoded_f,unsupported,rejected,lefts,rights,straight_crosses;
+    uint32_t decoded_a,decoded_f,unsupported,rejected,lefts,rights,straight_crosses,decoded_z,uturns;
+    BarcodeUTurn uturn;
     uint64_t start_us,leading_us,cross_us;
     double leading_wheel[2],cross_wheel[2],cross_width,cross_trailing_mm;
     bool leading_gate,cross_gate,cross_ready,cross_candidate,busy,allow_cross;
@@ -28,10 +30,20 @@ static inline void barcode_nav_begin(BarcodeNav *n,const CircuitInput *i) {
     *n=(BarcodeNav){.start_us=i->now};
     barcode_reader_reset(&n->reader,i->side_black,i->now,(i->wheel[0]+i->wheel[1])*.5);
 }
+static inline char barcode_action(char code) {
+    return code=='A'?'L':code=='F'?'R':code=='Z'?'U':'-';
+}
+static inline void barcode_queue_code(BarcodeNav *n,char code) {
+    n->last_code=code;
+    if(code=='A') {++n->decoded_a;n->pending=code;}
+    else if(code=='F') {++n->decoded_f;n->pending=code;}
+    else if(code=='Z') {++n->decoded_z;n->pending=code;}
+    else ++n->unsupported;
+}
 static inline void barcode_cross_confirm(BarcodeNav *n,uint64_t now,double mm,bool white) {
     if(n->cross_candidate && white && mm-n->cross_trailing_mm>=B_CROSS_WHITE_MM) {
         n->cross_candidate=false;n->cross_ready=true;
-        barcode_event(n,B_CROSS,now,mm,n->cross_width,n->pending,n->pending=='A'?'L':n->pending=='F'?'R':'-',0,NULL);
+        barcode_event(n,B_CROSS,now,mm,n->cross_width,n->pending,barcode_action(n->pending),0,NULL);
     }
 }
 static inline void barcode_nav_edge(BarcodeNav *n,uint64_t now,const double wheel[2],bool black) {
@@ -53,11 +65,8 @@ static inline void barcode_nav_edge(BarcodeNav *n,uint64_t now,const double whee
     if(r.events&(1u<<B_FRAME_START)) barcode_event(n,B_FRAME_START,now,mm,mm-r.start,0,0,n->reader.reverse,NULL);
     if(r.events&(1u<<B_BAD_FRAME)) { ++n->rejected;barcode_event(n,B_BAD_FRAME,now,mm,mm-r.start,'?',0,r.rejection,r.pattern); }
     if(r.events&(1u<<B_DECODE)) {
-        n->last_code=r.code;
-        if(r.code=='A') { ++n->decoded_a;n->pending='A'; }
-        else if(r.code=='F') { ++n->decoded_f;n->pending='F'; }
-        else ++n->unsupported;
-        barcode_event(n,B_DECODE,now,mm,mm-r.start,r.code,r.code=='A'?'L':r.code=='F'?'R':'-',r.reverse,r.pattern);
+        barcode_queue_code(n,r.code);
+        barcode_event(n,B_DECODE,now,mm,mm-r.start,r.code,barcode_action(r.code),r.reverse,r.pattern);
     }
     /* A complete barcode is required before queuing a route command. Frame
        context protects its bars, even when they are wider than the cross.
@@ -67,7 +76,7 @@ static inline void barcode_nav_edge(BarcodeNav *n,uint64_t now,const double whee
         n->cross_width=r.width;n->cross_us=n->leading_us;
         memcpy(n->cross_wheel,n->leading_wheel,sizeof(n->cross_wheel));
         n->cross_gate=n->leading_gate;n->cross_candidate=true;n->cross_trailing_mm=mm;
-        barcode_event(n,B_CROSS_CANDIDATE,now,mm,r.width,n->pending,n->pending=='A'?'L':n->pending=='F'?'R':'-',0,NULL);
+        barcode_event(n,B_CROSS_CANDIDATE,now,mm,r.width,n->pending,barcode_action(n->pending),0,NULL);
     }
 }
 static inline void barcode_mirror_tracker(CircuitTracker *t) {
@@ -127,9 +136,10 @@ static inline AnalogDemand barcode_circuit_step(Circuit *c,BarcodeNav *n,const L
                 ++c->ignored;barcode_event(n,B_GATE_REJECT,i->now,mean,n->cross_width,n->pending,0,0,NULL);
             } else {
                 n->action=n->pending;n->pending=0;n->busy=c->busy=true;
+                n->uturn=(BarcodeUTurn){0};
                 c->cruise_timing=c->fast=false;c->edge_us=n->cross_us;
                 memcpy(c->edge_wheel,n->cross_wheel,sizeof(c->edge_wheel));
-                c->edge_path=(n->cross_wheel[0]+n->cross_wheel[1])*.5;
+                c->edge_path=i->path-(mean-(n->cross_wheel[0]+n->cross_wheel[1])*.5);
                 JunctionInput begin={.now=i->now,.side_black=false};j_begin_mode(&c->turn,3,&begin);
                 c->turn.phase=J_CENTRE;c->turn.striped=true;c->turn.side_armed=true;
                 c->turn.leading_mm=0;c->turn.trailing_mm=(float)n->cross_width;
@@ -137,7 +147,7 @@ static inline AnalogDemand barcode_circuit_step(Circuit *c,BarcodeNav *n,const L
                 c->turn.approach_heading=0;
                 c->follow_ms=(uint32_t)((c->edge_us-c->leg_since)/1000);
                 c->centre_ms=c->turn_ms=c->align_ms=0;
-                barcode_event(n,B_DISPATCH,i->now,mean,n->cross_width,n->action,n->action=='A'?'L':'R',0,NULL);
+                barcode_event(n,B_DISPATCH,i->now,mean,n->cross_width,n->action,barcode_action(n->action),0,NULL);
                 barcode_reader_reset(&n->reader,i->side_black,i->now,mean);
             }
         }
@@ -151,8 +161,12 @@ static inline AnalogDemand barcode_circuit_step(Circuit *c,BarcodeNav *n,const L
     unsigned before=c->turn.phase;uint64_t phase_start=c->turn.phase_us;c->cruise_timing=false;
     if(before==J_ACQUIRE) d=circuit_join(c,&virtual_cal,&local);
     else {
-        d=junction_step(&c->turn,&virtual_cal,&local);
-        if(before==J_TURN && c->turn.phase==J_ACQUIRE) {
+        unsigned stage=n->uturn.stage;
+        d=n->action=='Z'?barcode_uturn_step(&n->uturn,&c->turn,&virtual_cal,&local):
+            junction_step(&c->turn,&virtual_cal,&local);
+        if(n->action=='Z' && stage!=n->uturn.stage)
+            barcode_event(n,B_UTURN_STAGE,i->now,mean,c->turn.turn_degrees,'Z','U',n->uturn.stage,NULL);
+        if((before==J_TURN || (n->action=='Z' && before==J_TURN_SETTLE)) && c->turn.phase==J_ACQUIRE) {
             c->join_timing=false;c->joining=(CircuitTracker){.core=c->turn.follower};
             d=circuit_join(c,&virtual_cal,&local);
         }
@@ -162,21 +176,22 @@ static inline AnalogDemand barcode_circuit_step(Circuit *c,BarcodeNav *n,const L
         c->centre_ms=(uint16_t)((i->now-phase_start)/1000);
         if(fabsf(i->speed[0])>65 || fabsf(i->speed[1])>65) circuit_fail(c,C_APPROACH_FAST);
     }
-    if(before==J_TURN && c->phase==J_ACQUIRE) c->turn_ms=(uint16_t)((i->now-phase_start)/1000);
+    if((before==J_TURN || (n->action=='Z' && before==J_TURN_SETTLE)) && c->phase==J_ACQUIRE)
+        c->turn_ms=(uint16_t)((i->now-(n->action=='Z'?n->uturn.since:phase_start))/1000);
     if(before==J_ACQUIRE && c->phase==J_EXIT) {
         c->align_ms=(uint16_t)((i->now-phase_start)/1000);++c->turns;c->completed=true;
-        if(right) ++n->rights;else ++n->lefts;
+        if(n->action=='Z') ++n->uturns;else if(right) ++n->rights;else ++n->lefts;
         c->busy=n->busy=false;c->phase=C_FOLLOW;c->gate_timing=c->white_timing=false;
         n->allow_cross=false;c->clear_path=i->path+C_CLEAR_MM;c->leg_since=i->now;
         c->follower=c->joining;if(right) barcode_mirror_tracker(&c->follower);
         c->follow_path=i->path;
-        barcode_event(n,B_COMPLETE,i->now,mean,c->turn.turn_degrees,n->action,right?'R':'L',0,NULL);
+        barcode_event(n,B_COMPLETE,i->now,mean,c->turn.turn_degrees,n->action,barcode_action(n->action),0,NULL);
         barcode_reader_reset(&n->reader,i->side_black,i->now,mean);
         return circuit_follow(c,cal,i,profile);
     }
     if(c->phase==J_CENTRE) {
         for(unsigned w=0;w<2;++w) if(d.target[w]>0) d.target[w]+=(int16_t)((profile-1)*5);
-    } else if(c->phase==J_TURN && d.target[1]>0)
+    } else if(n->action!='Z' && c->phase==J_TURN && d.target[1]>0)
         d.target[1]=(int16_t)(d.target[1]+(profile-1)*(d.target[1]>=45?10:5));
     if(right) {
         int16_t speed=d.target[0];d.target[0]=d.target[1];d.target[1]=speed;

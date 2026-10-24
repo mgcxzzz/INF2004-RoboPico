@@ -42,8 +42,8 @@ static void capture_case(char code,double narrow,double ratio,bool reverse,unsig
         assert(!n.cross_ready); /* stop bars never become junctions */
     }
     if(fault) { assert(!n.pending && !n.decoded_a && !n.decoded_f);return; }
-    if(code=='A' || code=='F') {
-        assert(n.pending==code && n.decoded_a+n.decoded_f==1 && a.selections==1);
+    if(code=='A' || code=='F' || code=='Z') {
+        assert(n.pending==code && n.decoded_a+n.decoded_f+n.decoded_z==1 && a.selections==1);
         assert(a.candidates>=2);
     } else { assert(!n.pending && n.unsupported==1);return; }
     /* Cross is separate, independent of barcode-to-cross distance. */
@@ -114,7 +114,7 @@ int main(void) {
     for(unsigned size=0;size<2;++size) for(unsigned reverse=0;reverse<2;++reverse)
         for(unsigned letter=0;letter<2;++letter) for(unsigned ratio=2;ratio<=3;++ratio)
             capture_case(letter?'F':'A',size?3:1.5,ratio,reverse,0);
-    capture_case('A',3,3,false,1);capture_case('A',3,3,false,2);capture_case('Z',3,3,false,0);
+    capture_case('A',3,3,false,1);capture_case('A',3,3,false,2);capture_case('Z',3,3,false,0);capture_case('Q',3,3,false,0);
     conflict_and_signal_tests();
     for(unsigned profile=1;profile<=3;++profile) driving_simulation(profile);
     puts("PASS: raw ADC A/F both sizes/directions/ratios; changing speed; reduced narrow-bar amplitude; missing-bars/malformed-stop/noise rejection; unsupported code; conflicting votes; distance-qualified cross;4 alternating turns/profile.");

@@ -24,7 +24,7 @@ int main(void) {
         }
         static BarcodeSaved s;s.magic=B_MAGIC;s.version=5;s.profile=s.recorded_profile=1;
         s.calibration=c;s.side=(SideCalibration){0,1,3};
-        s.crc=log_crc((uint8_t *)&s+offsetof(BarcodeSaved,count),sizeof(s)-offsetof(BarcodeSaved,count));
+        s.crc=log_crc((uint8_t *)&s+offsetof(BarcodeSaved,count),barcode_record_crc_size(s.version));
         assert(barcode_record_valid(&s));s.calibration.black[0]--;
         assert(!barcode_record_valid(&s));
     }

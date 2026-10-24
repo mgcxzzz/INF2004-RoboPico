@@ -70,14 +70,11 @@ static inline bool barcode_analog_select(BarcodeAnalog *a,BarcodeNav *n,uint64_t
     if(a->conflict && mm-a->conflict_end<=12) return false;
     a->selected=(uint8_t)winner;const AnalogBank *v=&a->bank[a->selected];
     a->black=v->stable;a->accepted=true;a->accepted_start=v->vote_start;a->accepted_end=v->vote_end;++a->selections;
-    n->cross_candidate=n->cross_ready=false;n->last_code=code;
-    if(code=='A') { ++n->decoded_a;n->pending='A'; }
-    else if(code=='F') { ++n->decoded_f;n->pending='F'; }
-    else ++n->unsupported;
+    n->cross_candidate=n->cross_ready=false;barcode_queue_code(n,code);
     barcode_event(n,B_ANALOG_SELECT,now,mm,barcode_analog_threshold(a->selected),code,
-        code=='A'?'L':code=='F'?'R':'-',a->selected+1,v->pattern);
+        barcode_action(code),a->selected+1,v->pattern);
     barcode_event(n,B_DECODE,now,mm,v->vote_end-v->vote_start,code,
-        code=='A'?'L':code=='F'?'R':'-',0x80u|(a->selected<<1)|v->reverse,v->pattern);
+        barcode_action(code),0x80u|(a->selected<<1)|v->reverse,v->pattern);
     return true;
 }
 static inline void barcode_analog_sample(BarcodeAnalog *a,BarcodeNav *n,uint16_t adc,uint64_t now,const double wheel[2]) {
@@ -150,7 +147,7 @@ static inline void barcode_analog_sample(BarcodeAnalog *a,BarcodeNav *n,uint16_t
             if(width>=B_CROSS_MIN_MM && width<=B_CROSS_MAX_MM) {
                 n->cross_width=width;n->cross_us=n->leading_us;memcpy(n->cross_wheel,n->leading_wheel,sizeof(n->cross_wheel));
                 n->cross_gate=n->leading_gate;n->cross_candidate=true;n->cross_trailing_mm=edge_mm;
-                barcode_event(n,B_CROSS_CANDIDATE,v->candidate_us,edge_mm,width,n->pending,n->pending=='A'?'L':'R',0,NULL);
+                barcode_event(n,B_CROSS_CANDIDATE,v->candidate_us,edge_mm,width,n->pending,barcode_action(n->pending),0,NULL);
             }
         }
     }

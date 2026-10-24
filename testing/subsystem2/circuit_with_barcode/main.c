@@ -34,7 +34,9 @@ static volatile int64_t total_ticks[2],cut_ticks[2];
 static volatile uint32_t initial_invalid[2],cut_invalid[2];
 static volatile int32_t output[2];
 static volatile uint64_t peak_until[2];
-static volatile bool ramp_output[2];
+static volatile bool ramp_output[2],signed_output[2];
+static volatile uint64_t travelled_ticks[2];
+static double restored_distance;
 static RampWheel ramp_wheel[2];
 static LineCalibration calibration;
 static SideCalibration side_cal;
@@ -45,7 +47,7 @@ static SmoothFollow steering;
 static uint16_t side_adc;static uint64_t last_side_sample;static bool status_enabled;
 static uint32_t last_nav_event;
 static uint8_t test_mode=1,recorded_mode=1;
-static uint8_t recorded_version=10;
+static uint8_t recorded_version=11;
 static bool last_fast;
 static CircuitCapture capture;
 static CircuitLoad load;
@@ -78,6 +80,10 @@ static double wheel_mm(unsigned w,int64_t ticks) {
     return (double)ticks*(double)mm_per_tick(w)*(w==0?-1.0:1.0);
 }
 static double path_mm(const int64_t ticks[2]) {
+    if(recorded_version>=11) {
+        uint32_t irq=save_and_disable_interrupts();uint64_t l=travelled_ticks[0],r=travelled_ticks[1];restore_interrupts(irq);
+        return restored_distance+(fabs(wheel_mm(0,(int64_t)l))+fabs(wheel_mm(1,(int64_t)r)))*.5;
+    }
     return (fabs(wheel_mm(0,ticks[0]))+fabs(wheel_mm(1,ticks[1])))*0.5;
 }
 static int32_t trace_mm10(double mm) {
@@ -92,6 +98,7 @@ static void outputs_off(void) {
 static void capture_cutoff(void) {
     for(unsigned w=0;w<2;++w) {
         cut_ticks[w]=total_ticks[w]+enc[w].position;
+        travelled_ticks[w]+=barcode_travel_ticks(enc[w].position);
         cut_invalid[w]=enc[w].invalid-initial_invalid[w];
     }
 }
@@ -114,7 +121,8 @@ static bool safety_tick(struct repeating_timer *t) {
     else for(unsigned w=0;w<2;++w) {
         int32_t capped=barcode_output_cap(output[w],ramp_output[w],peak_until[w],now);
         if(capped!=output[w]) {
-            output[w]=capped;DualLevels v=barcode_output_levels(w,capped,ramp_output[w],true,recorded_mode);
+            output[w]=capped;DualLevels v=signed_output[w]?boosted_junction_levels(w,capped,true):
+                barcode_output_levels(w,capped,ramp_output[w],true,recorded_mode);
             pwm_set_both_levels(pwm_gpio_to_slice_num(ma[w]),v.a,v.b);
         }
     }
@@ -145,8 +153,8 @@ static const char *reason_name(unsigned r) {
     }
 }
 static const char *phase_name(unsigned p) {
-    return p==C_FOLLOW?"circuit follow":p==J_CENTRE?"cross approach":p==J_TURN?(nav.action=='F'?"rolling right":"rolling left"):
-           p==J_ACQUIRE?"align outgoing line":p==J_FAULT?"fault":"idle";
+    return p==C_FOLLOW?"circuit follow":p==J_CENTRE?"cross approach":p==J_TURN?(nav.action=='Z'?"U-turn":nav.action=='F'?"rolling right":"rolling left"):
+           p==J_TURN_SETTLE?"U-turn settle":p==J_ACQUIRE?"align outgoing line":p==J_FAULT?"fault":"idle";
 }
 static bool storage_fits(void) { return (uintptr_t)&__flash_binary_end<=XIP_BASE+RAW_OFFSET; }
 static void load_raw(void) {
@@ -193,6 +201,7 @@ static void load_log(void) {
         summary_count=v->summary_count;summary_head=summary_count%C_SUMMARIES;
         recorded_key=v->key;recorded_offline=v->offline;test_mode=v->profile;recorded_mode=v->recorded_profile;
         recorded_version=(uint8_t)v->version;guard.duration_us=v->duration_us;guard.reason=v->reason;
+        restored_distance=recorded_version>=11?(double)v->path10/10:0;
         for(unsigned w=0;w<2;++w) { cut_ticks[w]=v->ticks[w];cut_invalid[w]=v->invalid[w]; }
         calibration=v->calibration;side_cal=v->side;imported_front=v->imported;
         circuit.turns=v->turns;circuit.ignored=v->ignored;
@@ -200,7 +209,8 @@ static void load_log(void) {
         nav.event_head=nav.event_count%B_EVENTS;nav.event_overwritten=v->event_overwritten;
         nav.decoded_a=v->decoded_a;nav.decoded_f=v->decoded_f;nav.unsupported=v->unsupported;
         nav.rejected=v->rejected;nav.lefts=v->lefts;nav.rights=v->rights;nav.straight_crosses=v->straight_crosses;
-        nav.last_code=(char)v->last_code;flash_loaded=true;
+        nav.last_code=(char)v->last_code;nav.decoded_z=recorded_version>=11?v->decoded_z:0;
+        nav.uturns=recorded_version>=11?v->uturns:0;flash_loaded=true;
         side_cal=(SideCalibration){0,1,3}; /* Legacy record field; no operator side calibration in V4. */
     } else {
         const CircuitSaved *old=(const CircuitSaved *)(XIP_BASE+PICO_FLASH_SIZE_BYTES-2*C_STORE_BYTES);
@@ -225,8 +235,9 @@ static void save_log(void) {
     v->event_count=nav.event_count;v->event_overwritten=nav.event_overwritten;
     v->decoded_a=nav.decoded_a;v->decoded_f=nav.decoded_f;v->unsupported=nav.unsupported;v->rejected=nav.rejected;
     v->lefts=nav.lefts;v->rights=nav.rights;v->straight_crosses=nav.straight_crosses;v->last_code=(uint8_t)nav.last_code;
+    v->decoded_z=nav.decoded_z;v->uturns=nav.uturns;
     for(unsigned n=0;n<nav.event_count;++n) v->events[n]=nav.events[(nav.event_head+B_EVENTS-nav.event_count+n)%B_EVENTS];
-    v->crc=log_crc((const uint8_t *)v+offsetof(BarcodeSaved,count),sizeof(*v)-offsetof(BarcodeSaved,count));
+    v->crc=log_crc((const uint8_t *)v+offsetof(BarcodeSaved,count),barcode_record_crc_size(v->version));
     uint32_t irq=save_and_disable_interrupts();
     flash_range_erase(LOG_OFFSET,C_STORE_BYTES);flash_range_program(LOG_OFFSET,saved.bytes,C_STORE_BYTES);
     restore_interrupts(irq);
@@ -237,21 +248,23 @@ static void save_log(void) {
 static void reset_log(void) {
     trace_count=trace_head=trace_dropped=summary_count=summary_head=0;
     guard.duration_us=0;guard.reason=0;circuit=(Circuit){0};nav=(BarcodeNav){0};
-    for(unsigned w=0;w<2;++w) { cut_ticks[w]=0;cut_invalid[w]=0; }
-    flash_loaded=false;recorded_key='-';recorded_version=10;
+    for(unsigned w=0;w<2;++w) {cut_ticks[w]=0;cut_invalid[w]=0;travelled_ticks[w]=0;}
+    restored_distance=0;
+    flash_loaded=false;recorded_key='-';recorded_version=11;
 }
 static void help(void) {
-    puts("\nBUDDY23 CIRCUIT WITH BARCODE v10 | AUTO ANALOG GP27 | *A* LEFT / *F* RIGHT | motors OFF on boot");
+    puts("\nBUDDY23 CIRCUIT WITH BARCODE v11 | AUTO ANALOG GP27 | *A* LEFT / *F* RIGHT / *Z* U-TURN | motors OFF on boot");
+    puts("V11 Z queues U-turn at next junction: right wheel forward to90deg,settle,left wheel reverse to~180deg,settle,confirm original line then follow. Use profile1;48% turn start/42% turn cap.");
     puts("V10 PROFILE2 RAMP: centred straight180mm/s; per-wheel Kp3.5 Ki10; acceleration400mm/s^2; PWM50% sustained/65% boost<=1500ms after40ms deficit. Profile1 remains V9. Profile3 remains135.");
     puts("V9 smooth visible-line steering: gentle small corrections,60..20ms response,200..600mm/s^2 target slew. Urgent bends/search/junction targets unchanged.");
     puts("V7 rolling line search after150ms loss: five alternating350/700/1050/1400/1750ms sweeps;150mm search limit. Recovery schedule retained.");
     puts("Search starts toward last seen side; no history starts left then alternates. Moving search wheel uses loaded42% cap, no48% search peak.");
     puts("V8 barcode sensitivity:63 thresholds; coarse128..3968/128 and fine192..254/2. Hysteresis coarse+/-32,fine+/-3;2ms debounce;black HIGH.");
-    puts("Need TWO neighbouring thresholds agreeing on complete Code39 *X* frame. Unknown/ambiguous frames never force A/F.");
+    puts("Need TWO neighbouring thresholds agreeing on complete Code39 *X* frame. Unknown/ambiguous frames never force A/F/Z.");
     puts("BARCODE A0 -> GP27/ADC1;GP19/D0 UNUSED. Front A0 GP26/GP28 unchanged;3.3V/common GND.");
-    puts("A/F pending until next separate11..30mm effective cross stripe on a straight; consume command ONCE.");
+    puts("A/F/Z pending until next separate11..30mm effective cross stripe on a straight; consume command ONCE.");
     puts("Cross requires4mm WHITE after trailing edge; a closer next bar cancels the candidate, preserving pending.");
-    puts("No queued command -> continue following. Junction search starts after verified A/F; frame stop bar is excluded.");
+    puts("No queued command -> continue following. Junction search starts after verified A/F/Z; frame stop bar is excluded.");
     puts("Scan/pending approach uses usual45mm/s; unmarked stable cruising profiles1/2/3 request45/180/135 (profile2 is the ramp experiment).");
     puts("Rolling LEFT: left off/right forward. RIGHT: right off/left forward. Side ahead92mm; start55mm before centre.");
     puts("Normal motor caps30% correction,42% loaded/turn,48% turn start. Profile2 ordinary visible-line drive uses ramp limits above. Encoder progress is WARNING ONLY.");
@@ -318,14 +331,15 @@ static void add_summary(uint64_t now,double path) {
         .number=circuit.turns,.follow_ms=circuit.follow_ms,.centre_ms=circuit.centre_ms,
         .turn_ms=circuit.turn_ms,.align_ms=circuit.align_ms,
         .angle10=(int16_t)(circuit.turn.turn_degrees*(nav.action=='F'?-10:10))};
-    entry->code=(uint8_t)nav.action;entry->action=nav.action=='A'?'L':'R';
+    entry->code=(uint8_t)nav.action;entry->action=(uint8_t)barcode_action(nav.action);
     summary_head=(summary_head+1)%C_SUMMARIES;if(summary_count<C_SUMMARIES) ++summary_count;
 }
 static void print_summary(void) {
     int64_t ticks[2]={cut_ticks[0],cut_ticks[1]};double distance=path_mm(ticks),seconds=(double)guard.duration_us/1e6;
-    printf("SUMMARY: total_time_s=%.3f total_distance_mm=%.1f average_speed_mm_s=%.2f completed_turns=%lu lefts=%lu rights=%lu decoded_A=%lu decoded_F=%lu unsupported=%lu bad_frames=%lu straight_crosses=%lu ignored_crosses=%lu invalid_L=%lu invalid_R=%lu\n",
+    printf("SUMMARY: total_time_s=%.3f total_distance_mm=%.1f average_speed_mm_s=%.2f completed_turns=%lu lefts=%lu rights=%lu decoded_A=%lu decoded_F=%lu decoded_Z=%lu uturns=%lu unsupported=%lu bad_frames=%lu straight_crosses=%lu ignored_crosses=%lu invalid_L=%lu invalid_R=%lu\n",
         seconds,distance,seconds>0?distance/seconds:0,(unsigned long)circuit.turns,
         (unsigned long)nav.lefts,(unsigned long)nav.rights,(unsigned long)nav.decoded_a,(unsigned long)nav.decoded_f,
+        (unsigned long)nav.decoded_z,(unsigned long)nav.uturns,
         (unsigned long)nav.unsupported,(unsigned long)nav.rejected,(unsigned long)nav.straight_crosses,
         (unsigned long)circuit.ignored,(unsigned long)cut_invalid[0],(unsigned long)cut_invalid[1]);
     if(recorded_version>=10 && recorded_mode==2) {
@@ -344,6 +358,7 @@ static const char *event_name(unsigned type) {
     case B_CROSS_CANCEL:return "CROSS_CANCEL";
     case B_ANALOG_CANDIDATE:return "ANALOG_CANDIDATE";case B_ANALOG_SELECT:return "ANALOG_SELECT";
     case B_ANALOG_CONFLICT:return "ANALOG_CONFLICT";case B_ANALOG_GAP:return "ANALOG_SAMPLE_GAP";
+    case B_UTURN_STAGE:return "UTURN_STAGE";
     default:return "OTHER";
     }
 }
@@ -355,6 +370,7 @@ static void dump_events(void) {
         puts("BAD_FRAME flags:1=width,2=class separation,4=wide count,8=character gap,16=pattern,32=timeout,64=bad run; values combine. Complete frames show all9-bit patterns.");
     if(recorded_version>=8) puts("ANALOG_CANDIDATE/SELECT width column=ADC threshold,flags=bank1..63; SAMPLE_GAP width=ms. DECODE flags bit7=analogue,bit0=reverse,bits1..6=bank0..62.");
     else if(recorded_version>=4) puts("ANALOG_CANDIDATE/SELECT width column=ADC threshold,flags=bank1..31; SAMPLE_GAP width=ms. DECODE flags bit7=analogue,bit0=reverse,bits1..5=bank0..30.");
+    if(recorded_version>=11) puts("UTURN_STAGE width=rotation_deg;flags1=first90,2=reverse quarter,3=line near180,4=align. Event distance is signed mean-wheel position;SUMMARY distance is accumulated travel.");
     puts("number,ms,distance_mm,event,width_mm,code,action,flags,pattern_start,pattern_data,pattern_stop");
     for(unsigned k=0;k<nav.event_count;++k) {
         BarcodeEvent *e=&nav.events[(nav.event_head+B_EVENTS-nav.event_count+k)%B_EVENTS];
@@ -405,13 +421,13 @@ static bool start_run(unsigned mode) {
     uint64_t now=time_us_64();uint32_t irq=save_and_disable_interrupts();
     bool ok=guard_start(&guard,now,mode!=LINE_USB_HOLD || !gpio_get(HOLD),!gpio_get(STOP));
     if(ok) {
-        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=10;last_fast=false;
+        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=11;last_fast=false;
         barcode_raw_begin(&raw_capture,recorded_mode);raw_new=true;raw_loaded=raw_persisted=raw_save_failed=false;
         capture=(CircuitCapture){0};load=(CircuitLoad){0};steering=(SmoothFollow){0};capture_outer=-1;assist_code=feedback_mask=0;
-        guard.deadline_us=UINT64_MAX;guard.duration_us=0;
+        guard.deadline_us=UINT64_MAX;guard.duration_us=0;restored_distance=0;
         for(unsigned w=0;w<2;++w) {
-            enc[w].position=0;total_ticks[w]=cut_ticks[w]=0;initial_invalid[w]=enc[w].invalid;cut_invalid[w]=0;
-            velocity[w]=0;output[w]=0;peak_until[w]=0;ramp_output[w]=false;
+            enc[w].position=0;total_ticks[w]=cut_ticks[w]=0;travelled_ticks[w]=0;initial_invalid[w]=enc[w].invalid;cut_invalid[w]=0;
+            velocity[w]=0;output[w]=0;peak_until[w]=0;ramp_output[w]=signed_output[w]=false;
             ramp_wheel[w]=(RampWheel){0};controller[w]=(SignedWheel){0};
             bad_direction_us[w]=0;feedback[w]=(CircuitFeedback){0};
         }
@@ -438,7 +454,7 @@ static void control_step(uint64_t now) {
     uint32_t irq=save_and_disable_interrupts();bool active=guard.active;uint32_t generation=guard.generation;
     BenchEncoder e[2]={enc[0],enc[1]};int64_t ticks[2];
     for(unsigned w=0;w<2;++w) {
-        enc[w].position=0;if(active) total_ticks[w]+=e[w].position;ticks[w]=total_ticks[w];
+        enc[w].position=0;if(active) {total_ticks[w]+=e[w].position;travelled_ticks[w]+=barcode_travel_ticks(e[w].position);}ticks[w]=total_ticks[w];
     }
     restore_interrupts(irq);float dt=(float)elapsed/1e6f;
     for(unsigned w=0;w<2;++w) velocity[w]+=0.25f*(raw_to_mm(w,e[w].position)/dt-velocity[w]);
@@ -448,11 +464,11 @@ static void control_step(uint64_t now) {
         .side_black=side_analog.black};
     unsigned previous_phase=circuit.phase;
     demand=barcode_drive_step(&circuit,&nav,&calibration,&input,recorded_mode,&steering,dt);
-    if(previous_phase==J_TURN && circuit.phase==J_ACQUIRE) circuit_capture_begin(&capture,now,input.path);
+    if((previous_phase==J_TURN || (nav.action=='Z' && previous_phase==J_TURN_SETTLE)) && circuit.phase==J_ACQUIRE) circuit_capture_begin(&capture,now,input.path);
     if(circuit.completed) add_summary(now,input.path);
     uint8_t failure=demand.stop?circuit.reason:WHY_NONE;int32_t next[2];
     bool turning=circuit.phase==J_TURN && ((demand.target[0]==0 && demand.target[1]>0) ||
-                                                         (demand.target[1]==0 && demand.target[0]>0));
+                                                         (demand.target[1]==0 && demand.target[0]!=0));
     bool ramp_drive=ramp_profile_active(recorded_mode,&circuit,&demand);
     unsigned wheel_profile=circuit.fast?recorded_mode:1;
     unsigned previous_assist=assist_code;
@@ -475,7 +491,7 @@ static void control_step(uint64_t now) {
             ramp_wheel_leave(&ramp_wheel[w],&controller[w],demand.target[w]);
             next[w]=circuit_wheel_step(&controller[w],w,demand.target[w],velocity[w],dt,now,loaded[w],wheel_profile);
         }
-        bad_direction_us[w]=demand.target[w]>0 && velocity[w]<-20?bad_direction_us[w]+elapsed:0;
+        bad_direction_us[w]=demand.target[w]!=0 && velocity[w]*(demand.target[w]>0?1:-1)<-20?bad_direction_us[w]+elapsed:0;
         if(bad_direction_us[w]>=50000) failure=WHY_DIRECTION;
         /* User-requested V5 behavior: retain diagnostic evidence but do not
            stop driving solely because the encoder-progress window expires. */
@@ -489,10 +505,11 @@ static void control_step(uint64_t now) {
         if(failure) kill(now,failure);
         else {
             for(unsigned w=0;w<2;++w) {
-                ramp_output[w]=ramp_drive;
+                ramp_output[w]=ramp_drive;signed_output[w]=nav.action=='Z' && circuit.phase==J_TURN;
                 peak_until[w]=ramp_drive?ramp_wheel[w].boost_until:turning?controller[w].peak_end_us:0;
                 output[w]=barcode_output_cap(next[w],ramp_output[w],peak_until[w],time_us_64());
-                DualLevels v=barcode_output_levels(w,output[w],ramp_output[w],loaded[w],wheel_profile);
+                DualLevels v=signed_output[w]?boosted_junction_levels(w,output[w],true):
+                    barcode_output_levels(w,output[w],ramp_output[w],loaded[w],wheel_profile);
                 pwm_set_both_levels(pwm_gpio_to_slice_num(ma[w]),v.a,v.b);
             }
             guard.last_control_us=now;
@@ -633,7 +650,7 @@ int main(void) {
             uint64_t duration=guard.active?now-guard.start_us:guard.duration_us;
             restore_interrupts(irq);
             double distance=path_mm(status_ticks);
-            printf("BARCODE_CIRCUIT: ms=%" PRIu64 " profile=%u phase=%u(%s) active=%u distance_mm=%.1f speed_mm_s=%.1f avg_mm_s=%.1f wheel_mm_s=%.1f,%.1f targets=%d,%d PWM=%ld,%ld ADC=%u,%u levels=%u,%u side=%u turns=%lu assist=%d memory=%u recovery=%u reacquire=%u feedback=%u arm=%u ready=%u pending=%u runs=%lu barcode=%c queued=%c action=%c scan=%u decoded_A=%lu decoded_F=%lu lefts=%lu rights=%lu edge_overflow=%lu\n",
+            printf("BARCODE_CIRCUIT: ms=%" PRIu64 " profile=%u phase=%u(%s) active=%u distance_mm=%.1f speed_mm_s=%.1f avg_mm_s=%.1f wheel_mm_s=%.1f,%.1f targets=%d,%d PWM=%ld,%ld ADC=%u,%u levels=%u,%u side=%u turns=%lu assist=%d memory=%u recovery=%u reacquire=%u feedback=%u arm=%u ready=%u pending=%u runs=%lu barcode=%c queued=%c action=%c scan=%u decoded_A=%lu decoded_F=%lu decoded_Z=%lu uturns=%lu lefts=%lu rights=%lu edge_overflow=%lu\n",
                 duration/1000,test_mode,circuit.phase,phase_name(circuit.phase),guard.active,distance,
                 (double)(velocity[0]+velocity[1])*0.5,duration?distance/((double)duration/1e6):0,
                 (double)velocity[0],(double)velocity[1],guard.active?demand.target[0]:0,guard.active?demand.target[1]:0,
@@ -643,8 +660,9 @@ int main(void) {
                 (unsigned long)circuit.turns,guard.active?(int)assist_code:0,
                 circuit_memory(current_tracker(),now),current_tracker()->core.white,
                 current_tracker()->reacquire_timing,feedback_mask,arm.state,rearm.ready,usb_pending,(unsigned long)runs,
-                nav.last_code?nav.last_code:'-',nav.pending?nav.pending:'-',nav.busy?(nav.action=='A'?'L':'R'):'-',nav.external_scanning,
-                (unsigned long)nav.decoded_a,(unsigned long)nav.decoded_f,(unsigned long)nav.lefts,(unsigned long)nav.rights,
+                nav.last_code?nav.last_code:'-',nav.pending?nav.pending:'-',nav.busy?barcode_action(nav.action):'-',nav.external_scanning,
+                (unsigned long)nav.decoded_a,(unsigned long)nav.decoded_f,(unsigned long)nav.decoded_z,(unsigned long)nav.uturns,
+                (unsigned long)nav.lefts,(unsigned long)nav.rights,
                 0ul);
             printf("ANALOG: ADC=%u selected_threshold=%u candidates=%lu selections=%lu max_gap_us=%lu gaps_over10ms=%lu\n",
                 side_adc,barcode_analog_threshold(side_analog.selected),(unsigned long)side_analog.candidates,(unsigned long)side_analog.selections,

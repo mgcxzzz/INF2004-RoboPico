@@ -29,7 +29,7 @@ static void measured_frame(char code,bool reverse,bool missing) {
     else {
         assert(n.last_code==code && a.candidates>=2 && a.selections==1);
         assert(a.selected>=1 && a.selected<=32);
-        if(code=='A' || code=='F') assert(n.pending==code && n.decoded_a+n.decoded_f==1);
+        if(code=='A' || code=='F' || code=='Z') assert(n.pending==code && n.decoded_a+n.decoded_f+n.decoded_z==1);
         else assert(!n.pending && n.unsupported==1);
     }
 }
@@ -44,7 +44,7 @@ int main(void) {
     assert(barcode_analog_hysteresis(11)==3);
     assert(barcode_analog_log_threshold(7,15)==2048 && barcode_analog_log_threshold(8,11)==212);
     for(unsigned rev=0;rev<2;++rev) {
-        measured_frame('A',rev,false);measured_frame('F',rev,false);measured_frame('Z',rev,false);
+        measured_frame('A',rev,false);measured_frame('F',rev,false);measured_frame('Z',rev,false);measured_frame('Q',rev,false);
         measured_frame('A',rev,true);
     }
     puts("PASS: measured215..221 bars/203..206 gaps decode complete A/F/Z both ways; missing narrow bars reject; original thresholds retained; fine grid sorted; legacy log threshold mapping.");

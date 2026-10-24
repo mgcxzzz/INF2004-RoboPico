@@ -120,8 +120,8 @@ static void queue_tests(void) {
     feed_nav_frame(&n,'A',3,false,&mm,&now);assert(n.pending=='A' && n.decoded_a==1 && !n.cross_ready);
     mm+=1;now+=30000;feed_nav_frame(&n,'F',1.5,true,&mm,&now);
     assert(n.pending=='F' && n.decoded_f==1 && !n.cross_ready); /* latest supported command */
-    mm+=20;now+=500000;feed_nav_frame(&n,'Z',3,false,&mm,&now);
-    assert(n.unsupported==1 && n.last_code=='Z' && n.pending=='F');
+    mm+=20;now+=500000;feed_nav_frame(&n,'Q',3,false,&mm,&now);
+    assert(n.unsupported==1 && n.last_code=='Q' && n.pending=='F');
     n.allow_cross=true;mm+=200;now+=5000000;
     double wheel[2]={mm,mm};barcode_nav_edge(&n,now,wheel,true);
     mm+=18;now+=400000;wheel[0]=wheel[1]=mm;barcode_nav_edge(&n,now,wheel,false);
@@ -250,9 +250,9 @@ static void no_command_and_record(void) {
     assert(c.busy && n.busy && n.action=='F' && !n.pending);
     static BarcodeSaved s;s.magic=B_MAGIC;s.version=1;s.profile=s.recorded_profile=1;s.calibration=cal;s.side=(SideCalibration){0,1,3};
     s.count=B_ROWS;s.event_count=B_EVENTS;s.summary_count=C_SUMMARIES;
-    s.crc=log_crc((uint8_t *)&s+offsetof(BarcodeSaved,count),sizeof(s)-offsetof(BarcodeSaved,count));
+    s.crc=log_crc((uint8_t *)&s+offsetof(BarcodeSaved,count),barcode_record_crc_size(s.version));
     assert(barcode_record_valid(&s));s.version=2;assert(barcode_record_valid(&s));
-    s.version=3;assert(barcode_record_valid(&s));s.version=4;assert(barcode_record_valid(&s));s.version=5;assert(barcode_record_valid(&s));s.version=6;assert(barcode_record_valid(&s));s.version=7;assert(barcode_record_valid(&s));s.version=8;assert(barcode_record_valid(&s));s.version=9;assert(barcode_record_valid(&s));s.version=10;assert(barcode_record_valid(&s));s.version=11;assert(!barcode_record_valid(&s));s.version=3;
+    s.version=3;assert(barcode_record_valid(&s));s.version=4;assert(barcode_record_valid(&s));s.version=5;assert(barcode_record_valid(&s));s.version=6;assert(barcode_record_valid(&s));s.version=7;assert(barcode_record_valid(&s));s.version=8;assert(barcode_record_valid(&s));s.version=9;assert(barcode_record_valid(&s));s.version=10;assert(barcode_record_valid(&s));s.version=11;s.crc=log_crc((uint8_t *)&s+offsetof(BarcodeSaved,count),barcode_record_crc_size(s.version));assert(barcode_record_valid(&s));s.version=12;assert(!barcode_record_valid(&s));s.version=3;
     s.events[10].code^=1;assert(!barcode_record_valid(&s));
     printf("record_bytes=%zu trace=%zu summary=%zu\n",sizeof(s),sizeof(BarcodeTrace),sizeof(BarcodeSummary));
 }
