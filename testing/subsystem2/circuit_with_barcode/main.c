@@ -20,6 +20,7 @@
 #include "barcode_analog.h"
 #include "barcode_start.h"
 #include "barcode_raw.h"
+#include "smooth_follow.h"
 #include "../circuit_left_test/circuit_capture.h"
 #include "../circuit_left_test/circuit_feedback.h"
 #include "../circuit_left_test/circuit_load.h"
@@ -38,10 +39,11 @@ static SideCalibration side_cal;
 static Circuit circuit;
 static BarcodeNav nav;
 static BarcodeAnalog side_analog;
+static SmoothFollow steering;
 static uint16_t side_adc;static uint64_t last_side_sample;static bool status_enabled;
 static uint32_t last_nav_event;
 static uint8_t test_mode=1,recorded_mode=1;
-static uint8_t recorded_version=8;
+static uint8_t recorded_version=9;
 static bool last_fast;
 static CircuitCapture capture;
 static CircuitLoad load;
@@ -234,11 +236,12 @@ static void reset_log(void) {
     trace_count=trace_head=trace_dropped=summary_count=summary_head=0;
     guard.duration_us=0;guard.reason=0;circuit=(Circuit){0};nav=(BarcodeNav){0};
     for(unsigned w=0;w<2;++w) { cut_ticks[w]=0;cut_invalid[w]=0; }
-    flash_loaded=false;recorded_key='-';recorded_version=8;
+    flash_loaded=false;recorded_key='-';recorded_version=9;
 }
 static void help(void) {
-    puts("\nBUDDY23 CIRCUIT WITH BARCODE v8 | AUTO ANALOG GP27 | *A* LEFT / *F* RIGHT | motors OFF on boot");
-    puts("V7 rolling line search after150ms loss: five alternating350/700/1050/1400/1750ms sweeps;150mm search limit. Normal follower unchanged.");
+    puts("\nBUDDY23 CIRCUIT WITH BARCODE v9 | AUTO ANALOG GP27 | *A* LEFT / *F* RIGHT | motors OFF on boot");
+    puts("V9 smooth visible-line steering: gentle small corrections,60..20ms response,200..600mm/s^2 target slew. Urgent bends/search/junction targets unchanged.");
+    puts("V7 rolling line search after150ms loss: five alternating350/700/1050/1400/1750ms sweeps;150mm search limit. Recovery schedule retained.");
     puts("Search starts toward last seen side; no history starts left then alternates. Moving search wheel uses loaded42% cap, no48% search peak.");
     puts("V8 barcode sensitivity:63 thresholds; coarse128..3968/128 and fine192..254/2. Hysteresis coarse+/-32,fine+/-3;2ms debounce;black HIGH.");
     puts("Need TWO neighbouring thresholds agreeing on complete Code39 *X* frame. Unknown/ambiguous frames never force A/F.");
@@ -393,9 +396,9 @@ static bool start_run(unsigned mode) {
     uint64_t now=time_us_64();uint32_t irq=save_and_disable_interrupts();
     bool ok=guard_start(&guard,now,mode!=LINE_USB_HOLD || !gpio_get(HOLD),!gpio_get(STOP));
     if(ok) {
-        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=8;last_fast=false;
+        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=9;last_fast=false;
         barcode_raw_begin(&raw_capture,recorded_mode);raw_new=true;raw_loaded=raw_persisted=raw_save_failed=false;
-        capture=(CircuitCapture){0};load=(CircuitLoad){0};capture_outer=-1;assist_code=feedback_mask=0;
+        capture=(CircuitCapture){0};load=(CircuitLoad){0};steering=(SmoothFollow){0};capture_outer=-1;assist_code=feedback_mask=0;
         guard.deadline_us=UINT64_MAX;guard.duration_us=0;
         for(unsigned w=0;w<2;++w) {
             enc[w].position=0;total_ticks[w]=cut_ticks[w]=0;initial_invalid[w]=enc[w].invalid;cut_invalid[w]=0;
@@ -405,7 +408,7 @@ static bool start_run(unsigned mode) {
         CircuitInput input={.now=now,.adc={analog_raw[0],analog_raw[1]},.side_black=false};
         barcode_nav_begin(&nav,&input);double initial_wheel[2]={0,0};
         barcode_analog_begin(&side_analog,&nav,side_adc,now,initial_wheel);last_side_sample=now;last_nav_event=0;
-        circuit_begin(&circuit,&input);demand=barcode_circuit_step(&circuit,&nav,&calibration,&input,recorded_mode);
+        circuit_begin(&circuit,&input);demand=barcode_drive_step(&circuit,&nav,&calibration,&input,recorded_mode,&steering,0);
         outputs_off();trace_count=trace_head=trace_dropped=summary_count=summary_head=0;
         recorded_key=mode==LINE_USB_FREE?'g':'f';recorded_offline=mode==LINE_BANK;
         trace_settling=false;flash_loaded=save_failed=false;last_control=last_trace=now;
@@ -434,7 +437,7 @@ static void control_step(uint64_t now) {
         .speed={velocity[0],velocity[1]},.adc={(uint16_t)adc_filtered[0],(uint16_t)adc_filtered[1]},
         .side_black=side_analog.black};
     unsigned previous_phase=circuit.phase;
-    demand=barcode_circuit_step(&circuit,&nav,&calibration,&input,recorded_mode);
+    demand=barcode_drive_step(&circuit,&nav,&calibration,&input,recorded_mode,&steering,dt);
     if(previous_phase==J_TURN && circuit.phase==J_ACQUIRE) circuit_capture_begin(&capture,now,input.path);
     if(circuit.completed) add_summary(now,input.path);
     uint8_t failure=demand.stop?circuit.reason:WHY_NONE;int32_t next[2];

@@ -7,7 +7,7 @@ typedef struct {
     CircuitTrace motion;
     union {
         struct { uint8_t pending,decoded,action,scan; }; /* V1-V3 */
-        struct { uint16_t side_adc;uint8_t ao_black,ao_bank; }; /* V4-V8 */
+        struct { uint16_t side_adc;uint8_t ao_black,ao_bank; }; /* V4-V9 */
     };
 } BarcodeTrace;
 typedef struct { CircuitSummary motion;uint8_t code,action; } BarcodeSummary;
@@ -23,7 +23,7 @@ typedef struct {
 _Static_assert(sizeof(BarcodeTrace)==56 && sizeof(BarcodeSummary)==40,"Barcode trace ABI changed");
 _Static_assert(sizeof(BarcodeSaved)<=C_STORE_BYTES,"Barcode record exceeds64KiB");
 static inline bool barcode_record_valid(const BarcodeSaved *s) {
-    return s->magic==B_MAGIC && s->version>=1 && s->version<=8 && s->count<=B_ROWS && s->summary_count<=C_SUMMARIES &&
+    return s->magic==B_MAGIC && s->version>=1 && s->version<=9 && s->count<=B_ROWS && s->summary_count<=C_SUMMARIES &&
         s->event_count<=B_EVENTS && s->profile>=1 && s->profile<=3 && s->recorded_profile>=1 && s->recorded_profile<=3 &&
         calibration_valid(&s->calibration) && side_valid(&s->side) &&
         s->crc==log_crc((const uint8_t *)s+offsetof(BarcodeSaved,count),sizeof(*s)-offsetof(BarcodeSaved,count));

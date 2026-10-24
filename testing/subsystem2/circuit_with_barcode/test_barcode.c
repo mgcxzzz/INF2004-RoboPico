@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include "barcode_record.h"
+#include "smooth_follow.h"
 #include "barcode_capture.h"
 #include "../circuit_left_test/circuit_wheel.h"
 #include "fixtures/pdf_runs.h"
@@ -185,7 +186,7 @@ static void captured_a_replay(unsigned source) {
     assert(!n.cross_ready && !n.cross_candidate && n.pending=='A');
 }
 static void navigation_simulation(unsigned profile) {
-    Circuit c;BarcodeNav nav;CircuitInput i={.now=1000,.adc={3464,3692}};
+    SmoothFollow smoothing={0};Circuit c;BarcodeNav nav;CircuitInput i={.now=1000,.adc={3464,3692}};
     circuit_begin(&c,&i);barcode_nav_begin(&nav,&i);
     double start=100,w[29],length=make_frame('A',3,3,false,w),gap=100;
     bool old=false,acquired=false;unsigned completed=0;
@@ -212,7 +213,7 @@ static void navigation_simulation(unsigned profile) {
         if(c.busy && c.turn.phase==J_ACQUIRE) {
             acquired=true;unsigned b=nav.action=='F'?0:1;i.adc[b]=184;
         }
-        d=barcode_circuit_step(&c,&nav,&cal,&i,profile);
+        d=barcode_drive_step(&c,&nav,&cal,&i,profile,&smoothing,.01f);
         if(d.stop) fprintf(stderr,"profile%u phase%u reason%u pos%.2f time%.2f pending%c action%c\n",profile,c.phase,c.reason,i.path,(double)i.now/1e6,nav.pending,nav.action);
         assert(!d.stop && !c.fault);
         if(c.phase==J_TURN) {
@@ -251,7 +252,7 @@ static void no_command_and_record(void) {
     s.count=B_ROWS;s.event_count=B_EVENTS;s.summary_count=C_SUMMARIES;
     s.crc=log_crc((uint8_t *)&s+offsetof(BarcodeSaved,count),sizeof(s)-offsetof(BarcodeSaved,count));
     assert(barcode_record_valid(&s));s.version=2;assert(barcode_record_valid(&s));
-    s.version=3;assert(barcode_record_valid(&s));s.version=4;assert(barcode_record_valid(&s));s.version=5;assert(barcode_record_valid(&s));s.version=6;assert(barcode_record_valid(&s));s.version=7;assert(barcode_record_valid(&s));s.version=8;assert(barcode_record_valid(&s));s.version=9;assert(!barcode_record_valid(&s));s.version=3;
+    s.version=3;assert(barcode_record_valid(&s));s.version=4;assert(barcode_record_valid(&s));s.version=5;assert(barcode_record_valid(&s));s.version=6;assert(barcode_record_valid(&s));s.version=7;assert(barcode_record_valid(&s));s.version=8;assert(barcode_record_valid(&s));s.version=9;assert(barcode_record_valid(&s));s.version=10;assert(!barcode_record_valid(&s));s.version=3;
     s.events[10].code^=1;assert(!barcode_record_valid(&s));
     printf("record_bytes=%zu trace=%zu summary=%zu\n",sizeof(s),sizeof(BarcodeTrace),sizeof(BarcodeSummary));
 }

@@ -1,8 +1,41 @@
-# Circuit with barcode V8: fine sensitivity and full-rate A0 capture
+# Circuit with barcode V9: smoother ordinary line following
 
-Use firmware/buddy23_circuit_with_barcode_v8.uf2 on the same Pico W.
-V8 changes barcode sensitivity and recording. V7 line following, motor gains,
-speed profiles, rolling search and junction turns remain unchanged.
+Use firmware/buddy23_circuit_with_barcode_v9.uf2 on the same Pico W.
+V9 adds a visible-line steering adapter in smooth_follow.h. It applies on
+ordinary C_FOLLOW travel, with or without a barcode, in all three profiles.
+
+- Small corrections with both levels at least300 blend from65% to100% of
+  the previous differential by350/1000 error. The mean target is preserved.
+- A60ms target filter and200mm/s^2 slew soften ordinary corrections. They
+  progressively shorten to20ms/increase to600mm/s^2 as error approaches700.
+- The weak/normal400-level target discontinuity is also smoothed. Raw levels
+  still control the original loss thresholds and recovery memory.
+- Error at least700, a near-pivot demand with a strong visible line, stops,
+  blind recovery/search, and every busy junction phase bypass the adapter.
+  Old targets pass through immediately and smoothing history resets.
+- On leaving faster90/135 cruising, correction targets are immediately
+  restricted to the original50mm/s ceiling, then continue smoothing.
+- Wheel PI, PWM limits, breakaway pulses, A0 sampling, decoder, pending command,
+  junction geometry/turns, search and calibration requirements are unchanged.
+  The adapter does not add heading lock or adaptive barcode thresholds.
+
+## First V9 test
+
+1. Keep the current mounting, wiring and front calibration. Flash V9, press h
+   to verify its banner and valid=1, then select profile1.
+2. Run on a plain straight first, starting with both front spots on the line.
+   Start with g over USB or the usual power-bank gesture. Stop manually after
+   enough travel to compare visible wobble; wait5s before changing power.
+3. Send j and describe whether the small corrections look smoother. p remains
+   optional diagnostic detail; actual target columns include V9 smoothing.
+4. If the straight improves, repeat the same small A scan several times, then
+   test a bend in each direction. Physical smoothness/barcode success still
+   needs these tests; host fixtures cannot establish wheel traction or drag.
+
+Versions1-9 of the existing64840-byte motion record load; unknown10 rejects.
+V8 raw capture and commands remain compatible. Older UF2s are retained.
+See BUILD_V9.md for executed validation. The sections below document the
+unchanged V8 barcode reader and capture used by V9.
 
 ## Why this trial
 
@@ -42,15 +75,15 @@ inferred or forced into A. Fine sensitivity can also expose more noise.
 
 ## One short self-driving test
 
-1. Flash V8. Open USB serial115200/8N1/no flow control. Press h and verify
-   BUDDY23 CIRCUIT WITH BARCODE v8 and front valid=1. Saved V7 calibration
+1. Flash V9. Open USB serial115200/8N1/no flow control. Press h and verify
+   BUDDY23 CIRCUIT WITH BARCODE v9 and front valid=1. Saved V7 calibration
    imports. Select1; k saves the profile.
 2. Put the front sensing points on the straight. Offset sensing point starts
    on blank paper roughly20mm before the first barcode bar, with its path
    passing through the middle of every bar. Start close: capture retains
    only the FIRST4096 samples, not an unlimited whole-course waveform.
 3. Press g for a2s hands-free USB countdown. The robot drives itself using
-   the unchanged line follower. For power-bank mode, retain the usual boot
+   the V9 smoothed line follower. For power-bank mode, retain the usual boot
    wait5s,both buttons3s,release,wait1s,tap GP21,2s countdown gesture.
 4. Stop after the offset sensor clears the final bar onto blank paper. Use s
    or either board button. Wait5s for settling and both flash saves.
@@ -90,9 +123,9 @@ need Python to test; sending the complete file is sufficient.
 
 ## Existing logs and behavior
 
-j/p motion and events remain. Main record layout stays64840 bytes; versions1-8
-load and unknown9 rejects. V4-V7 saved bank indices retain their original
-threshold mapping; V8 uses the new63-bank map. Event candidate/select flags
+j/p motion and events remain. Main record layout stays64840 bytes; versions1-9
+load and unknown10 rejects. V4-V7 saved bank indices retain their original
+threshold mapping; V8/V9 use the new63-bank map. Event candidate/select flags
 are bank1..63; DECODE bit7 marks analogue,bit0 reverse,bits1..6 bank0..62.
 
 The original complete Code39 reader, scan/pending base45mm/s, A/F mapping,
@@ -101,5 +134,5 @@ are retained. Normal profiles request45/90/135 on stable unmarked straights.
 The removed650 startup placement gate stays removed; valid front calibration
 and explicit start/buttons/readiness still apply. Old V1-V7 UF2 are retained.
 
-See BUILD_V8.md for validation and memory evidence. Static sensitivity fixtures
-pass; successful physical decoding of the small print is not yet claimed.
+See BUILD_V8.md for validation and memory evidence. The small A has decoded in physical V8 runs, but repeatability is not yet
+established. V9 tests whether smoother movement improves that repeatability.
