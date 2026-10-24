@@ -4,6 +4,12 @@
 #include <stdint.h>
 
 typedef struct { uint16_t white[2],black[2]; uint8_t mask; } LineCalibration;
+/* Standalone test targets may use a measured lower-contrast calibration.
+ * Existing targets keep the historical100-count minimum by default. */
+#ifndef LINE_CAL_MIN_SPAN
+#define LINE_CAL_MIN_SPAN 100
+#endif
+_Static_assert(LINE_CAL_MIN_SPAN>0 && LINE_CAL_MIN_SPAN<=4095,"Invalid front calibration minimum");
 enum { AL_EDGE, AL_RIGHT_GUARD, AL_BOTH_BLACK, AL_SEEK_LEFT, AL_LOST };
 typedef struct { uint64_t white_since,both_since; uint32_t white_mm; bool white,both,black_hold; } AnalogTracker;
 typedef struct { int16_t target[2]; uint16_t level[2]; uint8_t decision; bool stop; } AnalogDemand;
@@ -87,7 +93,7 @@ static inline int32_t line_breakaway(LineBreakaway *b,uint64_t now,int16_t wante
 static inline bool calibration_valid(const LineCalibration *c) {
     return c->mask==7 && c->white[0]<=4095 && c->white[1]<=4095 &&
         c->black[0]<=4095 && c->black[1]<=4095 &&
-        c->black[0]>=c->white[0]+100 && c->black[1]>=c->white[1]+100;
+        c->black[0]>=c->white[0]+LINE_CAL_MIN_SPAN && c->black[1]>=c->white[1]+LINE_CAL_MIN_SPAN;
 }
 static inline uint16_t line_level(uint16_t raw,uint16_t white,uint16_t black) {
     if(black<=white || raw<=white) return 0;

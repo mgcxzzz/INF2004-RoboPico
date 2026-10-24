@@ -39,7 +39,7 @@ static BarcodeAnalog side_analog;
 static uint16_t side_adc;static uint64_t last_side_sample;static bool status_enabled;
 static uint32_t last_nav_event;
 static uint8_t test_mode=1,recorded_mode=1;
-static uint8_t recorded_version=4;
+static uint8_t recorded_version=5;
 static bool last_fast;
 static CircuitCapture capture;
 static CircuitLoad load;
@@ -190,10 +190,11 @@ static void reset_log(void) {
     trace_count=trace_head=trace_dropped=summary_count=summary_head=0;
     guard.duration_us=0;guard.reason=0;circuit=(Circuit){0};nav=(BarcodeNav){0};
     for(unsigned w=0;w<2;++w) { cut_ticks[w]=0;cut_invalid[w]=0; }
-    flash_loaded=false;recorded_key='-';recorded_version=4;
+    flash_loaded=false;recorded_key='-';recorded_version=5;
 }
 static void help(void) {
-    puts("\nBUDDY23 CIRCUIT WITH BARCODE v4 | AUTO ANALOG GP27 | *A* LEFT / *F* RIGHT | motors OFF on boot");
+    puts("\nBUDDY23 CIRCUIT WITH BARCODE v5 | AUTO ANALOG GP27 | *A* LEFT / *F* RIGHT | motors OFF on boot");
+    puts("V5 front minimum span50 ADC counts; measured low-contrast test. Same line gains, speed/PWM and auto barcode reader.");
     puts("V6 line follower/correction retained. Read A/F at either print size, in either scan direction.");
     puts("No manual barcode calibration.31 raw-ADC thresholds128..3968;32-count hysteresis;2ms debounce;black HIGH.");
     puts("Need TWO neighbouring thresholds agreeing on complete Code39 *X* frame. Unknown/ambiguous frames never force A/F.");
@@ -209,8 +210,9 @@ static void help(void) {
     puts("g=USB hands-free2s;f=hold GP21;s/either button stops. BANK:wait5s,BOTH3s,release,wait1s,tap GP21,2s.");
     puts("h=help;j=compact events+summary;p=motion+events;v=toggle live status(defaultOFF). Stop,WAIT5s before changing power.");
     puts("Logs: latest1000 motion rows at20ms + state changes,192 events,64 turns; whole-run summary. p/j dumps paced5ms/row.");
-    printf("CAL FRONT white=%u,%u black=%u,%u valid=%u barcode=AUTO_A0_GP27 profile=%u restored=%u imported=%u\n",
+    printf("CAL FRONT white=%u,%u black=%u,%u valid=%u min_span=%u span=%d,%d barcode=AUTO_A0_GP27 profile=%u restored=%u imported=%u\n",
         calibration.white[0],calibration.white[1],calibration.black[0],calibration.black[1],calibration_valid(&calibration),
+        (unsigned)LINE_CAL_MIN_SPAN,(int)calibration.black[0]-(int)calibration.white[0],(int)calibration.black[1]-(int)calibration.white[1],
         test_mode,flash_loaded,imported_front);
 }
 static uint16_t read_adc(unsigned channel) {
@@ -349,7 +351,7 @@ static bool start_run(unsigned mode) {
     uint64_t now=time_us_64();uint32_t irq=save_and_disable_interrupts();
     bool ok=guard_start(&guard,now,mode!=LINE_USB_HOLD || !gpio_get(HOLD),!gpio_get(STOP));
     if(ok) {
-        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=4;last_fast=false;
+        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=5;last_fast=false;
         capture=(CircuitCapture){0};load=(CircuitLoad){0};capture_outer=-1;assist_code=feedback_mask=0;
         guard.deadline_us=UINT64_MAX;guard.duration_us=0;
         for(unsigned w=0;w<2;++w) {

@@ -1,14 +1,37 @@
-# Circuit with barcode V4: automatic analogue GP27 decoding
+# Circuit with barcode V5: lower-contrast front calibration + automatic GP27
 
 Driving test: existing Circuit Left V6 follower and mirrored junction turns,
 now reading offset A0 on GP27. **No manual barcode white/black calibration.**
 Front line sensors still require their existing calibration, imported from the
 saved barcode/circuit record when available. Motors stay off until started.
 
+## V5 raised-front-sensor trial
+
+The user's new front mounting produced references white138/152,black199/229
+(spans61/77). Held black samples were left197-200/right230-232; held white
+samples left136-139/right153-156. V4 rejected spans below100 even though these
+reported ranges do not overlap. V5 permits spans of at least50 counts through
+**LINE_CAL_MIN_SPAN=50 on this executable only**. Shared default remains100;
+other existing tests keep their requirement. No raw reference values are
+hardcoded. All gains, normalized thresholds, speeds/PWM, ADC averaging, A0
+barcode search and junction geometry remain unchanged.
+
+After flashing, **recapture w/l/r at the final mounted height, then k**. The
+rejected RAM calibration in V4 was never saved, so an older restored front
+record may still describe the previous height. h now prints min_span and both
+measured spans. Check min_span=50,valid=1 and CALIBRATION/PROFILE SAVED.
+Test a plain straight first in profile1, then stop and inspect p. Static
+separation is encouraging but does not establish stability while moving.
+
+**Junction side-ahead geometry is still92mm.** The offset mounting was moved;
+the new rear-axle-to-offset sensing-point forward distance is still needed.
+Do not treat this change as a junction geometry update. V5 saved records use
+version5 with the same V4 motion layout; V1-V4 records remain readable.
+
 ## Firmware and wiring
 
-Use `firmware/buddy23_circuit_with_barcode_v4.uf2` (driving firmware), not the
-separate motors-off analogue probe. V1-V3 UF2 remain unchanged. Historical
+Use `firmware/buddy23_circuit_with_barcode_v5.uf2` (driving firmware), not the
+separate motors-off analogue probe. V1-V4 UF2 remain unchanged. Historical
 digital V3 instructions are archived in README_V3.md.
 
 | Sensor connection | Pin |
@@ -28,8 +51,8 @@ from the timer ISR. Actual sampling gaps over10ms are diagnostic events.
 
 ## First physical test: small A, profile1
 
-1. Flash V4 and open USB serial115200/8N1/no flow control. h must show
-   **BUDDY23 CIRCUIT WITH BARCODE v4 | AUTO ANALOG GP27**.
+1. Flash V5 and open USB serial115200/8N1/no flow control. h must show
+   **BUDDY23 CIRCUIT WITH BARCODE v5 | AUTO ANALOG GP27**.
 2. Check `CAL FRONT ... valid=1`. Existing front calibration should import.
    **Do not press w/b to calibrate the barcode.** If the FRONT references are
    invalid, w/l/r capture front white/left-black/right-black, then k saves them.
@@ -100,7 +123,7 @@ and bounded line/turn checks are retained.
 For candidate/select events, `width_mm` carries threshold ADC counts;
 `flags` is bank1..31. For SAMPLE_GAP, width is milliseconds. DECODE retains
 frame span in millimetres; flags bit7=analogue, bit0=reverse, bits1..5=bank0..30.
-V4 motion rows replace the old four tail fields with side_ADC,threshold_ADC,
+V4/V5 motion rows replace the old four tail fields with side_ADC,threshold_ADC,
 analog_black,bank. Front and encoder/motion columns remain. Log version1-3
 retains its original field meaning when restored. The raw ADC snapshot is at
 20ms plus state/event changes, not a500Hz waveform export.
@@ -114,7 +137,7 @@ remain. A first short A test provides the clearest evidence.
 ## Verification and storage
 
 Existing record ABI remains64840 bytes in the same64KiB bank at0x101d0000.
-Version4 marks the new four-byte motion tail; V1-V3 load and print as legacy
+Versions4/5 mark the new four-byte motion tail; V1-V4 load and print as legacy
 records. The unused legacy side-calibration field is initialized to0/1 for
 record compatibility, not used as an A0 threshold. Probe calibration slots
 at0x101c0000/0x101c1000 and older circuit/tail banks are not written.
@@ -123,5 +146,5 @@ Executed tests include the original barcode/record/navigation suite plus raw
 ADC fixtures for A/F, scales/directions/ratios/speed variation, diminished
 narrow-bar amplitude, malformed/missing-bar rejection, noise, unsupported code,
 conflicting votes, cross qualification and alternating turns in all profiles.
-Build/UF2/ABI evidence is in BUILD_V4.md. Physical small-barcode success is not
+Build/UF2/ABI evidence is in BUILD_V5.md. Physical small-barcode success is not
 claimed until the next run.
