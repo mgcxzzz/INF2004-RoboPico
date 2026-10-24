@@ -2,7 +2,7 @@ from pathlib import Path
 import hashlib
 import struct
 root=Path(__file__).resolve().parent
-artifact=root/'firmware/buddy23_circuit_with_barcode_v6.uf2'
+artifact=root/'firmware/buddy23_circuit_with_barcode_v7.uf2'
 data=artifact.read_bytes();assert data and len(data)%512==0
 count=len(data)//512;payload=bytearray()
 for n in range(count):
@@ -12,10 +12,10 @@ for n in range(count):
     assert struct.unpack_from('<I',block,508)[0]==0x0AB16F30
     assert address==0x10000000+n*256 and address+size<=0x101d0000
     payload.extend(block[32:32+size])
-for marker in [b'BUDDY23 CIRCUIT WITH BARCODE v6',b'BARCODE_EVENTS:',b'CIRCUIT WITH BARCODE v%u:',b'decoded_A=',b'Code39',b'BAD_FRAME flags:',b'AUTO ANALOG GP27',b'ANALOG_CANDIDATE',b'ANALOG_SELECT',b'MOTION_DUMP_END:',b'min_span=',b'front minimum span50 ADC counts',b'optical_start_gate=OFF']:
+for marker in [b'BUDDY23 CIRCUIT WITH BARCODE v7',b'BARCODE_EVENTS:',b'CIRCUIT WITH BARCODE v%u:',b'decoded_A=',b'Code39',b'BAD_FRAME flags:',b'AUTO ANALOG GP27',b'ANALOG_CANDIDATE',b'ANALOG_SELECT',b'MOTION_DUMP_END:',b'min_span=',b'five alternating350/700/1050/1400/1750ms sweeps',b'five rolling sweeps exhausted',b'optical_start_gate=OFF']:
     assert marker in payload,marker
 assert b'smooth proportional line steering' not in payload
-built=root/'build/buddy23_circuit_with_barcode_v6.uf2'
+built=root/'build/buddy23_circuit_with_barcode_v7.uf2'
 assert not built.exists() or built.read_bytes()==data
 print(f'PASS: {count} RP2040 blocks; end=0x{0x10000000+len(payload):08x}; barcode/baseline records preserved')
 print(f'bytes={len(data)} sha256={hashlib.sha256(data).hexdigest()}')
@@ -28,3 +28,6 @@ print("PASS: V4 UF2 unchanged")
 
 assert hashlib.sha256((root/"firmware/buddy23_circuit_with_barcode_v5.uf2").read_bytes()).hexdigest()=="0ae311b7a76960d21e2735d5764f984a43a8679e968bba9b4f2f24b4b02793b0"
 print("PASS: V5 UF2 unchanged")
+
+assert hashlib.sha256((root/"firmware/buddy23_circuit_with_barcode_v6.uf2").read_bytes()).hexdigest()=="67e7e459ea00077d30093e9530f89a35fa00d58258338f8eac30ee0151130773"
+print("PASS: V6 UF2 unchanged")

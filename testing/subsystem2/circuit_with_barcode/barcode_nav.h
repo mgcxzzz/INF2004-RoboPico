@@ -74,9 +74,15 @@ static inline void barcode_mirror_tracker(CircuitTracker *t) {
     t->core.direction=-t->core.direction;t->core.recovery=-t->core.recovery;
     t->pending=-t->pending;t->reverse=-t->reverse;t->probe_direction=-t->probe_direction;
     int16_t v=t->bridge[0];t->bridge[0]=t->bridge[1];t->bridge[1]=v;
+#ifdef CIRCUIT_SWEEP_SEARCH
+    t->search.first=-t->search.first;
+#endif
 }
 static inline void barcode_straight_gate(Circuit *c,BarcodeNav *n,const CircuitInput *i,const AnalogDemand *d) {
     bool visible=d->level[0]>=400 || d->level[1]>=400;
+#ifdef CIRCUIT_SWEEP_SEARCH
+    visible=visible && !c->follower.core.white;
+#endif
     bool straight=visible && i->speed[0]>=10 && i->speed[1]>=10;
     if(!straight) c->gate_timing=false;
     else {
@@ -113,7 +119,11 @@ static inline AnalogDemand barcode_circuit_step(Circuit *c,BarcodeNav *n,const L
             if(!n->pending) {
                 ++n->straight_crosses;
                 barcode_event(n,B_NO_COMMAND,i->now,mean,n->cross_width,0,'S',0,NULL);
-            } else if(!n->cross_gate || i->path<c->clear_path) {
+            } else if(!n->cross_gate || i->path<c->clear_path
+#ifdef CIRCUIT_SWEEP_SEARCH
+                      || c->follower.core.white
+#endif
+                     ) {
                 ++c->ignored;barcode_event(n,B_GATE_REJECT,i->now,mean,n->cross_width,n->pending,0,0,NULL);
             } else {
                 n->action=n->pending;n->pending=0;n->busy=c->busy=true;

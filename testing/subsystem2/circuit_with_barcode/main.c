@@ -40,7 +40,7 @@ static BarcodeAnalog side_analog;
 static uint16_t side_adc;static uint64_t last_side_sample;static bool status_enabled;
 static uint32_t last_nav_event;
 static uint8_t test_mode=1,recorded_mode=1;
-static uint8_t recorded_version=6;
+static uint8_t recorded_version=7;
 static bool last_fast;
 static CircuitCapture capture;
 static CircuitLoad load;
@@ -128,6 +128,8 @@ static const char *reason_name(unsigned r) {
     case C_LOSS_NO_DIRECTION:return "line not recovered: no recent direction";
     case C_LOSS_TIME:return "line not recovered:2s recovery expired";
     case C_LOSS_DISTANCE:return "line not recovered:50mm recovery limit";
+    case LS_TIMEOUT:return "line not recovered: five rolling sweeps exhausted";
+    case LS_DISTANCE:return "line not recovered:150mm search travel limit";
     case B_EDGE_FAILURE:return "barcode edge capture overflow (legacy digital run)";
     case C_LOSS_STRAIGHT:return "straight gap not confirmed within500ms/15mm";
     default:return "other guard";
@@ -191,12 +193,12 @@ static void reset_log(void) {
     trace_count=trace_head=trace_dropped=summary_count=summary_head=0;
     guard.duration_us=0;guard.reason=0;circuit=(Circuit){0};nav=(BarcodeNav){0};
     for(unsigned w=0;w<2;++w) { cut_ticks[w]=0;cut_invalid[w]=0; }
-    flash_loaded=false;recorded_key='-';recorded_version=6;
+    flash_loaded=false;recorded_key='-';recorded_version=7;
 }
 static void help(void) {
-    puts("\nBUDDY23 CIRCUIT WITH BARCODE v6 | AUTO ANALOG GP27 | *A* LEFT / *F* RIGHT | motors OFF on boot");
-    puts("V6 removes front black>=650 START gate; front minimum span50 ADC counts. Same line gains, speed/PWM and barcode reader.");
-    puts("Circuit Left V6 follower/correction retained. Read A/F at either print size, in either scan direction.");
+    puts("\nBUDDY23 CIRCUIT WITH BARCODE v7 | AUTO ANALOG GP27 | *A* LEFT / *F* RIGHT | motors OFF on boot");
+    puts("V7 rolling line search after150ms loss: five alternating350/700/1050/1400/1750ms sweeps;150mm search limit. Normal follower unchanged.");
+    puts("Search starts toward last seen side; no history starts left then alternates. Moving search wheel uses loaded42% cap, no48% search peak.");
     puts("No manual barcode calibration.31 raw-ADC thresholds128..3968;32-count hysteresis;2ms debounce;black HIGH.");
     puts("Need TWO neighbouring thresholds agreeing on complete Code39 *X* frame. Unknown/ambiguous frames never force A/F.");
     puts("BARCODE A0 -> GP27/ADC1;GP19/D0 UNUSED. Front A0 GP26/GP28 unchanged;3.3V/common GND.");
@@ -206,7 +208,7 @@ static void help(void) {
     puts("Scan/pending approach uses usual45mm/s; unmarked stable cruising profiles1/2/3 request45/90/135.");
     puts("Rolling LEFT: left off/right forward. RIGHT: right off/left forward. Side ahead92mm; start55mm before centre.");
     puts("Motor caps30% correction,42% loaded/turn,48% bounded turn start. Encoder progress is WARNING ONLY.");
-    puts("Manual/button,USB,control,direction/invalid,edge overflow and bounded line/turn checks remain.");
+    puts("Search decisions19..23=sweep1..5; wheel targets show direction; assist5/6=search left/right wheel. Manual/USB/control/direction/invalid/turn checks remain.");
     puts("FRONT ONLY:w=both WHITE,l=left BLACK,r=right BLACK;k=save.1/2/3=profile. No o/b side capture.");
     puts("g=USB hands-free2s;f=hold GP21;s/either button stops. BANK:wait5s,BOTH3s,release,wait1s,tap GP21,2s.");
     puts("h=help;j=compact events+summary;p=motion+events;v=toggle live status(defaultOFF). Stop,WAIT5s before changing power.");
@@ -349,7 +351,7 @@ static bool start_run(unsigned mode) {
     uint64_t now=time_us_64();uint32_t irq=save_and_disable_interrupts();
     bool ok=guard_start(&guard,now,mode!=LINE_USB_HOLD || !gpio_get(HOLD),!gpio_get(STOP));
     if(ok) {
-        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=6;last_fast=false;
+        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=7;last_fast=false;
         capture=(CircuitCapture){0};load=(CircuitLoad){0};capture_outer=-1;assist_code=feedback_mask=0;
         guard.deadline_us=UINT64_MAX;guard.duration_us=0;
         for(unsigned w=0;w<2;++w) {
@@ -399,10 +401,12 @@ static void control_step(uint64_t now) {
     unsigned previous_assist=assist_code;
     capture_outer=circuit_capture_outer(&capture,&input,circuit.phase,&demand);
     bool recovering=current_tracker()->core.white;
+    int search_outer=line_search_outer(current_tracker()->search.active && recovering && !demand.stop,
+                                       demand.target[0],demand.target[1]);
     if(recovering) capture_outer=-1;
     int load_outer=circuit_load_outer(&load,&input,circuit.phase,&demand,capture_outer>=0 || recovering);
-    assist_code=capture_outer>=0?(unsigned)capture_outer+1:load_outer>=0?(unsigned)load_outer+3:0;
-    int effort_outer=capture_outer>=0?capture_outer:load_outer;
+    assist_code=search_outer>=0?(unsigned)search_outer+5:capture_outer>=0?(unsigned)capture_outer+1:load_outer>=0?(unsigned)load_outer+3:0;
+    int effort_outer=search_outer>=0?search_outer:capture_outer>=0?capture_outer:load_outer;
     bool loaded[2]={turning || effort_outer==0,turning || effort_outer==1};
     if(effort_outer>=0 && assist_code!=previous_assist) circuit_capture_prepare(&controller[effort_outer]);
     if(last_fast && !circuit.fast) for(unsigned w=0;w<2;++w) circuit_leave_fast(&controller[w]);

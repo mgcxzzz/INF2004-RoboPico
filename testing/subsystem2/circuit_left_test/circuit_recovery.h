@@ -1,6 +1,9 @@
 #ifndef CIRCUIT_RECOVERY_H
 #define CIRCUIT_RECOVERY_H
 #include "../analog_line_follow/symmetric_logic.h"
+#ifdef CIRCUIT_SWEEP_SEARCH
+#include "../circuit_with_barcode/line_search.h"
+#endif
 
 enum { C_LOSS_NO_DIRECTION=42,C_LOSS_TIME,C_LOSS_DISTANCE,C_LOSS_STRAIGHT,
        C_LOSS_US=2000000,C_LOSS_MM=50,C_MEMORY_US=1500000,C_WEAK_US=30000,
@@ -16,6 +19,9 @@ typedef struct {
     int8_t pending,reverse,probe_direction;
     uint8_t loss_reason;
     bool weak_timing,reverse_timing,reacquire_timing,probe_timing,medium_timing,strong_timing,centre_timing,centre_valid,straight_recovery;
+#ifdef CIRCUIT_SWEEP_SEARCH
+    LineSearch search;
+#endif
 } CircuitTracker;
 /* 0 unknown/stale,1 left,2 right,3 recently centred. This is recovery
    confidence, not a delay on the ordinary optical steering targets. */
@@ -113,16 +119,36 @@ static inline AnalogDemand circuit_line_demand(CircuitTracker *t,const LineCalib
                (t->probe_timing && now-t->probe_since>=C_REACQUIRE_FAINT_US)) {
                 s->white=false;s->recovery=0;t->straight_recovery=false;
                 t->reacquire_timing=t->medium_timing=t->strong_timing=false;
+#ifdef CIRCUIT_SWEEP_SEARCH
+                t->search=(LineSearch){0};
+#endif
             }
         }
         if(s->white) {
             uint64_t elapsed=now-s->white_since;uint32_t travel=mm-s->white_mm;
+#ifdef CIRCUIT_SWEEP_SEARCH
+            (void)travel;
+            /* A short worn gap still uses the proven bridge below. Once the
+               gap persists, replace a one-direction timeout with alternating
+               rolling searches; weak flashes do not restart this budget. */
+            if(elapsed>=LS_CONFIRM_US || t->search.active) {
+                if(!t->search.active) line_search_begin(&t->search,now,mm,s->recovery);
+                LineSearchDemand seek=line_search_step(&t->search,now,mm,t->reacquire_timing);
+                if(seek.reason) { t->loss_reason=seek.reason;d.stop=true;d.decision=AL_LOST;return d; }
+                d.target[0]=seek.target[0];d.target[1]=seek.target[1];
+                d.decision=(uint8_t)(LS_DECISION_FIRST+seek.stage);return d;
+            }
+            /* With no direction history, wait for the short confirmation
+               rather than inventing a turn before the first sweep begins. */
+            if(!s->recovery && !t->straight_recovery) return d;
+#else
             if(!s->recovery && !t->straight_recovery) t->loss_reason=C_LOSS_NO_DIRECTION;
             else if(t->straight_recovery && (elapsed>=C_STRAIGHT_GAP_US || travel>=C_STRAIGHT_GAP_MM))
                 t->loss_reason=C_LOSS_STRAIGHT;
             else if(elapsed>=C_LOSS_US) t->loss_reason=C_LOSS_TIME;
             else if(travel>=C_LOSS_MM) t->loss_reason=C_LOSS_DISTANCE;
             if(t->loss_reason) { d.stop=true;d.decision=AL_LOST;return d; }
+#endif
             /* Unlike V5, do not blindly ignore a real weak return on the
                other sensor. Probe using reflectance balance at reduced speed,
                keeping the original loss deadline until confirmation succeeds. */

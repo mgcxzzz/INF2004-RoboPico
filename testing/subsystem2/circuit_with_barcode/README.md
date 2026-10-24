@@ -1,11 +1,52 @@
-# Circuit with barcode V6: explicit startup without a black-placement gate
+# Circuit with barcode V7: alternating rolling line search
 
 Driving test: existing Circuit Left V6 follower and mirrored junction turns,
 now reading offset A0 on GP27. **No manual barcode white/black calibration.**
 Front line sensors still require their existing calibration, imported from the
 saved barcode/circuit record when available. Motors stay off until started.
 
-## V6 startup change
+## V7 line-loss search
+
+Normal steering, faint-line corrections, front calibration, speed profiles and
+barcode decoding retain V6 behavior. A target-private CIRCUIT_SWEEP_SEARCH
+option changes only lost-line recovery and gives its moving wheel loaded
+motor effort. Other test targets keep the original recovery implementation.
+
+After both fronts fall below150/1000, preserve the old brief bridge for150ms.
+With no direction history, wait with outputs off during this confirmation.
+If the loss persists, search toward the remembered side first; without usable
+history, start left. Alternate directions over five durations:
+350,700,1050,1400,1750ms (5.25s total search). Each sweep coasts one wheel and
+requests45mm/s on the other; reduce that request to30 during line confirmation.
+These are rolling arcs, not stationary rotations or guaranteed measured angles.
+They can move the chassis forward as well as turn it. Search also stops at
+150mm of additional encoder path; time expires even with no encoder ticks.
+
+Use the existing confirmation rules: a return>=400 held40ms, >=300 held80ms,
+or consistent faint asymmetric return held120ms restores ordinary following.
+An isolated flash does not restart the search clock. Both sensors need not
+be black; this preserves following a bend immediately after a junction.
+If all sweeps fail, stop with the specific search timeout/distance reason.
+
+Only the moving search wheel uses the loaded42% PWM allowance. Its controller
+still regulates speed; this is a cap, not forced constant PWM. Search does
+not receive a48% start pulse. Coast-wheel output remains zero. Manual/button,
+USB, control-loop, invalid-encoder/direction, calibration and turn checks remain.
+Encoder progress remains warning-only. While lost, junction dispatch is blocked
+and a queued A/F instruction is retained. Barcode decoding itself is unchanged.
+
+Logs keep their layout and now save version7; versions1-6 still load. Motion
+decision19..23 identifies sweep1..5, with targetL/targetR showing direction.
+Assist5 means loaded left search wheel;6 means loaded right search wheel.
+Normal motion rows, summary, offline save and p/j commands remain unchanged.
+
+Use firmware/buddy23_circuit_with_barcode_v7.uf2. After lowering the front
+sensors, recapture w/l/r at the normal resting height, then k. Select profile1
+and test a straight first. To exercise recovery, test a short gap in the line
+on an open surface; it should alternate if the line stays out of view, and
+resume once the line remains visible. Poor calibration is not fixed by search.
+
+## V6 startup change (retained)
 
 V6 removes only the front normalized-black>=650 requirement that produced
 START reason11. It does not change the line follower or copy a different
@@ -25,8 +66,8 @@ running line-loss checks still apply, and all-white without direction memory
 can stop immediately. Calibration must match the normal resting height;
 loosening a start gate cannot correct unrepresentative black references.
 
-Use firmware/buddy23_circuit_with_barcode_v6.uf2. V1-V5 binaries are retained.
-Saved records1-6 are supported with the same layout. Speed profiles, PWM,
+V6 firmware remains archived; use the V7 artifact above for the new search.
+Saved records1-7 are supported with the same layout. Speed profiles, PWM,
 analogue barcode decoding and the old92mm side-ahead geometry are unchanged.
 The replacement offset-to-axle measurement is still needed before judging
 junction positioning with the repositioned module.
@@ -67,8 +108,8 @@ version5 with the same V4 motion layout; V1-V4 records remain readable.
 
 ## Firmware and wiring
 
-Use `firmware/buddy23_circuit_with_barcode_v6.uf2` (driving firmware), not the
-separate motors-off analogue probe. V1-V5 UF2 remain unchanged. Historical
+Use `firmware/buddy23_circuit_with_barcode_v7.uf2` (driving firmware), not the
+separate motors-off analogue probe. V1-V6 UF2 remain unchanged. Historical
 digital V3 instructions are archived in README_V3.md.
 
 | Sensor connection | Pin |
@@ -88,8 +129,8 @@ from the timer ISR. Actual sampling gaps over10ms are diagnostic events.
 
 ## First physical test: small A, profile1
 
-1. Flash V6 and open USB serial115200/8N1/no flow control. h must show
-   **BUDDY23 CIRCUIT WITH BARCODE v6 | AUTO ANALOG GP27**.
+1. Flash V7 and open USB serial115200/8N1/no flow control. h must show
+   **BUDDY23 CIRCUIT WITH BARCODE v7 | AUTO ANALOG GP27**.
 2. Check `CAL FRONT ... valid=1`. Existing front calibration should import.
    **Do not press w/b to calibrate the barcode.** If the FRONT references are
    invalid, w/l/r capture front white/left-black/right-black, then k saves them.
