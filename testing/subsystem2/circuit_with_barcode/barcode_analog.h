@@ -6,7 +6,8 @@
  * only after two neighbouring thresholds decode the same complete Code39
  * frame. Existing measured module polarity is BLACK_HIGH. No narrow bars
  * are removed or inferred. Original decoder validates every element. */
-enum { AO_BANKS=31,AO_STEP=128,AO_HYSTERESIS=32,AO_DEBOUNCE_US=2000 };
+enum { AO_BANKS=63,AO_STEP=128,AO_HYSTERESIS=32,AO_FINE_HYSTERESIS=3,
+       AO_DEFAULT_BANK=11,AO_DEBOUNCE_US=2000 }; /*212 ADC diagnostic preview */
 typedef struct {
     BarcodeReader reader;
     bool stable,candidate,changed,was_frame;
@@ -20,9 +21,20 @@ typedef struct {
     uint64_t last_us;uint32_t max_gap_us,gap_count,candidates,selections;
     double accepted_start,accepted_end,conflict_end;
 } BarcodeAnalog;
-static inline unsigned barcode_analog_threshold(unsigned bank) { return (bank+1)*AO_STEP; }
+/* Sorted union: original128,256,...3968 plus192,194,...254. Fine banks
+ * target the user's measured narrow gap203..206 and narrow bar215..221.
+ * These are sensitivity hypotheses, not a hardcoded barcode or calibration. */
+static inline unsigned barcode_analog_threshold(unsigned bank) {
+    return bank==0?128:bank<=32?190+2*bank:(bank-31)*AO_STEP;
+}
+static inline unsigned barcode_analog_hysteresis(unsigned bank) {
+    return bank>=1 && bank<=32?AO_FINE_HYSTERESIS:AO_HYSTERESIS;
+}
+static inline unsigned barcode_analog_log_threshold(unsigned version,unsigned bank) {
+    return version<8?(bank+1)*AO_STEP:barcode_analog_threshold(bank);
+}
 static inline void barcode_analog_begin(BarcodeAnalog *a,BarcodeNav *n,uint16_t adc,uint64_t now,const double wheel[2]) {
-    *a=(BarcodeAnalog){.adc=adc,.baseline=adc,.minimum=adc,.maximum=adc,.selected=15,.last_us=now};
+    *a=(BarcodeAnalog){.adc=adc,.baseline=adc,.minimum=adc,.maximum=adc,.selected=AO_DEFAULT_BANK,.last_us=now};
     for(unsigned b=0;b<AO_BANKS;++b) {
         AnalogBank *v=&a->bank[b];v->stable=v->candidate=adc>=barcode_analog_threshold(b);
         v->candidate_us=now;memcpy(v->candidate_wheel,wheel,sizeof(v->candidate_wheel));
@@ -88,7 +100,8 @@ static inline void barcode_analog_sample(BarcodeAnalog *a,BarcodeNav *n,uint16_t
     a->last_us=now;a->scanning=false;
     for(unsigned b=0;b<AO_BANKS;++b) {
         AnalogBank *v=&a->bank[b];unsigned t=barcode_analog_threshold(b);v->changed=false;
-        bool black=v->stable?adc>t-AO_HYSTERESIS:adc>=t+AO_HYSTERESIS;
+        unsigned hysteresis=barcode_analog_hysteresis(b);
+        bool black=v->stable?adc>t-hysteresis:adc>=t+hysteresis;
         if(black!=v->candidate) {
             v->candidate=black;v->candidate_us=now;memcpy(v->candidate_wheel,wheel,sizeof(v->candidate_wheel));
         }

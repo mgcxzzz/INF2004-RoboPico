@@ -19,6 +19,7 @@
 #include "barcode_record.h"
 #include "barcode_analog.h"
 #include "barcode_start.h"
+#include "barcode_raw.h"
 #include "../circuit_left_test/circuit_capture.h"
 #include "../circuit_left_test/circuit_feedback.h"
 #include "../circuit_left_test/circuit_load.h"
@@ -40,7 +41,7 @@ static BarcodeAnalog side_analog;
 static uint16_t side_adc;static uint64_t last_side_sample;static bool status_enabled;
 static uint32_t last_nav_event;
 static uint8_t test_mode=1,recorded_mode=1;
-static uint8_t recorded_version=7;
+static uint8_t recorded_version=8;
 static bool last_fast;
 static CircuitCapture capture;
 static CircuitLoad load;
@@ -62,8 +63,12 @@ static BarcodeTrace trace[B_ROWS];
 static BarcodeSummary summaries[C_SUMMARIES];
 static uint32_t trace_count,trace_head,trace_dropped,summary_count,summary_head;
 #define LOG_OFFSET (PICO_FLASH_SIZE_BYTES-3*C_STORE_BYTES)
+#define RAW_OFFSET (PICO_FLASH_SIZE_BYTES-5*C_STORE_BYTES)
+_Static_assert(RAW_OFFSET+RAW_BANK_BYTES<=PICO_FLASH_SIZE_BYTES-4*C_STORE_BYTES,"Raw/probe banks overlap");
 extern char __flash_binary_end;
 static union { BarcodeSaved data;uint8_t bytes[C_STORE_BYTES]; } saved;
+static BarcodeRaw raw_capture;
+static bool raw_new,raw_loaded,raw_persisted,raw_save_failed;
 
 static double wheel_mm(unsigned w,int64_t ticks) {
     return (double)ticks*(double)mm_per_tick(w)*(w==0?-1.0:1.0);
@@ -139,7 +144,42 @@ static const char *phase_name(unsigned p) {
     return p==C_FOLLOW?"circuit follow":p==J_CENTRE?"cross approach":p==J_TURN?(nav.action=='F'?"rolling right":"rolling left"):
            p==J_ACQUIRE?"align outgoing line":p==J_FAULT?"fault":"idle";
 }
-static bool storage_fits(void) { return (uintptr_t)&__flash_binary_end<=XIP_BASE+LOG_OFFSET; }
+static bool storage_fits(void) { return (uintptr_t)&__flash_binary_end<=XIP_BASE+RAW_OFFSET; }
+static void load_raw(void) {
+    if(!storage_fits()) return;
+    const BarcodeRaw *r=(const BarcodeRaw *)(XIP_BASE+RAW_OFFSET);
+    if(barcode_raw_valid(r)) { memcpy(&raw_capture,r,sizeof(raw_capture));raw_loaded=raw_persisted=true; }
+}
+static void save_raw(void) {
+    if(!raw_new || guard.active || !storage_fits()) return;
+    int64_t ticks[2]={cut_ticks[0],cut_ticks[1]};
+    barcode_raw_finish(&raw_capture,guard.duration_us,ticks,guard.reason);
+    uint32_t irq=save_and_disable_interrupts();
+    flash_range_erase(RAW_OFFSET,RAW_BANK_BYTES);
+    flash_range_program(RAW_OFFSET,(const uint8_t *)&raw_capture,sizeof(raw_capture));
+    restore_interrupts(irq);
+    const BarcodeRaw *written=(const BarcodeRaw *)(XIP_BASE+RAW_OFFSET);
+    raw_save_failed=!barcode_raw_valid(written) || memcmp(written,&raw_capture,sizeof(raw_capture))!=0;
+    raw_persisted=!raw_save_failed;raw_new=false;
+}
+static void dump_raw(void) {
+    if(guard.active || trace_settling) { puts("RAW rejected: stop and wait5s before a.");return; }
+    if(!barcode_raw_valid(&raw_capture)) { puts("RAW unavailable: make a new V8 driving run first.");return; }
+    const BarcodeRawMeta *m=&raw_capture.header.meta;
+    bool matches=recorded_version>=8 && m->duration_us==guard.duration_us &&
+        m->ticks[0]==cut_ticks[0] && m->ticks[1]==cut_ticks[1] && m->profile==recorded_mode && m->reason==guard.reason;
+    printf("RAW_ADC_BEGIN: rows=%lu capacity=%u stride=12 pin=27 channel=1 data_crc=%08lx duration_us=%" PRIu64 " max_gap_us=%lu full=%u stored=%u restored=%u matches_motion=%u\n",
+        (unsigned long)m->count,RAW_CAPACITY,(unsigned long)m->data_crc,m->duration_us,
+        (unsigned long)m->max_gap_us,m->full,raw_persisted,raw_loaded,matches);
+    puts("sample,us,path_mm,adc");
+    for(unsigned n=0;n<m->count;++n) {
+        if(!stdio_usb_connected()) return;
+        const BarcodeRawRow *r=&raw_capture.rows[n];
+        printf("%u,%lu,%.2f,%u\n",n,(unsigned long)r->us,(double)r->path100/100,r->adc);
+        stdio_flush();sleep_ms(5);
+    }
+    printf("RAW_ADC_END: rows=%lu data_crc=%08lx\n",(unsigned long)m->count,(unsigned long)m->data_crc);
+}
 static void load_log(void) {
     if(!storage_fits()) return;
     const BarcodeSaved *v=(const BarcodeSaved *)(XIP_BASE+LOG_OFFSET);
@@ -188,18 +228,19 @@ static void save_log(void) {
     restore_interrupts(irq);
     const BarcodeSaved *written=(const BarcodeSaved *)(XIP_BASE+LOG_OFFSET);
     save_failed=!barcode_record_valid(written) || memcmp(written,v,sizeof(*v))!=0;flash_loaded=false;
+    save_raw();
 }
 static void reset_log(void) {
     trace_count=trace_head=trace_dropped=summary_count=summary_head=0;
     guard.duration_us=0;guard.reason=0;circuit=(Circuit){0};nav=(BarcodeNav){0};
     for(unsigned w=0;w<2;++w) { cut_ticks[w]=0;cut_invalid[w]=0; }
-    flash_loaded=false;recorded_key='-';recorded_version=7;
+    flash_loaded=false;recorded_key='-';recorded_version=8;
 }
 static void help(void) {
-    puts("\nBUDDY23 CIRCUIT WITH BARCODE v7 | AUTO ANALOG GP27 | *A* LEFT / *F* RIGHT | motors OFF on boot");
+    puts("\nBUDDY23 CIRCUIT WITH BARCODE v8 | AUTO ANALOG GP27 | *A* LEFT / *F* RIGHT | motors OFF on boot");
     puts("V7 rolling line search after150ms loss: five alternating350/700/1050/1400/1750ms sweeps;150mm search limit. Normal follower unchanged.");
     puts("Search starts toward last seen side; no history starts left then alternates. Moving search wheel uses loaded42% cap, no48% search peak.");
-    puts("No manual barcode calibration.31 raw-ADC thresholds128..3968;32-count hysteresis;2ms debounce;black HIGH.");
+    puts("V8 barcode sensitivity:63 thresholds; coarse128..3968/128 and fine192..254/2. Hysteresis coarse+/-32,fine+/-3;2ms debounce;black HIGH.");
     puts("Need TWO neighbouring thresholds agreeing on complete Code39 *X* frame. Unknown/ambiguous frames never force A/F.");
     puts("BARCODE A0 -> GP27/ADC1;GP19/D0 UNUSED. Front A0 GP26/GP28 unchanged;3.3V/common GND.");
     puts("A/F pending until next separate11..30mm effective cross stripe on a straight; consume command ONCE.");
@@ -211,8 +252,8 @@ static void help(void) {
     puts("Search decisions19..23=sweep1..5; wheel targets show direction; assist5/6=search left/right wheel. Manual/USB/control/direction/invalid/turn checks remain.");
     puts("FRONT ONLY:w=both WHITE,l=left BLACK,r=right BLACK;k=save.1/2/3=profile. No o/b side capture.");
     puts("g=USB hands-free2s;f=hold GP21;s/either button stops. BANK:wait5s,BOTH3s,release,wait1s,tap GP21,2s.");
-    puts("h=help;j=compact events+summary;p=motion+events;v=toggle live status(defaultOFF). Stop,WAIT5s before changing power.");
-    puts("Logs: latest1000 motion rows at20ms + state changes,192 events,64 turns; whole-run summary. p/j dumps paced5ms/row.");
+    puts("h=help;j=events+summary;p=motion+events;a=raw barcode ADC trace;v=live(defaultOFF). Stop,WAIT5s before changing power.");
+    puts("Raw: first4096 A0 samples/run,nominal2ms,encoder path;CRC/readback flash saved; a dump paced5ms/row. V7 motion/events/turn logs retained.");
     printf("CAL FRONT white=%u,%u black=%u,%u valid=%u min_span=%u span=%d,%d barcode=AUTO_A0_GP27 profile=%u restored=%u imported=%u\n",
         calibration.white[0],calibration.white[1],calibration.black[0],calibration.black[1],calibration_valid(&calibration),
         (unsigned)LINE_CAL_MIN_SPAN,(int)calibration.black[0]-(int)calibration.white[0],(int)calibration.black[1]-(int)calibration.white[1],
@@ -300,7 +341,8 @@ static void dump_events(void) {
         (unsigned long)nav.event_count,(unsigned long)nav.event_overwritten);
     if(recorded_version>=3)
         puts("BAD_FRAME flags:1=width,2=class separation,4=wide count,8=character gap,16=pattern,32=timeout,64=bad run; values combine. Complete frames show all9-bit patterns.");
-    if(recorded_version>=4) puts("ANALOG_CANDIDATE/SELECT width column=ADC threshold,flags=bank1..31; SAMPLE_GAP width=ms. DECODE flags bit7=analogue,bit0=reverse,bits1..5=bank0..30.");
+    if(recorded_version>=8) puts("ANALOG_CANDIDATE/SELECT width column=ADC threshold,flags=bank1..63; SAMPLE_GAP width=ms. DECODE flags bit7=analogue,bit0=reverse,bits1..6=bank0..62.");
+    else if(recorded_version>=4) puts("ANALOG_CANDIDATE/SELECT width column=ADC threshold,flags=bank1..31; SAMPLE_GAP width=ms. DECODE flags bit7=analogue,bit0=reverse,bits1..5=bank0..30.");
     puts("number,ms,distance_mm,event,width_mm,code,action,flags,pattern_start,pattern_data,pattern_stop");
     for(unsigned k=0;k<nav.event_count;++k) {
         BarcodeEvent *e=&nav.events[(nav.event_head+B_EVENTS-nav.event_count+k)%B_EVENTS];
@@ -329,7 +371,7 @@ static void dump(void) {
             (double)r->speed10[0]/10,(double)r->speed10[1]/10,r->pwm[0],r->pwm[1],r->adc[0],r->adc[1],
             r->level[0],r->level[1],r->target[0],r->target[1],r->decision&31,(unsigned long)r->turns,r->decision>>5,
             (r->phase>>4)&3,(r->phase>>6)&1,(r->phase>>7)&1,(r->side>>1)&3);
-        if(recorded_version>=4) printf("%u,%u,%u,%u\n",entry->side_adc,barcode_analog_threshold(entry->ao_bank),entry->ao_black,entry->ao_bank);
+        if(recorded_version>=4) printf("%u,%u,%u,%u\n",entry->side_adc,barcode_analog_log_threshold(recorded_version,entry->ao_bank),entry->ao_black,entry->ao_bank);
         else printf("%c,%c,%c,%u\n",entry->pending?entry->pending:'-',entry->decoded?entry->decoded:'-',entry->action?entry->action:'-',entry->scan);
         stdio_flush();sleep_ms(5);
     }
@@ -351,7 +393,8 @@ static bool start_run(unsigned mode) {
     uint64_t now=time_us_64();uint32_t irq=save_and_disable_interrupts();
     bool ok=guard_start(&guard,now,mode!=LINE_USB_HOLD || !gpio_get(HOLD),!gpio_get(STOP));
     if(ok) {
-        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=7;last_fast=false;
+        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=8;last_fast=false;
+        barcode_raw_begin(&raw_capture,recorded_mode);raw_new=true;raw_loaded=raw_persisted=raw_save_failed=false;
         capture=(CircuitCapture){0};load=(CircuitLoad){0};capture_outer=-1;assist_code=feedback_mask=0;
         guard.deadline_us=UINT64_MAX;guard.duration_us=0;
         for(unsigned w=0;w<2;++w) {
@@ -465,7 +508,7 @@ int main(void) {
     adc_init();adc_gpio_init(26);adc_gpio_init(28);adc_gpio_init(27);
     analog_raw[0]=read_adc(0);analog_raw[1]=read_adc(2);
     adc_filtered[0]=analog_raw[0];adc_filtered[1]=analog_raw[1];
-    side_adc=read_adc(1);side_analog.selected=15;stdio_init_all();load_log();side_cal=(SideCalibration){0,1,3};last_control=time_us_64();
+    side_adc=read_adc(1);side_analog.selected=AO_DEFAULT_BANK;stdio_init_all();load_log();load_raw();side_cal=(SideCalibration){0,1,3};last_control=time_us_64();
     bool old_connected=false,usb_pending=false;uint8_t raw_buttons=0,buttons=0;
     uint64_t changed=0,last_status=0,last_adc=0,usb_start_at=0;uint32_t seen_stops=0;
     BenchArm arm={0};
@@ -496,6 +539,7 @@ int main(void) {
         if(ch=='h') help();
         else if(ch=='p') dump();
         else if(ch=='j') dump_events();
+        else if(ch=='a') { usb_pending=false;arm.state=ARM_IDLE;dump_raw(); }
         else if(ch=='s') {
             usb_pending=false;arm.state=ARM_IDLE;uint32_t irq=save_and_disable_interrupts();kill(now,WHY_SERIAL);restore_interrupts(irq);
 
@@ -535,6 +579,9 @@ int main(void) {
                 for(unsigned w=0;w<2;++w) ticks[w]=total_ticks[w]+enc[w].position;
                 restore_interrupts(irq);double wheel[2]={wheel_mm(0,ticks[0]),wheel_mm(1,ticks[1])};
                 barcode_analog_sample(&side_analog,&nav,side_adc,last_side_sample,wheel);
+                double path100=(wheel[0]+wheel[1])*50;
+                int32_t point=path100>INT32_MAX?INT32_MAX:path100<INT32_MIN?INT32_MIN:(int32_t)path100;
+                barcode_raw_sample(&raw_capture,last_side_sample-guard.start_us,point,side_adc);
             } else { side_analog.adc=side_adc;side_analog.black=side_adc>=barcode_analog_threshold(side_analog.selected); }
         }
         uint8_t before_phase=circuit.phase;
@@ -552,7 +599,11 @@ int main(void) {
             }
             if(trace_settling && now-stopped_us>=1000000) {
                 trace_settling=false;save_log();
-                if(connected) { puts(save_failed?"FLASH SAVE FAILED":"RUN SAVED; p prints log.");print_summary(); }
+                if(connected) {
+                    puts(save_failed?"FLASH SAVE FAILED":"RUN SAVED; p=motion/events; a=raw barcode.");
+                    if(raw_save_failed) puts("RAW FLASH SAVE FAILED; a can still dump the RAM trace.");
+                    print_summary();
+                }
             }
         }
         if(connected && status_enabled && now-last_status>=500000) {
