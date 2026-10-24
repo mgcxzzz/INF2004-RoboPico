@@ -1,8 +1,8 @@
-# Barcode analogue probe V4: saved calibration and raw distance sweep
+# Barcode analogue probe V5: saved calibration and raw distance sweep
 
 Motors-off USB diagnostic. Barcode A0 -> GP27 / ADC1 (Pico W physical pin32),
 3.3 V and common GND; D0/GP19 unused. Leave both front Grove connections and
-existing encoder wiring unchanged. V4 measures the full analogue profile before
+existing encoder wiring unchanged. V5 measures the full analogue profile before
 choosing a threshold. It does not decode, line-follow or execute junction turns.
 
 ## Why capture a full A?
@@ -16,8 +16,8 @@ No reading is forced to A. Both missing gaps and missing bars remain measurable.
 
 ## Save calibration once
 
-1. Flash `firmware/buddy23_barcode_analog_probe_v4.uf2`; open computer USB serial
-   115200 / 8N1 / no flow control. Press h: verify V4 and GP27/ADC1, motors OFF.
+1. Flash `firmware/buddy23_barcode_analog_probe_v5.uf2`; open computer USB serial
+   115200 / 8N1 / no flow control. Press h: verify V5 and GP27/ADC1, motors OFF.
 2. At normal mounted height, broad white on the actual barcode paper: w, hold
    still for one second. On a wide black bar on that paper: b, hold still.
 3. Check CAL `mask=3 valid=1`, then keep still and press **k**. Expect
@@ -26,7 +26,7 @@ No reading is forced to A. Both missing gaps and missing bars remain measurable.
    references. Recalibrate if height, lighting, paper or mounting changes.
 
 V3 calibration was RAM-only and is lost when resetting to flash V4: recapture
-once. V4 does not hardcode earlier values or import the front sensor calibration.
+once. V4/V5 do not hardcode earlier values or import the front sensor calibration.
 Broad reference checks: >=500 samples/capture, >=100-count mean separation,
 >=6x largest reference SD. Normalized white0 / black1000 / invalid-1, either
 voltage polarity. g/n still capture narrow gap/bar without changing references.
@@ -55,6 +55,24 @@ quadrature signs are left negative/right positive for forward, matching the
 working circuit firmware. Conversion uses the same provisional calibration:
 200 mm circumference, left2524.05/right2528.30 counts per revolution. Wheel
 slip and angle make these estimates inaccurate: roll straight with wheels turning.
+
+## V5 dump transport fix
+
+The complete user PuTTY file contains three V4 dump headers but only1069/9690,
+1369/8241 and1347/7321 complete rows. One missing stretch jumps2.73->16.91s,
+even though its recorder reports no missed sampling slots. V4 had a10ms USB
+stdout timeout; the SDK can discard text on backpressure, consistent with the
+joined/truncated rows. V5 raises that timeout to5s, flushes and paces each row
+by5ms, numbers rows0..N-1 and appends SWEEP_DUMP_END with row count and CRC32
+of numeric CSV rows (LF line endings). Sampling is unchanged; pacing happens
+only during the later dump. This mitigates data loss; the checksum detects any
+remaining incomplete/corrupted transfer. Wait up to about55s at the maximum
+row count, and until both end markers. Use Session Logging to a fresh file.
+
+Run `python analyze_sweep_log.py putty.txt` to audit mixed logs. V4 counts can
+be audited but have no transport checksum. V5 is checksum_verified only with
+the expected row count, contiguous indexes, increasing times, end marker and
+matching CRC. Run `python test_sweep_log.py` for6 transport-audit tests.
 
 ## Data and controls
 
@@ -99,5 +117,5 @@ bank0x1d0000, circuit bank0x1e0000 and legacy tail records are not written.
 Binary-end check rejects writes if the firmware overlaps these probe slots.
 A future full-chip erase or other firmware using these slots can remove records.
 
-V1/V2/V3 UF2 remain unchanged. See BUILD_V4.md for build/UF2 evidence. V4 has
+V1-V4 UF2 remain unchanged. See BUILD_V5.md for build/UF2 evidence. V5 has
 not been physically tested; verify calibration restore and hand-scan readings.

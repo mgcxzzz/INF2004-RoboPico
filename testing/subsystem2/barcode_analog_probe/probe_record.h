@@ -26,14 +26,15 @@ typedef struct {
 } ProbeRecord;
 _Static_assert(sizeof(Calibration)==40 && sizeof(ProbeRecord)==72,"Probe calibration flash ABI changed");
 #define PROBE_MAGIC 0x34415042u
-static inline uint32_t probe_crc(const void *data,size_t length) {
-    const uint8_t *p=data;uint32_t crc=0xffffffffu;
+static inline uint32_t probe_crc_update(uint32_t crc,const void *data,size_t length) {
+    const uint8_t *p=data;
     for(size_t k=0;k<length;++k) {
         crc^=p[k];
         for(unsigned b=0;b<8;++b) crc=(crc>>1)^((crc&1)?0xedb88320u:0);
     }
-    return ~crc;
+    return crc;
 }
+static inline uint32_t probe_crc(const void *data,size_t length) { return ~probe_crc_update(0xffffffffu,data,length); }
 static inline bool probe_record_valid(const ProbeRecord *p) {
     return p->magic==PROBE_MAGIC && p->version==1 && p->bytes==sizeof(*p) &&
            p->pin==27 && p->channel==1 && probe_cal_valid(&p->calibration) &&

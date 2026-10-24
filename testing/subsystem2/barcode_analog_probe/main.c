@@ -112,17 +112,22 @@ static void sample_sweep(uint64_t now) {
 }
 static void dump_sweep(void) {
     if(!sweep_have) { puts("No sweep recorded. f=arm2seconds, manually roll over A, s=stop, p=dump.");return; }
-    printf("ANALOG_SWEEP v4: samples=%u duration_ms=%" PRIu64 " pin=27 ADC=1 motors=OFF\n",sweep_count,(sweep_stop-sweep_start)/1000);
+    printf("ANALOG_SWEEP v5: samples=%u duration_ms=%" PRIu64 " pin=27 ADC=1 paced_rows_per_s=200 motors=OFF\n",sweep_count,(sweep_stop-sweep_start)/1000);
     printf("SWEEP_CAL: white=%.1f black=%.1f valid=%u max_interval_us=%" PRIu32
            " missed_slots=%" PRIu32 " invalid_L=%" PRIu32 " invalid_R=%" PRIu32 "\n",
            sweep_cal.white,sweep_cal.black,probe_cal_valid(&sweep_cal),sweep_max_interval,sweep_missed,sweep_bad[0],sweep_bad[1]);
-    puts("us,ADC,level_1000,ticks_L,ticks_R,L_mm,R_mm,mean_forward_mm");
+    puts("sample,us,ADC,level_1000,ticks_L,ticks_R,L_mm,R_mm,mean_forward_mm");
+    uint32_t crc=0xffffffffu;char line[192];
     for(unsigned k=0;k<sweep_count;++k) {
         if(!stdio_usb_connected()) return; /* RAM copy remains available for p after reconnect. */
         const SweepRow *r=&sweep[k];double l=sweep_mm(0,r->ticks[0]),right=sweep_mm(1,r->ticks[1]);
-        printf("%" PRIu32 ",%u,%d,%" PRId32 ",%" PRId32 ",%.3f,%.3f,%.3f\n",
-               r->us,r->adc,probe_level(&sweep_cal,r->adc),r->ticks[0],r->ticks[1],l,right,(l+right)*.5);
+        int length=snprintf(line,sizeof(line),"%u,%" PRIu32 ",%u,%d,%" PRId32 ",%" PRId32 ",%.3f,%.3f,%.3f\n",
+               k,r->us,r->adc,probe_level(&sweep_cal,r->adc),r->ticks[0],r->ticks[1],l,right,(l+right)*.5);
+        if(length<=0 || (size_t)length>=sizeof(line)) { puts("DUMP_ERROR: row format overflow; retry p.");return; }
+        crc=probe_crc_update(crc,line,(size_t)length);
+        printf("%s",line);stdio_flush();sleep_ms(5);
     }
+    printf("SWEEP_DUMP_END: rows=%u crc32=%08" PRIx32 " (numeric rows including LF; normalize CRLF to LF)\n",sweep_count,~crc);
     puts("END ANALOG_SWEEP. Raw signal, no letter decoded. Encoder distances are estimates. Sweep is RAM only.");
 }
 static void print_calibration(void) {
@@ -164,7 +169,7 @@ static const char *label_for(int ch) {
     }
 }
 static void help(void) {
-    puts("\nBUDDY23 BARCODE ANALOG PROBE v4 | motors=OFF always");
+    puts("\nBUDDY23 BARCODE ANALOG PROBE v5 | motors=OFF always");
     puts("Barcode A0 -> GP27/ADC1 (Pico W physical pin32). Front sensors unchanged; GP19/D0 unused.");
     puts("Sensor VCC=3.3V, common GND. Do not connect a 5V output to the ADC.");
     puts("USB-only motors-OFF probe. k=save calibration (dual CRC slots); restored on boot. No barcode decoding.");
@@ -176,6 +181,7 @@ static void help(void) {
     puts("Each key records1second then prints CAPTURE. Repeat g/n at least3times, normal mounted height.");
     puts("c=calibration; k=save current calibration while still; r=reset RAM references (saved copy kept).");
     puts("f=arm2s then record500Hz up to20s; roll straight by hand, wheels on mat; s=stop; p=dump sweep.\nq=last stationary capture; v=toggle LIVE (off by default); h=help. Sweep RAM-only; calibration persists after k.");
+    puts("V5 p dump is paced5ms/row: wait up to55seconds for SWEEP_DUMP_END + END ANALOG_SWEEP. Row numbers/CRC detect missing output.");
     print_calibration();
 }
 int main(void) {
