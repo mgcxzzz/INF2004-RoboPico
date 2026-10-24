@@ -34,6 +34,8 @@ static volatile int64_t total_ticks[2],cut_ticks[2];
 static volatile uint32_t initial_invalid[2],cut_invalid[2];
 static volatile int32_t output[2];
 static volatile uint64_t peak_until[2];
+static volatile bool ramp_output[2];
+static RampWheel ramp_wheel[2];
 static LineCalibration calibration;
 static SideCalibration side_cal;
 static Circuit circuit;
@@ -43,7 +45,7 @@ static SmoothFollow steering;
 static uint16_t side_adc;static uint64_t last_side_sample;static bool status_enabled;
 static uint32_t last_nav_event;
 static uint8_t test_mode=1,recorded_mode=1;
-static uint8_t recorded_version=9;
+static uint8_t recorded_version=10;
 static bool last_fast;
 static CircuitCapture capture;
 static CircuitLoad load;
@@ -110,9 +112,9 @@ static bool safety_tick(struct repeating_timer *t) {
     if(guard.active && run_mode!=LINE_USB_HOLD && !gpio_get(HOLD)) guard_stop(&guard,now,WHY_BUTTON);
     if(!guard.active) { outputs_off();if(active) capture_cutoff(); }
     else for(unsigned w=0;w<2;++w) {
-        int32_t capped=boosted_junction_peak_cap(output[w],peak_until[w],now);
+        int32_t capped=barcode_output_cap(output[w],ramp_output[w],peak_until[w],now);
         if(capped!=output[w]) {
-            output[w]=capped;DualLevels v=circuit_levels(w,capped,true,recorded_mode);
+            output[w]=capped;DualLevels v=barcode_output_levels(w,capped,ramp_output[w],true,recorded_mode);
             pwm_set_both_levels(pwm_gpio_to_slice_num(ma[w]),v.a,v.b);
         }
     }
@@ -236,10 +238,11 @@ static void reset_log(void) {
     trace_count=trace_head=trace_dropped=summary_count=summary_head=0;
     guard.duration_us=0;guard.reason=0;circuit=(Circuit){0};nav=(BarcodeNav){0};
     for(unsigned w=0;w<2;++w) { cut_ticks[w]=0;cut_invalid[w]=0; }
-    flash_loaded=false;recorded_key='-';recorded_version=9;
+    flash_loaded=false;recorded_key='-';recorded_version=10;
 }
 static void help(void) {
-    puts("\nBUDDY23 CIRCUIT WITH BARCODE v9 | AUTO ANALOG GP27 | *A* LEFT / *F* RIGHT | motors OFF on boot");
+    puts("\nBUDDY23 CIRCUIT WITH BARCODE v10 | AUTO ANALOG GP27 | *A* LEFT / *F* RIGHT | motors OFF on boot");
+    puts("V10 PROFILE2 RAMP: centred straight180mm/s; per-wheel Kp3.5 Ki10; acceleration400mm/s^2; PWM50% sustained/65% boost<=1500ms after40ms deficit. Profile1 remains V9. Profile3 remains135.");
     puts("V9 smooth visible-line steering: gentle small corrections,60..20ms response,200..600mm/s^2 target slew. Urgent bends/search/junction targets unchanged.");
     puts("V7 rolling line search after150ms loss: five alternating350/700/1050/1400/1750ms sweeps;150mm search limit. Recovery schedule retained.");
     puts("Search starts toward last seen side; no history starts left then alternates. Moving search wheel uses loaded42% cap, no48% search peak.");
@@ -249,10 +252,10 @@ static void help(void) {
     puts("A/F pending until next separate11..30mm effective cross stripe on a straight; consume command ONCE.");
     puts("Cross requires4mm WHITE after trailing edge; a closer next bar cancels the candidate, preserving pending.");
     puts("No queued command -> continue following. Junction search starts after verified A/F; frame stop bar is excluded.");
-    puts("Scan/pending approach uses usual45mm/s; unmarked stable cruising profiles1/2/3 request45/90/135.");
+    puts("Scan/pending approach uses usual45mm/s; unmarked stable cruising profiles1/2/3 request45/180/135 (profile2 is the ramp experiment).");
     puts("Rolling LEFT: left off/right forward. RIGHT: right off/left forward. Side ahead92mm; start55mm before centre.");
-    puts("Motor caps30% correction,42% loaded/turn,48% bounded turn start. Encoder progress is WARNING ONLY.");
-    puts("Search decisions19..23=sweep1..5; wheel targets show direction; assist5/6=search left/right wheel. Manual/USB/control/direction/invalid/turn checks remain.");
+    puts("Normal motor caps30% correction,42% loaded/turn,48% turn start. Profile2 ordinary visible-line drive uses ramp limits above. Encoder progress is WARNING ONLY.");
+    puts("Search decisions19..23=sweep1..5; wheel targets show direction; assist5/6=search left/right wheel;assist7=profile2 ramp controller. Manual/USB/control/direction/invalid/turn checks remain.");
     puts("FRONT ONLY:w=both WHITE,l=left BLACK,r=right BLACK;k=save.1/2/3=profile. No o/b side capture.");
     puts("g=USB hands-free2s;f=hold GP21;s/either button stops. BANK:wait5s,BOTH3s,release,wait1s,tap GP21,2s.");
     puts("h=help;j=events+summary;p=motion+events;a=raw barcode ADC trace;v=live(defaultOFF). Stop,WAIT5s before changing power.");
@@ -325,6 +328,12 @@ static void print_summary(void) {
         (unsigned long)nav.lefts,(unsigned long)nav.rights,(unsigned long)nav.decoded_a,(unsigned long)nav.decoded_f,
         (unsigned long)nav.unsupported,(unsigned long)nav.rejected,(unsigned long)nav.straight_crosses,
         (unsigned long)circuit.ignored,(unsigned long)cut_invalid[0],(unsigned long)cut_invalid[1]);
+    if(recorded_version>=10 && recorded_mode==2) {
+        int peak[2]={0,0};
+        for(unsigned n=0;n<trace_count;++n) for(unsigned w=0;w<2;++w)
+            if(trace[n].motion.pwm[w]>peak[w]) peak[w]=trace[n].motion.pwm[w];
+        printf("RAMP2: straight_target_mm_s=180 sustained_pwm=500 boost_pwm=650 boost_ms=1500 recorded_peak_pwm=%d,%d assist7=ramp_controller (peaks from retained motion rows)\n",peak[0],peak[1]);
+    }
 }
 static const char *event_name(unsigned type) {
     switch(type) {
@@ -396,13 +405,14 @@ static bool start_run(unsigned mode) {
     uint64_t now=time_us_64();uint32_t irq=save_and_disable_interrupts();
     bool ok=guard_start(&guard,now,mode!=LINE_USB_HOLD || !gpio_get(HOLD),!gpio_get(STOP));
     if(ok) {
-        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=9;last_fast=false;
+        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=10;last_fast=false;
         barcode_raw_begin(&raw_capture,recorded_mode);raw_new=true;raw_loaded=raw_persisted=raw_save_failed=false;
         capture=(CircuitCapture){0};load=(CircuitLoad){0};steering=(SmoothFollow){0};capture_outer=-1;assist_code=feedback_mask=0;
         guard.deadline_us=UINT64_MAX;guard.duration_us=0;
         for(unsigned w=0;w<2;++w) {
             enc[w].position=0;total_ticks[w]=cut_ticks[w]=0;initial_invalid[w]=enc[w].invalid;cut_invalid[w]=0;
-            velocity[w]=0;output[w]=0;peak_until[w]=0;controller[w]=(SignedWheel){0};
+            velocity[w]=0;output[w]=0;peak_until[w]=0;ramp_output[w]=false;
+            ramp_wheel[w]=(RampWheel){0};controller[w]=(SignedWheel){0};
             bad_direction_us[w]=0;feedback[w]=(CircuitFeedback){0};
         }
         CircuitInput input={.now=now,.adc={analog_raw[0],analog_raw[1]},.side_black=false};
@@ -443,6 +453,7 @@ static void control_step(uint64_t now) {
     uint8_t failure=demand.stop?circuit.reason:WHY_NONE;int32_t next[2];
     bool turning=circuit.phase==J_TURN && ((demand.target[0]==0 && demand.target[1]>0) ||
                                                          (demand.target[1]==0 && demand.target[0]>0));
+    bool ramp_drive=ramp_profile_active(recorded_mode,&circuit,&demand);
     unsigned wheel_profile=circuit.fast?recorded_mode:1;
     unsigned previous_assist=assist_code;
     capture_outer=circuit_capture_outer(&capture,&input,circuit.phase,&demand);
@@ -454,12 +465,16 @@ static void control_step(uint64_t now) {
     assist_code=search_outer>=0?(unsigned)search_outer+5:capture_outer>=0?(unsigned)capture_outer+1:load_outer>=0?(unsigned)load_outer+3:0;
     int effort_outer=search_outer>=0?search_outer:capture_outer>=0?capture_outer:load_outer;
     bool loaded[2]={turning || effort_outer==0,turning || effort_outer==1};
-    if(effort_outer>=0 && assist_code!=previous_assist) circuit_capture_prepare(&controller[effort_outer]);
+    if(!ramp_drive && effort_outer>=0 && assist_code!=previous_assist) circuit_capture_prepare(&controller[effort_outer]);
     if(last_fast && !circuit.fast) for(unsigned w=0;w<2;++w) circuit_leave_fast(&controller[w]);
     last_fast=circuit.fast;
     feedback_mask=0;
     for(unsigned w=0;w<2;++w) {
-        next[w]=circuit_wheel_step(&controller[w],w,demand.target[w],velocity[w],dt,now,loaded[w],wheel_profile);
+        if(ramp_drive) next[w]=ramp_wheel_step(&ramp_wheel[w],&controller[w],w,demand.target[w],velocity[w],dt,now);
+        else {
+            ramp_wheel_leave(&ramp_wheel[w],&controller[w],demand.target[w]);
+            next[w]=circuit_wheel_step(&controller[w],w,demand.target[w],velocity[w],dt,now,loaded[w],wheel_profile);
+        }
         bad_direction_us[w]=demand.target[w]>0 && velocity[w]<-20?bad_direction_us[w]+elapsed:0;
         if(bad_direction_us[w]>=50000) failure=WHY_DIRECTION;
         /* User-requested V5 behavior: retain diagnostic evidence but do not
@@ -468,14 +483,16 @@ static void control_step(uint64_t now) {
             feedback_mask|=1u<<w;
         if(e[w].invalid-initial_invalid[w]>=8) failure=WHY_ENCODER;
     }
+    if(ramp_drive) assist_code=7; /* V10 ramp per-wheel speed controller */
     irq=save_and_disable_interrupts();
     if(guard.active && guard.generation==generation) {
         if(failure) kill(now,failure);
         else {
             for(unsigned w=0;w<2;++w) {
-                peak_until[w]=turning?controller[w].peak_end_us:0;
-                output[w]=boosted_junction_peak_cap(next[w],peak_until[w],time_us_64());
-                DualLevels v=circuit_levels(w,output[w],loaded[w],wheel_profile);
+                ramp_output[w]=ramp_drive;
+                peak_until[w]=ramp_drive?ramp_wheel[w].boost_until:turning?controller[w].peak_end_us:0;
+                output[w]=barcode_output_cap(next[w],ramp_output[w],peak_until[w],time_us_64());
+                DualLevels v=barcode_output_levels(w,output[w],ramp_output[w],loaded[w],wheel_profile);
                 pwm_set_both_levels(pwm_gpio_to_slice_num(ma[w]),v.a,v.b);
             }
             guard.last_control_us=now;

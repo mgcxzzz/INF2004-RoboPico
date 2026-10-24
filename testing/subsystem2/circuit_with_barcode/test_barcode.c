@@ -252,7 +252,7 @@ static void no_command_and_record(void) {
     s.count=B_ROWS;s.event_count=B_EVENTS;s.summary_count=C_SUMMARIES;
     s.crc=log_crc((uint8_t *)&s+offsetof(BarcodeSaved,count),sizeof(s)-offsetof(BarcodeSaved,count));
     assert(barcode_record_valid(&s));s.version=2;assert(barcode_record_valid(&s));
-    s.version=3;assert(barcode_record_valid(&s));s.version=4;assert(barcode_record_valid(&s));s.version=5;assert(barcode_record_valid(&s));s.version=6;assert(barcode_record_valid(&s));s.version=7;assert(barcode_record_valid(&s));s.version=8;assert(barcode_record_valid(&s));s.version=9;assert(barcode_record_valid(&s));s.version=10;assert(!barcode_record_valid(&s));s.version=3;
+    s.version=3;assert(barcode_record_valid(&s));s.version=4;assert(barcode_record_valid(&s));s.version=5;assert(barcode_record_valid(&s));s.version=6;assert(barcode_record_valid(&s));s.version=7;assert(barcode_record_valid(&s));s.version=8;assert(barcode_record_valid(&s));s.version=9;assert(barcode_record_valid(&s));s.version=10;assert(barcode_record_valid(&s));s.version=11;assert(!barcode_record_valid(&s));s.version=3;
     s.events[10].code^=1;assert(!barcode_record_valid(&s));
     printf("record_bytes=%zu trace=%zu summary=%zu\n",sizeof(s),sizeof(BarcodeTrace),sizeof(BarcodeSummary));
 }

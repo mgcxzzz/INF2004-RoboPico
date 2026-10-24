@@ -69,7 +69,7 @@ static void weak_boundary_and_profile_transition(void) {
         d=barcode_drive_step(&c,&n,&cal,&i,profile,&smooth,.01f);
         assert(d.target[0]==45 && d.target[1]==45);
         for(unsigned k=0;k<150;++k) {i.now+=10000;d=barcode_drive_step(&c,&n,&cal,&i,profile,&smooth,.01f);}
-        assert(abs(d.target[0]-circuit_cruise(profile))<=1 && d.target[0]==d.target[1]);
+        assert(abs(d.target[0]-(int)barcode_profile_cruise(profile))<=1 && d.target[0]==d.target[1]);
         i.now+=10000;i.adc[0]=221;
         d=barcode_drive_step(&c,&n,&cal,&i,profile,&smooth,.01f);
         assert(!c.fast && d.target[0]<=50 && d.target[1]<=50);

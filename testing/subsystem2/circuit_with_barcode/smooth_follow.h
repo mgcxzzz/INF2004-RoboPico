@@ -1,6 +1,7 @@
 #ifndef BARCODE_SMOOTH_FOLLOW_H
 #define BARCODE_SMOOTH_FOLLOW_H
 #include "barcode_nav.h"
+#include "ramp_profile.h"
 
 typedef struct { float target[2];bool active; } SmoothFollow;
 /* This adapter changes only visible-line output targets. Raw calibrated
@@ -50,6 +51,8 @@ static inline void smooth_follow_apply(SmoothFollow *s,const Circuit *c,float dt
 static inline AnalogDemand barcode_drive_step(Circuit *c,BarcodeNav *n,const LineCalibration *cal,
                                               const CircuitInput *i,unsigned profile,SmoothFollow *s,float dt) {
     AnalogDemand d=barcode_circuit_step(c,n,cal,i,profile);
+    if(profile==2 && c->fast && !d.stop)
+        d.target[0]=d.target[1]=RAMP2_SPEED;
     smooth_follow_apply(s,c,dt,&d);return d;
 }
 #endif
