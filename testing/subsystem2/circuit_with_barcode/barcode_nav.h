@@ -11,6 +11,7 @@ typedef struct {
     uint64_t start_us,leading_us,cross_us;
     double leading_wheel[2],cross_wheel[2],cross_width,cross_trailing_mm;
     bool leading_gate,cross_gate,cross_ready,cross_candidate,busy,allow_cross;
+    bool external_reader,external_scanning;
     char pending,action,last_code;
 } BarcodeNav;
 static inline void barcode_event(BarcodeNav *n,unsigned type,uint64_t now,double mm,double width,
@@ -97,12 +98,13 @@ static inline AnalogDemand barcode_circuit_step(Circuit *c,BarcodeNav *n,const L
     double mean=(i->wheel[0]+i->wheel[1])*.5;
     if(!c->busy) {
         barcode_cross_confirm(n,i->now,mean,!i->side_black);
-        if(barcode_reader_expire(&n->reader,i->now,mean)) {
+        if(!n->external_reader && barcode_reader_expire(&n->reader,i->now,mean)) {
             ++n->rejected;barcode_event(n,B_BAD_FRAME,i->now,mean,mean-n->reader.start_mm,'?',0,B_REJECT_TIMEOUT,NULL);
         }
         /* Slow scanning and the approach with a pending command; encoding
            remains distance-based even as measured speed changes. */
-        bool scan=n->reader.frame || n->reader.history_count || n->reader.black || n->pending;
+        bool scan=n->external_reader?(n->external_scanning || n->pending):
+            (n->reader.frame || n->reader.history_count || n->reader.black || n->pending);
         d=circuit_follow(c,cal,i,scan?1:profile);
         if(d.stop) { circuit_fail(c,c->follower.loss_reason?c->follower.loss_reason:J_LINE_LOST);return d; }
         barcode_straight_gate(c,n,i,&d);
