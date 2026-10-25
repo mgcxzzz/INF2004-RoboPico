@@ -7,11 +7,12 @@
 #define MQTT_UTK_H
 
 /*
- * Call once, from cyw43_utk_task() the first time the link reaches
- * CYW43_LINK_UP (see cyw43_utk.c). Starts the MQTT connection to
- * MQTT_BROKER_IP:MQTT_BROKER_PORT (config/wifi_secrets.h) and, once
- * connected, a periodic heartbeat publish on MQTT_TOPIC. Safe to call more
- * than once -- a second call while already connecting/connected is a no-op.
+ * Called by cyw43_utk_task() on every poll (about every 2 ms) while the
+ * link is CYW43_LINK_UP (see cyw43_utk.c). IS28 Buddy 1: connects to
+ * MQTT_BROKER_IP:MQTT_BROKER_PORT (config/wifi_secrets.h), reconnects with
+ * back-off, publishes the heartbeat and the queued telemetry, and receives
+ * supervisory commands (app_program/subsystem1/b1_net.h). Each call does a
+ * bounded amount of work and returns.
  */
 void mqtt_utk_start(void);
 

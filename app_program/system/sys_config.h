@@ -30,8 +30,9 @@
 
 /* 1 = print the Navigation Coordinator, Safety Supervisor and Buddy 5
  *     status on the console. Set to 0 once WiFi and MQTT (S1) provides
- *     the *_telemetry_publish() functions. */
-#define SYS_CONSOLE_STATUS      (1)
+ *     the *_telemetry_publish() functions: done on the buddy1 branch
+ *     (subsystem1/task_wifi.c sends them to MQTT instead). */
+#define SYS_CONSOLE_STATUS      (0)
 
 /* 1 = also print raw sensor readings for bench checks (needs
  *     SYS_CONSOLE_STATUS 1): Buddy 3's three IR sensors whenever one

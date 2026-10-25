@@ -1,35 +1,28 @@
-/*
- *	subsystem1.c
- *	Subsystem 1 -- LED heartbeat: creates its objects and starts its task.
+/**
+ * @file    subsystem1.c
+ * @brief   Subsystem 1 -- WiFi and MQTT (Buddy 1): creates its objects and
+ *          starts its task (the network side runs inside the kernel's WiFi
+ *          service task, see b1_net.h).
  *
- *	APIs shown: tk_cre_cyc, tk_sta_cyc
+ * Group IS28, Buddy 1. Coding standard: Barr-C:2018.
  */
 
 #include "subsystem1.h"
 
-EXPORT ID	tid_led;	/* IF-05, see subsystem1.h */
-EXPORT ID	cyc_led;
-
-EXPORT ER subsystem1_init(void)
+EXPORT ER
+subsystem1_init (void)
 {
-	T_CCYC	ccyc = {0};
-
-	/* Cyclic handler: once started, the kernel calls led_cyclic_handler
-	   every S1_TICK_MS.  Without TA_STA it is created stopped; it is
-	   started in subsystem1_start(), once the task it wakes exists. */
-	ccyc.cycatr = TA_HLNG;
-	ccyc.cychdr = (FP)led_cyclic_handler;
-	ccyc.cyctim = S1_TICK_MS;	/* period, ms */
-	ccyc.cycphs = S1_TICK_MS;	/* delay before the first call, ms */
-	cyc_led = tk_cre_cyc(&ccyc);
-	return (cyc_led < E_OK) ? cyc_led : E_OK;
+    return b1_create_objects();
 }
 
-EXPORT ER subsystem1_start(void)
+EXPORT ER
+subsystem1_start (void)
 {
-	tid_led = app_start_task(led_task, S1_PRI_LED, 0, "led_task");
-	if (tid_led < E_OK) {
-		return tid_led;
-	}
-	return tk_sta_cyc(cyc_led);	/* start the cyclic handler now */
+    ID tid = app_start_task(b1_task, S1_PRI_WIFI, 0, "wifi_task");
+
+    if (tid < E_OK)
+    {
+        return tid;
+    }
+    return b1_glue_start();
 }

@@ -55,6 +55,12 @@
  * room to spare; each slot is only a few bytes. */
 #define MEMP_NUM_SYS_TIMEOUT        (LWIP_NUM_SYS_TIMEOUT_INTERNAL + 4)
 
+/* IS28 Buddy 1 (mqtt_utk.c): every buddy's telemetry goes out through one
+ * client. The default 256-byte output buffer holds only about four frames;
+ * 1 KB rides out short bursts (several buddies publishing in the same
+ * poll) instead of making mqtt_publish() return ERR_MEM. */
+#define MQTT_OUTPUT_RINGBUF_SIZE    1024
+
 #define LWIP_ARP                    1
 #define LWIP_ETHERNET               1
 #define LWIP_ICMP                   1

@@ -137,7 +137,7 @@ sys_get_le32(uint8_t const * p)
 #define TLM_HDR_BYTES           (3U)
 
 /* Sources (4 bits). 0 is never sent. */
-#define TLM_SRC_WIFI            (1U)    /* S1 WiFi and MQTT       (to define) */
+#define TLM_SRC_WIFI            (1U)    /* S1 WiFi and MQTT       (below)     */
 #define TLM_SRC_MOTION          (2U)    /* S2 Motion Control      (to define) */
 #define TLM_SRC_LINE            (3U)    /* S3 Line and Barcode    (below)     */
 #define TLM_SRC_IMU             (4U)    /* S4 IMU Terrain         (to define) */
@@ -366,8 +366,109 @@ void s3_tlm_pack(s3_tlm_t const * p_in, uint8_t p_frame[S3_TLM_FRAME_BYTES]);
 bool s3_tlm_unpack(uint8_t const * p_frame, uint32_t len, s3_tlm_t * p_out);
 
 /* ------------------------------------------------------------------------
- * Sources 1, 2 and 4 (Buddies 1, 2 and 4): add your payload sections
- * here, in the same style, before your first frame goes out.
+ * Source 1: WiFi and MQTT (Buddy 1). Payload 12 bytes. Sent as the
+ * heartbeat on topic is28/hb about once a second (NFR-WIFI-02), and at
+ * once when the operating state changes. The header sequence number counts
+ * heartbeats. Packed by b1_tlm_pack() in subsystem1/b1_proto.c.
+ *
+ *   word 0  bits  0..1   link state (b1_net_t: 0 disconnected,
+ *                        1 connecting, 2 operational, 3 reconnect wait)
+ *           bits  2..4   operating state (nav_state_t; 7 = not known yet)
+ *           bits  5..8   last command code (B1_CMD_*, 0 = none yet)
+ *           bits  9..11  last command result (B1_ACK_*, 7 = none yet)
+ *           bits 12..25  uptime, s, 0..16383 (saturates, about 4.5 h)
+ *           bits 26..31  reserved
+ *   word 1  bits  0..15  messages published (wrapping)
+ *           bits 16..31  messages lost: queue full or publish failed
+ *                        (wrapping)
+ *   word 2  bits  0..7   commands accepted (wrapping)
+ *           bits  8..15  commands rejected (wrapping)
+ *           bits 16..23  MQTT (re)connections (wrapping)
+ *           bits 24..30  outgoing queue fill, %, 0..100
+ *           bit  31      reserved
+ * --------------------------------------------------------------------- */
+#define B1_TLM_PAYLOAD_BYTES    (12U)
+#define B1_TLM_FRAME_BYTES      (TLM_HDR_BYTES + B1_TLM_PAYLOAD_BYTES)
+
+#define B1_BITS_NET             (2U)
+#define B1_BITS_STATE           (3U)
+#define B1_BITS_CMD             (4U)
+#define B1_BITS_RESULT          (3U)
+#define B1_BITS_UPTIME          (14U)
+#define B1_BITS_FILL            (7U)
+#define B1_STATE_UNKNOWN        (7U)    /* operating state not reported yet */
+#define B1_RESULT_NONE          (7U)    /* no command received yet          */
+
+typedef struct
+{
+    uint8_t  seq;
+    uint8_t  net;               /* b1_net_t */
+    uint8_t  state;             /* nav_state_t or B1_STATE_UNKNOWN */
+    uint8_t  last_cmd;          /* B1_CMD_* */
+    uint8_t  last_result;       /* B1_ACK_* or B1_RESULT_NONE */
+    uint16_t uptime_s;
+    uint16_t published;
+    uint16_t lost;
+    uint8_t  accepted;
+    uint8_t  rejected;
+    uint8_t  connects;
+    uint8_t  fill_pct;
+} b1_tlm_t;
+
+void b1_tlm_pack(b1_tlm_t const * p_in, uint8_t p_frame[B1_TLM_FRAME_BYTES]);
+bool b1_tlm_unpack(uint8_t const * p_frame, uint32_t len, b1_tlm_t * p_out);
+
+/* ------------------------------------------------------------------------
+ * Supervisory commands, PC -> car, topic is28/cmd. 4 bytes, no header.
+ * Checked by b1_cmd_check() (subsystem1/b1_proto.c), FR-WIFI-02/03.
+ *
+ *   byte 0  bits 0..3  schema version (TLM_VERSION)
+ *           bits 4..7  command code (B1_CMD_*)
+ *   byte 1             command id, chosen by the PC, echoed in the ack
+ *   bytes 2..3         argument, little-endian (B1_CMD_CONFIG only:
+ *                      bits 12..15 parameter, bits 0..11 value; else 0)
+ *
+ * Acknowledgement, car -> PC, topic is28/ack. 4 bytes, no header.
+ *
+ *   byte 0             byte 0 of the command, echoed
+ *   byte 1             command id, echoed
+ *   byte 2             result (B1_ACK_*)
+ *   byte 3  bits 0..2  operating state when answered (nav_state_t, 7 =
+ *                      not known yet); bits 3..7 reserved
+ *
+ * Steering and navigation commands are never carried out (FR-WIFI-03).
+ * They have codes only so a test can send one and see it rejected.
+ * --------------------------------------------------------------------- */
+#define B1_CMD_BYTES            (4U)
+#define B1_ACK_BYTES            (4U)
+
+#define B1_CMD_NONE             (0U)
+#define B1_CMD_START            (1U)    /* Ready -> Running                 */
+#define B1_CMD_PAUSE            (2U)
+#define B1_CMD_RESUME           (3U)
+#define B1_CMD_STOP             (4U)    /* controlled stop (Safe Stop)      */
+#define B1_CMD_RESET            (5U)    /* back to Ready / clear latch      */
+#define B1_CMD_ESTOP            (6U)    /* straight to Safety Supervisor    */
+#define B1_CMD_CONFIG           (7U)    /* configuration update             */
+#define B1_CMD_PING             (8U)    /* ack + heartbeat at once (latency)*/
+#define B1_CMD_STEER            (12U)   /* PROHIBITED: remote steering      */
+#define B1_CMD_DRIVE            (13U)   /* PROHIBITED: remote driving       */
+#define B1_CMD_TURN             (14U)   /* PROHIBITED: remote turning       */
+
+#define B1_ACK_ACCEPTED         (0U)    /* checked and passed on            */
+#define B1_ACK_PROHIBITED       (1U)    /* steering/navigation (FR-WIFI-03) */
+#define B1_ACK_UNKNOWN          (2U)    /* not a command code               */
+#define B1_ACK_FORMAT           (3U)    /* wrong length or schema version   */
+#define B1_ACK_BUSY             (4U)    /* valid, but could not be queued   */
+#define B1_ACK_UNSUPPORTED      (5U)    /* configuration parameter unknown  */
+
+/* Configuration parameters (B1_CMD_CONFIG, argument bits 12..15). */
+#define B1_CFG_TELEMETRY        (1U)    /* value 0 = pause other buddies'
+                                         * frames, 1 = forward them       */
+
+/* ------------------------------------------------------------------------
+ * Sources 2 and 4 (Buddies 2 and 4): add your payload sections here, in
+ * the same style, before your first frame goes out.
  * --------------------------------------------------------------------- */
 
 #endif /* SYS_TLM_H */
