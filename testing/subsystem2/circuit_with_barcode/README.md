@@ -1,14 +1,41 @@
-# Circuit with barcode V14: V12 follower restored, stationary search retained
+# Circuit with barcode V15: straight-only smoothing on the V14 baseline
 
-Use firmware/buddy23_circuit_with_barcode_v14.uf2 on the same Pico W.
+Use firmware/buddy23_circuit_with_barcode_v15.uf2 on the same Pico W.
 Select profile1 and retain the current calibration for the first comparison.
 Profile2 is still the separate paused ramp experiment.
 
-## Why V14 restores the V12 follower
+## V15 small-correction changes
+
+V14 completed the supplied school run through straights and bends, with manual
+GP21 stop at59.458s. Small straight-line jerks remained. The retained motion
+window is40.615..60.445s, not the entire route, so straight/bend labels cannot
+be inferred for every sample. Calibration is unchanged and valid.
+
+V15 adds two narrow adapters to the working V14 base:
+
+- Qualify both front levels>=700 and absolute difference<=220 for100ms. In
+  this strong-black plateau, request equal45mm/s instead of chasing small
+  brightness differences. Existing equal fast-cruise targets remain intact.
+  Exit immediately if either level<600 or imbalance>300. Raw loss/junction
+  thresholds, front calibration, recovery confidence and barcode ADCs do not
+  change. Decision24 marks the settled paired-black hold in motion logs.
+- Slew positive PWM at800 units/s upward and1600 downward ONLY while the
+  hold is active, both actual wheel speeds>=25mm/s and both targets35..55.
+  Start/slow wheel, zero output, loaded correction/capture, ramps, junction
+  turns and stationary search bypass it. No new PI or V13 visible-wheel
+  controller is used. This keeps breakaway/urgent bend authority available.
+
+Both-black sensing does not prove geometric centring or a perfectly straight
+track. This is deliberate small-error tolerance; it can change when correction
+begins on a gentle curve. Verify the straight-to-bend transition physically.
+Large-error and near-pivot bypass remain V14. No scan success is claimed from
+input replay or host tests; improve movement first, then try one barcode.
+
+## V14 baseline retained
 
 V13 performed worse on the school circuit. Its gradual visible-wheel controller
-and smoothing of strong corrections are removed from production. smooth_follow.h
-and the normal motor-controller dependencies match V12(commit f0e3b35) exactly.
+and smoothing of strong corrections are removed from production. V14 restored smooth_follow.h
+and motor dependencies from V12(commit f0e3b35); V15 adds only the adapters above.
 The historical visible_wheel.h/test_visible_wheel.c remain as V13 references;
 main.c does not include or call that controller.
 
@@ -132,8 +159,8 @@ remain. Physical slip/drag can still require tuning; no IMU is assumed.
 
 ## Test with profile1
 
-1. Keep the mounting, wiring and saved front calibration. Flash V14, press h
-   and verify the V14 banner and valid=1. Select1, then k to retain that profile.
+1. Keep the mounting, wiring and saved front calibration. Flash V15, press h
+   and verify the V15 banner and valid=1. Select1, then k to retain that profile.
 2. Put a complete Z barcode beside a straight leading to the cross, in the
    same position used by A/F. Start the offset sensor roughly20mm before it.
 3. Start with g over USB for a2s countdown, or use the usual power-bank
@@ -180,8 +207,8 @@ whole-run travelled-distance metric. Subsequent junctions use cumulative path
 and relative signed wheel geometry consistently.
 
 The main record appends8 bytes for Z/U counters: old64840-byte V1..V10 prefixes
-and trace56/turn-summary40 layouts remain byte-compatible; V11-V14 use64848 bytes.
-CRC length depends on version. V1..V13 calibration/logs still load; unknown15
+and trace56/turn-summary40 layouts remain byte-compatible; V11-V15 use64848 bytes.
+CRC length depends on version. V1..V14 calibration/logs still load; unknown16
 rejects. Main bank remains0x101d0000. Raw record/address is unchanged at
 0x101b0000, separate from probe calibration0x101c0000/0x101c1000.
 
@@ -191,7 +218,7 @@ RAW_ADC_BEGIN/END counts and CRC. Wait for the footer and send a full PuTTY
 logging file if raw analysis is needed. full=1 means later run samples were
 omitted. matches_motion checks capture identity. No raw rows are overwritten.
 
-See BUILD_V14.md for build/test evidence. Physical school-circuit behaviour
+See BUILD_V15.md for build/test evidence. Physical school-circuit behaviour
 and stationary recovery still require testing. Start with5..10s of straight
 tracing, stop and collect p before a long loop overwrites it; then try one A
 and collect j immediately after passing it. Older manifests remain available.

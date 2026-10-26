@@ -2,7 +2,7 @@ from pathlib import Path
 import hashlib
 import struct
 root=Path(__file__).resolve().parent
-artifact=root/'firmware/buddy23_circuit_with_barcode_v14.uf2'
+artifact=root/'firmware/buddy23_circuit_with_barcode_v15.uf2'
 data=artifact.read_bytes();assert data and len(data)%512==0
 count=len(data)//512;payload=bytearray()
 for n in range(count):
@@ -12,11 +12,11 @@ for n in range(count):
     assert struct.unpack_from('<I',block,508)[0]==0x0AB16F30
     assert address==0x10000000+n*256 and address+size<=0x101b0000
     payload.extend(block[32:32+size])
-for marker in [b'BUDDY23 CIRCUIT WITH BARCODE v14',b'BARCODE_EVENTS:',b'CIRCUIT WITH BARCODE v%u:',b'decoded_A=',b'Code39',b'BAD_FRAME flags:',b'AUTO ANALOG GP27',b'ANALOG_CANDIDATE',b'ANALOG_SELECT',b'MOTION_DUMP_END:',b'min_span=',b'V13 stationary line search:',b'stationary sweep angle/time bound',b'V14 restores V12 visible-line steering and motor controller',b'optical_start_gate=OFF',b'V8 barcode sensitivity:63 thresholds',b'RAW_ADC_BEGIN:',b'RAW_ADC_END:',b'V9 smooth visible-line steering:',b'V10 PROFILE2 RAMP:',b'RAMP2: straight_target_mm_s=180',b'V11 Z queues U-turn',b'UTURN_STAGE',b'decoded_Z=',b'V12 faster Z:',b'RECOVERY_SWEEP',b'RECOVERY_WAIT',b'RECOVERY_FOUND']:
+for marker in [b'BUDDY23 CIRCUIT WITH BARCODE v15',b'BARCODE_EVENTS:',b'CIRCUIT WITH BARCODE v%u:',b'decoded_A=',b'Code39',b'BAD_FRAME flags:',b'AUTO ANALOG GP27',b'ANALOG_CANDIDATE',b'ANALOG_SELECT',b'MOTION_DUMP_END:',b'min_span=',b'V13 stationary line search:',b'stationary sweep angle/time bound',b'V15 paired-black straight hold:',b'optical_start_gate=OFF',b'V8 barcode sensitivity:63 thresholds',b'RAW_ADC_BEGIN:',b'RAW_ADC_END:',b'V9 smooth visible-line steering:',b'V10 PROFILE2 RAMP:',b'RAMP2: straight_target_mm_s=180',b'V11 Z queues U-turn',b'UTURN_STAGE',b'decoded_Z=',b'V12 faster Z:',b'RECOVERY_SWEEP',b'RECOVERY_WAIT',b'RECOVERY_FOUND']:
     if marker==b'V9 smooth visible-line steering:':marker=b'V9 smooth visible-line steering restored as V12:'
     assert marker in payload,marker
 assert b'smooth proportional line steering' not in payload
-built=root/'build/buddy23_circuit_with_barcode_v14.uf2'
+built=root/'build/buddy23_circuit_with_barcode_v15.uf2'
 assert not built.exists() or built.read_bytes()==data
 print(f'PASS: {count} RP2040 blocks; end=0x{0x10000000+len(payload):08x}; barcode/baseline records preserved')
 print(f'bytes={len(data)} sha256={hashlib.sha256(data).hexdigest()}')
@@ -53,3 +53,6 @@ print("PASS: V12 UF2 unchanged")
 
 assert hashlib.sha256((root/"firmware/buddy23_circuit_with_barcode_v13.uf2").read_bytes()).hexdigest()=="2437fa97483a029d2e497145ad4c8d04f7c5295696c6c95d3b51037c87e1ca96"
 print("PASS: V13 UF2 unchanged")
+
+assert hashlib.sha256((root/"firmware/buddy23_circuit_with_barcode_v14.uf2").read_bytes()).hexdigest()=="fbbd53531319f76d56f67a23ac5e14b177367ed71d568bd1a6acba12d88accef"
+print("PASS: V14 UF2 unchanged")

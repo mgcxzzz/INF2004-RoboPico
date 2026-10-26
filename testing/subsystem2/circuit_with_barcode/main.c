@@ -21,6 +21,7 @@
 #include "barcode_start.h"
 #include "barcode_raw.h"
 #include "smooth_follow.h"
+#include "straight_pwm.h"
 #include "maneuver_power.h"
 #include "../circuit_left_test/circuit_capture.h"
 #include "../circuit_left_test/circuit_feedback.h"
@@ -49,7 +50,7 @@ static SmoothFollow steering;
 static uint16_t side_adc;static uint64_t last_side_sample;static bool status_enabled;
 static uint32_t last_nav_event;
 static uint8_t test_mode=1,recorded_mode=1;
-static uint8_t recorded_version=14;
+static uint8_t recorded_version=15;
 static bool last_fast;
 static CircuitCapture capture;
 static CircuitLoad load;
@@ -255,11 +256,13 @@ static void reset_log(void) {
     guard.duration_us=0;guard.reason=0;circuit=(Circuit){0};nav=(BarcodeNav){0};
     for(unsigned w=0;w<2;++w) {cut_ticks[w]=0;cut_invalid[w]=0;travelled_ticks[w]=0;}
     restored_distance=0;
-    flash_loaded=false;recorded_key='-';recorded_version=14;
+    flash_loaded=false;recorded_key='-';recorded_version=15;
 }
 static void help(void) {
-    puts("\nBUDDY23 CIRCUIT WITH BARCODE v14 | AUTO ANALOG GP27 | *A* LEFT / *F* RIGHT / *Z* U-TURN | motors OFF on boot");
-    puts("V14 restores V12 visible-line steering and motor controller;V13 gradual wheel drive removed. Same calibration and optical thresholds. V13 stationary search retained;use profile1 for this comparison.");
+    puts("\nBUDDY23 CIRCUIT WITH BARCODE v15 | AUTO ANALOG GP27 | *A* LEFT / *F* RIGHT / *Z* U-TURN | motors OFF on boot");
+    puts("V15 paired-black straight hold:100ms with both>=700 and difference<=220;release at either<600 or difference>300. V14 motor controller and bend bypass unchanged;profile1 recommended.");
+    puts("Straight-only PWM smoothing:both wheels>=25mm/s,targets35..55,paired-black hold;rise800/fall1600 PWM units/s. Starts,slow wheels,edges,loaded capture,turns and search bypass it.");
+    puts("Motion decision24=qualified paired-black straight hold;11/12/13 retain ordinary straight/left/right. Calibrated raw levels still control loss,search and barcode/junction acceptance.");
     puts("V12 faster Z: forward90/55/35 and reverse80/45/30mm/s;120ms measured-still settle. U/search PWM60% sustained/75% start<=180ms, ends early at50mm/s or80% target.");
     puts("V11 Z queues U-turn at next junction: right wheel forward to90deg,settle,left wheel reverse to~180deg,settle,confirm original line then follow. Use profile1;V12 U-turn power limits apply.");
     puts("V10 PROFILE2 RAMP: centred straight180mm/s; per-wheel Kp3.5 Ki10; acceleration400mm/s^2; PWM50% sustained/65% boost<=1500ms after40ms deficit. Ramp work paused;use profile1. Profile3 remains135.");
@@ -431,7 +434,7 @@ static bool start_run(unsigned mode) {
     uint64_t now=time_us_64();uint32_t irq=save_and_disable_interrupts();
     bool ok=guard_start(&guard,now,mode!=LINE_USB_HOLD || !gpio_get(HOLD),!gpio_get(STOP));
     if(ok) {
-        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=14;last_fast=false;
+        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=15;last_fast=false;
         barcode_raw_begin(&raw_capture,recorded_mode);raw_new=true;raw_loaded=raw_persisted=raw_save_failed=false;
         capture=(CircuitCapture){0};load=(CircuitLoad){0};steering=(SmoothFollow){0};capture_outer=-1;assist_code=feedback_mask=0;
         guard.deadline_us=UINT64_MAX;guard.duration_us=0;restored_distance=0;
@@ -497,6 +500,8 @@ static void control_step(uint64_t now) {
     assist_code=search_outer>=0?(unsigned)search_outer+5:capture_outer>=0?(unsigned)capture_outer+1:load_outer>=0?(unsigned)load_outer+3:0;
     int effort_outer=search_outer>=0?search_outer:capture_outer>=0?capture_outer:load_outer;
     bool loaded[2]={turning || effort_outer==0,turning || effort_outer==1};
+    bool steady_drive=straight_pwm_eligible(&circuit,&steering,&demand,velocity,
+        ramp_drive || maneuver_drive || capture.window || loaded[0] || loaded[1]);
     for(unsigned w=0;w<2;++w) {
         if(!ramp_drive)ramp_wheel_leave(&ramp_wheel[w],&controller[w],demand.target[w]);
         if(!maneuver_drive)maneuver_leave(&maneuver_power[w],&controller[w],demand.target[w]);
@@ -512,6 +517,7 @@ static void control_step(uint64_t now) {
             ramp_wheel_leave(&ramp_wheel[w],&controller[w],demand.target[w]);
             next[w]=circuit_wheel_step(&controller[w],w,demand.target[w],velocity[w],dt,now,loaded[w],wheel_profile);
         }
+        next[w]=straight_pwm_limit(output[w],next[w],dt,steady_drive);
         bad_direction_us[w]=demand.target[w]!=0 && velocity[w]*(demand.target[w]>0?1:-1)<-20?bad_direction_us[w]+elapsed:0;
         if(bad_direction_us[w]>=50000) failure=WHY_DIRECTION;
         /* User-requested V5 behavior: retain diagnostic evidence but do not
