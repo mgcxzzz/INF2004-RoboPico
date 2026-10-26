@@ -1,8 +1,8 @@
 # Buddy 2/3 Interface V1.2 — frozen V12.2 navigation plus shared coordination
 
-**Current test release: V1.2** adds gradual ordinary-drive effort and cruise qualification from steering/encoder history. It retains the V1.1 startup fix and V1 APIs, but intentionally changes ordinary-drive behavior. See [V1.2 changes and test](SMOOTH_DRIVE_V1_2.md). [V1.1 UF2](firmware/buddy23_interface_v1_1.uf2) remains the pre-smoothing comparison build; original V1 has the confirmed startup bug and must not be used.
+**V1.2 FAILED its physical follow-up: do not use it as the integration baseline.** The user's next run showed worse stall/surge/steering oscillation. See [physical regression analysis](V1_2_PHYSICAL_REGRESSION.md). Use the retained [V1.1 UF2](firmware/buddy23_interface_v1_1.uf2) / source commit `72e11ce` for comparison until a correction is physically validated. Original V1 still has the confirmed startup bug. The V1.2 source/artifact and test evidence below are retained for diagnosis, not a recommendation to continue using it.
 
-[Download the standalone UF2](firmware/buddy23_interface_v1_2.uf2). [Buddy 5 handoff and build/start instructions](BUDDY5_HANDOFF.md). [Data representation and evidence scope](DATA_REPRESENTATION.md). [Build verification](BUILD.md).
+[V1.2 failed-test artifact (diagnosis only)](firmware/buddy23_interface_v1_2.uf2). [Buddy 5 handoff and build/start instructions](BUDDY5_HANDOFF.md). [Data representation and evidence scope](DATA_REPRESENTATION.md). [Build verification](BUILD.md).
 
 This is a separate integration baseline, based on `circuit_with_barcode_v12_2` at commit `9df1b95`. V12.2's optical steering, calibration, barcode thresholds, junction geometry, A/F/Z handling, recovery, speed maxima and motor power caps are retained. V1.2 changes ordinary forward effort and the qualification/ramp of cruising speed in profiles1/3; these are no longer an exact V12.2 motor-output baseline. There is no heading lock, new centre calibration or junction-gate fix. The original V12.2 firmware remains available in its original folder.
 

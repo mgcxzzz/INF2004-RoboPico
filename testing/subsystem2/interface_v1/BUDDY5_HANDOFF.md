@@ -1,6 +1,6 @@
 # Buddy 5 integration handoff — Interface V1.2 test (same V1 API)
 
-**Current source is the V1.2 smoothing test.** Its public API, coordinator, external finite movement and ownership policies are unchanged. Validate the new ordinary navigation drive on the robot before treating it as your stable circuit baseline. V1.1 source commit `72e11ce` / its retained UF2 is the pre-smoothing comparison. See [V1.2 details](SMOOTH_DRIVE_V1_2.md).
+**V1.2 physical testing regressed: use V1.1 source commit `72e11ce` / its retained UF2 as the comparison integration baseline.** Current branch source contains the failed V1.2 drive experiment; do not adopt its motion changes without a validated correction. Public API/ownership signatures are unchanged. See [regression evidence](V1_2_PHYSICAL_REGRESSION.md). The V1.2 integration/build details below remain for diagnosis.
 
 **Mandatory startup fix:** use V1.1 or later firmware/source, not original V1. If you already added Buddy5 code, bring in the updated `nav_coordinator.c` and rebuild your integrated UF2; the API and record layouts are unchanged. See [confirmed root cause and regression](STARTUP_FIX_V1_1.md).
 

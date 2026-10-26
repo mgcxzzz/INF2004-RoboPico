@@ -1,5 +1,7 @@
 # V1.2: gradual drive effort and motion-based cruise — 2026-10-27
 
+**Physical follow-up FAILED.** `line_test_3.txt` / `IMG_4310.MOV` show worse tracking and stall/surge behavior. V1.2 is withdrawn as a recommended test/integration baseline. See [full analysis and next isolation test](V1_2_PHYSICAL_REGRESSION.md). Host/replay passes below remain factual but did not validate closed-loop behavior.
+
 This is an experimental response to the user's V1.1 straight-line logs and IMG_4308.MOV. Physical smoothness has not yet been measured on the robot. API signatures, ownership rules and external Buddy5 finite maneuvers are unchanged. The V1.1 timestamp fix remains.
 
 ## Evidence from the supplied runs
