@@ -1,5 +1,9 @@
 /* Included by the frozen V12.2 main after globals and log helpers. Hardware
  * stays in that one owner; buddy code only sees nav_api.h. */
+#include "drive_smooth.h"
+#include "tracking_cruise.h"
+static DriveSmooth smooth_drive[2];
+static TrackingCruise tracking_cruise;
 static MotionOutput interface_motion;
 static unsigned interface_last_phase,interface_a,interface_f,interface_z;
 static uint32_t interface_session_generation;
@@ -9,6 +13,7 @@ static void interface_reset_controllers(void) {
         ramp_wheel[w]=(RampWheel){0};feedback[w]=(CircuitFeedback){0};bad_direction_us[w]=0;
     }
     capture=(CircuitCapture){0};load=(CircuitLoad){0};capture_outer=-1;last_fast=false;
+    memset(smooth_drive,0,sizeof(smooth_drive));tracking_cruise=(TrackingCruise){0};
 }
 static void interface_resume_navigation(const CircuitInput *i) {
     /* Preserve completed navigation counters and a fully decoded pending route.
@@ -31,6 +36,9 @@ static AnalogDemand interface_navigation_step(const CircuitInput *i,float dt) {
     MotionStatus status=nav_get_status();AnalogDemand d={0};
     if(status.session_active && status.mode==MOTION_AUTO) {
         d=scan_smooth_step(&circuit,&nav,&calibration,i,recorded_mode,&steering,&side_analog,&gentle,dt);
+        d=tracking_cruise_step(&tracking_cruise,&circuit,i,recorded_mode,&gentle,d,dt);
+        if(recorded_mode!=2 && !circuit.busy && !d.stop && !circuit.follower.core.white)
+            circuit.fast=!gentle.scanning && (d.target[0]>55 || d.target[1]>55);
         if(!d.stop)(void)nav_submit_navigation(MOTION_BUDDY3,d.target[0],d.target[1]);
         if(interface_session_generation!=guard.generation) {
             interface_last_phase=UINT32_MAX;interface_a=interface_f=interface_z=0;
@@ -42,7 +50,7 @@ static AnalogDemand interface_navigation_step(const CircuitInput *i,float dt) {
         interface_a=nav.decoded_a;interface_f=nav.decoded_f;interface_z=nav.decoded_z;
         if(circuit.phase!=interface_last_phase) {motion_note_navigation(circuit.phase,0);interface_last_phase=circuit.phase;}
     } else {
-        circuit.completed=false;
+        circuit.completed=false;tracking_cruise=(TrackingCruise){0};
         for(unsigned w=0;w<2;++w)d.level[w]=line_level(i->adc[w],calibration.white[w],calibration.black[w]);
     }
     MotionFeedback f={.now_us=i->now,.wheel_mm={i->wheel[0],i->wheel[1]},

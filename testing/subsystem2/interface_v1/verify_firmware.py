@@ -24,8 +24,8 @@ for k in range(meta['blocks']):
     assert address==0x10000000+256*k and address+size<=0x101af000
     assert struct.unpack_from('<I',b,508)[0]==0x0ab16f30
     payload.extend(b[32:288])
-for marker in [b'BUDDY23 INTERFACE v1.1',b'V12.2 BASELINE',b'NAV_LOG_BEGIN:',b'TARGETS_ACCEPTED',b'SESSION_END',
-               b'ANALOG_SELECT',b'V12 faster Z:',b'NO heading lock',b'RAW_ADC_BEGIN:',b'NAV_COORD:']:
+for marker in [b'BUDDY23 INTERFACE v1.2',b'V12.2 BASELINE',b'NAV_LOG_BEGIN:',b'TARGETS_ACCEPTED',b'SESSION_END',
+               b'ANALOG_SELECT',b'V12 faster Z:',b'NO heading lock',b'RAW_ADC_BEGIN:',b'NAV_COORD:',b'DRIVE_SMOOTH:']:
     assert marker in payload,marker
 if (root/'build/buddy23_interface_v1.uf2').exists():
     assert data==(root/'build/buddy23_interface_v1.uf2').read_bytes()
@@ -37,4 +37,8 @@ print('UF2 bytes=',len(data),'blocks=',meta['blocks'],'flash_end=',meta['padded_
 
 original=root/'firmware/buddy23_interface_v1.uf2'
 assert hashlib.sha256(original.read_bytes()).hexdigest()=='abef641045462f2e452265e352e32de996fd2b3d63c70551f0c3e0186b1b52dc'
-print('PASS original V1 artifact unchanged; current release is V1.1 (supersedes V1 startup bug).')
+print('PASS original V1 artifact unchanged; current release is V1.2 (retains V1.1 startup fix).')
+
+prior=root/'firmware/buddy23_interface_v1_1.uf2'
+assert hashlib.sha256(prior.read_bytes()).hexdigest()=='42a81aeca01fffba960a5e508f3b1c6f3e00d5a03cf53fff0a2c5d445b73f775'
+print('PASS retained V1.1 comparison UF2 unchanged.')

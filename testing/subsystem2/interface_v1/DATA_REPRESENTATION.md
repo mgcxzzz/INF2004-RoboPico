@@ -1,6 +1,6 @@
 # Minimum-bit requirement: Interface V1 implementation and evidence
 
-**V1.1 retains these same representations and RAM savings.** Its startup clock fix changes timing comparisons, not packet layouts or field precision. Current verification is in BUILD.md; original V1 measurements are archived in BUILD_V1.md.
+**V1.2 retains the same shared API representations and4960B packing saving.** Its ordinary-drive/tracking state adds48B BSS; packet layouts and precision remain. Drive state uses a16-bit0..60000us deficit counter,8-bit0..180 prior target and1-bit active flag. Tracking state uses19-bit0..400000us qualify,17-bit0..120000us departure counters and Boolean flags; float working calculations remain further audit scope. Current verification is in BUILD.md; original release measurements are archived in BUILD_V1.md / BUILD_V1_1.md.
 
 ## Compliance boundary
 

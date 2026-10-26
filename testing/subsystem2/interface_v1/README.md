@@ -1,10 +1,10 @@
-# Buddy 2/3 Interface V1.1 — frozen V12.2 navigation plus shared coordination
+# Buddy 2/3 Interface V1.2 — frozen V12.2 navigation plus shared coordination
 
-**Use V1.1 for testing/integration.** Original V1 has a confirmed accepted-start/zero-output timestamp bug and is superseded. V1.1 keeps the same APIs, driving settings, calibration and record format; see [startup fix](STARTUP_FIX_V1_1.md). The original artifact is retained for traceability only.
+**Current test release: V1.2** adds gradual ordinary-drive effort and cruise qualification from steering/encoder history. It retains the V1.1 startup fix and V1 APIs, but intentionally changes ordinary-drive behavior. See [V1.2 changes and test](SMOOTH_DRIVE_V1_2.md). [V1.1 UF2](firmware/buddy23_interface_v1_1.uf2) remains the pre-smoothing comparison build; original V1 has the confirmed startup bug and must not be used.
 
-[Download the standalone UF2](firmware/buddy23_interface_v1_1.uf2). [Buddy 5 handoff and build/start instructions](BUDDY5_HANDOFF.md). [Data representation and evidence scope](DATA_REPRESENTATION.md). [Build verification](BUILD.md).
+[Download the standalone UF2](firmware/buddy23_interface_v1_2.uf2). [Buddy 5 handoff and build/start instructions](BUDDY5_HANDOFF.md). [Data representation and evidence scope](DATA_REPRESENTATION.md). [Build verification](BUILD.md).
 
-This is a separate integration baseline, based on `circuit_with_barcode_v12_2` at commit `9df1b95`. V12.2's optical steering, small-error smoothing, calibration, barcode thresholds, junction geometry, A/F/Z handling, recovery, speeds and motor power constants are retained. There is no heading lock, new centre calibration, junction-gate fix, or additional speed boost. The original V12.2 firmware remains available in its original folder.
+This is a separate integration baseline, based on `circuit_with_barcode_v12_2` at commit `9df1b95`. V12.2's optical steering, calibration, barcode thresholds, junction geometry, A/F/Z handling, recovery, speed maxima and motor power caps are retained. V1.2 changes ordinary forward effort and the qualification/ramp of cruising speed in profiles1/3; these are no longer an exact V12.2 motor-output baseline. There is no heading lock, new centre calibration or junction-gate fix. The original V12.2 firmware remains available in its original folder.
 
 The default UF2 still runs the circuit test. It includes no ultrasonic driver or obstacle planner. Buddy 5 adds his source to this same executable to produce a second standalone UF2; the two UF2 files do not communicate at runtime.
 
@@ -34,12 +34,12 @@ Buddy 5 avoidance planner ─────┘                        ↑ command 
 
 ## Run the unmodified test
 
-1. Flash the UF2; `h` must show **BUDDY23 INTERFACE v1.1 | V12.2 BASELINE**. Motors are off at boot.
+1. Flash the UF2; `h` must show **BUDDY23 INTERFACE v1.2 | V12.2 BASELINE**. Motors are off at boot.
 2. Verify the imported `CAL FRONT` line. Existing valid V12.2 calibration imports. If mounting/material changed, calibrate `w` with both over white, `l` with left centred on broad black, `r` with right centred on broad black, then select `1` and `k`. No barcode calibration is needed.
 3. USB/PuTTY: `g` starts after a two-second countdown; `f` requires GP21 held. `s` or either board button stops. Power bank: wait five seconds after boot, hold both buttons three seconds, release, wait one second, tap GP21, allow the two-second countdown.
 4. Stop and wait five seconds before changing power. Use `j` for barcode events/summary, `p` for motion plus barcode events, `a` for raw barcode ADC, and **`z` for the separate coordinator audit**. `v` toggles live output, including the added `NAV_COORD` mode/owner/fault/target diagnostic. Dumps are refused while moving.
 
-Profile 1 retains V12.2's qualified 60 mm/s cruise and 45 mm/s scan. Profile 2 remains the paused 180 mm/s ramp experiment, not a general faster circuit profile. Profile 3 retains its qualified 135 mm/s setting. Start with profile 1 for integration.
+Profile 1 allows60mm/s and profile3 allows135mm/s after400ms settled steering/encoder history; the new qualifier does not read ADC values or require the two levels to match. Existing calibrated optical visibility/urgent-departure detection remains. Barcode approach remains45mm/s. Profile 2 remains the paused 180 mm/s ramp experiment, not a general faster circuit profile. Profile 3 retains its qualified 135 mm/s setting. Start with profile 1 for integration.
 
 ## Coordinator log
 
@@ -54,7 +54,7 @@ The separate audit uses a CRC-checked 4 KiB flash sector at offset `0x1af000`, i
 - The new reverse/arbitrary-angle avoidance primitives are host-tested, not yet physically validated on this robot. In-place turns previously struggled with sensor housings dragging on the mat. Rolling turns shift the axle and must be planned accordingly.
 - This provides motion execution and arbitration, not ultrasonic sensing, path planning, automatic line search after avoidance, or an IMU speed policy. Buddy 5 must return the front sensors to the stripe before requesting resume.
 - The default harness is cooperative on core 0. Shared coordinator accesses and final motor commits use a Pico spinlock with IRQ exclusion. A dual-core/RTOS integration must additionally provide flash lockout and validate scheduling; do not launch this harness's flash-saving code alongside an unmanaged second core.
-- Saved motion record version 19 imports earlier records. Original V12.2 cannot import a newly saved version-19 record; record calibration references before downgrading. Coordinator logs are separate and versioned independently.
+- Saved motion record version20 imports earlier records. V1.1/V12.2 cannot import a newly saved version20 record; record calibration references before downgrading. Coordinator logs are separate and versioned independently.
 - Known V12.2 limits remain, including straightness qualification of a cross near a recent steering correction and existing sensor-to-axle geometry assumptions. This interface handoff deliberately does not retune those behaviors.
 - Compact new request/log representations and shared-state packing are implemented. Whole-firmware minimum-bit compliance, MQTT binary telemetry, and on-target timing/physical evidence remain further work; see the representation document.
 
