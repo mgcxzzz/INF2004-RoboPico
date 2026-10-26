@@ -26,6 +26,12 @@
 #include "../circuit_left_test/circuit_capture.h"
 #include "../circuit_left_test/circuit_feedback.h"
 #include "../circuit_left_test/circuit_load.h"
+#ifdef B_STRAIGHT_DRIVE_PROBE
+#include "../straight_drive_probe/probe_logic.h"
+#define RUN_DRIVE_STEP probe_drive_step
+#else
+#define RUN_DRIVE_STEP barcode_drive_step
+#endif
 
 enum { HOLD=21,STOP=20,PWM_TOP=999 };
 static const uint ma[2]={8,10},mb[2]={9,11},ea[2]={0,4},eb[2]={1,5};
@@ -136,6 +142,9 @@ static bool safety_tick(struct repeating_timer *t) {
 static const char *reason_name(unsigned r) {
     switch(r) {
     case WHY_NONE:return "none";case WHY_GP20:return "GP20 pressed";
+#ifdef B_STRAIGHT_DRIVE_PROBE
+    case WHY_LIMIT:return "4-second fixed-speed diagnostic complete";
+#endif
     case WHY_RELEASE:return "GP21 released";case WHY_SERIAL:return "serial s";
     case WHY_USB:return "USB connection changed";case WHY_LATE:return "control loop late";
     case WHY_FEEDBACK:return recorded_version>=3?"no forward encoder progress for750ms under drive":"no encoder movement under drive";
@@ -259,6 +268,12 @@ static void reset_log(void) {
     flash_loaded=false;recorded_key='-';recorded_version=15;
 }
 static void help(void) {
+#ifdef B_STRAIGHT_DRIVE_PROBE
+    puts("\nBUDDY23 STRAIGHT DRIVE PROBE v1 | fixed45/45mm/s for4s | motors OFF on boot");
+    puts("Diagnostic only: front/side ADCs logged, no line steering, line search or junction execution. Normal V14/V15 motor PI,30% cap and breakaway retained. It can leave the stripe.");
+    puts("Place on a clear flat40cm path. Same power-bank start gesture or USB g(2s countdown)/f(hold GP21). s/either button stops. Independent4s deadline always ends the run.");
+    puts("p=motion log;h=help;v=live. Existing front calibration retained. Saved data uses V15 container with key=D;profile always1. Wait5s after stop before changing power.");
+#else
     puts("\nBUDDY23 CIRCUIT WITH BARCODE v15 | AUTO ANALOG GP27 | *A* LEFT / *F* RIGHT / *Z* U-TURN | motors OFF on boot");
     puts("V15 paired-black straight hold:100ms with both>=700 and difference<=220;release at either<600 or difference>300. V14 motor controller and bend bypass unchanged;profile1 recommended.");
     puts("Straight-only PWM smoothing:both wheels>=25mm/s,targets35..55,paired-black hold;rise800/fall1600 PWM units/s. Starts,slow wheels,edges,loaded capture,turns and search bypass it.");
@@ -283,6 +298,7 @@ static void help(void) {
     puts("g=USB hands-free2s;f=hold GP21;s/either button stops. BANK:wait5s,BOTH3s,release,wait1s,tap GP21,2s.");
     puts("h=help;j=events+summary;p=motion+events;a=raw barcode ADC trace;v=live(defaultOFF). Stop,WAIT5s before changing power.");
     puts("Raw: first4096 A0 samples/run,nominal2ms,encoder path;CRC/readback flash saved; a dump paced5ms/row. V7 motion/events/turn logs retained.");
+#endif
     printf("CAL FRONT white=%u,%u black=%u,%u valid=%u min_span=%u span=%d,%d barcode=AUTO_A0_GP27 profile=%u restored=%u imported=%u\n",
         calibration.white[0],calibration.white[1],calibration.black[0],calibration.black[1],calibration_valid(&calibration),
         (unsigned)LINE_CAL_MIN_SPAN,(int)calibration.black[0]-(int)calibration.white[0],(int)calibration.black[1]-(int)calibration.white[1],
@@ -395,6 +411,9 @@ static void dump_events(void) {
     printf("STOP: %s | run_ms=%" PRIu64 "\n",reason_name(guard.reason),guard.duration_us/1000);print_summary();
 }
 static void dump(void) {
+#ifdef B_STRAIGHT_DRIVE_PROBE
+    if(recorded_key=='D')puts("STRAIGHT DRIVE PROBE v1: fixed45/45mm/s; optical steering disabled;4s run. V15 motion container follows.");
+#endif
     if(guard.active || trace_settling) { puts("Stop and wait for RUN SAVED before p.");return; }
     if(!trace_count) { puts("No barcode circuit run saved yet.");return; }
     if(flash_loaded) puts("RESTORED: CRC-verified barcode circuit calibration/log.");
@@ -438,6 +457,9 @@ static bool start_run(unsigned mode) {
         barcode_raw_begin(&raw_capture,recorded_mode);raw_new=true;raw_loaded=raw_persisted=raw_save_failed=false;
         capture=(CircuitCapture){0};load=(CircuitLoad){0};steering=(SmoothFollow){0};capture_outer=-1;assist_code=feedback_mask=0;
         guard.deadline_us=UINT64_MAX;guard.duration_us=0;restored_distance=0;
+#ifdef B_STRAIGHT_DRIVE_PROBE
+        test_mode=recorded_mode=1;guard.deadline_us=probe_deadline(now);
+#endif
         for(unsigned w=0;w<2;++w) {
             enc[w].position=0;total_ticks[w]=cut_ticks[w]=0;travelled_ticks[w]=0;initial_invalid[w]=enc[w].invalid;cut_invalid[w]=0;
             velocity[w]=0;output[w]=0;peak_until[w]=0;ramp_output[w]=signed_output[w]=maneuver_output[w]=false;maneuver_power[w]=(ManeuverPower){0};
@@ -447,10 +469,13 @@ static bool start_run(unsigned mode) {
         CircuitInput input={.now=now,.adc={analog_raw[0],analog_raw[1]},.side_black=false};
         barcode_nav_begin(&nav,&input);double initial_wheel[2]={0,0};
         barcode_analog_begin(&side_analog,&nav,side_adc,now,initial_wheel);last_side_sample=now;last_nav_event=0;
-        circuit_begin(&circuit,&input);demand=barcode_drive_step(&circuit,&nav,&calibration,&input,recorded_mode,&steering,0);
+        circuit_begin(&circuit,&input);demand=RUN_DRIVE_STEP(&circuit,&nav,&calibration,&input,recorded_mode,&steering,0);
         barcode_recovery_events(&nav,now,0,false,false,false,0,current_tracker(),&demand,circuit.reason);
         outputs_off();trace_count=trace_head=trace_dropped=summary_count=summary_head=0;
         recorded_key=mode==LINE_USB_FREE?'g':'f';recorded_offline=mode==LINE_BANK;
+#ifdef B_STRAIGHT_DRIVE_PROBE
+        recorded_key='D';
+#endif
         trace_settling=false;flash_loaded=save_failed=false;last_control=last_trace=now;
     }
     restore_interrupts(irq);if(!ok) last_start_block=START_GUARD;
@@ -479,7 +504,7 @@ static void control_step(uint64_t now) {
     unsigned previous_phase=circuit.phase,previous_decision=demand.decision;
     const CircuitTracker *before_tracker=current_tracker();
     bool was_white=before_tracker->core.white,was_waiting=before_tracker->search.waiting,was_search=before_tracker->search.active;
-    demand=barcode_drive_step(&circuit,&nav,&calibration,&input,recorded_mode,&steering,dt);
+    demand=RUN_DRIVE_STEP(&circuit,&nav,&calibration,&input,recorded_mode,&steering,dt);
     barcode_recovery_events(&nav,now,(input.wheel[0]+input.wheel[1])*.5,was_white,was_waiting,was_search,previous_decision,current_tracker(),&demand,circuit.reason);
     if((previous_phase==J_TURN || (nav.action=='Z' && previous_phase==J_TURN_SETTLE)) && circuit.phase==J_ACQUIRE) circuit_capture_begin(&capture,now,input.path);
     if(circuit.completed) add_summary(now,input.path);
@@ -577,6 +602,9 @@ int main(void) {
     analog_raw[0]=read_adc(0);analog_raw[1]=read_adc(2);
     adc_filtered[0]=analog_raw[0];adc_filtered[1]=analog_raw[1];
     side_adc=read_adc(1);side_analog.selected=AO_DEFAULT_BANK;stdio_init_all();load_log();load_raw();side_cal=(SideCalibration){0,1,3};last_control=time_us_64();
+#ifdef B_STRAIGHT_DRIVE_PROBE
+    test_mode=1;
+#endif
     bool old_connected=false,usb_pending=false;uint8_t raw_buttons=0,buttons=0;
     uint64_t changed=0,last_status=0,last_adc=0,usb_start_at=0;uint32_t seen_stops=0;
     BenchArm arm={0};
@@ -618,7 +646,13 @@ int main(void) {
             usb_pending=false;
             if(guard.active || trace_settling || hold || stop) puts("CONFIG rejected: stop/release both buttons.");
             else if(ch=='k') { save_log();puts(save_failed?"SAVE FAILED: need valid FRONT calibration":"CALIBRATION/PROFILE SAVED."); }
-            else { test_mode=(uint8_t)(ch-'0');printf("PROFILE %u selected; k saves profile.\n",test_mode); }
+            else {
+#ifdef B_STRAIGHT_DRIVE_PROBE
+                test_mode=1;puts("Probe is fixed45/45mm/s; profile keys do not change it.");
+#else
+                test_mode=(uint8_t)(ch-'0');printf("PROFILE %u selected; k saves profile.\n",test_mode);
+#endif
+            }
         } else if(ch=='f') {
             usb_pending=false;bool ok=start_run(LINE_USB_HOLD);
             if(ok) puts("FOLLOW accepted: USB hold GP21.");else report_start_block();
