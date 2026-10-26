@@ -138,8 +138,8 @@ static inline AnalogDemand circuit_line_demand(CircuitTracker *t,const LineCalib
                 d.target[0]=seek.target[0];d.target[1]=seek.target[1];
                 d.decision=(uint8_t)(LS_DECISION_FIRST+seek.stage);return d;
             }
-            /* Barcode V12: after the short gap bridge, coast while the
-               continuous-white timer runs instead of pivoting for2s. */
+            /* After the short gap bridge, coast during white qualification;
+               the barcode search then counter-rotates about its start pose. */
             if(elapsed>=LS_BRIDGE_US && strongest<200)return d;
             /* With no direction history, wait for the short confirmation
                rather than inventing a turn before the first sweep begins. */

@@ -105,6 +105,7 @@ static inline void barcode_mirror_tracker(CircuitTracker *t) {
     int16_t v=t->bridge[0];t->bridge[0]=t->bridge[1];t->bridge[1]=v;
 #ifdef CIRCUIT_SWEEP_SEARCH
     t->search.first=-t->search.first;
+    t->search.angle=-t->search.angle;t->search.origin_angle=-t->search.origin_angle;
 #endif
 }
 static inline void barcode_straight_gate(Circuit *c,BarcodeNav *n,const CircuitInput *i,const AnalogDemand *d) {

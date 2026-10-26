@@ -4,7 +4,7 @@
 enum { M_SUSTAIN=600,M_PEAK=750,M_PEAK_US=180000 };
 typedef struct {bool active;} ManeuverPower;
 /* Physical PWM units, no extra20% multiplication. This controller is used
- * only for Z turning or an active rolling line-search wheel. */
+ * only for Z turning or active stationary line-search wheels. */
 static inline int32_t maneuver_wheel_step(ManeuverPower *s,SignedWheel *p,unsigned w,
                                          int16_t wanted,float speed,float dt,uint64_t now) {
     int sign=wanted>0?1:wanted<0?-1:0;

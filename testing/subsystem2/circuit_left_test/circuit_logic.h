@@ -25,6 +25,9 @@ typedef struct {
 } Circuit;
 static inline int circuit_cruise(unsigned profile) { return profile>=1 && profile<=3?(int)profile*45:0; }
 static inline AnalogDemand circuit_follow(Circuit *c,const LineCalibration *cal,const CircuitInput *i,unsigned profile) {
+#ifdef CIRCUIT_SWEEP_SEARCH
+    line_search_observe(&c->follower.search,i->wheel[0],i->wheel[1],i->speed[0],i->speed[1]);
+#endif
     AnalogDemand d=circuit_line_demand(&c->follower,cal,i->adc[0],i->adc[1],i->now,(uint32_t)(i->path-c->follow_path));
     /* V2: only a stable centred observation earns faster straight travel.
        All correcting and blind-recovery targets are the exact profile1 values. */
@@ -47,12 +50,15 @@ static inline AnalogDemand circuit_follow(Circuit *c,const LineCalibration *cal,
    A visible branch must persist150ms before counting the junction as complete. */
 static inline AnalogDemand circuit_join(Circuit *c,const LineCalibration *cal,const JunctionInput *i) {
     Junction *j=&c->turn;
+#ifdef CIRCUIT_SWEEP_SEARCH
+    line_search_observe(&c->joining.search,i->wheel[0],i->wheel[1],i->speed[0],i->speed[1]);
+#endif
     AnalogDemand d=circuit_line_demand(&c->joining,cal,i->adc[0],i->adc[1],i->now,(uint32_t)i->path);
     j->turn_degrees=j_rotation(j,i);
     uint64_t alignment_limit=J_ALIGN_US;
     float alignment_distance=J_ALIGN_MM;
 #ifdef CIRCUIT_SWEEP_SEARCH
-    alignment_limit=LS_ALIGN_US; /* Covers2s white confirmation plus a full search. */
+    alignment_limit=LS_ALIGN_US; /* Covers1.5s confirmation and12s stationary search. */
     alignment_distance=LS_ALIGN_MM;
 #endif
     if(i->now-j->phase_us>=alignment_limit) j_fail(j,J_ALIGN_TIMEOUT);

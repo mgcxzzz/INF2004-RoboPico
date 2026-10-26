@@ -22,6 +22,7 @@
 #include "barcode_raw.h"
 #include "smooth_follow.h"
 #include "maneuver_power.h"
+#include "visible_wheel.h"
 #include "../circuit_left_test/circuit_capture.h"
 #include "../circuit_left_test/circuit_feedback.h"
 #include "../circuit_left_test/circuit_load.h"
@@ -37,6 +38,7 @@ static volatile int32_t output[2];
 static volatile uint64_t peak_until[2];
 static volatile bool ramp_output[2],signed_output[2],maneuver_output[2];
 static ManeuverPower maneuver_power[2];
+static VisibleWheel visible_wheel[2];
 static volatile uint64_t travelled_ticks[2];
 static double restored_distance;
 static RampWheel ramp_wheel[2];
@@ -49,7 +51,7 @@ static SmoothFollow steering;
 static uint16_t side_adc;static uint64_t last_side_sample;static bool status_enabled;
 static uint32_t last_nav_event;
 static uint8_t test_mode=1,recorded_mode=1;
-static uint8_t recorded_version=12;
+static uint8_t recorded_version=13;
 static bool last_fast;
 static CircuitCapture capture;
 static CircuitLoad load;
@@ -149,8 +151,9 @@ static const char *reason_name(unsigned r) {
     case C_LOSS_NO_DIRECTION:return "line not recovered: no recent direction";
     case C_LOSS_TIME:return "line not recovered:2s recovery expired";
     case C_LOSS_DISTANCE:return "line not recovered:50mm recovery limit";
-    case LS_TIMEOUT:return "line not recovered: five rolling sweeps exhausted";
-    case LS_DISTANCE:return "line not recovered:150mm search travel limit";
+    case LS_TIMEOUT:return recorded_version>=13?"line not recovered: stationary sweep angle/time bound":"line not recovered: rolling search time bound";
+    case LS_DISTANCE:return recorded_version>=13?"line not recovered:1000mm accumulated wheel travel limit":"line not recovered: rolling search travel bound";
+    case LS_DRIFT:return "line search: encoder centre drift reached30mm";
     case B_EDGE_FAILURE:return "barcode edge capture overflow (legacy digital run)";
     case C_LOSS_STRAIGHT:return "straight gap not confirmed within500ms/15mm";
     default:return "other guard";
@@ -254,16 +257,17 @@ static void reset_log(void) {
     guard.duration_us=0;guard.reason=0;circuit=(Circuit){0};nav=(BarcodeNav){0};
     for(unsigned w=0;w<2;++w) {cut_ticks[w]=0;cut_invalid[w]=0;travelled_ticks[w]=0;}
     restored_distance=0;
-    flash_loaded=false;recorded_key='-';recorded_version=12;
+    flash_loaded=false;recorded_key='-';recorded_version=13;
 }
 static void help(void) {
-    puts("\nBUDDY23 CIRCUIT WITH BARCODE v12 | AUTO ANALOG GP27 | *A* LEFT / *F* RIGHT / *Z* U-TURN | motors OFF on boot");
+    puts("\nBUDDY23 CIRCUIT WITH BARCODE v13 | AUTO ANALOG GP27 | *A* LEFT / *F* RIGHT / *Z* U-TURN | motors OFF on boot");
+    puts("V13 visible-line drive: continuous steering even for large errors;100..20ms smoothing,150..600mm/s^2 slew. Gradual wheel assistance replaces repeated maximum breakaway kicks;physical PWM rise600/fall1200 per second. Same final bend targets and cruise speeds.");
     puts("V12 faster Z: forward90/55/35 and reverse80/45/30mm/s;120ms measured-still settle. U/search PWM60% sustained/75% start<=180ms, ends early at50mm/s or80% target.");
     puts("V11 Z queues U-turn at next junction: right wheel forward to90deg,settle,left wheel reverse to~180deg,settle,confirm original line then follow. Use profile1;V12 U-turn power limits apply.");
-    puts("V10 PROFILE2 RAMP: centred straight180mm/s; per-wheel Kp3.5 Ki10; acceleration400mm/s^2; PWM50% sustained/65% boost<=1500ms after40ms deficit. Profile1 remains V9. Profile3 remains135.");
-    puts("V9 smooth visible-line steering: gentle small corrections,60..20ms response,200..600mm/s^2 target slew. Ordinary bend targets retained;U/search use V12 settings above.");
-    puts("Rolling line search: five alternating350/700/1050/1400/1750ms sweeps;V12 waits2s white,then90mm/s sweeps/45 confirming;300mm limit.");
-    puts("Search starts toward last seen side; no history starts left then alternates. Moving search wheel uses V12 maneuver power. After150ms gap bridge,coast until2s continuous-white confirmation.");
+    puts("V10 PROFILE2 RAMP: centred straight180mm/s; per-wheel Kp3.5 Ki10; acceleration400mm/s^2; PWM50% sustained/65% boost<=1500ms after40ms deficit. Use profile1 for V13 smooth drive. Profile3 remains135.");
+    puts("V9 smooth visible-line steering: small-error gain retained;V13 extends smoothing across strong visible errors. Raw optical loss/junction thresholds and barcode decoder unchanged;U/search use V12 settings above.");
+    puts("V13 stationary line search:1.5s continuous white;counter-rotate both wheels at100mm/s,taper25 near encoder endpoints35/60/90/120/150deg alternating about start heading. Stop on possible line for confirmation.");
+    puts("Search starts toward last seen side;no history starts left.80ms measured-still pause before reversal. V12 power60%/75% start. After150ms bridge coast until1.5s;bounds12s active/1000mm wheel travel/30mm encoder centre drift.");
     puts("V8 barcode sensitivity:63 thresholds; coarse128..3968/128 and fine192..254/2. Hysteresis coarse+/-32,fine+/-3;2ms debounce;black HIGH.");
     puts("Need TWO neighbouring thresholds agreeing on complete Code39 *X* frame. Unknown/ambiguous frames never force A/F/Z.");
     puts("BARCODE A0 -> GP27/ADC1;GP19/D0 UNUSED. Front A0 GP26/GP28 unchanged;3.3V/common GND.");
@@ -273,7 +277,7 @@ static void help(void) {
     puts("Scan/pending approach uses usual45mm/s; unmarked stable cruising profiles1/2/3 request45/180/135 (profile2 is the ramp experiment).");
     puts("Rolling LEFT: left off/right forward. RIGHT: right off/left forward. Side ahead92mm; start55mm before centre.");
     puts("Normal motor caps30% correction,42% loaded/turn,48% turn start. Profile2 ordinary visible-line drive uses ramp limits above. Encoder progress is WARNING ONLY.");
-    puts("Search decisions19..23=sweep1..5; wheel targets show direction; assist5/6=search left/right wheel;assist7=profile2 ramp controller. Manual/USB/control/direction/invalid/turn checks remain.");
+    puts("Search decisions19..23=sweep1..5;signed targets show counter-rotation;assist5/6=positive search wheel;assist7=profile2 ramp controller. Manual/USB/control/direction/invalid/turn checks remain.");
     puts("FRONT ONLY:w=both WHITE,l=left BLACK,r=right BLACK;k=save.1/2/3=profile. No o/b side capture.");
     puts("g=USB hands-free2s;f=hold GP21;s/either button stops. BANK:wait5s,BOTH3s,release,wait1s,tap GP21,2s.");
     puts("h=help;j=events+summary;p=motion+events;a=raw barcode ADC trace;v=live(defaultOFF). Stop,WAIT5s before changing power.");
@@ -429,14 +433,14 @@ static bool start_run(unsigned mode) {
     uint64_t now=time_us_64();uint32_t irq=save_and_disable_interrupts();
     bool ok=guard_start(&guard,now,mode!=LINE_USB_HOLD || !gpio_get(HOLD),!gpio_get(STOP));
     if(ok) {
-        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=12;last_fast=false;
+        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=13;last_fast=false;
         barcode_raw_begin(&raw_capture,recorded_mode);raw_new=true;raw_loaded=raw_persisted=raw_save_failed=false;
         capture=(CircuitCapture){0};load=(CircuitLoad){0};steering=(SmoothFollow){0};capture_outer=-1;assist_code=feedback_mask=0;
         guard.deadline_us=UINT64_MAX;guard.duration_us=0;restored_distance=0;
         for(unsigned w=0;w<2;++w) {
             enc[w].position=0;total_ticks[w]=cut_ticks[w]=0;travelled_ticks[w]=0;initial_invalid[w]=enc[w].invalid;cut_invalid[w]=0;
             velocity[w]=0;output[w]=0;peak_until[w]=0;ramp_output[w]=signed_output[w]=maneuver_output[w]=false;maneuver_power[w]=(ManeuverPower){0};
-            ramp_wheel[w]=(RampWheel){0};controller[w]=(SignedWheel){0};
+            ramp_wheel[w]=(RampWheel){0};visible_wheel[w]=(VisibleWheel){0};controller[w]=(SignedWheel){0};
             bad_direction_us[w]=0;feedback[w]=(CircuitFeedback){0};
         }
         CircuitInput input={.now=now,.adc={analog_raw[0],analog_raw[1]},.side_black=false};
@@ -486,25 +490,29 @@ static void control_step(uint64_t now) {
     unsigned previous_assist=assist_code;
     capture_outer=circuit_capture_outer(&capture,&input,circuit.phase,&demand);
     bool recovering=current_tracker()->core.white;
-    int search_outer=line_search_outer(current_tracker()->search.active && recovering && !demand.stop,
+    bool search_drive=current_tracker()->search.active && recovering && !demand.stop;
+    int search_outer=line_search_outer(search_drive,
                                        demand.target[0],demand.target[1]);
-    bool maneuver_drive=(turning && nav.action=='Z') || search_outer>=0;
+    bool maneuver_drive=(turning && nav.action=='Z') || search_drive;
+    bool visible_drive=!ramp_drive && !maneuver_drive && visible_wheel_eligible(&circuit,&demand,capture.window);
     if(recovering) capture_outer=-1;
     int load_outer=circuit_load_outer(&load,&input,circuit.phase,&demand,capture_outer>=0 || recovering);
     assist_code=search_outer>=0?(unsigned)search_outer+5:capture_outer>=0?(unsigned)capture_outer+1:load_outer>=0?(unsigned)load_outer+3:0;
     int effort_outer=search_outer>=0?search_outer:capture_outer>=0?capture_outer:load_outer;
     bool loaded[2]={turning || effort_outer==0,turning || effort_outer==1};
     for(unsigned w=0;w<2;++w) {
+        if(!visible_drive)visible_wheel_leave(&visible_wheel[w],&controller[w]);
         if(!ramp_drive)ramp_wheel_leave(&ramp_wheel[w],&controller[w],demand.target[w]);
         if(!maneuver_drive)maneuver_leave(&maneuver_power[w],&controller[w],demand.target[w]);
     }
-    if(!ramp_drive && !maneuver_drive && effort_outer>=0 && assist_code!=previous_assist) circuit_capture_prepare(&controller[effort_outer]);
+    if(!visible_drive && !ramp_drive && !maneuver_drive && effort_outer>=0 && assist_code!=previous_assist) circuit_capture_prepare(&controller[effort_outer]);
     if(last_fast && !circuit.fast) for(unsigned w=0;w<2;++w) circuit_leave_fast(&controller[w]);
     last_fast=circuit.fast;
     feedback_mask=0;
     for(unsigned w=0;w<2;++w) {
         if(maneuver_drive)next[w]=maneuver_wheel_step(&maneuver_power[w],&controller[w],w,demand.target[w],velocity[w],dt,now);
         else if(ramp_drive) next[w]=ramp_wheel_step(&ramp_wheel[w],&controller[w],w,demand.target[w],velocity[w],dt,now);
+        else if(visible_drive)next[w]=visible_wheel_step(&visible_wheel[w],&controller[w],w,demand.target[w],velocity[w],dt,now,loaded[w],wheel_profile,output[w]);
         else {
             ramp_wheel_leave(&ramp_wheel[w],&controller[w],demand.target[w]);
             next[w]=circuit_wheel_step(&controller[w],w,demand.target[w],velocity[w],dt,now,loaded[w],wheel_profile);
@@ -524,7 +532,7 @@ static void control_step(uint64_t now) {
         else {
             for(unsigned w=0;w<2;++w) {
                 ramp_output[w]=ramp_drive;maneuver_output[w]=maneuver_drive;
-                signed_output[w]=nav.action=='Z' && circuit.phase==J_TURN;
+                signed_output[w]=search_drive || (nav.action=='Z' && circuit.phase==J_TURN);
                 peak_until[w]=maneuver_drive?(controller[w].peak_active?controller[w].peak_end_us:0):
                     ramp_drive?ramp_wheel[w].boost_until:turning?controller[w].peak_end_us:0;
                 output[w]=maneuver_output[w]?maneuver_output_cap(next[w],peak_until[w],time_us_64()):

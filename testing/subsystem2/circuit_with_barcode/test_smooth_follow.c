@@ -34,10 +34,12 @@ static void sustained_bends_and_bypass(void) {
         assert(abs(d.target[0]-45)<abs(raw[0]-45));
         for(unsigned k=0;k<20;++k)d=apply(&s,&c,l,r);
         assert(abs(d.target[0]-raw[0])<=1 && abs(d.target[1]-raw[1])<=1);
-        /* Strong departures pass through in this control tick, even when
-         * their direction reverses a previous mild correction. */
+        /* Large visible errors now enter the same continuous filter. They
+         * still converge to the original bend targets, in both directions. */
         l=mirror?1000:0;r=mirror?0:1000;d=apply(&s,&c,l,r);symmetric_targets((int)l-(int)r,raw);
-        assert(!s.active && d.target[0]==raw[0] && d.target[1]==raw[1]);
+        assert(s.active && abs(d.target[0]-raw[0])>1);
+        for(unsigned k=0;k<35;++k)d=apply(&s,&c,l,r);
+        assert(abs(d.target[0]-raw[0])<=1 && abs(d.target[1]-raw[1])<=1);
         c.follower.core.white=true;d=apply(&s,&c,500,200);symmetric_targets(300,raw);
         assert(!s.active && d.target[0]==raw[0] && d.target[1]==raw[1]);
     }
@@ -77,5 +79,5 @@ static void weak_boundary_and_profile_transition(void) {
 }
 int main(void) {
     noise_and_mirror();sustained_bends_and_bypass();weak_boundary_and_profile_transition();
-    puts("PASS: reduced alternating target variation; mirrored steering; sustained bends converge; urgent/stop/search/junction bypass; weak400 boundary slew; all speed profiles retained.");
+    puts("PASS: reduced alternating target variation; mirrored steering; sustained strong bends converge; stop/search/junction bypass; weak400 boundary slew; all speed profiles retained.");
 }

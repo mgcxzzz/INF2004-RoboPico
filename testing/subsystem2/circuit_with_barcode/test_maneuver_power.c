@@ -35,5 +35,5 @@ int main(void) {
         int y=circuit_wheel_step(&b,0,45,k%60,.01f,1000+k*10000,false,1);
         assert(x==y && !memcmp(&a,&b,sizeof(a)));
     }
-    puts("PASS: physical60%/bounded75% effort;180ms ISR expiry;no repeated stalled kick;early moving cutoff;overspeed coast;zero OFF;signed pin mapping;reverse disallowed for search;normal-controller parity.");
+    puts("PASS: physical60%/bounded75% effort;180ms ISR expiry;no repeated stalled kick;early moving cutoff;overspeed coast;zero OFF;signed pin mapping;optional forward-only mapping;normal-controller parity.");
 }

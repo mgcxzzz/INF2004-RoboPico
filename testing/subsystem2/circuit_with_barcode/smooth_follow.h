@@ -12,11 +12,12 @@ static inline void smooth_follow_apply(SmoothFollow *s,const Circuit *c,float dt
     const CircuitTracker *t=&c->follower;
     int error=(int)d->level[0]-d->level[1],magnitude=abs(error);
     unsigned strongest=d->level[0]>d->level[1]?d->level[0]:d->level[1];
-    /* A clear departure or strong near-pivot demand must retain its original bend
-     * authority immediately. The same is true of every blind search/stop. */
-    bool near_pivot=d->target[0]<=10 || d->target[1]<=10;
+    /* V13: a large visible error still needs continuous output targets. V12
+     * reset the filter at700 or near-pivot, creating abrupt opposite-wheel
+     * commands on patchy tape. Sustained errors retain the same final targets;
+     * loss/search/stop and planned junction manoeuvres still bypass this. */
     bool eligible=following && !c->busy && !d->stop && !t->core.white &&
-        strongest>=200 && magnitude<700 && !(near_pivot && strongest>=400) &&
+        strongest>=200 &&
         (d->decision==SYM_STRAIGHT || d->decision==SYM_LEFT ||
          d->decision==SYM_RIGHT || d->decision==C_FAST);
     if(!eligible) { *s=(SmoothFollow){0};return; }
@@ -36,8 +37,8 @@ static inline void smooth_follow_apply(SmoothFollow *s,const Circuit *c,float dt
         if((s->target[0]>55 || s->target[1]>55) && desired[0]<=50 && desired[1]<=50)
             for(unsigned w=0;w<2;++w) s->target[w]=fminf(s->target[w],50);
         dt=clampf(dt,0,.05f);
-        float urgency=clampf((magnitude-250)/450.0f,0,1);
-        float tau=.060f-.040f*urgency,rate=200+400*urgency;
+        float urgency=clampf((magnitude-250)/650.0f,0,1);
+        float tau=.100f-.080f*urgency,rate=150+450*urgency;
         float alpha=dt/(tau+dt);
         for(unsigned w=0;w<2;++w) {
             float change=(desired[w]-s->target[w])*alpha;
