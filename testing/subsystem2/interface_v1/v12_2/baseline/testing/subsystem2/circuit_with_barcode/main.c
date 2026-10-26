@@ -273,7 +273,8 @@ static void reset_log(void) {
     flash_loaded=false;recorded_key='-';recorded_version=19;
 }
 static void help(void) {
-    puts("\nBUDDY23 INTERFACE v1 | V12.2 BASELINE | AUTO ANALOG GP27 | *A* LEFT / *F* RIGHT / *Z* U-TURN | motors OFF on boot");
+    puts("\nBUDDY23 INTERFACE v1.1 | V12.2 BASELINE | AUTO ANALOG GP27 | *A* LEFT / *F* RIGHT / *Z* U-TURN | motors OFF on boot");
+    puts("V1.1 fixes accepted-start zero-output clock ordering; adds NAV_COORD live diagnostics. APIs, records, thresholds and speeds unchanged.");
     puts("Shared nav coordinator: all Buddy3 targets, Buddy4 terrain telemetry and Buddy5 avoidance requests pass through nav_api.h.");
     puts("No extension loaded by default: autonomous line/barcode/junction settings are EXACT V12.2. New avoidance primitives require physical testing.");
     puts("z=separate coordinator audit (stop first); saved offline with CRC. Record19=interface1. Buddy hooks run cooperatively on core0.");
@@ -718,6 +719,10 @@ int main(void) {
             printf("ANALOG: ADC=%u selected_threshold=%u candidates=%lu selections=%lu max_gap_us=%lu gaps_over10ms=%lu\n",
                 side_adc,barcode_analog_threshold(side_analog.selected),(unsigned long)side_analog.candidates,(unsigned long)side_analog.selections,
                 (unsigned long)side_analog.max_gap_us,(unsigned long)side_analog.gap_count);
+            MotionStatus state=nav_get_status();
+            printf("NAV_COORD: mode=%u owner=%u session=%u stopped=%u command_id=%lu command_state=%u fault=0x%03x targets=%d,%d\n",
+                state.mode,state.owner,state.session_active,state.stopped,(unsigned long)state.command_id,
+                state.command_state,state.fault,state.target_mm_s[0],state.target_mm_s[1]);
             last_status=now;
         }
         sleep_us(100);

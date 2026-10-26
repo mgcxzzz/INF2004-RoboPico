@@ -171,6 +171,10 @@ bool nav_coordinator_command(uint32_t id,MotionCommandStatus *status) {
 }
 MotionOutput nav_coordinator_update(const MotionFeedback *f) {
     uintptr_t key=lock();g.feedback=*f;MotionOutput output={0};
+    /* Requests use the live port clock and can be newer than this tick's
+     * feedback snapshot. Compare request ages on that same live clock;
+     * unsigned snapshot-request subtraction would underflow at startup. */
+    uint64_t check_us=now();
     bool still=fabsf(f->speed_mm_s[0])<5 && fabsf(f->speed_mm_s[1])<5;
     if(!still)g.still_timing=false;
     else if(!g.still_timing) {g.still_timing=true;g.still_since=f->now_us;}
@@ -181,12 +185,12 @@ MotionOutput nav_coordinator_update(const MotionFeedback *f) {
     g.status.pending_route=f->pending_route;
     if(g.status.session_active) {
         if(g.resume)g.status.mode=MOTION_AUTO; /* adapter resets old navigation before the next optical tick */
-        if(g.status.mode==MOTION_AUTO && f->now_us-g.nav_since>100000) {
+        if(g.status.mode==MOTION_AUTO && check_us-g.nav_since>100000) {
             g.status.mode=MOTION_FAULT;g.status.fault=g.reported_faults|NAV_FAULT_CONTROL;off();event(MOTION_EVENT_FAULT);
         } else if(g.status.mode==MOTION_STOPPING) {
             g.status.navigation_interrupted|=f->navigation_busy;
             if(g.status.stopped) {g.status.mode=MOTION_PAUSED;event(MOTION_EVENT_STOPPED);}
-            else if(f->now_us-g.pause_since>=2000000) {g.status.mode=MOTION_FAULT;g.status.fault=g.reported_faults|NAV_FAULT_SETTLE;off();event(MOTION_EVENT_FAULT);}
+            else if(check_us-g.pause_since>=2000000) {g.status.mode=MOTION_FAULT;g.status.fault=g.reported_faults|NAV_FAULT_SETTLE;off();event(MOTION_EVENT_FAULT);}
         } else if(g.status.mode==MOTION_DRIVING || g.status.mode==MOTION_TURNING || g.status.mode==MOTION_SETTLING) {
             MotionCommandState state=motion_executor_step(&g.executor,f);
             g.status.progress_mm=g.executor.progress_mm;g.status.rotation_deg=g.executor.rotation_deg;

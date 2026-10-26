@@ -1,5 +1,7 @@
 # Minimum-bit requirement: Interface V1 implementation and evidence
 
+**V1.1 retains these same representations and RAM savings.** Its startup clock fix changes timing comparisons, not packet layouts or field precision. Current verification is in BUILD.md; original V1 measurements are archived in BUILD_V1.md.
+
 ## Compliance boundary
 
 Interface V1 starts the Tribunal change at the new cross-buddy boundary: canonical binary requests, compact finite-state/flag storage, one synchronized fault bitmap, and compact saved coordinator events. This is **partial implementation**, not whole-firmware compliance. The frozen V12.2 navigation/encoder/raw/motion data, floating-point working calculations and legacy record layouts remain. MQTT transport is not present in this standalone test. The remaining team-wide migration and required physical timing/performance evidence must still be completed for Week 13.

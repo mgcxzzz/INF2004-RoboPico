@@ -1,10 +1,12 @@
-# Buddy 5 integration handoff — Interface V1
+# Buddy 5 integration handoff — Interface V1.1 (same V1 API)
+
+**Mandatory startup fix:** use the current V1.1 firmware/source, not original V1. If you already added Buddy5 code, bring in the updated `nav_coordinator.c` and rebuild your integrated UF2; the API and record layouts are unchanged. See [confirmed root cause and regression](STARTUP_FIX_V1_1.md).
 
 Use this folder as the integration baseline. It preserves Buddy 2/3 V12.2 and its standalone line/barcode/junction circuit test. Build Buddy 5's ultrasonic sensing and obstacle planner into the same executable. The supplied UF2 has the weak hooks only, so it follows the circuit normally and has no obstacle detection yet.
 
 ## Start and test the baseline
 
-Flash `firmware/buddy23_interface_v1.uf2`. Open the Pico USB serial port in PuTTY (115200 is a convenient setting; USB CDC has no physical UART baud dependency). Press `h`; check the Interface V1 banner and valid front calibration. Press `1`, then `k`. Calibration `w/l/r/k` is needed only if the front references are invalid or mounting/material changed; the offset barcode sensor remains A0 on GP27 with automatic decoding.
+Flash `firmware/buddy23_interface_v1_1.uf2`. Open the Pico USB serial port in PuTTY (115200 is a convenient setting; USB CDC has no physical UART baud dependency). Press `h`; check the Interface v1.1 banner and valid front calibration. Press `1`, then `k`. Calibration `w/l/r/k` is needed only if the front references are invalid or mounting/material changed; the offset barcode sensor remains A0 on GP27 with automatic decoding.
 
 USB: `g` gives a two-second hands-free start. `f` runs with GP21 held. Either button or `s` stops. Power bank: boot, wait five seconds, both buttons three seconds, release, wait one second, tap GP21, wait two seconds. Stop and wait five seconds before changing power. `j` gives barcode results, `p` motion, `a` raw barcode ADC, and `z` the independent coordinator audit. Saved logs restore after reboot. Use profile 1 initially.
 

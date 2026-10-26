@@ -15,6 +15,8 @@ def run(source,extra=(),defines=(),suffix=''):
     subprocess.run([str(exe)],check=True)
 for source in [root/'v12_2/test_scan_smooth.c']+sorted(base.glob('test_*.c')):run(source)
 run(root/'test_interface.c',core)
+run(root/'test_clock.c',core)
+run(root/'test_clock.c',core,['-DINTERFACE_UNPACKED_REFERENCE=1'],'_unpacked')
 run(root/'test_interface.c',core,['-DINTERFACE_UNPACKED_REFERENCE=1'],'_unpacked')
 run(root/'test_storage.c',[root/'nav_codec.c'])
 run(root/'test_buddy5.c',core+[root/'examples/buddy5_extension.c'])

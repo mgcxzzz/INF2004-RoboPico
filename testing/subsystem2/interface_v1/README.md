@@ -1,6 +1,8 @@
-# Buddy 2/3 Interface V1 — frozen V12.2 navigation plus shared coordination
+# Buddy 2/3 Interface V1.1 — frozen V12.2 navigation plus shared coordination
 
-[Download the standalone UF2](firmware/buddy23_interface_v1.uf2). [Buddy 5 handoff and build/start instructions](BUDDY5_HANDOFF.md). [Data representation and evidence scope](DATA_REPRESENTATION.md). [Build verification](BUILD.md).
+**Use V1.1 for testing/integration.** Original V1 has a confirmed accepted-start/zero-output timestamp bug and is superseded. V1.1 keeps the same APIs, driving settings, calibration and record format; see [startup fix](STARTUP_FIX_V1_1.md). The original artifact is retained for traceability only.
+
+[Download the standalone UF2](firmware/buddy23_interface_v1_1.uf2). [Buddy 5 handoff and build/start instructions](BUDDY5_HANDOFF.md). [Data representation and evidence scope](DATA_REPRESENTATION.md). [Build verification](BUILD.md).
 
 This is a separate integration baseline, based on `circuit_with_barcode_v12_2` at commit `9df1b95`. V12.2's optical steering, small-error smoothing, calibration, barcode thresholds, junction geometry, A/F/Z handling, recovery, speeds and motor power constants are retained. There is no heading lock, new centre calibration, junction-gate fix, or additional speed boost. The original V12.2 firmware remains available in its original folder.
 
@@ -32,10 +34,10 @@ Buddy 5 avoidance planner ─────┘                        ↑ command 
 
 ## Run the unmodified test
 
-1. Flash the UF2; `h` must show **BUDDY23 INTERFACE v1 | V12.2 BASELINE**. Motors are off at boot.
+1. Flash the UF2; `h` must show **BUDDY23 INTERFACE v1.1 | V12.2 BASELINE**. Motors are off at boot.
 2. Verify the imported `CAL FRONT` line. Existing valid V12.2 calibration imports. If mounting/material changed, calibrate `w` with both over white, `l` with left centred on broad black, `r` with right centred on broad black, then select `1` and `k`. No barcode calibration is needed.
 3. USB/PuTTY: `g` starts after a two-second countdown; `f` requires GP21 held. `s` or either board button stops. Power bank: wait five seconds after boot, hold both buttons three seconds, release, wait one second, tap GP21, allow the two-second countdown.
-4. Stop and wait five seconds before changing power. Use `j` for barcode events/summary, `p` for motion plus barcode events, `a` for raw barcode ADC, and **`z` for the separate coordinator audit**. `v` toggles live output. Dumps are refused while moving.
+4. Stop and wait five seconds before changing power. Use `j` for barcode events/summary, `p` for motion plus barcode events, `a` for raw barcode ADC, and **`z` for the separate coordinator audit**. `v` toggles live output, including the added `NAV_COORD` mode/owner/fault/target diagnostic. Dumps are refused while moving.
 
 Profile 1 retains V12.2's qualified 60 mm/s cruise and 45 mm/s scan. Profile 2 remains the paused 180 mm/s ramp experiment, not a general faster circuit profile. Profile 3 retains its qualified 135 mm/s setting. Start with profile 1 for integration.
 

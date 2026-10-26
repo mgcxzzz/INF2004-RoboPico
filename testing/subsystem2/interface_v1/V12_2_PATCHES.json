@@ -7,7 +7,7 @@
   {
     "path": "baseline/testing/subsystem2/circuit_with_barcode/main.c",
     "v12_2_sha256": "6644569678a5af6a4be9b27ab7bb3e5724b69c228f18576dd7fbf2a596f59893",
-    "interface_sha256": "59587171176ae8f8b216a02d0fbc327fcad090a3275f37b262c8cd19aa840a53"
+    "interface_sha256": "53e90485ba81674f52ce78d882840903344fed3893bcf94f78f643dd5ec5400d"
   },
   {
     "path": "baseline/testing/subsystem2/circuit_with_barcode/test_barcode.c",
