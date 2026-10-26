@@ -110,7 +110,7 @@ static void limits_and_saved_record(void) {
     assert(!levels.a && levels.b==(unsigned)-pwm);
     static BarcodeSaved saved;saved.magic=B_MAGIC;saved.profile=saved.recorded_profile=1;
     saved.calibration=cal;saved.side=(SideCalibration){0,1,3};
-    for(unsigned version=1;version<=15;++version) {
+    for(unsigned version=1;version<=16;++version) {
         saved.version=version;saved.decoded_z=saved.uturns=version>=11?3:0;
         saved.crc=log_crc((const uint8_t *)&saved+offsetof(BarcodeSaved,count),barcode_record_crc_size(version));
         assert(barcode_record_valid(&saved));
@@ -121,5 +121,5 @@ static void limits_and_saved_record(void) {
 int main(void) {
     for(unsigned size=0;size<2;++size)for(unsigned rev=0;rev<2;++rev)kinematic_trial(size,rev,false,false);
     kinematic_trial(0,false,true,false);kinematic_trial(0,false,false,true);limits_and_saved_record();
-    puts("PASS: complete analogue Z both sizes/directions; queued crossing; 90deg arm ignored; reverse quarter and settled forward rejoin; original-line geometry; missing-return/time/drift rejection; signed PWM; next junction after reverse; V1..V15 record integrity.");
+    puts("PASS: complete analogue Z both sizes/directions; queued crossing; 90deg arm ignored; reverse quarter and settled forward rejoin; original-line geometry; missing-return/time/drift rejection; signed PWM; next junction after reverse; V1..V16 record integrity.");
 }

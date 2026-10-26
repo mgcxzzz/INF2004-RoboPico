@@ -1,41 +1,75 @@
-# Circuit with barcode V15: straight-only smoothing on the V14 baseline
+# Circuit with barcode V16: steer from line coverage and confirmed white
 
-Use firmware/buddy23_circuit_with_barcode_v15.uf2 on the same Pico W.
-Select profile1 and retain the current calibration for the first comparison.
-Profile2 is still the separate paused ramp experiment.
+Use firmware/buddy23_circuit_with_barcode_v16.uf2 on the same Pico W.
+Select profile1. Keep the current mounting and saved front calibration for
+this first comparison. Profile2 remains the paused ramp experiment.
 
-## V15 small-correction changes
+## V16 steering interpretation
 
-V14 completed the supplied school run through straights and bends, with manual
-GP21 stop at59.458s. Small straight-line jerks remained. The retained motion
-window is40.615..60.445s, not the entire route, so straight/bend labels cannot
-be inferred for every sample. Calibration is unchanged and valid.
+The fixed45/45 probe ran smoothly with stable motor output. Stationary tests
+and the underside photo showed narrow optical coverage: a small displacement
+can reduce one front signal from3000 ADC to800..1000 while the other remains
+strong. V15 interpreted that brightness difference as a large steering error.
+V16 instead classifies each front spot relative to its own white/black
+calibration; raw levels remain intact in logs and for planned-turn detection.
 
-V15 adds two narrow adapters to the working V14 base:
+| Normalised band/timing | Meaning and ordinary target |
+|---|---|
+| Both>=180 | Both have line coverage:45/45, regardless of brightness difference |
+| After entering coverage, both remain>=120 | Continue45/45 until an edge is approached |
+| Both>=120 but not yet in coverage state | Cautious30/30 |
+| One<120, other>=120; white unconfirmed | Gentle correction35/50(inner/outer) |
+| Weak side<=60 for30ms | Firm correction25/50 |
+| Confirmed white persists120ms from its first low sample | Strong0/45 |
+| White side returns>=120 for20ms | Clear white state; useful return can resume following |
+| Both uncertain<120 for80ms, or both confirmed white | Existing bounded loss/search path |
 
-- Qualify both front levels>=700 and absolute difference<=220 for100ms. In
-  this strong-black plateau, request equal45mm/s instead of chasing small
-  brightness differences. Existing equal fast-cruise targets remain intact.
-  Exit immediately if either level<600 or imbalance>300. Raw loss/junction
-  thresholds, front calibration, recovery confidence and barcode ADCs do not
-  change. Decision24 marks the settled paired-black hold in motion logs.
-- Slew positive PWM at800 units/s upward and1600 downward ONLY while the
-  hold is active, both actual wheel speeds>=25mm/s and both targets35..55.
-  Start/slow wheel, zero output, loaded correction/capture, ramps, junction
-  turns and stationary search bypass it. No new PI or V13 visible-wheel
-  controller is used. This keeps breakaway/urgent bend authority available.
+With the school references(white176/175,black3483/3498),180 is about771/774
+raw ADC,120 about573/574,60 about374/374. Therefore3000/800 and800/3000
+both request straight travel. These are calibration-derived bands, not new
+hardcoded raw black references. Difference/equality of black strength no
+longer chooses steering when both have coverage.
 
-Both-black sensing does not prove geometric centring or a perfectly straight
-track. This is deliberate small-error tolerance; it can change when correction
-begins on a gentle curve. Verify the straight-to-bend transition physically.
-Large-error and near-pivot bypass remain V14. No scan success is claimed from
-input replay or host tests; improve movement first, then try one barcode.
+There is no new motor PI or global PWM ramp. Normal motor gains, feedforward,
+breakaway and power limits match the successful probe/V14. The V15 additional
+brightness-balancing/straight-PWM adapter is inactive in V16. Gentle/firm tiers
+keep both wheels moving; sustained true white retains strong bend authority.
+This deliberately changes when correction begins; test straight-to-bend
+behaviour before assuming the circuit is solved.
+
+Coverage interpretation applies in C_FOLLOW and outgoing-line alignment,
+including mirrored right turns. Planned junction rotation and its optical
+branch confirmation remain unchanged. Barcode Code39 decoding and A/F/Z
+routing are unchanged. Equal fast-cruise settings are preserved under their
+existing conservative high-contrast straight gate; use profile1 now.
+
+The existing1.5s stationary search starts after loss is qualified. A short
+known-curve bridge lasts up to150ms, then it coasts until the search begins.
+Search angle/time/drift limits remain as described below. A possible return
+stops searching while20ms of line confidence is checked. Ambiguous low signals
+cannot wait unboundedly. Both-coverage confidence replaces raw balance for
+recovery memory; raw brightness differences do not continually reverse memory.
+
+Motion decisions:24=coverage straight,26/27=gentle left/right,28/29=firm
+left/right,12/13=strong left/right,30=uncertain/bridge/coast;19..23=search stages.
+The CSV schema and saved calibration remain unchanged. V16 loads V1..V15
+records and writes the same64848-byte format under version16.
+
+## Test
+
+1. Flash V16, use h to verify the banner and valid=1. Select1; k can retain
+   that profile. Do not repeat w/l/r unless the mounting changes.
+2. Start with both front spots seeing at least partial black. Run a straight
+   for5..8s, stop and send p immediately so the beginning is retained.
+3. Check a straight-to-bend transition, then one A barcode and j. All standard
+   USB/offline start/stop commands remain. This is the driving firmware;
+   the four-second probe is no longer needed for this comparison.
 
 ## V14 baseline retained
 
 V13 performed worse on the school circuit. Its gradual visible-wheel controller
 and smoothing of strong corrections are removed from production. V14 restored smooth_follow.h
-and motor dependencies from V12(commit f0e3b35); V15 adds only the adapters above.
+and motor dependencies from V12(commit f0e3b35); V16 replaces the V15 optical adapters as described above.
 The historical visible_wheel.h/test_visible_wheel.c remain as V13 references;
 main.c does not include or call that controller.
 
@@ -113,7 +147,7 @@ During ordinary following or outgoing-line alignment:
 - Search ends at the last endpoint,12s active,1000mm accumulated wheel travel,
   or30mm absolute encoder mean-wheel displacement. A small common-mode trim
   opposes measured centre drift. Encoder estimates cannot detect tyre slip or
-  guarantee a stationary chassis. Confirmed return resumes the restored V12 tracing.
+  guarantee a stationary chassis. Confirmed return resumes the V16 coverage follower.
 - Outgoing alignment allows15s/1100mm to fit the wait and stationary search.
   Expected white during a planned Z turn does not start ordinary recovery;
   its own angle/time/line-confirmation limits still apply.
@@ -159,8 +193,8 @@ remain. Physical slip/drag can still require tuning; no IMU is assumed.
 
 ## Test with profile1
 
-1. Keep the mounting, wiring and saved front calibration. Flash V15, press h
-   and verify the V15 banner and valid=1. Select1, then k to retain that profile.
+1. Keep the mounting, wiring and saved front calibration. Flash V16, press h
+   and verify the V16 banner and valid=1. Select1, then k to retain that profile.
 2. Put a complete Z barcode beside a straight leading to the cross, in the
    same position used by A/F. Start the offset sensor roughly20mm before it.
 3. Start with g over USB for a2s countdown, or use the usual power-bank
@@ -207,8 +241,8 @@ whole-run travelled-distance metric. Subsequent junctions use cumulative path
 and relative signed wheel geometry consistently.
 
 The main record appends8 bytes for Z/U counters: old64840-byte V1..V10 prefixes
-and trace56/turn-summary40 layouts remain byte-compatible; V11-V15 use64848 bytes.
-CRC length depends on version. V1..V14 calibration/logs still load; unknown16
+and trace56/turn-summary40 layouts remain byte-compatible; V11-V16 use64848 bytes.
+CRC length depends on version. V1..V15 calibration/logs still load; unknown17
 rejects. Main bank remains0x101d0000. Raw record/address is unchanged at
 0x101b0000, separate from probe calibration0x101c0000/0x101c1000.
 
@@ -218,7 +252,7 @@ RAW_ADC_BEGIN/END counts and CRC. Wait for the footer and send a full PuTTY
 logging file if raw analysis is needed. full=1 means later run samples were
 omitted. matches_motion checks capture identity. No raw rows are overwritten.
 
-See BUILD_V15.md for build/test evidence. Physical school-circuit behaviour
+See BUILD_V16.md for build/test evidence. Physical school-circuit behaviour
 and stationary recovery still require testing. Start with5..10s of straight
 tracing, stop and collect p before a long loop overwrites it; then try one A
 and collect j immediately after passing it. Older manifests remain available.

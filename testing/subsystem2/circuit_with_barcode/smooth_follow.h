@@ -66,6 +66,13 @@ static inline AnalogDemand barcode_drive_step(Circuit *c,BarcodeNav *n,const Lin
     AnalogDemand d=barcode_circuit_step(c,n,cal,i,profile);
     if(profile==2 && c->fast && !d.stop)
         d.target[0]=d.target[1]=RAMP2_SPEED;
-    smooth_follow_apply(s,c,dt,&d);return d;
+#ifdef CIRCUIT_COVERAGE_FOLLOW
+    /* Coverage logic owns the optical target state in follow AND outgoing
+     * alignment. Retire the V15 brightness-balancing/paired-PWM adapter. */
+    (void)dt;*s=(SmoothFollow){0};
+#else
+    smooth_follow_apply(s,c,dt,&d);
+#endif
+    return d;
 }
 #endif

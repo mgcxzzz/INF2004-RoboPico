@@ -32,6 +32,9 @@
 #else
 #define RUN_DRIVE_STEP barcode_drive_step
 #endif
+#ifndef B_RECORD_VERSION
+#define B_RECORD_VERSION 16
+#endif
 
 enum { HOLD=21,STOP=20,PWM_TOP=999 };
 static const uint ma[2]={8,10},mb[2]={9,11},ea[2]={0,4},eb[2]={1,5};
@@ -56,7 +59,7 @@ static SmoothFollow steering;
 static uint16_t side_adc;static uint64_t last_side_sample;static bool status_enabled;
 static uint32_t last_nav_event;
 static uint8_t test_mode=1,recorded_mode=1;
-static uint8_t recorded_version=15;
+static uint8_t recorded_version=B_RECORD_VERSION;
 static bool last_fast;
 static CircuitCapture capture;
 static CircuitLoad load;
@@ -265,7 +268,7 @@ static void reset_log(void) {
     guard.duration_us=0;guard.reason=0;circuit=(Circuit){0};nav=(BarcodeNav){0};
     for(unsigned w=0;w<2;++w) {cut_ticks[w]=0;cut_invalid[w]=0;travelled_ticks[w]=0;}
     restored_distance=0;
-    flash_loaded=false;recorded_key='-';recorded_version=15;
+    flash_loaded=false;recorded_key='-';recorded_version=B_RECORD_VERSION;
 }
 static void help(void) {
 #ifdef B_STRAIGHT_DRIVE_PROBE
@@ -274,14 +277,14 @@ static void help(void) {
     puts("Place on a clear flat40cm path. Same power-bank start gesture or USB g(2s countdown)/f(hold GP21). s/either button stops. Independent4s deadline always ends the run.");
     puts("p=motion log;h=help;v=live. Existing front calibration retained. Saved data uses V15 container with key=D;profile always1. Wait5s after stop before changing power.");
 #else
-    puts("\nBUDDY23 CIRCUIT WITH BARCODE v15 | AUTO ANALOG GP27 | *A* LEFT / *F* RIGHT / *Z* U-TURN | motors OFF on boot");
-    puts("V15 paired-black straight hold:100ms with both>=700 and difference<=220;release at either<600 or difference>300. V14 motor controller and bend bypass unchanged;profile1 recommended.");
-    puts("Straight-only PWM smoothing:both wheels>=25mm/s,targets35..55,paired-black hold;rise800/fall1600 PWM units/s. Starts,slow wheels,edges,loaded capture,turns and search bypass it.");
-    puts("Motion decision24=qualified paired-black straight hold;11/12/13 retain ordinary straight/left/right. Calibrated raw levels still control loss,search and barcode/junction acceptance.");
+    puts("\nBUDDY23 CIRCUIT WITH BARCODE v16 | AUTO ANALOG GP27 | *A* LEFT / *F* RIGHT / *Z* U-TURN | motors OFF on boot");
+    puts("V16 coverage steering: both>=180 means straight despite unequal brightness;hold while both>=120. Levels are normalised0..1000,not raw ADC. Partial800..1000 raw ADC is useful line with school calibration.");
+    puts("White<=60 for30ms;clear>=120 for20ms. Near-white35/50,confirmed-white25/50,strong0/45 after120ms. Both uncertain<120 for80ms also starts bounded loss recovery. Normal motor PI/PWM/breakaway unchanged.");
+    puts("Motion24=coverage straight,26/27=gentle left/right,28/29=firm left/right,12/13=strong left/right,30=uncertain/bridge/coast. V15 brightness balancing and extra straight-PWM adapter inactive.");
     puts("V12 faster Z: forward90/55/35 and reverse80/45/30mm/s;120ms measured-still settle. U/search PWM60% sustained/75% start<=180ms, ends early at50mm/s or80% target.");
     puts("V11 Z queues U-turn at next junction: right wheel forward to90deg,settle,left wheel reverse to~180deg,settle,confirm original line then follow. Use profile1;V12 U-turn power limits apply.");
     puts("V10 PROFILE2 RAMP: centred straight180mm/s; per-wheel Kp3.5 Ki10; acceleration400mm/s^2; PWM50% sustained/65% boost<=1500ms after40ms deficit. Ramp work paused;use profile1. Profile3 remains135.");
-    puts("V9 smooth visible-line steering restored as V12: gentle small corrections,60..20ms response,200..600mm/s^2 target slew;strong bends bypass. Barcode decoder and fast U-turn unchanged.");
+    puts("Coverage interpretation applies to ordinary following and outgoing alignment. Planned junction turns,barcode decoder and fast U-turn retained. Use profile1 for the first circuit comparison.");
     puts("V13 stationary line search:1.5s continuous white;counter-rotate both wheels at100mm/s,taper25 near encoder endpoints35/60/90/120/150deg alternating about start heading. Stop on possible line for confirmation.");
     puts("Search starts toward last seen side;no history starts left.80ms measured-still pause before reversal. V12 power60%/75% start. After150ms bridge coast until1.5s;bounds12s active/1000mm wheel travel/30mm encoder centre drift.");
     puts("V8 barcode sensitivity:63 thresholds; coarse128..3968/128 and fine192..254/2. Hysteresis coarse+/-32,fine+/-3;2ms debounce;black HIGH.");
@@ -453,7 +456,7 @@ static bool start_run(unsigned mode) {
     uint64_t now=time_us_64();uint32_t irq=save_and_disable_interrupts();
     bool ok=guard_start(&guard,now,mode!=LINE_USB_HOLD || !gpio_get(HOLD),!gpio_get(STOP));
     if(ok) {
-        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=15;last_fast=false;
+        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=B_RECORD_VERSION;last_fast=false;
         barcode_raw_begin(&raw_capture,recorded_mode);raw_new=true;raw_loaded=raw_persisted=raw_save_failed=false;
         capture=(CircuitCapture){0};load=(CircuitLoad){0};steering=(SmoothFollow){0};capture_outer=-1;assist_code=feedback_mask=0;
         guard.deadline_us=UINT64_MAX;guard.duration_us=0;restored_distance=0;

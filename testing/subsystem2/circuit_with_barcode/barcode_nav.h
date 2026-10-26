@@ -100,6 +100,9 @@ static inline void barcode_nav_edge(BarcodeNav *n,uint64_t now,const double whee
     }
 }
 static inline void barcode_mirror_tracker(CircuitTracker *t) {
+#ifdef CIRCUIT_COVERAGE_FOLLOW
+    coverage_mirror(&t->coverage);
+#endif
     t->core.direction=-t->core.direction;t->core.recovery=-t->core.recovery;
     t->pending=-t->pending;t->reverse=-t->reverse;t->probe_direction=-t->probe_direction;
     int16_t v=t->bridge[0];t->bridge[0]=t->bridge[1];t->bridge[1]=v;

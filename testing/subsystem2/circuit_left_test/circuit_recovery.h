@@ -4,6 +4,12 @@
 #ifdef CIRCUIT_SWEEP_SEARCH
 #include "../circuit_with_barcode/line_search.h"
 #endif
+#ifdef CIRCUIT_COVERAGE_FOLLOW
+#ifndef CIRCUIT_SWEEP_SEARCH
+#error Coverage follower requires the bounded barcode search
+#endif
+#include "../circuit_with_barcode/coverage_state.h"
+#endif
 
 enum { C_LOSS_NO_DIRECTION=42,C_LOSS_TIME,C_LOSS_DISTANCE,C_LOSS_STRAIGHT,
        C_LOSS_US=2000000,C_LOSS_MM=50,C_MEMORY_US=1500000,C_WEAK_US=30000,
@@ -19,6 +25,9 @@ typedef struct {
     int8_t pending,reverse,probe_direction;
     uint8_t loss_reason;
     bool weak_timing,reverse_timing,reacquire_timing,probe_timing,medium_timing,strong_timing,centre_timing,centre_valid,straight_recovery;
+#ifdef CIRCUIT_COVERAGE_FOLLOW
+    CoverageState coverage;
+#endif
 #ifdef CIRCUIT_SWEEP_SEARCH
     LineSearch search;
 #endif
@@ -72,13 +81,19 @@ static inline void circuit_faint_targets(int error,const uint16_t level[2],int16
     target[0]=(int16_t)(target[0]*35/maximum);
     target[1]=(int16_t)(target[1]*35/maximum);
 }
+#ifdef CIRCUIT_COVERAGE_FOLLOW
+#include "../circuit_with_barcode/coverage_follow.h"
+#endif
 static inline AnalogDemand circuit_line_demand(CircuitTracker *t,const LineCalibration *cal,
                                                 uint16_t l,uint16_t r,uint64_t now,uint32_t mm) {
     AnalogDemand d={.decision=SYM_STRAIGHT};t->loss_reason=0;
-    SymmetricTracker *s=&t->core;
     if(!calibration_valid(cal)) { d.stop=true;d.decision=AL_LOST;return d; }
     d.level[0]=line_level(l,cal->white[0],cal->black[0]);
     d.level[1]=line_level(r,cal->white[1],cal->black[1]);
+#ifdef CIRCUIT_COVERAGE_FOLLOW
+    return coverage_line_demand(t,d,now,mm);
+#else
+    SymmetricTracker *s=&t->core;
     int error=(int)d.level[0]-d.level[1],magnitude=error<0?-error:error;
     unsigned strongest=d.level[0]>d.level[1]?d.level[0]:d.level[1];
     bool low=d.level[0]<150 && d.level[1]<150;
@@ -182,5 +197,6 @@ static inline AnalogDemand circuit_line_demand(CircuitTracker *t,const LineCalib
         t->bridge[1]=(int16_t)(d.target[1]*35/maximum);
     }
     return d;
+#endif
 }
 #endif
