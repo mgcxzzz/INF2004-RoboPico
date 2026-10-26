@@ -1,0 +1,22 @@
+[
+  {
+    "path": "baseline/testing/subsystem2/circuit_with_barcode/barcode_record.h",
+    "v12_2_sha256": "1df11e8f084df3ff6465ccb0cb9b4af1c9bab30db074bbfa0bada181ae3a9914",
+    "interface_sha256": "338cbbd33637d42fcc625c07f1925dc52d88a4ae562ef4ad82ea8f5dbe293d0b"
+  },
+  {
+    "path": "baseline/testing/subsystem2/circuit_with_barcode/main.c",
+    "v12_2_sha256": "6644569678a5af6a4be9b27ab7bb3e5724b69c228f18576dd7fbf2a596f59893",
+    "interface_sha256": "59587171176ae8f8b216a02d0fbc327fcad090a3275f37b262c8cd19aa840a53"
+  },
+  {
+    "path": "baseline/testing/subsystem2/circuit_with_barcode/test_barcode.c",
+    "v12_2_sha256": "dbca5811748ef2226262ab37bbba1292334c7ff34e12521a6b635f6f9a7ed13c",
+    "interface_sha256": "be4f635fa493a74e0c1e867bf426d2ebbc5c6c3ee4f98fe5625bde366a930d31"
+  },
+  {
+    "path": "baseline/testing/subsystem2/circuit_with_barcode/test_uturn.c",
+    "v12_2_sha256": "8d656c18f4c4bbd8d82f9eb44cd56d7075b2732dfa85bb5a583d1e9b5d7dc6ee",
+    "interface_sha256": "8e044c149552a36d5df6b61ef517a9fa7418ee626263bb04840defc71b91729d"
+  }
+]
