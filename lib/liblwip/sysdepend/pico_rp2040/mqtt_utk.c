@@ -106,7 +106,8 @@ static void incoming_data_cb(void *arg, const u8_t *data, u16_t len, u8_t flags)
 		rx_buf[rx_len++] = data[i];
 	}
 	if((flags & MQTT_DATA_FLAG_LAST) != 0) {
-		/* Pass the true length: anything but 4 bytes is rejected. */
+		/* Copy into Buddy 1's bounded RX buffer before returning.
+		 * Preserve oversize detection; valid commands are 4 or 5 bytes. */
 		b1_net_command(rx_buf, rx_total);
 		rx_is_cmd = 0;
 	}

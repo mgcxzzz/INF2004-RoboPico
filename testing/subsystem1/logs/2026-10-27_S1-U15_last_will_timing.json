@@ -1,0 +1,9 @@
+{
+  "usbDisconnectLowerEpochS": 1793109666.8262432,
+  "usbDisconnectUpperEpochS": 1793109666.877044,
+  "scope": "USB console disappearance brackets power removal; Pico USB is assumed sole power source",
+  "status": "PASS",
+  "lastWillEpochS": 1793109673.459792,
+  "delayLowerS": 6.582747936248779,
+  "delayUpperS": 6.633548736572266
+}

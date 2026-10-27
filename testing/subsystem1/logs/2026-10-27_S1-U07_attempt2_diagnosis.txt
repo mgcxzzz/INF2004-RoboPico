@@ -1,0 +1,8 @@
+S1-U07 second real Pico run
+Expected firmware SHA256: 296245a64a6e1bedf29202de14206c7e487bc06a0a9058da2696ff6c696574f9
+Hardware: Pico W on Robo Pico, all peripherals connected.
+Observed: USB console available; repeated CYW43_LINK_BADAUTH (-3) before DHCP/MQTT.
+Mac network check: configured SSID matches active network (name and password omitted). Channel 11, 2.4GHz, WPA2/WPA3 transition mode.
+Current join mode: CYW43_AUTH_WPA2_MIXED_PSK.
+Next controlled experiment: local WIFI_AUTH_MODE=CYW43_AUTH_WPA3_WPA2_AES_PSK, using existing driver override. Router unchanged.
+The transition-mode finding does not prove the root cause. Network authentication still needs a successful live test.

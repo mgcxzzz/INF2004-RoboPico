@@ -15,6 +15,7 @@
 #include <string.h>
 
 #include "b1_proto.h"
+#include "b1_mapping.h"
 #include "sys_tlm.h"
 
 static int g_pass = 0;
@@ -45,7 +46,7 @@ test_commands (void)
     static uint8_t const allowed[] =
     {
         B1_CMD_START, B1_CMD_PAUSE, B1_CMD_RESUME, B1_CMD_STOP,
-        B1_CMD_RESET, B1_CMD_ESTOP, B1_CMD_PING
+        B1_CMD_RESET, B1_CMD_ESTOP, B1_CMD_PING, B1_CMD_BARCODE_GET
     };
     uint8_t  msg[12];
     b1_cmd_t cmd;
@@ -66,12 +67,12 @@ test_commands (void)
     ok = 1;
     for (i = 0U; i < 16U; i++)
     {
-        if ((i == 0U) || ((i >= 9U) && (i <= 11U)) || (i == 15U))
+        if ((i == 0U) || (i == 11U) || (i == 15U))
         {
             ok &= (check_code((uint8_t)i, 0U) == B1_ACK_UNKNOWN);
         }
     }
-    CHECK("H01c", ok, "codes 0, 9, 10, 11, 15 rejected as unknown");
+    CHECK("H01c", ok, "codes 0, 11, 15 rejected as unknown");
 
     CHECK("H01d", (check_code(B1_CMD_CONFIG, (1U << 12) | 0U) == B1_ACK_ACCEPTED) &&
                   (check_code(B1_CMD_CONFIG, (1U << 12) | 1U) == B1_ACK_ACCEPTED) &&
@@ -205,6 +206,11 @@ vectors (void)
     uint8_t      f6[NAV_TLM_FRAME_BYTES];
     uint8_t      f7[SAFETY_TLM_FRAME_BYTES];
     uint8_t      cmd[B1_CMD_BYTES];
+    uint8_t      map_cmd[B1_MAP_CMD_BYTES];
+    uint8_t      map_frame[B1_MAP_FRAME_BYTES];
+    uint8_t      map_empty[B1_MAP_FRAME_BYTES];
+    uint8_t const letters[B1_MAP_SLOTS] = { 'Z', 'A', 'M', 'Q' };
+    uint32_t     mapping = 0U;
 
     b1.seq = 17U; b1.net = 2U; b1.state = 1U; b1.last_cmd = 12U;
     b1.last_result = 1U; b1.uptime_s = 1234U; b1.published = 54321U;
@@ -223,12 +229,19 @@ vectors (void)
     safety_tlm_pack(&sf, f7);
 
     b1_cmd_pack(B1_CMD_CONFIG, 77U, (1U << 12) | 1U, cmd);
+    (void)b1_mapping_encode(letters, &mapping);
+    b1_map_cmd_pack(201U, mapping, map_cmd);
+    b1_mapping_frame(b1_mapping_replace(0U, mapping), 201U, 255U, map_frame);
+    b1_mapping_frame(0U, 7U, 0U, map_empty);
 
     printf("{\n");
     hex("b1", f1, sizeof(f1), 0);
     hex("nav", f6, sizeof(f6), 0);
     hex("safety", f7, sizeof(f7), 0);
-    hex("cmd_config", cmd, sizeof(cmd), 1);
+    hex("cmd_config", cmd, sizeof(cmd), 0);
+    hex("cmd_mapping", map_cmd, sizeof(map_cmd), 0);
+    hex("mapping", map_frame, sizeof(map_frame), 0);
+    hex("mapping_empty", map_empty, sizeof(map_empty), 1);
     printf("}\n");
     return 0;
 }

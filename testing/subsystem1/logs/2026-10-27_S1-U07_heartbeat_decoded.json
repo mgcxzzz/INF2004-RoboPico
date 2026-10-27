@@ -1,0 +1,130 @@
+{
+  "scope": "Five live Pico heartbeats only; not a five-minute performance test",
+  "frames": [
+    {
+      "timestamp": "2026-10-27T19:17:25+0800",
+      "topic": "is28/hb",
+      "src": 1,
+      "srcName": "WiFi (B1)",
+      "seq": 202,
+      "len": 12,
+      "data": {
+        "net": 2,
+        "netName": "Operational",
+        "state": 7,
+        "stateName": "unknown",
+        "lastCmd": 10,
+        "lastCmdName": "BARCODE_GET",
+        "lastResult": 0,
+        "lastResultName": "accepted",
+        "uptimeS": 208,
+        "published": 206,
+        "lost": 0,
+        "accepted": 1,
+        "rejected": 0,
+        "connects": 1,
+        "fillPct": 0
+      }
+    },
+    {
+      "timestamp": "2026-10-27T19:17:26+0800",
+      "topic": "is28/hb",
+      "src": 1,
+      "srcName": "WiFi (B1)",
+      "seq": 203,
+      "len": 12,
+      "data": {
+        "net": 2,
+        "netName": "Operational",
+        "state": 7,
+        "stateName": "unknown",
+        "lastCmd": 10,
+        "lastCmdName": "BARCODE_GET",
+        "lastResult": 0,
+        "lastResultName": "accepted",
+        "uptimeS": 209,
+        "published": 207,
+        "lost": 0,
+        "accepted": 1,
+        "rejected": 0,
+        "connects": 1,
+        "fillPct": 0
+      }
+    },
+    {
+      "timestamp": "2026-10-27T19:17:27+0800",
+      "topic": "is28/hb",
+      "src": 1,
+      "srcName": "WiFi (B1)",
+      "seq": 204,
+      "len": 12,
+      "data": {
+        "net": 2,
+        "netName": "Operational",
+        "state": 7,
+        "stateName": "unknown",
+        "lastCmd": 10,
+        "lastCmdName": "BARCODE_GET",
+        "lastResult": 0,
+        "lastResultName": "accepted",
+        "uptimeS": 210,
+        "published": 208,
+        "lost": 0,
+        "accepted": 1,
+        "rejected": 0,
+        "connects": 1,
+        "fillPct": 0
+      }
+    },
+    {
+      "timestamp": "2026-10-27T19:17:28+0800",
+      "topic": "is28/hb",
+      "src": 1,
+      "srcName": "WiFi (B1)",
+      "seq": 205,
+      "len": 12,
+      "data": {
+        "net": 2,
+        "netName": "Operational",
+        "state": 7,
+        "stateName": "unknown",
+        "lastCmd": 10,
+        "lastCmdName": "BARCODE_GET",
+        "lastResult": 0,
+        "lastResultName": "accepted",
+        "uptimeS": 211,
+        "published": 209,
+        "lost": 0,
+        "accepted": 1,
+        "rejected": 0,
+        "connects": 1,
+        "fillPct": 0
+      }
+    },
+    {
+      "timestamp": "2026-10-27T19:17:29+0800",
+      "topic": "is28/hb",
+      "src": 1,
+      "srcName": "WiFi (B1)",
+      "seq": 206,
+      "len": 12,
+      "data": {
+        "net": 2,
+        "netName": "Operational",
+        "state": 7,
+        "stateName": "unknown",
+        "lastCmd": 10,
+        "lastCmdName": "BARCODE_GET",
+        "lastResult": 0,
+        "lastResultName": "accepted",
+        "uptimeS": 212,
+        "published": 210,
+        "lost": 0,
+        "accepted": 1,
+        "rejected": 0,
+        "connects": 1,
+        "fillPct": 0
+      }
+    }
+  ]
+}

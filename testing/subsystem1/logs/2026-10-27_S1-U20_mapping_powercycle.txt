@@ -1,0 +1,12 @@
+8:31:11 PM  is28/lwt  broker reports the car went offline
+8:31:28 PM  cmd       → BARCODE_GET id 72 [a2 48 00 00]
+8:31:28 PM  is28/tlm  Safety #0 Normal, mask 0x0
+8:31:28 PM  is28/tlm  Navigation #0 Ready, owner none
+8:31:28 PM  is28/tlm  Barcode mapping #0 mapping not configured
+8:31:28 PM  is28/ack  ← BARCODE_GET id 72: accepted in 119 ms, state unknown
+8:31:39 PM  cmd       → raw 92 49 19 40 06 id 73 [92 49 19 40 06]
+8:31:39 PM  is28/tlm  Barcode mapping #1 mapping rev 1: Z/A/Q/M (forward/U-turn/left/right), request 73
+8:31:39 PM  is28/ack  ← BARCODE_MAP id 73: accepted in 66 ms, state unknown
+8:31:44 PM  cmd       → BARCODE_GET id 74 [a2 4a 00 00]
+8:31:45 PM  is28/tlm  Barcode mapping #2 mapping rev 1: Z/A/Q/M (forward/U-turn/left/right), request 74
+8:31:45 PM  is28/ack  ← BARCODE_GET id 74: accepted in 116 ms, state unknown

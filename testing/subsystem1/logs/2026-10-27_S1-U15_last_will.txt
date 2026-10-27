@@ -1,0 +1,6 @@
+10:01:13 PM  is28/lwt  broker reports the car went offline
+10:01:43 PM  cmd       → BARCODE_GET id 178 [a2 b2 00 00]
+10:01:43 PM  is28/tlm  Safety #0 Normal, mask 0x0
+10:01:43 PM  is28/tlm  Navigation #0 Ready, owner none
+10:01:43 PM  is28/tlm  Barcode mapping #0 mapping not configured
+10:01:43 PM  is28/ack  ← BARCODE_GET id 178: accepted in 90 ms, state unknown

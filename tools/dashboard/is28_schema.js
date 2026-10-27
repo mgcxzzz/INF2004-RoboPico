@@ -14,9 +14,10 @@
   'use strict';
 
   const VERSION = 2;
-  const SRC = { WIFI: 1, MOTION: 2, LINE: 3, IMU: 4, OBSTACLE: 5, NAV: 6, SAFETY: 7 };
+  const SRC = { WIFI: 1, MOTION: 2, LINE: 3, IMU: 4, OBSTACLE: 5, NAV: 6, SAFETY: 7,
+                BARCODE_MAP: 8 };
   const SRC_NAME = ['?', 'WiFi (B1)', 'Motion (B2)', 'Line (B3)', 'IMU (B4)',
-                    'Obstacle (B5)', 'Navigation', 'Safety'];
+                    'Obstacle (B5)', 'Navigation', 'Safety', 'Barcode mapping'];
 
   const NAV_STATE = ['Ready', 'Running', 'Paused', 'Safe Stop', 'Completed',
                      'Emergency Stop', 'Fault', 'unknown'];
@@ -46,9 +47,9 @@
 
   /* Commands (sys_tlm.h, "Supervisory commands"). */
   const CMD = { START: 1, PAUSE: 2, RESUME: 3, STOP: 4, RESET: 5, ESTOP: 6, CONFIG: 7,
-                PING: 8, STEER: 12, DRIVE: 13, TURN: 14 };
+                PING: 8, BARCODE_MAP: 9, BARCODE_GET: 10, STEER: 12, DRIVE: 13, TURN: 14 };
   const CMD_NAME = ['none', 'START', 'PAUSE', 'RESUME', 'STOP', 'RESET', 'ESTOP',
-                    'CONFIG', 'PING', 'code9', 'code10', 'code11', 'STEER', 'DRIVE',
+                    'CONFIG', 'PING', 'BARCODE_MAP', 'BARCODE_GET', 'code11', 'STEER', 'DRIVE',
                     'TURN', 'code15'];
   const ACK_NAME = ['accepted', 'rejected: steering/navigation not allowed (FR-WIFI-03)',
                     'rejected: unknown command', 'rejected: bad format',
@@ -56,7 +57,40 @@
   const CFG_TELEMETRY = 1;
 
   /* Payload length per source; a frame of any other length is refused. */
-  const PAYLOAD = { 1: 12, 3: 12, 4: 16, 5: 16, 6: 6, 7: 12 };
+  const PAYLOAD = { 1: 12, 3: 12, 4: 16, 5: 16, 6: 6, 7: 12, 8: 5 };
+  const MAP_MOVEMENTS = ['Forward', 'U-turn', 'Left', 'Right'];
+
+  function mappingWord(letters) {
+    if (!Array.isArray(letters) || letters.length !== 4 ||
+        letters.some((x) => typeof x !== 'string' || !/^[A-Z]$/.test(x)) ||
+        new Set(letters).size !== 4) {
+      throw new Error('Choose four different letters from A to Z.');
+    }
+    return letters.reduce((word, ch, i) => word | ((ch.charCodeAt(0) - 65) << (5 * i)), 0);
+  }
+
+  function encodeMapping(id, letters) {
+    const word = mappingWord(letters);
+    return new Uint8Array([(CMD.BARCODE_MAP << 4) | VERSION, id & 255,
+                           word & 255, (word >>> 8) & 255, (word >>> 16) & 255]);
+  }
+
+  function decodeMapping(p) {
+    const word = le32(p, 0), configured = !!(word & (1 << 20));
+    if ((word >>> 29) || (!configured && word !== 0)) return { error: 'invalid mapping status' };
+    const indices = [0, 1, 2, 3].map((i) => (word >>> (5 * i)) & 31);
+    if (configured && (indices.some((i) => i >= 26) || new Set(indices).size !== 4)) {
+      return { error: 'invalid mapping letters' };
+    }
+    return { configured, revision: (word >>> 21) & 255, requestId: p[4],
+             letters: configured ? indices.map((i) => String.fromCharCode(65 + i)) : [] };
+  }
+
+  function mappedMovement(mapping, letter) {
+    if (!mapping || !mapping.configured) return 'not configured';
+    const slot = mapping.letters.indexOf(letter);
+    return slot >= 0 ? MAP_MOVEMENTS[slot] : 'unassigned';
+  }
 
   function u(word, shift, bits) {
     return bits >= 32 ? (word >>> shift) >>> 0 : (word >>> shift) & ((1 << bits) - 1);
@@ -157,7 +191,7 @@
   }
 
   const DECODERS = { 1: decodeB1, 3: decodeLine, 4: decodeImu, 5: decodeB5,
-                     6: decodeNav, 7: decodeSafety };
+                     6: decodeNav, 7: decodeSafety, 8: decodeMapping };
 
   /* Decode one frame. Returns { src, srcName, seq, data } or { error }. */
   function decodeFrame(bytes) {
@@ -170,6 +204,7 @@
     if (!(src in PAYLOAD)) { out.data = null; return out; }        /* not defined yet */
     if (len !== PAYLOAD[src]) return { error: 'payload ' + len + ' bytes, expected ' + PAYLOAD[src], src };
     out.data = DECODERS[src](b.subarray(3));
+    if (out.data.error) return { error: out.data.error, src };
     return out;
   }
 
@@ -184,6 +219,7 @@
   function decodeAck(bytes) {
     const b = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
     if (b.length !== 4) return { error: 'ack length ' + b.length };
+    if ((b[0] & 15) !== VERSION) return { error: 'ack schema version ' + (b[0] & 15) };
     const code = b[0] >> 4;
     return { code, codeName: CMD_NAME[code], id: b[1], result: b[2],
              resultName: name(ACK_NAME, b[2]), accepted: b[2] === 0,
@@ -208,9 +244,25 @@
     return { received: r, missing: m, pct: r + m ? (100 * r) / (r + m) : 100 };
   };
 
+  /* A stopped-short run or a silent beginning/end must never earn PASS.
+   * Delivery is a sequence-gap estimate, assessed per observed source.
+   * Source 8 is on-demand configuration, not periodic telemetry. */
+  function connectivityVerdict(per, durationS, maxGap, beats, finished) {
+    const sources = Object.keys(per).filter((k) => Number(k) !== SRC.BARCODE_MAP);
+    const complete = finished && durationS >= 300;
+    const deliveryGood = sources.includes(String(SRC.WIFI)) && sources.every((k) => {
+      const t = per[k];
+      return t.received > 0 && 100 * t.received / (t.received + t.missing) >= 95;
+    });
+    const heartbeatGood = beats > 1 && maxGap <= 2;
+    return { complete, deliveryGood, heartbeatGood,
+             deliveryPass: complete && deliveryGood, heartbeatPass: complete && heartbeatGood };
+  }
+
   const api = { VERSION, SRC, SRC_NAME, CMD, CMD_NAME, ACK_NAME, CFG_TELEMETRY,
                 NAV_STATE, NET_STATE, decodeFrame, encodeCommand, configArg,
-                decodeAck, SeqTracker, le32, u, s };
+                decodeAck, SeqTracker, le32, u, s, MAP_MOVEMENTS, mappingWord,
+                encodeMapping, mappedMovement, connectivityVerdict };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.IS28 = api;
 })(typeof self !== 'undefined' ? self : this);

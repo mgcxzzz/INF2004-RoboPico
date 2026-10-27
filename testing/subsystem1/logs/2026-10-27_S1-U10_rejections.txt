@@ -1,0 +1,8 @@
+8:02:14 PM  cmd       → STEER id 29 [c2 1d 00 00]
+8:02:14 PM  is28/ack  ← STEER id 29: rejected: steering/navigation not allowed (FR-WIFI-03) in 101 ms, state Ready
+8:02:18 PM  cmd       → DRIVE id 30 [d2 1e 00 00]
+8:02:18 PM  is28/ack  ← DRIVE id 30: rejected: steering/navigation not allowed (FR-WIFI-03) in 31 ms, state Ready
+8:02:22 PM  cmd       → raw 12 1f 00 id 31 [12 1f 00]
+8:02:22 PM  is28/ack  ← START id 31: rejected: bad format in 81 ms, state Ready
+8:02:24 PM  cmd       → code11 id 32 [b2 20 00 00]
+8:02:24 PM  is28/ack  ← code11 id 32: rejected: unknown command in 138 ms, state Ready

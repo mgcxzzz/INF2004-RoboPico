@@ -1,0 +1,59 @@
+{
+  "scope": "Real Pico MQTT mapping edge cases",
+  "checks": [
+    {
+      "name": "baseline mapping configured on Pico",
+      "pass": true
+    },
+    {
+      "name": "duplicate letter rejected; full mapping/revision retained",
+      "pass": true
+    },
+    {
+      "name": "index outside A-Z rejected; full mapping/revision retained",
+      "pass": true
+    },
+    {
+      "name": "reserved bit set rejected; full mapping/revision retained",
+      "pass": true
+    },
+    {
+      "name": "short mapping rejected; full mapping/revision retained",
+      "pass": true
+    },
+    {
+      "name": "extra mapping byte rejected; full mapping/revision retained",
+      "pass": true
+    },
+    {
+      "name": "1024-byte mapping with valid prefix rejected; full mapping/revision retained",
+      "pass": true
+    },
+    {
+      "name": "split TCP writes of oversized mapping rejected; full mapping/revision retained",
+      "pass": true
+    },
+    {
+      "name": "telemetry off keeps heartbeat and suppresses ordinary frames",
+      "pass": true
+    },
+    {
+      "name": "SET and GET work while telemetry off",
+      "pass": true
+    },
+    {
+      "name": "identical SET while telemetry off retains revision",
+      "pass": true
+    },
+    {
+      "name": "test mapping restored while telemetry off",
+      "pass": true
+    },
+    {
+      "name": "mapping preserved through RESET",
+      "pass": true
+    }
+  ],
+  "limits": "No motor timing claim. Publisher TCP splits do not prove Pico callback boundaries. No queue-saturation claim.",
+  "pass": true
+}

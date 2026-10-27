@@ -1,0 +1,24 @@
+9:55:04 PM  cmd       → START id 169 [12 a9 00 00]
+9:55:04 PM  is28/ack  ← START id 169: accepted in 83 ms, state unknown
+9:55:04 PM  is28/tlm  Navigation #1 Running, owner line
+9:55:04 PM  is28/tlm  Navigation #2 Running, owner line
+9:55:21 PM  is28/lwt  broker reports the car went offline
+9:55:41 PM  cmd       → BARCODE_GET id 170 [a2 aa 00 00]
+9:55:41 PM  broker    connected to ws://127.0.0.1:9001
+9:55:44 PM  is28/tlm  Safety #1 Normal, mask 0x10
+9:55:47 PM  cmd       → BARCODE_GET id 171 [a2 ab 00 00]
+9:55:47 PM  is28/tlm  Barcode mapping #3 mapping not configured
+9:55:47 PM  is28/ack  ← BARCODE_GET id 171: accepted in 39 ms, state Running
+9:55:50 PM  cmd       → BARCODE_GET id 172 [a2 ac 00 00]
+9:55:50 PM  is28/tlm  Barcode mapping #4 mapping not configured
+9:55:50 PM  is28/ack  ← BARCODE_GET id 172: accepted in 134 ms, state Running
+9:56:09 PM  cmd       → PING id 173 [82 ad 00 00]
+9:56:10 PM  is28/ack  ← PING id 173: accepted in 52 ms, state Running
+9:56:17 PM  cmd       → STOP id 174 [42 ae 00 00]
+9:56:17 PM  is28/ack  ← STOP id 174: accepted in 80 ms, state Running
+9:56:17 PM  is28/tlm  Navigation #3 Safe Stop, owner none
+9:56:17 PM  is28/tlm  Navigation #4 Safe Stop, owner none
+9:56:19 PM  cmd       → RESET id 175 [52 af 00 00]
+9:56:19 PM  is28/ack  ← RESET id 175: accepted in 87 ms, state Safe Stop
+9:56:19 PM  is28/tlm  Navigation #5 Ready, owner none
+9:56:19 PM  is28/tlm  Safety #2 Normal, mask 0x0

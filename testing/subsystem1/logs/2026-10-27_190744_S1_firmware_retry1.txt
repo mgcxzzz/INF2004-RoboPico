@@ -1,0 +1,16 @@
+created_sgt: 2026-10-27_190744
+base_commit: 3f6ecf14b305e36b52a34f535ee00b2710ce2e67
+working_tree: local Buddy 1 changes, uncommitted
+flags: WIFI=cyw43 NET=lwip MQTT=1 SMP=1 CONSOLE=usb_cdc TEST=0 CRASH_REPORT=0
+build_output: /Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico/build_make/mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt.uf2
+laptop_copy: /Users/skyler/SIT/Y2T1/Embedded/bench_tools/buddy1/buddy1_mqtt.uf2
+sha256: 296245a64a6e1bedf29202de14206c7e487bc06a0a9058da2696ff6c696574f9
+bytes: 695296
+settings: Local gitignored wifi_secrets.h used; values not included
+flashed: False
+metadata_path: /Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico/testing/subsystem1/logs/2026-10-27_190744_S1_firmware_retry1.txt
+naming_policy: Stable buddy1_mqtt.uf2; dates and checksums recorded in repo logs.
+flash_status: Waiting for user to flash refreshed file through Finder
+broker_ip: 192.168.1.45
+previous_sha256: 2d3724ee1f594c7339a5d8114776cb369c34eaf2d76f840403feb7e3dd4be409
+User reported manual flash completed. USB console appeared; connection attempt still rejected with authentication -3. See attempt2 console/diagnosis logs.

@@ -1,0 +1,53 @@
+8:07:19 PM  cmd       → raw 92 26 19 30 08 id 38 [92 26 19 30 08]
+8:07:19 PM  is28/tlm  Barcode mapping #13 mapping rev 1: Z/A/M/Q (forward/U-turn/left/right), request 38
+8:07:19 PM  is28/ack  ← BARCODE_MAP id 38: accepted in 55 ms, state Ready
+8:07:44 PM  cmd       → BARCODE_GET id 39 [a2 27 00 00]
+8:07:44 PM  is28/tlm  Barcode mapping #14 mapping rev 1: Z/A/M/Q (forward/U-turn/left/right), request 39
+8:07:44 PM  is28/ack  ← BARCODE_GET id 39: accepted in 41 ms, state Ready
+8:07:51 PM  cmd       → BARCODE_GET id 40 [a2 28 00 00]
+8:07:51 PM  is28/tlm  Barcode mapping #15 mapping rev 1: Z/A/M/Q (forward/U-turn/left/right), request 40
+8:07:51 PM  is28/ack  ← BARCODE_GET id 40: accepted in 31 ms, state Ready
+8:08:50 PM  cmd       → BARCODE_GET id 41 [a2 29 00 00]
+8:08:50 PM  is28/tlm  Barcode mapping #16 mapping rev 1: Z/A/M/Q (forward/U-turn/left/right), request 41
+8:08:50 PM  is28/ack  ← BARCODE_GET id 41: accepted in 64 ms, state Ready
+8:09:51 PM  cmd       → BARCODE_GET id 42 [a2 2a 00 00]
+8:09:51 PM  is28/tlm  Barcode mapping #17 mapping rev 1: Z/A/M/Q (forward/U-turn/left/right), request 42
+8:09:51 PM  is28/ack  ← BARCODE_GET id 42: accepted in 90 ms, state Ready
+8:10:51 PM  cmd       → BARCODE_GET id 43 [a2 2b 00 00]
+8:10:51 PM  is28/tlm  Barcode mapping #18 mapping rev 1: Z/A/M/Q (forward/U-turn/left/right), request 43
+8:10:51 PM  is28/ack  ← BARCODE_GET id 43: accepted in 41 ms, state Ready
+8:11:50 PM  cmd       → BARCODE_GET id 44 [a2 2c 00 00]
+8:11:50 PM  is28/tlm  Barcode mapping #19 mapping rev 1: Z/A/M/Q (forward/U-turn/left/right), request 44
+8:11:50 PM  is28/ack  ← BARCODE_GET id 44: accepted in 78 ms, state Ready
+8:12:07 PM  cmd       → BARCODE_GET id 45 [a2 2d 00 00]
+8:12:07 PM  is28/tlm  Barcode mapping #20 mapping rev 1: Z/A/M/Q (forward/U-turn/left/right), request 45
+8:12:07 PM  is28/ack  ← BARCODE_GET id 45: accepted in 36 ms, state Ready
+8:13:50 PM  cmd       → BARCODE_GET id 46 [a2 2e 00 00]
+8:13:50 PM  is28/tlm  Barcode mapping #21 mapping rev 1: Z/A/M/Q (forward/U-turn/left/right), request 46
+8:13:50 PM  is28/ack  ← BARCODE_GET id 46: accepted in 51 ms, state Ready
+8:14:50 PM  cmd       → BARCODE_GET id 47 [a2 2f 00 00]
+8:14:50 PM  is28/tlm  Barcode mapping #22 mapping rev 1: Z/A/M/Q (forward/U-turn/left/right), request 47
+8:14:50 PM  is28/ack  ← BARCODE_GET id 47: accepted in 124 ms, state Ready
+8:15:50 PM  cmd       → BARCODE_GET id 48 [a2 30 00 00]
+8:15:50 PM  is28/tlm  Barcode mapping #23 mapping rev 1: Z/A/M/Q (forward/U-turn/left/right), request 48
+8:15:50 PM  is28/ack  ← BARCODE_GET id 48: accepted in 89 ms, state Ready
+8:16:50 PM  cmd       → BARCODE_GET id 49 [a2 31 00 00]
+8:16:50 PM  is28/tlm  Barcode mapping #24 mapping rev 1: Z/A/M/Q (forward/U-turn/left/right), request 49
+8:16:50 PM  is28/ack  ← BARCODE_GET id 49: accepted in 74 ms, state Ready
+8:18:46 PM  cmd       → RESET id 50 [52 32 00 00]
+8:18:46 PM  is28/ack  ← RESET id 50: accepted in 127 ms, state Ready
+8:18:50 PM  cmd       → BARCODE_GET id 51 [a2 33 00 00]
+8:18:50 PM  is28/tlm  Barcode mapping #25 mapping rev 1: Z/A/M/Q (forward/U-turn/left/right), request 51
+8:18:50 PM  is28/ack  ← BARCODE_GET id 51: accepted in 62 ms, state Ready
+8:18:53 PM  cmd       → BARCODE_GET id 52 [a2 34 00 00]
+8:18:53 PM  is28/tlm  Barcode mapping #26 mapping rev 1: Z/A/M/Q (forward/U-turn/left/right), request 52
+8:18:53 PM  is28/ack  ← BARCODE_GET id 52: accepted in 102 ms, state Ready
+8:19:26 PM  cmd       → raw 92 35 19 30 08 id 53 [92 35 19 30 08]
+8:19:26 PM  is28/tlm  Barcode mapping #27 mapping rev 1: Z/A/M/Q (forward/U-turn/left/right), request 53
+8:19:26 PM  is28/ack  ← BARCODE_MAP id 53: accepted in 56 ms, state Ready
+8:19:47 PM  cmd       → raw 92 36 19 30 08 id 54 [92 36 19 30 08]
+8:19:47 PM  is28/tlm  Barcode mapping #28 mapping rev 1: Z/A/M/Q (forward/U-turn/left/right), request 54
+8:19:47 PM  is28/ack  ← BARCODE_MAP id 54: accepted in 278 ms, state Ready
+8:19:50 PM  cmd       → BARCODE_GET id 55 [a2 37 00 00]
+8:19:50 PM  is28/tlm  Barcode mapping #29 mapping rev 1: Z/A/M/Q (forward/U-turn/left/right), request 55
+8:19:50 PM  is28/ack  ← BARCODE_GET id 55: accepted in 88 ms, state Ready

@@ -1,0 +1,331 @@
+Browser tab: 1, Title: "IS28 Car Dashboard", URL: "http://127.0.0.1:9071/".
+0 AXWebArea IS28 Car Dashboard, URL: 127.0.0.1:9071/
+	1 container
+		2 heading IS28 Car Dashboard, Value: 1
+			3 text IS28 Car Dashboard
+		4 text field (settable) Description: Broker WebSocket URL, Value: ws://127.0.0.1:9001, ID: url
+		5 button Disconnect, ID: connect
+		434 text broker connected
+		448 text car: online
+	8 container
+		9 heading OPERATING STATE, Value: 2
+			10 text OPERATING STATE
+		449 text Ready
+		12 definition list
+			13 container Motion owner
+				14 text Motion owner
+			15 text none
+			16 container Safety
+				17 text Safety
+			18 text Normal
+			19 container Fault mask
+				20 text Fault mask
+			21 text none
+			22 container Last stop time
+				23 text Last stop time
+			24 text 0 ms (worst 0 ms, limit 100)
+		25 heading COMMANDS, Value: 2
+			26 text COMMANDS
+		27 button Start
+		28 button Pause
+		29 button Resume
+		30 button Stop
+		31 button Reset
+		32 button EMERGENCY STOP
+		33 button Ping
+		34 button Telemetry on, ID: tlmOn
+		35 button Telemetry off, ID: tlmOff
+		36 text Rejection tests (FR-WIFI-03):
+		37 button Send STEER
+		38 button Send DRIVE
+		39 button Bad length, ID: badlen
+		40 button Unknown code, ID: unknown
+		41 container lastack
+			450 text BARCODE_GET  (id 204):  accepted  in 82 ms
+		43 heading WIFI AND MQTT (BUDDY 1), Value: 2
+			44 text WIFI AND MQTT (BUDDY 1)
+		45 definition list
+			46 container Link
+				47 text Link
+			451 text Operational
+			49 container Heartbeat
+				50 text Heartbeat
+			452 text 0.2 s ago
+			52 container Gap (last / max)
+				53 text Gap (last / max)
+			453 text 1.00 s / 548.26 s
+			55 container Published / lost
+				56 text Published / lost
+			454 text 931 / 0
+			58 container Commands ok / rejected
+				59 text Commands ok / rejected
+			455 text 24 / 0 (last: BARCODE_GET, accepted)
+			61 container Reconnections
+				62 text Reconnections
+			456 text 1
+			64 container Queue fill
+				65 text Queue fill
+			457 text 0 %
+			67 container Uptime
+				68 text Uptime
+			458 text 15 min 24 s
+		70 heading SUBSYSTEMS, Value: 2
+			71 text SUBSYSTEMS
+		72 definition list
+			73 container Line (B3)
+				74 text Line (B3)
+			75 text no frames
+			76 container IMU (B4)
+				77 text IMU (B4)
+			78 text no frames
+			79 container Obstacle (B5)
+				80 text Obstacle (B5)
+			81 text no frames
+			82 container Motion (B2)
+				83 text Motion (B2)
+			84 text no frames
+		85 heading BARCODE LETTER MAPPING, Value: 2
+			86 text BARCODE LETTER MAPPING
+		87 text Assign the four demo letters before starting a run. The car stores this mapping in RAM; send it again after power loss.
+		88 table
+			89 row
+				90 cell
+					91 text Movement at the next cross-junction
+				92 cell
+					93 text Letter to send
+				94 cell
+					95 text Active on car
+			96 container mappingRows
+				97 row
+					98 cell
+						99 text Forward
+					100 cell
+						101 pop up button (collapsed, settable) Description: Forward barcode letter, Value: Z, ID: mapLetter0, Secondary Actions: Expand
+							102 menu
+								103 Choose letter
+								104 A
+								105 B
+								106 C
+								107 D
+								108 E
+								109 F
+								110 G
+								111 H
+								112 I
+								113 J
+								114 K
+								115 L
+								116 M
+								117 N
+								118 O
+								119 P
+								120 Q
+								121 R
+								122 S
+								123 T
+								124 U
+								125 V
+								126 W
+								127 X
+								128 Y
+								129 (selected) Z
+					130 cell
+						459 text Z
+				132 row
+					133 cell
+						134 text U-turn
+					135 cell
+						136 pop up button (collapsed, settable) Description: U-turn barcode letter, Value: A, ID: mapLetter1, Secondary Actions: Expand
+							137 menu
+								138 Choose letter
+								139 (selected) A
+								140 B
+								141 C
+								142 D
+								143 E
+								144 F
+								145 G
+								146 H
+								147 I
+								148 J
+								149 K
+								150 L
+								151 M
+								152 N
+								153 O
+								154 P
+								155 Q
+								156 R
+								157 S
+								158 T
+								159 U
+								160 V
+								161 W
+								162 X
+								163 Y
+								164 Z
+					165 cell
+						460 text A
+				167 row
+					168 cell
+						169 text Left
+					170 cell
+						171 pop up button (collapsed, settable) Description: Left barcode letter, Value: Q, ID: mapLetter2, Secondary Actions: Expand
+							172 menu
+								173 Choose letter
+								174 A
+								175 B
+								176 C
+								177 D
+								178 E
+								179 F
+								180 G
+								181 H
+								182 I
+								183 J
+								184 K
+								185 L
+								186 M
+								187 N
+								188 O
+								189 P
+								190 (selected) Q
+								191 R
+								192 S
+								193 T
+								194 U
+								195 V
+								196 W
+								197 X
+								198 Y
+								199 Z
+					200 cell
+						461 text Q
+				202 row
+					203 cell
+						204 text Right
+					205 cell
+						206 pop up button (collapsed, settable) Description: Right barcode letter, Value: M, ID: mapLetter3, Secondary Actions: Expand
+							207 menu
+								208 Choose letter
+								209 A
+								210 B
+								211 C
+								212 D
+								213 E
+								214 F
+								215 G
+								216 H
+								217 I
+								218 J
+								219 K
+								220 L
+								221 (selected) M
+								222 N
+								223 O
+								224 P
+								225 Q
+								226 R
+								227 S
+								228 T
+								229 U
+								230 V
+								231 W
+								232 X
+								233 Y
+								234 Z
+					235 cell
+						462 text M
+		237 button Apply mapping, ID: mapApply
+		238 button Read mapping from car, ID: mapRead
+		463 text Confirmed by car: revision 3, Z/A/Q/M (forward/U-turn/left/right).
+		240 definition list
+			241 container Last decoded letter (B3)
+				242 text Last decoded letter (B3)
+			243 text no frames
+			244 container Mapped movement for that letter
+				245 text Mapped movement for that letter
+			464 text no letter received
+		247 text Barcode decoding, pending-letter storage and junction execution will be integrated with Buddy 3 later. A mapping response confirms configuration only.
+		248 heading CONNECTIVITY TEST (NFR-WIFI-01 ≥ 95 % DELIVERED, NFR-WIFI-02 HEARTBEAT GAP ≤ 2 S), Value: 2
+			249 text CONNECTIVITY TEST (NFR-WIFI-01 ≥ 95 % DELIVERED, NFR-WIFI-02 HEARTBEAT GAP ≤ 2 S)
+		250 button Start 5-minute test, ID: testStart
+		251 button Stop, ID: testStop
+		252 button Save results, ID: testSave
+		253 text done
+		254 table
+			255 row
+				256 cell
+					257 text Source
+				258 cell
+					259 text Received
+				260 cell
+					261 text Missing
+				262 cell
+					263 text Delivered
+			264 row
+				265 cell
+					266 text WiFi (B1)
+				267 cell
+					268 text 300
+				269 cell
+					270 text 0
+				271 cell
+					272 text 100.0 %
+		273 container testVerdict
+			274 text Delivered  100.0 %  (300 received, 0 missing) · heartbeats 300, mean gap 1.00 s, max gap  1.16 s , gaps over 2 s: 0 · NFR-WIFI-01  PASS , NFR-WIFI-02  PASS
+		275 heading MESSAGES, Value: 2
+			276 text MESSAGES
+		277 checkbox (settable, integer) Description: Pause, Value: 0, ID: logPause
+		278 checkbox (settable, integer) Description: Show heartbeats, Value: 0, ID: logHb
+		279 button Clear, ID: logClear
+		280 button Save log, ID: logSave
+		281 container log
+			282 text 10:13:07 PM  test      5-minute connectivity test started
+			283 text 10:18:07 PM  test      test finished: Delivered 100.0 % (300 received, 0 missing) · heartbeats 300, mean gap 1.00 s, max gap 1.16 s, gaps over 2 s: 0 · NFR-WIFI-01 PASS, NFR-WIFI-02 PASS
+			305 text 10:23:29 PM  broker    connected to ws://127.0.0.1:9002
+			306 text 10:23:29 PM  cmd       → BARCODE_GET id 188 [a2 bc 00 00]
+			307 text 10:23:29 PM  is28/tlm  Barcode mapping #5 mapping rev 1: Z/A/Q/M (forward/U-turn/left/right), request 188
+			308 text 10:23:29 PM  is28/ack  ← BARCODE_GET id 188: accepted in 70 ms, state Ready
+			326 text 10:23:29 PM  cmd       → BARCODE_GET id 189 [a2 bd 00 00]
+			327 text 10:23:29 PM  is28/tlm  Barcode mapping #6 mapping rev 1: Z/A/Q/M (forward/U-turn/left/right), request 189
+			328 text 10:23:29 PM  is28/ack  ← BARCODE_GET id 189: accepted in 34 ms, state Ready
+			341 text 10:23:47 PM  cmd       → raw 92 be 18 40 06 id 190 [92 be 18 40 06]
+			342 text 10:23:47 PM  is28/ack  ← BARCODE_MAP id 190: accepted in 61 ms, state Ready
+			355 text 10:23:52 PM  cmd       → BARCODE_GET id 191 [a2 bf 00 00]
+			356 text 10:23:52 PM  is28/ack  ← BARCODE_GET id 191: accepted in 43 ms, state Ready
+			357 text 10:23:58 PM  cmd       → BARCODE_GET id 192 [a2 c0 00 00]
+			358 text 10:23:59 PM  is28/ack  ← BARCODE_GET id 192: accepted in 62 ms, state Ready
+			359 text 10:24:04 PM  cmd       → BARCODE_GET id 193 [a2 c1 00 00]
+			360 text 10:24:05 PM  is28/ack  ← BARCODE_GET id 193: accepted in 48 ms, state Ready
+			361 text 10:24:07 PM  is28/ack  ← BARCODE_GET id 21: accepted, state Ready
+			362 text 10:24:10 PM  cmd       → BARCODE_GET id 194 [a2 c2 00 00]
+			363 text 10:24:11 PM  is28/ack  ← BARCODE_GET id 194: accepted in 71 ms, state Ready
+			381 text 10:24:16 PM  cmd       → BARCODE_GET id 195 [a2 c3 00 00]
+			382 text 10:24:17 PM  is28/ack  ← BARCODE_GET id 195: accepted in 60 ms, state Ready
+			383 text 10:24:22 PM  cmd       → BARCODE_GET id 196 [a2 c4 00 00]
+			384 text 10:24:22 PM  is28/ack  ← BARCODE_GET id 196: accepted in 39 ms, state Ready
+			385 text 10:24:28 PM  cmd       → BARCODE_GET id 197 [a2 c5 00 00]
+			386 text 10:24:29 PM  is28/ack  ← BARCODE_GET id 197: accepted in 60 ms, state Ready
+			387 text 10:24:34 PM  cmd       → BARCODE_GET id 198 [a2 c6 00 00]
+			388 text 10:24:35 PM  is28/ack  ← BARCODE_GET id 198: accepted in 47 ms, state Ready
+			389 text 10:24:41 PM  cmd       → BARCODE_GET id 199 [a2 c7 00 00]
+			390 text 10:24:41 PM  is28/ack  ← BARCODE_GET id 199: accepted in 358 ms, state Ready
+			391 text 10:24:46 PM  cmd       → BARCODE_GET id 200 [a2 c8 00 00]
+			392 text 10:24:47 PM  is28/tlm  Barcode mapping #18 mapping rev 2: Y/A/Q/M (forward/U-turn/left/right), request 200
+			393 text 10:24:47 PM  is28/ack  ← BARCODE_GET id 200: accepted in 57 ms, state Ready
+			394 text 10:24:47 PM  cmd       → BARCODE_GET id 201 [a2 c9 00 00]
+			395 text 10:24:47 PM  is28/tlm  Barcode mapping #19 mapping rev 2: Y/A/Q/M (forward/U-turn/left/right), request 201
+			396 text 10:24:47 PM  is28/ack  ← BARCODE_GET id 201: accepted in 50 ms, state Ready
+			414 text 10:24:57 PM  cmd       → raw 92 ca 19 40 06 id 202 [92 ca 19 40 06]
+			415 text 10:24:57 PM  is28/tlm  Barcode mapping #20 mapping rev 3: Z/A/Q/M (forward/U-turn/left/right), request 202
+			433 text 10:24:57 PM  is28/ack  ← BARCODE_MAP id 202: accepted in 148 ms, state Ready
+			444 text 10:25:05 PM  broker    connected to ws://127.0.0.1:9001
+			445 text 10:25:05 PM  cmd       → BARCODE_GET id 203 [a2 cb 00 00]
+			446 text 10:25:05 PM  is28/tlm  Barcode mapping #21 mapping rev 3: Z/A/Q/M (forward/U-turn/left/right), request 203
+			447 text 10:25:05 PM  is28/ack  ← BARCODE_GET id 203: accepted in 91 ms, state Ready
+			465 text 10:25:05 PM  cmd       → BARCODE_GET id 204 [a2 cc 00 00]
+			466 text 10:25:06 PM  is28/tlm  Barcode mapping #22 mapping rev 3: Z/A/Q/M (forward/U-turn/left/right), request 204
+			467 text 10:25:06 PM  is28/ack  ← BARCODE_GET id 204: accepted in 82 ms, state Ready
+
+The focused UI element is 5 button Disconnect, ID: connect

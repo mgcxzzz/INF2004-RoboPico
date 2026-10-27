@@ -1,0 +1,17 @@
+created_sgt: 2026-10-27_191311
+base_commit: 3f6ecf14b305e36b52a34f535ee00b2710ce2e67
+working_tree: local Buddy 1 changes, uncommitted
+flags: WIFI=cyw43 NET=lwip MQTT=1 SMP=1 CONSOLE=usb_cdc TEST=0 CRASH_REPORT=0
+build_output: /Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico/build_make/mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt.uf2
+laptop_copy: /Users/skyler/SIT/Y2T1/Embedded/bench_tools/buddy1/buddy1_mqtt.uf2
+sha256: 75943d604ef35013046cc2da2ab429a54824df463d80a4cecebdb211c99e2006
+bytes: 695296
+settings: Local gitignored wifi_secrets.h used; values not included
+flashed: False
+metadata_path: /Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico/testing/subsystem1/logs/2026-10-27_191311_S1_firmware_auth_trial.txt
+naming_policy: Stable buddy1_mqtt.uf2; dates and checksums recorded in repo logs.
+flash_status: Awaiting manual flash for authentication compatibility experiment
+broker_ip: 192.168.1.45
+previous_sha256: 296245a64a6e1bedf29202de14206c7e487bc06a0a9058da2696ff6c696574f9
+auth_mode: CYW43_AUTH_WPA3_WPA2_AES_PSK (local override)
+Authentication-trial image superseded before flash: user identified a password capitalisation error. Next build corrects it and restores the original join mode; no credential values recorded.

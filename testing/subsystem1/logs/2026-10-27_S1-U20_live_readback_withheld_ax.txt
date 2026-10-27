@@ -1,0 +1,25 @@
+Browser tab: 1, Title: "IS28 Car Dashboard", URL: "http://127.0.0.1:9071/".
+The following is a diff from the previous accessibility tree with ~ and + representing changed and added elements, respectively. Removed elements are summarized by ID range.
+Removed element IDs: 329-340
++		343 text car: online
++		344 text Ready
++			345 text BARCODE_GET  (id 194):  accepted  in 71 ms
++			346 text Operational
++			347 text 0.9 s ago
++			348 text 1.08 s / 548.26 s
++			349 text 845 / 0
++			350 text 14 / 0 (last: BARCODE_GET, accepted)
++			351 text 1
++			352 text 0 %
++			353 text 14 min 18 s
++		354 text Waiting for active mapping from the car…
++			355 text 10:23:52 PM  cmd       → BARCODE_GET id 191 [a2 bf 00 00]
++			356 text 10:23:52 PM  is28/ack  ← BARCODE_GET id 191: accepted in 43 ms, state Ready
++			357 text 10:23:58 PM  cmd       → BARCODE_GET id 192 [a2 c0 00 00]
++			358 text 10:23:59 PM  is28/ack  ← BARCODE_GET id 192: accepted in 62 ms, state Ready
++			359 text 10:24:04 PM  cmd       → BARCODE_GET id 193 [a2 c1 00 00]
++			360 text 10:24:05 PM  is28/ack  ← BARCODE_GET id 193: accepted in 48 ms, state Ready
++			361 text 10:24:07 PM  is28/ack  ← BARCODE_GET id 21: accepted, state Ready
++			362 text 10:24:10 PM  cmd       → BARCODE_GET id 194 [a2 c2 00 00]
++			363 text 10:24:11 PM  is28/ack  ← BARCODE_GET id 194: accepted in 71 ms, state Ready
+The focused UI element is 237 button Apply mapping, ID: mapApply

@@ -1,0 +1,23 @@
+created_sgt: 2026-10-27_211321
+base_commit: 3f6ecf14b305e36b52a34f535ee00b2710ce2e67
+working_tree: local Buddy 1 changes, uncommitted
+flags: WIFI=cyw43 NET=lwip MQTT=1 SMP=1 CONSOLE=usb_cdc TEST=0 CRASH_REPORT=0
+build_output: /Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico/build_make/mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt.uf2
+laptop_copy: /Users/skyler/SIT/Y2T1/Embedded/bench_tools/buddy1/buddy1_mqtt.uf2
+sha256: 70194a1c8c33dcc7c9636e89080625a37a68747e96fbc18e1ea043c0ae97b234
+bytes: 696320
+settings: Local gitignored wifi_secrets.h used; values not included
+flashed: False
+metadata_path: /Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico/testing/subsystem1/logs/2026-10-27_211321_S1_firmware_pm_off.txt
+naming_policy: Stable buddy1_mqtt.uf2; dates and checksums recorded in repo logs.
+flash_status: Awaiting user flash; PM readback and repeat timing test required
+broker_ip: 192.168.1.45
+previous_sha256: 7a5d86db474f84c825a0a46073d551889cf8fad72a2029ee1b529ee341f49817
+auth_mode: Original driver default: CYW43_AUTH_WPA2_MIXED_PSK
+power_management: WIFI_PM_MODE=CYW43_NONE_PM (optional local override)
+baseline_firmware: /Users/skyler/SIT/Y2T1/Embedded/bench_tools/buddy1/buddy1_mqtt_baseline.uf2
+baseline_sha256: 7a5d86db474f84c825a0a46073d551889cf8fad72a2029ee1b529ee341f49817
+Heartbeat remains 1000 ms; receive-gap threshold remains 2 seconds. Credentials/authentication/broker unchanged. PM setting and readback must both succeed; active low nibble must be 0. No live PASS recorded.
+Live boot verification: PM requested 0x10, active 0x10, set=0, read=0; active mode low nibble 0. MQTT Operational at broker .45. Repeat performance result pending.
+S1-U08 PM-off repeat PASS: 300/300; dashboard max gap 1.124 s; native max 1.124805 s; Buddy 1-only baseline
+Evidence: 2026-10-27_S1-U08_pm_off_connectivity.txt and 2026-10-27_S1-U08_pm_off_native_review.json. Earlier failed run retained.

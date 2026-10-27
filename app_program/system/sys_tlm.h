@@ -144,6 +144,7 @@ sys_get_le32(uint8_t const * p)
 #define TLM_SRC_OBSTACLE        (5U)    /* S5 Obstacle Scan       (below)     */
 #define TLM_SRC_NAV             (6U)    /* Navigation Coordinator (below)     */
 #define TLM_SRC_SAFETY          (7U)    /* Safety Supervisor      (below)     */
+#define TLM_SRC_BARCODE_MAP     (8U)    /* S1 configuration readback          */
 
 /** Write the 3-byte header at the start of a frame. */
 static inline void
@@ -419,7 +420,8 @@ void b1_tlm_pack(b1_tlm_t const * p_in, uint8_t p_frame[B1_TLM_FRAME_BYTES]);
 bool b1_tlm_unpack(uint8_t const * p_frame, uint32_t len, b1_tlm_t * p_out);
 
 /* ------------------------------------------------------------------------
- * Supervisory commands, PC -> car, topic is28/cmd. 4 bytes, no header.
+ * Supervisory commands, PC -> car, topic is28/cmd. No telemetry header.
+ * Existing commands stay 4 bytes. BARCODE_MAP is 5 bytes (see below).
  * Checked by b1_cmd_check() (subsystem1/b1_proto.c), FR-WIFI-02/03.
  *
  *   byte 0  bits 0..3  schema version (TLM_VERSION)
@@ -451,6 +453,8 @@ bool b1_tlm_unpack(uint8_t const * p_frame, uint32_t len, b1_tlm_t * p_out);
 #define B1_CMD_ESTOP            (6U)    /* straight to Safety Supervisor    */
 #define B1_CMD_CONFIG           (7U)    /* configuration update             */
 #define B1_CMD_PING             (8U)    /* ack + heartbeat at once (latency)*/
+#define B1_CMD_BARCODE_MAP      (9U)    /* assign four letters; 5 bytes     */
+#define B1_CMD_BARCODE_GET      (10U)   /* read active map; 4 bytes, arg 0  */
 #define B1_CMD_STEER            (12U)   /* PROHIBITED: remote steering      */
 #define B1_CMD_DRIVE            (13U)   /* PROHIBITED: remote driving       */
 #define B1_CMD_TURN             (14U)   /* PROHIBITED: remote turning       */
@@ -465,6 +469,33 @@ bool b1_tlm_unpack(uint8_t const * p_frame, uint32_t len, b1_tlm_t * p_out);
 /* Configuration parameters (B1_CMD_CONFIG, argument bits 12..15). */
 #define B1_CFG_TELEMETRY        (1U)    /* value 0 = pause other buddies'
                                          * frames, 1 = forward them       */
+
+/* Barcode mapping, configured before the demo through is28/cmd.
+ * BARCODE_MAP: [version | 9<<4, command id, map low, map mid, map high].
+ * Map bits 0..4 = FORWARD, 5..9 = UTURN, 10..14 = LEFT, 15..19 = RIGHT.
+ * Each field is a letter index A=0..Z=25; bits 20..23 MUST be zero.
+ * All four letters must be distinct. One command replaces the whole map.
+ * BARCODE_GET uses the existing 4-byte command layout with argument 0.
+ * Both get the ordinary 4-byte acknowledgement and a source-8 readback
+ * on is28/tlm, including when ordinary telemetry forwarding is off.
+ * No mapping is configured at boot; it is RAM-only and survives RESET,
+ * but must be sent again after power loss. No default letters are used.
+ *
+ * Source 8 payload (5 bytes):
+ *   word 0 bits 0..19 map as above (zero if not configured)
+ *          bit 20     configured
+ *          bits 21..28 revision, wrapping; increments on a changed map
+ *          bits 29..31 reserved, zero
+ *   byte 4           request id (same as the MAP or GET command)
+ * Common-header sequence counts readbacks, not telemetry samples.
+ * This reports configuration only, not a pending or executed movement.
+ */
+#define B1_MAP_CMD_BYTES        (5U)
+#define B1_MAP_PAYLOAD_BYTES    (5U)
+#define B1_MAP_FRAME_BYTES      (TLM_HDR_BYTES + B1_MAP_PAYLOAD_BYTES)
+#define B1_MAP_BITS             (20U)
+#define B1_MAP_MASK             (0x000FFFFFUL)
+#define B1_MAP_SLOTS            (4U)
 
 /* ------------------------------------------------------------------------
  * Sources 2 and 4 (Buddies 2 and 4): add your payload sections here, in

@@ -83,6 +83,7 @@ static volatile uint8_t  g_warn_code[SAFETY_SRC_COUNT];
 static volatile uint32_t g_last_kick_ms[SAFETY_SRC_COUNT];
 static uint16_t          g_watch_ms[SAFETY_SRC_COUNT];
 static uint32_t          g_stop_t0_ms = 0U;
+static uint8_t           g_published_fault_mask = 0U;
 
 static char const * const g_state_names[SAFETY_ST_COUNT] =
 {
@@ -219,6 +220,7 @@ publish (void)
     safety_tlm_pack(&t, frame);
     g_rec.tlm_seq++;                    /* 8-bit field: wraps */
     safety_telemetry_publish(frame, SAFETY_TLM_FRAME_BYTES);
+    g_published_fault_mask = t.fault_mask;
 }
 
 static void
@@ -416,6 +418,14 @@ periodic_checks (void)
     {
         g_rec.b_slow_noted = 1U;
         note_warning(SAFETY_SRC_SAFETY, SAFETY_CODE_STOP_SLOW);
+    }
+
+    /* Owners clear their own bits after reset. That can happen after
+     * handle_reset(), including when Safety is already Normal. Publish
+     * the changed snapshot even if no Safety state transition occurs. */
+    if ((uint8_t)sys_fault_get() != g_published_fault_mask)
+    {
+        publish();
     }
 }
 

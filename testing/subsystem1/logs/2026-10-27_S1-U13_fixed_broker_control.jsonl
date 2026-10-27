@@ -1,0 +1,4 @@
+{"time": "2026-10-27T21:55:21.332+08:00", "event": "stop_requested", "pid": 33800}
+{"time": "2026-10-27T21:55:21.335+08:00", "event": "broker_stopped", "pid": 33800}
+{"time": "2026-10-27T21:55:41.346+08:00", "event": "restart_requested", "pid": 34496}
+{"time": "2026-10-27T21:55:42.351+08:00", "event": "broker_alive", "pid": 34496}

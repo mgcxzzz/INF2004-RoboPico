@@ -38,8 +38,8 @@
 /* Largest message body in the outgoing queue, bytes. */
 #define B1_OUT_MAX              (40U)
 
-/* Largest command accepted from MQTT (longer ones are cut here and then
- * rejected as B1_ACK_FORMAT, because a command is exactly 4 bytes). */
+/* Staging bound, strictly larger than every valid command (4 or 5 bytes).
+ * Longer payloads are cut here and rejected, never treated as a prefix. */
 #define B1_CMD_MAX              (8U)
 
 /* Network side timing. */

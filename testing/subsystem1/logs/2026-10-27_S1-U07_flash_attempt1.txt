@@ -1,0 +1,9 @@
+Buddy 1 live setup attempt 1, 27 October 2026 (Asia/Singapore)
+Base: 3f6ecf14b305e36b52a34f535ee00b2710ce2e67 + local changes
+Firmware laptop copy: /Users/skyler/SIT/Y2T1/Embedded/bench_tools/buddy1/buddy1_mqtt_2026-10-27_185652.uf2
+SHA256: 2d3724ee1f594c7339a5d8114776cb369c34eaf2d76f840403feb7e3dd4be409
+Build: PASS (local saved network settings; values not recorded)
+Flash: NOT CONFIRMED. UF2 copy stalled; RPI-RP2 remained mounted; a directory listing also did not complete.
+USB console: no MTK3PICO1 port appeared within 90 seconds.
+Action: requested termination of stalled copy and a physical BOOTSEL reconnect.
+Outcome: BLOCKED during transfer; no WiFi/MQTT or on-target test result claimed.

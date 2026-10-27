@@ -191,6 +191,7 @@ sends to it or waits on it. Agree on the data format before coding.
 | IF-18 | S2 → S3 | function call | `s3_motion_get_distance()` | net signed distance, `int16_t` mm, may wrap (same rule as IF-16); read every 10 ms to place barcode edges by distance. Until S2 provides it, S3 reuses `b5_motion_get_estimate()` | to agree with S2 |
 | IF-19 | S2 (Motion Control) | rule | `NAV_LINE_STALE_MS` (50 ms) | a wheel-speed target not renewed within 50 ms is stale: stop (Week 6 statechart 6.2) | to agree with S2 |
 | IF-25 | S1 task ↔ S1 network side (`mqtt_utk.c` in `cyw43_utk_task`) | two message buffers owned by S1, `TMO_POL` on the network side | `b1_net_take()`, `b1_net_command()`, `b1_net_heartbeat()`, `b1_net_set_state()`, `b1_net_count()` (`subsystem1/b1_net.h`) | outgoing: kind byte + frame (telemetry or command answer); incoming: raw `is28/cmd` payload. Topics `is28/tlm`, `is28/hb`, `is28/ack`, `is28/cmd`, last will `is28/lwt`; command format in `system/sys_tlm.h` | S1; needs team + instructor (shared library file) |
+| IF-26 | PC ↔ S1; later S1 → S3 | MQTT configuration; coherent snapshot under S1-owned mutex | `b1_barcode_mapping_get()`, pure `b1_mapping_lookup()` | four distinct A–Z assignments for Forward/U-turn/Left/Right, atomic whole-map update; 5-byte SET, 4-byte GET, source-8 readback (schema and `tools/dashboard/README.md`); RAM-only, no default letters; getter is task-only and never waits | S1 implemented; real MQTT tests and S3 junction integration pending |
 
 Each interface is tested by at least one integration test
 (`testing/integration/TEST_LOG.md`).
@@ -206,7 +207,7 @@ limit there. The numbers below are the example's usage.
 | Semaphore | 16 | 1 (dropped-frame counter) | 1 | | | | 2 (bench, nav dropped-message counter) |
 | Event flag | 16 | | | 1 | 1 | 2 | 2 (safety, fault mask) |
 | Mailbox | 12 | | | 1 | | | |
-| Mutex | 12 | | | 1 (template) | | 1 | 1 (nav mode lock for `nav_line_drive`) |
+| Mutex | 12 | 1 (barcode mapping snapshot) | | 1 (template) | | 1 | 1 (nav mode lock for `nav_line_drive`) |
 | Message buffer | 12 | 2 (outgoing, commands) | | | 1 | | 1 (nav inbox) |
 | Fixed memory pool | 12 | | 1 | | | | |
 | Variable memory pool | 12 | | | | | | |

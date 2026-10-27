@@ -1,0 +1,37 @@
+Browser tab: 1, Title: "IS28 Car Dashboard", URL: "http://127.0.0.1:9071/".
+The following is a diff from the previous accessibility tree with ~ and + representing changed and added elements, respectively. Removed elements are summarized by ID range.
+Removed element IDs: 320-323, 325, 343-354
++		364 text car: online
++		365 text Ready
++			366 text BARCODE_GET  (id 201):  accepted  in 50 ms
++			367 text Operational
++			368 text 0.5 s ago
++			369 text 1.00 s / 548.26 s
++			370 text 887 / 0
++			371 text 19 / 0 (last: BARCODE_GET, accepted)
++			372 text 1
++			373 text 0 %
++			374 text 14 min 50 s
++						375 text Y
++						376 text A
++						377 text Q
++						378 text M
++		379 text Confirmed by car: revision 2, Y/A/Q/M (forward/U-turn/left/right).
++			380 text no letter received
++			381 text 10:24:16 PM  cmd       → BARCODE_GET id 195 [a2 c3 00 00]
++			382 text 10:24:17 PM  is28/ack  ← BARCODE_GET id 195: accepted in 60 ms, state Ready
++			383 text 10:24:22 PM  cmd       → BARCODE_GET id 196 [a2 c4 00 00]
++			384 text 10:24:22 PM  is28/ack  ← BARCODE_GET id 196: accepted in 39 ms, state Ready
++			385 text 10:24:28 PM  cmd       → BARCODE_GET id 197 [a2 c5 00 00]
++			386 text 10:24:29 PM  is28/ack  ← BARCODE_GET id 197: accepted in 60 ms, state Ready
++			387 text 10:24:34 PM  cmd       → BARCODE_GET id 198 [a2 c6 00 00]
++			388 text 10:24:35 PM  is28/ack  ← BARCODE_GET id 198: accepted in 47 ms, state Ready
++			389 text 10:24:41 PM  cmd       → BARCODE_GET id 199 [a2 c7 00 00]
++			390 text 10:24:41 PM  is28/ack  ← BARCODE_GET id 199: accepted in 358 ms, state Ready
++			391 text 10:24:46 PM  cmd       → BARCODE_GET id 200 [a2 c8 00 00]
++			392 text 10:24:47 PM  is28/tlm  Barcode mapping #18 mapping rev 2: Y/A/Q/M (forward/U-turn/left/right), request 200
++			393 text 10:24:47 PM  is28/ack  ← BARCODE_GET id 200: accepted in 57 ms, state Ready
++			394 text 10:24:47 PM  cmd       → BARCODE_GET id 201 [a2 c9 00 00]
++			395 text 10:24:47 PM  is28/tlm  Barcode mapping #19 mapping rev 2: Y/A/Q/M (forward/U-turn/left/right), request 201
++			396 text 10:24:47 PM  is28/ack  ← BARCODE_GET id 201: accepted in 50 ms, state Ready
+The focused UI element is 238 button Read mapping from car, ID: mapRead

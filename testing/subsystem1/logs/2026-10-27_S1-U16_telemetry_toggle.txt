@@ -1,0 +1,24 @@
+8:39:44 PM  cmd       → RESET id 88 [52 58 00 00]
+8:39:44 PM  is28/ack  ← RESET id 88: accepted in 46 ms, state Paused
+8:39:45 PM  cmd       → CONFIG id 89 [72 59 00 10]
+8:39:45 PM  is28/ack  ← CONFIG id 89: accepted in 130 ms, state Paused
+8:39:47 PM  cmd       → START id 90 [12 5a 00 00]
+8:39:47 PM  is28/ack  ← START id 90: accepted in 99 ms, state Paused
+8:39:52 PM  cmd       → PAUSE id 91 [22 5b 00 00]
+8:39:52 PM  is28/ack  ← PAUSE id 91: accepted in 38 ms, state Paused
+8:40:14 PM  cmd       → BARCODE_GET id 92 [a2 5c 00 00]
+8:40:14 PM  is28/tlm  Barcode mapping #9 mapping rev 1: Z/A/Q/M (forward/U-turn/left/right), request 92
+8:40:14 PM  is28/ack  ← BARCODE_GET id 92: accepted in 178 ms, state Paused
+8:40:24 PM  cmd       → CONFIG id 93 [72 5d 01 10]
+8:40:24 PM  is28/ack  ← CONFIG id 93: accepted in 50 ms, state Paused
+8:40:26 PM  cmd       → RESUME id 94 [32 5e 00 00]
+8:40:26 PM  is28/ack  ← RESUME id 94: accepted in 61 ms, state Paused
+8:40:26 PM  is28/tlm  Navigation #5 Running, owner line
+8:40:26 PM  is28/tlm  Navigation #6 Running, owner line
+8:40:29 PM  cmd       → STOP id 95 [42 5f 00 00]
+8:40:29 PM  is28/ack  ← STOP id 95: accepted in 161 ms, state Running
+8:40:29 PM  is28/tlm  Navigation #7 Safe Stop, owner none
+8:40:29 PM  is28/tlm  Navigation #8 Safe Stop, owner none
+8:40:33 PM  cmd       → RESET id 96 [52 60 00 00]
+8:40:33 PM  is28/tlm  Navigation #9 Ready, owner none
+8:40:33 PM  is28/ack  ← RESET id 96: accepted in 79 ms, state Ready

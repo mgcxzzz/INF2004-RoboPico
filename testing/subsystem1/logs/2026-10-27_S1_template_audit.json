@@ -1,0 +1,13 @@
+{
+  "scope": "Local main testing template vs buddy1 documentation and referenced evidence",
+  "checkedEvidencePaths": 96,
+  "presentEvidencePaths": 95,
+  "missingEvidencePaths": [
+    "logs/2026-10-27_S1-U09_commands.txt"
+  ],
+  "missingDisposition": "S1-U09 raw export remains unavailable; appended correction keeps result at user-reported evidence level",
+  "layoutMatchesMain": true,
+  "commitBeforeTestingSatisfied": false,
+  "studentIdFilled": false,
+  "historicalResultRowsPreserved": true
+}

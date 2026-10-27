@@ -974,6 +974,9 @@ nav_task (INT stacd, void * p_exinf)
     (void)stacd;
     (void)p_exinf;
 
+    /* Seed Buddy 1's heartbeat/ACK snapshot before the first command;
+     * enter_state() otherwise notifies it only after a transition. */
+    wifi_notify_state(nav_get_state());
     publish();
 
     for (;;)

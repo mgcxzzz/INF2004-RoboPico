@@ -38,6 +38,13 @@
  * Safe from any task on either core (not from an interrupt). */
 void b1_telemetry_publish(uint8_t const * p_frame, uint32_t len);
 
+/* Integration API for later: get one coherent map/valid/revision word.
+ * Task context on either core; never waits. E_OBJ before initialisation,
+ * E_TMOUT if busy. Retry next cycle; never use an uninitialised snapshot.
+ * Interpret with b1_mapping_lookup() (b1_mapping.h). This API does not
+ * decode a barcode, store a pending letter, or command any movement. */
+ER b1_barcode_mapping_get(uint32_t * p_snapshot);
+
 /* Private to subsystem 1, shared between its own .c files. */
 IMPORT ER   b1_create_objects(void);
 IMPORT void b1_task(INT stacd, void * p_exinf);

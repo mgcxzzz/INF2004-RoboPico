@@ -1,0 +1,9 @@
+8:07:19 PM  cmd       → raw 92 26 19 30 08 id 38 [92 26 19 30 08]
+8:07:19 PM  is28/tlm  Barcode mapping #13 mapping rev 1: Z/A/M/Q (forward/U-turn/left/right), request 38
+8:07:19 PM  is28/ack  ← BARCODE_MAP id 38: accepted in 55 ms, state Ready
+8:07:44 PM  cmd       → BARCODE_GET id 39 [a2 27 00 00]
+8:07:44 PM  is28/tlm  Barcode mapping #14 mapping rev 1: Z/A/M/Q (forward/U-turn/left/right), request 39
+8:07:44 PM  is28/ack  ← BARCODE_GET id 39: accepted in 41 ms, state Ready
+8:07:51 PM  cmd       → BARCODE_GET id 40 [a2 28 00 00]
+8:07:51 PM  is28/tlm  Barcode mapping #15 mapping rev 1: Z/A/M/Q (forward/U-turn/left/right), request 40
+8:07:51 PM  is28/ack  ← BARCODE_GET id 40: accepted in 31 ms, state Ready

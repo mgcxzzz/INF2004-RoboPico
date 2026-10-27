@@ -1,0 +1,13 @@
+{
+  "brokerRestart": {
+    "time": "2026-10-27T22:10:39.987+08:00",
+    "event": "broker_started_after_Pico_boot",
+    "pid": 35235
+  },
+  "firstPicoConnection": "1793110240: New client connected from 192.168.1.92:54598 as mtk3smp-pico (p4, c1, k5).",
+  "connectAfterBrokerStartLowerBoundS": 0.013000011444091797,
+  "connectAfterBrokerStartUpperBoundS": 1.0130000114440918,
+  "timingResolution": "One-second broker log timestamps; restart timestamp recorded after launching process",
+  "bootEvidence": "USB close/reopen after user flash and connection status 256 / Reconnect wait while broker absent; live USB console log",
+  "pass": true
+}

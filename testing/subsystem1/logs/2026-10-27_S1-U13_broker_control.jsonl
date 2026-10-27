@@ -1,0 +1,4 @@
+{"timeSGT": "2026-10-27T21:39:55.403+08:00", "event": "stop_requested", "pid": 24092, "scope": "Project broker only; user confirmed Running"}
+{"timeSGT": "2026-10-27T21:39:55.506+08:00", "event": "broker_stopped", "pid": 24092}
+{"timeSGT": "2026-10-27T21:40:15.517+08:00", "event": "restart_started", "pid": 33800}
+{"timeSGT": "2026-10-27T21:40:16.519+08:00", "event": "restart_process_alive", "pid": 33800}

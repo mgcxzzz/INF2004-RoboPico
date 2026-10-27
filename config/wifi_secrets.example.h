@@ -24,4 +24,11 @@
 #define MQTT_CLIENT_ID   "mtk3smp-pico"
 #define MQTT_TOPIC       "mtk3smp-pico/heartbeat"
 
+/* Optional WiFi timing experiment, applied only by the WiFi service task.
+ * Leave undefined to keep the driver's normal power management.
+ * Uncomment for the Buddy 1 heartbeat-gap diagnostic; verify the boot
+ * log says set=0, read=0 and active mode's low nibble is 0 before testing.
+ * #define WIFI_PM_MODE CYW43_NONE_PM
+ */
+
 #endif /* WIFI_SECRETS_H */

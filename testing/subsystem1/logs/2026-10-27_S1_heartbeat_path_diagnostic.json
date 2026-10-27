@@ -1,0 +1,57 @@
+{
+  "scope": "80-second path-isolation experiment; unchanged Pico firmware; local test traffic stays on Mac loopback",
+  "started": "2026-10-27T13:01:43.069Z",
+  "ended": "2026-10-27T13:03:03.375Z",
+  "localhostPublishPeriodMs": 200,
+  "localhostSent": 396,
+  "stats": {
+    "heartbeat": {
+      "received": 81,
+      "maxGapS": 3.2766380310058594,
+      "gapsOver2S": [
+        {
+          "gap": 3.2766380310058594,
+          "at": "2026-10-27T13:01:51.516Z"
+        },
+        {
+          "gap": 2.5641660690307617,
+          "at": "2026-10-27T13:02:50.811Z"
+        }
+      ],
+      "largest": [
+        {
+          "gap": 3.2766380310058594,
+          "at": "2026-10-27T13:01:51.516Z"
+        },
+        {
+          "gap": 2.5641660690307617,
+          "at": "2026-10-27T13:02:50.811Z"
+        },
+        {
+          "gap": 1.171555995941162,
+          "at": "2026-10-27T13:02:45.385Z"
+        }
+      ]
+    },
+    "localhost": {
+      "received": 396,
+      "maxGapS": 0.20328187942504883,
+      "gapsOver2S": [],
+      "largest": [
+        {
+          "gap": 0.20328187942504883,
+          "at": "2026-10-27T13:01:56.983Z"
+        },
+        {
+          "gap": 0.20303797721862793,
+          "at": "2026-10-27T13:02:19.971Z"
+        },
+        {
+          "gap": 0.20302915573120117,
+          "at": "2026-10-27T13:02:54.284Z"
+        }
+      ]
+    }
+  },
+  "errors": []
+}

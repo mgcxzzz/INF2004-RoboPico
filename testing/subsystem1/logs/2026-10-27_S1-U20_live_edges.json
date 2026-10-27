@@ -1,0 +1,12 @@
+{
+  "scope": "Real Pico MQTT mapping edge cases",
+  "checks": [
+    {
+      "name": "baseline mapping configured on Pico",
+      "pass": true
+    }
+  ],
+  "limits": "No motor timing claim. Publisher TCP splits do not prove Pico callback boundaries. No queue-saturation claim.",
+  "passed": false,
+  "error": "command 9 id 24: result 3, expected 1"
+}

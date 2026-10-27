@@ -1,0 +1,21 @@
+{
+  "scope": "Real Pico finite MQTT request burst and queue recovery",
+  "checks": [
+    {
+      "name": "finite GET burst causes counted drops, heartbeat survives, queue recovers and mapping retained",
+      "pass": true
+    }
+  ],
+  "limits": "No motor timing or integrated-load claim; only this finite burst and shared counter observed.",
+  "burst": {
+    "sentRequests": 1024,
+    "acknowledgementsObserved": 19,
+    "lostBefore": 0,
+    "lostAfter": 74,
+    "lostDelta": 74,
+    "heartbeatsObserved": 8,
+    "queueFillAfterPct": 0,
+    "limits": "Shared lost counter combines incoming/outgoing queue and network drops; no attribution to a specific queue."
+  },
+  "pass": true
+}

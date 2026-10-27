@@ -1,0 +1,2 @@
+10:13:07 PM  test      5-minute connectivity test started
+10:18:07 PM  test      test finished: Delivered 100.0 % (300 received, 0 missing) · heartbeats 300, mean gap 1.00 s, max gap 1.16 s, gaps over 2 s: 0 · NFR-WIFI-01 PASS, NFR-WIFI-02 PASS

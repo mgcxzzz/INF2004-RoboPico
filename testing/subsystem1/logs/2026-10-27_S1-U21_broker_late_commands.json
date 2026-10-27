@@ -1,0 +1,16 @@
+{
+  "expectedFirmwareSha256": "d27c36e9751898f870a9cdaec482ce76da97e49094209c0d89bc0497df3714ce",
+  "initialHeartbeat": {
+    "time": 1793110285.852512,
+    "kind": 3,
+    "topic": "is28/hb",
+    "hex": "120c2e429105003200000001000100"
+  },
+  "initialState": 0,
+  "initialStateName": "Ready",
+  "mappingBefore": 0,
+  "mappingApplied": 3555353,
+  "mappingReadBack": 3555353,
+  "pass": true,
+  "scope": "Pico booted while broker absent; connected automatically, initial heartbeat Ready; Ping, SET and GET accepted after new subscription. No Start/Stop/Reset sent before initial-state check."
+}

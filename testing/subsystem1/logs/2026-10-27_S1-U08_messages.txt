@@ -1,0 +1,20 @@
+8:46:57 PM  test      5-minute connectivity test started
+8:47:50 PM  cmd       → BARCODE_GET id 110 [a2 6e 00 00]
+8:47:50 PM  is28/tlm  Barcode mapping #22 mapping rev 1: Z/A/Q/M (forward/U-turn/left/right), request 110
+8:47:50 PM  is28/ack  ← BARCODE_GET id 110: accepted in 49 ms, state Ready
+8:48:50 PM  cmd       → BARCODE_GET id 111 [a2 6f 00 00]
+8:48:50 PM  is28/tlm  Barcode mapping #23 mapping rev 1: Z/A/Q/M (forward/U-turn/left/right), request 111
+8:48:50 PM  is28/ack  ← BARCODE_GET id 111: accepted in 120 ms, state Ready
+8:49:50 PM  cmd       → BARCODE_GET id 112 [a2 70 00 00]
+8:49:50 PM  is28/tlm  Barcode mapping #24 mapping rev 1: Z/A/Q/M (forward/U-turn/left/right), request 112
+8:49:50 PM  is28/ack  ← BARCODE_GET id 112: accepted in 120 ms, state Ready
+8:50:50 PM  cmd       → BARCODE_GET id 113 [a2 71 00 00]
+8:50:50 PM  is28/tlm  Barcode mapping #25 mapping rev 1: Z/A/Q/M (forward/U-turn/left/right), request 113
+8:50:50 PM  is28/ack  ← BARCODE_GET id 113: accepted in 55 ms, state Ready
+8:51:50 PM  cmd       → BARCODE_GET id 114 [a2 72 00 00]
+8:51:50 PM  is28/tlm  Barcode mapping #26 mapping rev 1: Z/A/Q/M (forward/U-turn/left/right), request 114
+8:51:50 PM  is28/ack  ← BARCODE_GET id 114: accepted in 37 ms, state Ready
+8:51:57 PM  test      test finished: Delivered 100.0 % (300 received, 0 missing) · heartbeats 300, mean gap 1.00 s, max gap 2.65 s, gaps over 2 s: 5 · NFR-WIFI-01 PASS, NFR-WIFI-02 FAIL
+8:52:50 PM  cmd       → BARCODE_GET id 115 [a2 73 00 00]
+8:52:50 PM  is28/tlm  Barcode mapping #27 mapping rev 1: Z/A/Q/M (forward/U-turn/left/right), request 115
+8:52:50 PM  is28/ack  ← BARCODE_GET id 115: accepted in 68 ms, state Ready

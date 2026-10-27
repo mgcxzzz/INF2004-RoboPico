@@ -36,6 +36,7 @@
   button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
   button.danger { background:var(--bad); border-color:var(--bad); color:#fff; font-weight:600; }
   button:disabled { opacity:.45; cursor:not-allowed; }
+  select { padding:5px 8px; border:1px solid var(--line); border-radius:6px; background:var(--bg); }
   .pill { padding:3px 9px; border-radius:999px; font-size:12px; font-weight:600; border:1px solid var(--line); }
   .ok { color:var(--ok); } .warn { color:var(--warn); } .bad { color:var(--bad); } .muted { color:var(--muted); }
   main { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:12px; padding:12px 16px; }
@@ -124,6 +125,25 @@
   </section>
 
   <section class="wide">
+    <h2>Barcode letter mapping</h2>
+    <p class="muted">Assign the four demo letters before starting a run. The car stores this mapping in RAM; send it again after power loss.</p>
+    <table>
+      <thead><tr><th>Movement at the next cross-junction</th><th>Letter to send</th><th>Active on car</th></tr></thead>
+      <tbody id="mappingRows"></tbody>
+    </table>
+    <div class="row">
+      <button id="mapApply" class="primary">Apply mapping</button>
+      <button id="mapRead">Read mapping from car</button>
+    </div>
+    <div id="mapStatus" class="muted" role="status">Active mapping unknown. Connect to read it from the car.</div>
+    <dl style="margin-top:8px">
+      <dt>Last decoded letter (B3)</dt><dd id="barcodeLetter">no frames</dd>
+      <dt>Mapped movement for that letter</dt><dd id="barcodeMovement">unknown</dd>
+    </dl>
+    <p class="muted">Barcode decoding, pending-letter storage and junction execution will be integrated with Buddy 3 later. A mapping response confirms configuration only.</p>
+  </section>
+
+  <section class="wide">
     <h2>Connectivity test (NFR-WIFI-01 ≥ 95 % delivered, NFR-WIFI-02 heartbeat gap ≤ 2 s)</h2>
     <div class="row">
       <button id="testStart" class="primary">Start 5-minute test</button>
@@ -153,11 +173,13 @@
 'use strict';
 const $ = (id) => document.getElementById(id);
 let client = null, cmdId = 0;
-const pending = {};                     /* id -> send time, for ack latency */
+const pending = {};                     /* id -> {time, code}, for ack latency */
+let activeMapping = null, lastBarcodeLetter = null, mapPending = null;
+let mappingQueried = false, lastUptime = null;
 const hb = { last: 0, gaps: [], maxGap: 0, lastGap: 0 };
 let logLines = [];
 const test = { running: false, start: 0, end: 0, seq: new IS28.SeqTracker(), gaps: [],
-               lastHb: 0, timer: null };
+               firstHb: 0, lastHb: 0, timer: null };
 
 /* ---------- connection ---------- */
 const host = location.hostname || 'localhost';
@@ -165,8 +187,16 @@ $('url').value = localStorage.getItem('is28.url') || `ws://${host}:9001`;
 
 function setPill(el, text, cls) { el.textContent = text; el.className = 'pill ' + cls; }
 
+function mappingUnknown(reason) {
+  activeMapping = null; mappingQueried = false; mapPending = null;
+  document.querySelectorAll('[data-map-active]').forEach((el) => { el.textContent = 'unknown'; });
+  $('mapStatus').textContent = reason; $('mapStatus').className = 'warn';
+  $('barcodeMovement').textContent = 'unknown';
+}
+
 $('connect').onclick = () => {
   if (client) { client.end(true); client = null; setPill($('broker'), 'not connected', 'muted');
+                mappingUnknown('Disconnected. Read the mapping again after reconnecting.');
                 $('connect').textContent = 'Connect'; return; }
   const url = $('url').value.trim();
   try { localStorage.setItem('is28.url', url); } catch (e) { /* private mode */ }
@@ -175,23 +205,32 @@ $('connect').onclick = () => {
                                reconnectPeriod: 2000, connectTimeout: 5000 });
   $('connect').textContent = 'Disconnect';
   client.on('connect', () => { setPill($('broker'), 'broker connected', 'ok');
-                               client.subscribe('is28/#'); log('broker', 'connected to ' + url); });
+    client.subscribe('is28/#', (err) => {
+      if (err) { log('broker', 'subscription failed: ' + err.message); return; }
+      requestMapping();
+    });
+    log('broker', 'connected to ' + url);
+  });
   client.on('reconnect', () => setPill($('broker'), 'reconnecting…', 'warn'));
-  client.on('close', () => { if (client) setPill($('broker'), 'broker lost', 'bad'); });
+  client.on('close', () => {
+    if (client) setPill($('broker'), 'broker lost', 'bad');
+    mappingUnknown('Broker connection lost. Active mapping needs a fresh readback.');
+  });
   client.on('error', (e) => log('broker', 'error: ' + e.message));
   client.on('message', onMessage);
 };
 
 /* ---------- commands ---------- */
 function send(code, arg, raw) {
-  if (!client || !client.connected) { $('lastack').textContent = 'Not connected to the broker.'; return; }
+  if (!client || !client.connected) { $('lastack').textContent = 'Not connected to the broker.'; return null; }
   cmdId = (cmdId + 1) & 0xff;
   const bytes = raw || IS28.encodeCommand(code, cmdId, arg || 0);
-  pending[cmdId] = performance.now();
-  client.publish('is28/cmd', bytes);
+  pending[cmdId] = { time: performance.now(), code: bytes[0] >> 4 };
+  client.publish('is28/cmd', bytes, { qos: 0, retain: false });
   const label = raw ? 'raw ' + hex(bytes) : IS28.CMD_NAME[code];
   $('lastack').textContent = `Sent ${label} (id ${cmdId}), waiting for the car…`;
   log('cmd', `→ ${label} id ${cmdId} [${hex(bytes)}]`);
+  return cmdId;
 }
 document.querySelectorAll('button[data-cmd]').forEach((b) => {
   b.onclick = () => send(IS28.CMD[b.dataset.cmd]);
@@ -200,7 +239,41 @@ $('tlmOn').onclick = () => send(IS28.CMD.CONFIG, IS28.configArg(IS28.CFG_TELEMET
 $('tlmOff').onclick = () => send(IS28.CMD.CONFIG, IS28.configArg(IS28.CFG_TELEMETRY, 0));
 $('badlen').onclick = () => { const b = IS28.encodeCommand(IS28.CMD.START, (cmdId + 1) & 0xff);
                               send(0, 0, b.subarray(0, 3)); };
-$('unknown').onclick = () => send(10);
+$('unknown').onclick = () => send(11);
+
+IS28.MAP_MOVEMENTS.forEach((movement, i) => {
+  const row = document.createElement('tr');
+  const label = document.createElement('td'); label.textContent = movement;
+  const input = document.createElement('td'), select = document.createElement('select');
+  select.id = 'mapLetter' + i; select.setAttribute('aria-label', movement + ' barcode letter');
+  select.add(new Option('Choose letter', ''));
+  for (let n = 65; n <= 90; n++) { const ch = String.fromCharCode(n); select.add(new Option(ch, ch)); }
+  input.appendChild(select);
+  const active = document.createElement('td'); active.dataset.mapActive = i; active.textContent = 'unknown';
+  row.append(label, input, active); $('mappingRows').appendChild(row);
+});
+
+function requestMapping() {
+  const id = send(IS28.CMD.BARCODE_GET);
+  if (id === null) return;
+  mappingQueried = true;
+  mapPending = { id, time: now(), wanted: null };
+  $('mapStatus').textContent = 'Waiting for active mapping from the car…';
+  $('mapStatus').className = 'warn';
+}
+$('mapRead').onclick = requestMapping;
+$('mapApply').onclick = () => {
+  try {
+    const letters = IS28.MAP_MOVEMENTS.map((_, i) => $('mapLetter' + i).value);
+    const bytes = IS28.encodeMapping((cmdId + 1) & 255, letters);
+    const id = send(IS28.CMD.BARCODE_MAP, 0, bytes);
+    if (id === null) throw new Error('Connect to the broker before applying a mapping.');
+    mappingQueried = true;
+    mapPending = { id, time: now(), wanted: letters };
+    $('mapStatus').textContent = 'Sent mapping; waiting for the car to return its active configuration…';
+    $('mapStatus').className = 'warn';
+  } catch (e) { $('mapStatus').textContent = e.message; $('mapStatus').className = 'bad'; }
+};
 
 /* ---------- incoming ---------- */
 function hex(b) { return Array.from(b, (x) => x.toString(16).padStart(2, '0')).join(' '); }
@@ -211,19 +284,25 @@ function onMessage(topic, payload) {
   if (topic === 'is28/hb' || topic === 'is28/tlm') {
     const f = IS28.decodeFrame(b);
     if (f.error) { log(topic, `bad frame (${f.error}) [${hex(b)}]`); return; }
-    if (test.running) test.seq.add(f.src, f.seq);
+    if (test.running && f.src !== IS28.SRC.BARCODE_MAP) test.seq.add(f.src, f.seq);
     show(f);
     if (topic === 'is28/hb') heartbeat();
     if (topic !== 'is28/hb' || $('logHb').checked) log(topic, `${f.srcName} #${f.seq} ${summary(f)}`);
   } else if (topic === 'is28/ack') {
     const a = IS28.decodeAck(b);
     if (a.error) { log(topic, a.error); return; }
-    const t0 = pending[a.id]; delete pending[a.id];
-    const ms = t0 ? ` in ${Math.round(now() - t0)} ms` : '';
+    const sent = pending[a.id];
+    const own = sent && sent.code === a.code;
+    if (own) delete pending[a.id];
+    const ms = own ? ` in ${Math.round(now() - sent.time)} ms` : '';
     $('lastack').innerHTML = `<b>${a.codeName}</b> (id ${a.id}): <span class="${a.accepted ? 'ok' : 'bad'}">${a.resultName}</span>${ms}`;
     log(topic, `← ${a.codeName} id ${a.id}: ${a.resultName}${ms}, state ${a.stateName}`);
+    if (own && mapPending && mapPending.id === a.id && !a.accepted) {
+      mapPending = null; $('mapStatus').textContent = a.resultName; $('mapStatus').className = 'bad';
+    }
   } else if (topic === 'is28/lwt') {
     setPill($('carlink'), 'car offline (broker last will)', 'bad');
+    mappingUnknown('Car offline. Its mapping needs a fresh readback when it returns.');
     log(topic, 'broker reports the car went offline');
   } else if (topic !== 'is28/cmd') {
     log(topic, `[${hex(b)}]`);
@@ -234,6 +313,7 @@ function heartbeat() {
   const t = now();
   if (hb.last) { hb.lastGap = (t - hb.last) / 1000; hb.maxGap = Math.max(hb.maxGap, hb.lastGap); }
   if (test.running) {
+    if (!test.firstHb) test.firstHb = t;
     if (test.lastHb) test.gaps.push((t - test.lastHb) / 1000);
     test.lastHb = t;
   }
@@ -242,8 +322,17 @@ function heartbeat() {
 }
 
 setInterval(() => {
+  if (mapPending && now() - mapPending.time > 5000) {
+    mapPending = null; mappingQueried = false;
+    $('mapStatus').textContent = 'No matching readback within 5 s. Apply status is unknown; read the mapping from the car before retrying.';
+    $('mapStatus').className = 'bad';
+  }
+  for (const id of Object.keys(pending)) {
+    if (now() - pending[id].time > 10000) delete pending[id];
+  }
   if (!hb.last) return;
   const age = (now() - hb.last) / 1000;
+  if (age > 2 && activeMapping) mappingUnknown('Heartbeat lost. Read the active mapping again when the car returns.');
   $('hbage').innerHTML = `<span class="${age > 2 ? 'bad' : 'ok'}">${age.toFixed(1)} s ago</span>`;
   if (age > 2) setPill($('carlink'), `car: no heartbeat for ${age.toFixed(0)} s`, 'bad');
   else setPill($('carlink'), 'car: online', 'ok');
@@ -259,6 +348,7 @@ function summary(f) {
     case 5: return `${d.stateName}, range ${d.rangeMm} mm, width ${d.widthMm} mm, side ${d.side}, servo ${d.servoDeg}°`;
     case 6: return `${d.stateName}, owner ${d.ownerName}${d.slow ? ' (slow)' : ''}`;
     case 7: return `${d.stateName}${d.inhibit ? ', drive inhibited' : ''}, mask 0x${d.faultMask.toString(16)}`;
+    case 8: return d.configured ? `mapping rev ${d.revision}: ${d.letters.join('/')} (forward/U-turn/left/right), request ${d.requestId}` : 'mapping not configured';
     default: return '';
   }
 }
@@ -272,6 +362,11 @@ function show(f) {
   if (!d) { if (f.src === 2) $('s2').textContent = `frame #${f.seq} (layout not defined yet)`; return; }
   switch (f.src) {
     case 1:
+      if (lastUptime !== null && d.uptimeS < lastUptime) {
+        mappingUnknown('Car restarted. Reading its mapping again…');
+      }
+      lastUptime = d.uptimeS;
+      if (!mappingQueried) requestMapping();
       $('net').textContent = d.netName;
       $('pub').textContent = `${d.published} / ${d.lost}`;
       $('cmds').textContent = `${d.accepted} / ${d.rejected} (last: ${d.lastCmdName}, ${d.lastResultName})`;
@@ -280,7 +375,12 @@ function show(f) {
       $('uptime').textContent = `${Math.floor(d.uptimeS / 60)} min ${d.uptimeS % 60} s`;
       if (d.state !== 7) setState(d.stateName);
       break;
-    case 3: $('s3').textContent = summary(f); break;
+    case 3:
+      $('s3').textContent = summary(f);
+      lastBarcodeLetter = d.lastChar;
+      $('barcodeLetter').textContent = d.lastChar;
+      $('barcodeMovement').textContent = IS28.mappedMovement(activeMapping, lastBarcodeLetter);
+      break;
     case 4: $('s4').textContent = summary(f); break;
     case 5: $('s5').textContent = summary(f); break;
     case 6: setState(d.stateName); $('owner').textContent = d.ownerName + (d.slow ? ' (slow)' : ''); break;
@@ -290,6 +390,22 @@ function show(f) {
       $('faults').textContent = d.faultMask ? d.faultNames.join(', ') : 'none';
       $('stopms').textContent = `${d.lastStopMs} ms (worst ${d.maxStopMs} ms, limit 100)`;
       break;
+    case 8: {
+      activeMapping = d;
+      document.querySelectorAll('[data-map-active]').forEach((el) => {
+        el.textContent = d.configured ? d.letters[Number(el.dataset.mapActive)] : 'not configured';
+      });
+      $('barcodeMovement').textContent = lastBarcodeLetter ? IS28.mappedMovement(d, lastBarcodeLetter) : 'no letter received';
+      if (mapPending && mapPending.id !== d.requestId) break;
+      const matches = !mapPending || !mapPending.wanted ||
+        (d.configured && d.letters.every((ch, i) => ch === mapPending.wanted[i]));
+      $('mapStatus').textContent = matches ?
+        (d.configured ? `Confirmed by car: revision ${d.revision}, ${d.letters.join('/')} (forward/U-turn/left/right).` : 'Car has no mapping. Choose four letters and apply them.') :
+        'Car returned a different mapping. Review the Active on car column.';
+      $('mapStatus').className = matches && d.configured ? 'ok' : 'warn';
+      mapPending = null;
+      break;
+    }
   }
 }
 function setState(name) { $('opstate').textContent = name; $('opstate').className = 'big ' + stateClass(name); }
@@ -316,7 +432,7 @@ $('logSave').onclick = () => download(`is28_messages_${stamp()}.txt`, logLines.j
 /* ---------- 5-minute connectivity test ---------- */
 const TEST_S = 300;
 $('testStart').onclick = () => {
-  test.seq.reset(); test.gaps = []; test.lastHb = 0; test.running = true;
+  test.seq.reset(); test.gaps = []; test.firstHb = 0; test.lastHb = 0; test.running = true;
   test.start = now(); test.end = 0;
   clearInterval(test.timer); test.timer = setInterval(updateTest, 500);
   log('test', '5-minute connectivity test started');
@@ -330,9 +446,16 @@ function finishTest(why) {
 function testStats() {
   const s = test.seq.summary();
   const g = test.gaps;
-  const maxGap = g.length ? Math.max(...g) : 0;
+  const end = test.running ? now() : test.end;
+  const durationS = test.start ? Math.max(0, end - test.start) / 1000 : 0;
+  const head = test.firstHb ? (test.firstHb - test.start) / 1000 : durationS;
+  const tail = test.lastHb ? (end - test.lastHb) / 1000 : durationS;
+  const maxGap = Math.max(head, tail, g.length ? Math.max(...g) : 0);
   const mean = g.length ? g.reduce((a, b) => a + b, 0) / g.length : 0;
-  return { s, maxGap, mean, over2: g.filter((x) => x > 2).length, beats: g.length + (test.lastHb ? 1 : 0) };
+  const beats = g.length + (test.lastHb ? 1 : 0);
+  const verdict = IS28.connectivityVerdict(test.seq.per, durationS, maxGap, beats, !test.running && test.end > 0);
+  return { s, maxGap, mean, durationS, verdict,
+    over2: g.filter((x) => x > 2).length + (head > 2 ? 1 : 0) + (test.lastHb && tail > 2 ? 1 : 0), beats };
 }
 function updateTest() {
   const el = (test.running ? now() : test.end) - test.start;
@@ -344,11 +467,12 @@ function updateTest() {
   });
   $('testRows').innerHTML = rows.join('') || '<tr><td colspan="4" class="muted">No frames yet.</td></tr>';
   const st = testStats();
-  const d = st.s.pct >= 95, h = st.beats > 1 && st.maxGap <= 2;
+  const d = st.verdict.deliveryPass, h = st.verdict.heartbeatPass;
+  const label = (pass) => test.running ? 'IN PROGRESS' : !st.verdict.complete ? 'INCOMPLETE' : pass ? 'PASS' : 'FAIL';
   $('testVerdict').innerHTML =
     `Delivered <b class="${d ? 'ok' : 'bad'}">${st.s.pct.toFixed(1)} %</b> (${st.s.received} received, ${st.s.missing} missing) · ` +
     `heartbeats ${st.beats}, mean gap ${st.mean.toFixed(2)} s, max gap <b class="${h ? 'ok' : 'bad'}">${st.maxGap.toFixed(2)} s</b>, gaps over 2 s: ${st.over2} · ` +
-    `NFR-WIFI-01 <b class="${d ? 'ok' : 'bad'}">${d ? 'PASS' : 'FAIL'}</b>, NFR-WIFI-02 <b class="${h ? 'ok' : 'bad'}">${h ? 'PASS' : 'FAIL'}</b>`;
+    `NFR-WIFI-01 <b class="${d ? 'ok' : 'warn'}">${label(d)}</b>, NFR-WIFI-02 <b class="${h ? 'ok' : 'warn'}">${label(h)}</b>`;
   if (test.running && left <= 0) finishTest('finished');
 }
 $('testSave').onclick = () => {
@@ -357,7 +481,8 @@ $('testSave').onclick = () => {
     `duration_s=${(((test.end || now()) - test.start) / 1000).toFixed(1)}`,
     `delivered_pct=${st.s.pct.toFixed(2)} received=${st.s.received} missing=${st.s.missing}`,
     `heartbeats=${st.beats} mean_gap_s=${st.mean.toFixed(3)} max_gap_s=${st.maxGap.toFixed(3)} gaps_over_2s=${st.over2}`,
-    `NFR-WIFI-01=${st.s.pct >= 95 ? 'PASS' : 'FAIL'} NFR-WIFI-02=${st.beats > 1 && st.maxGap <= 2 ? 'PASS' : 'FAIL'}`,
+    `complete=${st.verdict.complete} delivery_estimate=sequence_gaps_per_observed_source`,
+    `NFR-WIFI-01=${st.verdict.complete ? (st.verdict.deliveryPass ? 'PASS' : 'FAIL') : 'INCOMPLETE'} NFR-WIFI-02=${st.verdict.complete ? (st.verdict.heartbeatPass ? 'PASS' : 'FAIL') : 'INCOMPLETE'}`,
     'source,received,missing,duplicates'];
   for (const k of Object.keys(test.seq.per)) {
     const t = test.seq.per[k]; lines.push(`${IS28.SRC_NAME[k]},${t.received},${t.missing},${t.dup}`);

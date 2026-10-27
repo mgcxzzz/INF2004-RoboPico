@@ -1,0 +1,237 @@
+{
+  "scope": "S1-U13 fault-mask fix hardware retest",
+  "expectedFirmwareSha256": "d89b4a356021b733a9acc8bb7b629b68b3c1ec36700e09d2aec3c84e8e7a2c9e",
+  "imageVerification": "User-reported flash; device checksum not read back",
+  "events": [
+    {
+      "time": "1793109292.146653000",
+      "topic": "is28/ack",
+      "code": 10,
+      "codeName": "BARCODE_GET",
+      "id": 168,
+      "result": 0,
+      "resultName": "accepted",
+      "accepted": true,
+      "state": 7,
+      "stateName": "unknown"
+    },
+    {
+      "time": "1793109304.805080000",
+      "topic": "is28/ack",
+      "code": 1,
+      "codeName": "START",
+      "id": 169,
+      "result": 0,
+      "resultName": "accepted",
+      "accepted": true,
+      "state": 7,
+      "stateName": "unknown"
+    },
+    {
+      "time": "1793109304.805136000",
+      "topic": "is28/tlm",
+      "src": 6,
+      "srcName": "Navigation",
+      "seq": 1,
+      "len": 6,
+      "data": {
+        "state": 1,
+        "stateName": "Running",
+        "owner": 1,
+        "ownerName": "line",
+        "slow": false,
+        "searchStep": 0,
+        "dropped": 0,
+        "commandsSent": 0
+      }
+    },
+    {
+      "time": "1793109304.805179000",
+      "topic": "is28/tlm",
+      "src": 6,
+      "srcName": "Navigation",
+      "seq": 2,
+      "len": 6,
+      "data": {
+        "state": 1,
+        "stateName": "Running",
+        "owner": 1,
+        "ownerName": "line",
+        "slow": false,
+        "searchStep": 0,
+        "dropped": 0,
+        "commandsSent": 0
+      }
+    },
+    {
+      "time": "1793109344.543281000",
+      "topic": "is28/tlm",
+      "src": 7,
+      "srcName": "Safety",
+      "seq": 1,
+      "len": 12,
+      "data": {
+        "state": 0,
+        "stateName": "Normal",
+        "inhibit": false,
+        "faultSrc": "none",
+        "warnSrc": "WiFi",
+        "faultCode": 0,
+        "warnCode": 1,
+        "estops": 0,
+        "faults": 0,
+        "warnings": 1,
+        "slowStops": 0,
+        "lastStopMs": 0,
+        "maxStopMs": 0,
+        "faultMask": 16,
+        "faultNames": [
+          "WiFi/broker lost"
+        ]
+      }
+    },
+    {
+      "time": "1793109347.622141000",
+      "topic": "is28/ack",
+      "code": 10,
+      "codeName": "BARCODE_GET",
+      "id": 171,
+      "result": 0,
+      "resultName": "accepted",
+      "accepted": true,
+      "state": 1,
+      "stateName": "Running"
+    },
+    {
+      "time": "1793109350.943409000",
+      "topic": "is28/ack",
+      "code": 10,
+      "codeName": "BARCODE_GET",
+      "id": 172,
+      "result": 0,
+      "resultName": "accepted",
+      "accepted": true,
+      "state": 1,
+      "stateName": "Running"
+    },
+    {
+      "time": "1793109370.047143000",
+      "topic": "is28/ack",
+      "code": 8,
+      "codeName": "PING",
+      "id": 173,
+      "result": 0,
+      "resultName": "accepted",
+      "accepted": true,
+      "state": 1,
+      "stateName": "Running"
+    },
+    {
+      "time": "1793109377.683030000",
+      "topic": "is28/ack",
+      "code": 4,
+      "codeName": "STOP",
+      "id": 174,
+      "result": 0,
+      "resultName": "accepted",
+      "accepted": true,
+      "state": 1,
+      "stateName": "Running"
+    },
+    {
+      "time": "1793109377.683102000",
+      "topic": "is28/tlm",
+      "src": 6,
+      "srcName": "Navigation",
+      "seq": 3,
+      "len": 6,
+      "data": {
+        "state": 3,
+        "stateName": "Safe Stop",
+        "owner": 0,
+        "ownerName": "none",
+        "slow": false,
+        "searchStep": 0,
+        "dropped": 0,
+        "commandsSent": 0
+      }
+    },
+    {
+      "time": "1793109377.683195000",
+      "topic": "is28/tlm",
+      "src": 6,
+      "srcName": "Navigation",
+      "seq": 4,
+      "len": 6,
+      "data": {
+        "state": 3,
+        "stateName": "Safe Stop",
+        "owner": 0,
+        "ownerName": "none",
+        "slow": false,
+        "searchStep": 0,
+        "dropped": 0,
+        "commandsSent": 1
+      }
+    },
+    {
+      "time": "1793109379.123984000",
+      "topic": "is28/ack",
+      "code": 5,
+      "codeName": "RESET",
+      "id": 175,
+      "result": 0,
+      "resultName": "accepted",
+      "accepted": true,
+      "state": 3,
+      "stateName": "Safe Stop"
+    },
+    {
+      "time": "1793109379.124032000",
+      "topic": "is28/tlm",
+      "src": 6,
+      "srcName": "Navigation",
+      "seq": 5,
+      "len": 6,
+      "data": {
+        "state": 0,
+        "stateName": "Ready",
+        "owner": 0,
+        "ownerName": "none",
+        "slow": false,
+        "searchStep": 0,
+        "dropped": 0,
+        "commandsSent": 1
+      }
+    },
+    {
+      "time": "1793109379.124099000",
+      "topic": "is28/tlm",
+      "src": 7,
+      "srcName": "Safety",
+      "seq": 2,
+      "len": 12,
+      "data": {
+        "state": 0,
+        "stateName": "Normal",
+        "inhibit": false,
+        "faultSrc": "none",
+        "warnSrc": "WiFi",
+        "faultCode": 0,
+        "warnCode": 1,
+        "estops": 0,
+        "faults": 0,
+        "warnings": 1,
+        "slowStops": 0,
+        "lastStopMs": 0,
+        "maxStopMs": 0,
+        "faultMask": 0,
+        "faultNames": []
+      }
+    }
+  ],
+  "resetMaskCleared": true,
+  "userReport": "working now",
+  "savedDashboardExportPresent": true,
+  "limitations": "No physical motor timing or integrated subsystem-load claim."
+}

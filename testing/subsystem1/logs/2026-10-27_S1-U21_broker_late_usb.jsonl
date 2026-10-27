@@ -1,0 +1,3 @@
+{"epoch": 1793110117.836446, "event": "USB console opened"}
+{"epoch": 1793110169.61641, "event": "USB console closed", "errno": 6}
+{"epoch": 1793110196.813169, "event": "USB console opened"}

@@ -1,0 +1,63 @@
+{
+  "scope": "Ordinary telemetry forwarding versus always-on heartbeat/configuration replies",
+  "offCommand": {
+    "time": "2026-10-27T20:39:10+0800",
+    "topic": "is28/cmd",
+    "hex": "72530010",
+    "code": 7,
+    "id": 83,
+    "arg": 4096
+  },
+  "onCommand": {
+    "time": "2026-10-27T20:40:24+0800",
+    "topic": "is28/cmd",
+    "hex": "725d0110",
+    "code": 7,
+    "id": 93,
+    "arg": 4097
+  },
+  "offAccepted": true,
+  "onAccepted": true,
+  "whileOff": {
+    "heartbeats": 74,
+    "ordinaryTelemetry": 0,
+    "mappingReadbacks": [
+      {
+        "time": "2026-10-27T20:40:14+0800",
+        "configured": true,
+        "revision": 1,
+        "requestId": 92,
+        "letters": [
+          "Z",
+          "A",
+          "Q",
+          "M"
+        ]
+      }
+    ],
+    "acceptedCommands": [
+      "START",
+      "PAUSE",
+      "RESET",
+      "RESET",
+      "RESET",
+      "CONFIG",
+      "START",
+      "PAUSE",
+      "BARCODE_GET"
+    ]
+  },
+  "afterOn": {
+    "navigationFrames": 5,
+    "lastNavigation": {
+      "state": 0,
+      "stateName": "Ready",
+      "owner": 0,
+      "ownerName": "none",
+      "slow": false,
+      "searchStep": 0,
+      "dropped": 0,
+      "commandsSent": 2
+    }
+  }
+}

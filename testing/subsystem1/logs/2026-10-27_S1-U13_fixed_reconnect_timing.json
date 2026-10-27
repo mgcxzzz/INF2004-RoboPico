@@ -1,0 +1,84 @@
+{
+  "expectedImageSha256": "d89b4a356021b733a9acc8bb7b629b68b3c1ec36700e09d2aec3c84e8e7a2c9e",
+  "imageVerification": "User flash/online report; no on-device checksum readback",
+  "control": [
+    {
+      "time": "2026-10-27T21:55:21.332+08:00",
+      "event": "stop_requested",
+      "pid": 33800
+    },
+    {
+      "time": "2026-10-27T21:55:21.335+08:00",
+      "event": "broker_stopped",
+      "pid": 33800
+    },
+    {
+      "time": "2026-10-27T21:55:41.346+08:00",
+      "event": "restart_requested",
+      "pid": 34496
+    },
+    {
+      "time": "2026-10-27T21:55:42.351+08:00",
+      "event": "broker_alive",
+      "pid": 34496
+    }
+  ],
+  "firstPicoConnectLog": "1793109344: New client connected from 192.168.1.92:54596 as mtk3smp-pico (p4, c1, k5).",
+  "reconnectAfterRestartLowerBoundS": 2.6540000438690186,
+  "reconnectAfterRestartUpperBoundS": 3.6540000438690186,
+  "lastHeartbeat": {
+    "time": "1793109357.582163000",
+    "topic": "is28/hb",
+    "src": 1,
+    "srcName": "WiFi (B1)",
+    "seq": 135,
+    "len": 12,
+    "data": {
+      "net": 2,
+      "netName": "Operational",
+      "state": 1,
+      "stateName": "Running",
+      "lastCmd": 10,
+      "lastCmdName": "BARCODE_GET",
+      "lastResult": 0,
+      "lastResultName": "accepted",
+      "uptimeS": 160,
+      "published": 151,
+      "lost": 0,
+      "accepted": 6,
+      "rejected": 0,
+      "connects": 2,
+      "fillPct": 0
+    }
+  },
+  "safetyFrames": [
+    {
+      "time": "1793109344.543281000",
+      "topic": "is28/tlm",
+      "src": 7,
+      "srcName": "Safety",
+      "seq": 1,
+      "len": 12,
+      "data": {
+        "state": 0,
+        "stateName": "Normal",
+        "inhibit": false,
+        "faultSrc": "none",
+        "warnSrc": "WiFi",
+        "faultCode": 0,
+        "warnCode": 1,
+        "estops": 0,
+        "faults": 0,
+        "warnings": 1,
+        "slowStops": 0,
+        "lastStopMs": 0,
+        "maxStopMs": 0,
+        "faultMask": 16,
+        "faultNames": [
+          "WiFi/broker lost"
+        ]
+      }
+    }
+  ],
+  "remaining": "User Ping then Stop/Reset; fresh Safety zero-mask and saved export required"
+}

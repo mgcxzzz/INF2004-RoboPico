@@ -1,0 +1,18 @@
+9:35:09 PM  is28/tlm  Navigation #1 Running, owner line
+9:35:09 PM  is28/tlm  Navigation #2 Running, owner line
+9:35:14 PM  is28/tlm  Safety #1 Emergency Stop, drive inhibited, mask 0x0
+9:35:14 PM  is28/tlm  Navigation #3 Emergency Stop, owner none
+9:35:14 PM  is28/tlm  Navigation #4 Emergency Stop, owner none
+9:35:14 PM  is28/tlm  Safety #2 Emergency Stop, drive inhibited, mask 0x0
+9:35:14 PM  is28/tlm  Safety #3 Emergency Stop, drive inhibited, mask 0x0
+9:35:21 PM  is28/tlm  Safety #4 Normal, mask 0x0
+9:35:21 PM  is28/tlm  Navigation #5 Ready, owner none
+9:35:21 PM  is28/tlm  Navigation #6 Running, owner line
+9:35:21 PM  is28/tlm  Navigation #7 Running, owner line
+9:35:27 PM  cmd       → STOP id 149 [42 95 00 00]
+9:35:27 PM  is28/ack  ← STOP id 149: accepted in 83 ms, state Running
+9:35:27 PM  is28/tlm  Navigation #8 Safe Stop, owner none
+9:35:27 PM  is28/tlm  Navigation #9 Safe Stop, owner none
+9:35:29 PM  cmd       → RESET id 150 [52 96 00 00]
+9:35:29 PM  is28/ack  ← RESET id 150: accepted in 58 ms, state Safe Stop
+9:35:29 PM  is28/tlm  Navigation #10 Ready, owner none

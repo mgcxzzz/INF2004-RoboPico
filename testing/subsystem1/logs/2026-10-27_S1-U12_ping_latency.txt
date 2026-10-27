@@ -1,0 +1,20 @@
+9:33:00 PM  cmd       → PING id 137 [82 89 00 00]
+9:33:00 PM  is28/ack  ← PING id 137: accepted in 85 ms, state unknown
+9:33:01 PM  cmd       → PING id 138 [82 8a 00 00]
+9:33:01 PM  is28/ack  ← PING id 138: accepted in 86 ms, state unknown
+9:33:01 PM  cmd       → PING id 139 [82 8b 00 00]
+9:33:01 PM  is28/ack  ← PING id 139: accepted in 62 ms, state unknown
+9:33:02 PM  cmd       → PING id 140 [82 8c 00 00]
+9:33:02 PM  is28/ack  ← PING id 140: accepted in 169 ms, state unknown
+9:33:03 PM  cmd       → PING id 141 [82 8d 00 00]
+9:33:03 PM  is28/ack  ← PING id 141: accepted in 63 ms, state unknown
+9:33:04 PM  cmd       → PING id 142 [82 8e 00 00]
+9:33:04 PM  is28/ack  ← PING id 142: accepted in 61 ms, state unknown
+9:33:04 PM  cmd       → PING id 143 [82 8f 00 00]
+9:33:04 PM  is28/ack  ← PING id 143: accepted in 45 ms, state unknown
+9:33:05 PM  cmd       → PING id 144 [82 90 00 00]
+9:33:05 PM  is28/ack  ← PING id 144: accepted in 116 ms, state unknown
+9:33:06 PM  cmd       → PING id 145 [82 91 00 00]
+9:33:06 PM  is28/ack  ← PING id 145: accepted in 55 ms, state unknown
+9:33:07 PM  cmd       → PING id 146 [82 92 00 00]
+9:33:07 PM  is28/ack  ← PING id 146: accepted in 120 ms, state unknown

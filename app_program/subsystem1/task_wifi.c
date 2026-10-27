@@ -22,6 +22,7 @@
 #include "subsystem1.h"
 #include "b1_net.h"
 #include "b1_proto.h"
+#include "b1_mapping.h"
 #include "../system/nav_iface.h"
 #include "../system/safety_iface.h"
 #include "../system/sys_fault.h"
@@ -64,6 +65,9 @@ static volatile uint8_t  g_connects = 0U;                        /* [N] */
 static volatile uint16_t g_published = 0U;                       /* [N] */
 static volatile uint16_t g_net_lost = 0U;                        /* [N] */
 static uint8_t           g_hb_seq = 0U;                          /* [N] */
+static ID                g_mapping_mtx = 0;
+static uint32_t          g_mapping = 0U;  /* map + valid + revision; mutex */
+static uint8_t           g_mapping_seq = 0U;                    /* [T] */
 
 /* <string.h> clashes with tk/syslib.h's size_t, so copy by hand. */
 static void
@@ -86,6 +90,7 @@ b1_create_objects (void)
 {
     T_CMBF cmbf = { 0 };
     T_CSEM csem = { 0 };
+    T_CMTX cmtx = { 0 };
 
     cmbf.mbfatr = TA_TFIFO;
     cmbf.bufsz  = S1_OUT_BUF_BYTES;
@@ -108,8 +113,36 @@ b1_create_objects (void)
     csem.isemcnt = 0;
     csem.maxsem  = 0x7FFFFFFF;
     g_sem_drops  = tk_cre_sem(&csem);
+    if (g_sem_drops < E_OK)
+    {
+        return g_sem_drops;
+    }
+    cmtx.mtxatr = TA_INHERIT;
+    g_mapping_mtx = tk_cre_mtx(&cmtx);
+    return (g_mapping_mtx < E_OK) ? g_mapping_mtx : E_OK;
+}
 
-    return (g_sem_drops < E_OK) ? g_sem_drops : E_OK;
+ER
+b1_barcode_mapping_get (uint32_t * p_snapshot)
+{
+    ER er;
+
+    if (p_snapshot == 0)
+    {
+        return E_PAR;
+    }
+    if (g_mapping_mtx <= 0)
+    {
+        return E_OBJ;
+    }
+    er = tk_loc_mtx(g_mapping_mtx, TMO_POL);
+    if (er != E_OK)
+    {
+        return er;
+    }
+    *p_snapshot = g_mapping;
+    (void)tk_unl_mtx(g_mapping_mtx);
+    return E_OK;
 }
 
 /* ---------------------------------------------------------------------
@@ -250,7 +283,8 @@ b1_net_command (uint8_t const * p_msg, uint32_t len)
     }
 
     /* Keep the real length visible to the checker: a longer message is
-     * passed on cut to B1_CMD_MAX bytes, still != 4, so still rejected. */
+     * passed on cut to B1_CMD_MAX bytes, longer than any valid command,
+     * so it is still rejected rather than accepted as a valid prefix. */
     copy_bytes(buf, p_msg, n);
     if (tk_snd_mbf(g_mbf_cmd, buf, (INT)n, TMO_POL) != E_OK)
     {
@@ -331,6 +365,34 @@ b1_net_count (bool b_published)
  * ------------------------------------------------------------------ */
 
 static uint8_t
+mapping_command (b1_cmd_t const * p_cmd)
+{
+    uint32_t snapshot;
+    uint8_t frame[B1_MAP_FRAME_BYTES];
+    bool queued;
+
+    if ((g_mapping_mtx <= 0) ||
+        (tk_loc_mtx(g_mapping_mtx, TMO_POL) != E_OK))
+    {
+        return B1_ACK_BUSY;
+    }
+    if (p_cmd->code == B1_CMD_BARCODE_MAP)
+    {
+        g_mapping = b1_mapping_replace(g_mapping, p_cmd->mapping);
+    }
+    snapshot = g_mapping;
+    (void)tk_unl_mtx(g_mapping_mtx);
+
+    b1_mapping_frame(snapshot, p_cmd->id, g_mapping_seq++, frame);
+    /* Configuration readback is independent of telemetry forwarding.
+     * If the queue is full after SET, the map WAS applied: keep the ack
+     * truthful. The PC must GET the active map if readback is lost. */
+    queued = queue_out(B1_OUT_TLM, frame, B1_MAP_FRAME_BYTES);
+    return (queued || (p_cmd->code == B1_CMD_BARCODE_MAP)) ?
+           B1_ACK_ACCEPTED : B1_ACK_BUSY;
+}
+
+static uint8_t
 dispatch (b1_cmd_t const * p_cmd)
 {
     ER er = E_OK;
@@ -365,6 +427,9 @@ dispatch (b1_cmd_t const * p_cmd)
         case B1_CMD_PING:
             g_b_hb_now = true;
             break;
+        case B1_CMD_BARCODE_MAP:
+        case B1_CMD_BARCODE_GET:
+            return mapping_command(p_cmd);
         default:
             er = E_PAR;                     /* b1_cmd_check() let it by? */
             break;

@@ -1,0 +1,9 @@
+S1-U09 user-observed command test
+Reported: 2026-10-27T19:32:10+08:00
+Branch: buddy1
+Base commit: 3f6ecf14b305e36b52a34f535ee00b2710ce2e67 + local changes
+Expected firmware SHA256: 7a5d86db474f84c825a0a46073d551889cf8fad72a2029ee1b529ee341f49817
+User report: everything returned as expected for Start, Pause, Resume, Stop, Reset.
+Expected sequence confirmed by user: accepted/Running, accepted/Paused, accepted/Running, accepted/Safe Stop, accepted/Ready.
+Scope: user-observed software states; no physical motor timing claim.
+Dashboard export present at expected path: False

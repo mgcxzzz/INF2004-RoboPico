@@ -1,0 +1,22 @@
+Date: 2026-10-27 (Asia/Singapore)
+Base commit: 3f6ecf14b305e36b52a34f535ee00b2710ce2e67 plus uncommitted changes (see source manifest)
+Scope: automated host/simulated transport only; no physical Pico test
+
+PASS UI01 four empty selectors with every A-Z option
+PASS UI02 missing selections rejected
+PASS UI03 subscribes then queries active map
+PASS UI04 boot readback has no hard-coded letters
+PASS UI05 duplicate letters never published
+PASS UI06 whole-map command uses five bytes and retain=false
+PASS UI07 acceptance alone does not claim confirmed mapping
+PASS UI08 matching readback confirms exactly the applied letters
+PASS UI09 mapping readback still handled after telemetry-off command
+PASS UI10 malformed readback logged without replacing active letters
+PASS UI11 mobile page has no horizontal overflow
+PASS UI12 lost readback produces unknown status, not false success
+PASS UI13 disconnect invalidates previously confirmed mapping
+PASS UI14 no page JavaScript errors
+PASS UI15 early stop is incomplete rather than PASS
+PASS UI16 silent test tail fails heartbeat in the actual UI
+
+16 passed, 0 failed (simulated MQTT; no Pico)

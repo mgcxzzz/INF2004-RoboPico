@@ -1,0 +1,253 @@
+{
+  "scope": "Power-cycle and mapping reconfiguration; no precise last-will deadline claim",
+  "events": [
+    {
+      "time": "2026-10-27T20:27:50+0800",
+      "topic": "is28/tlm",
+      "src": 8,
+      "srcName": "Barcode mapping",
+      "seq": 42,
+      "len": 5,
+      "data": {
+        "configured": true,
+        "revision": 2,
+        "requestId": 68,
+        "letters": [
+          "Z",
+          "A",
+          "Q",
+          "M"
+        ]
+      }
+    },
+    {
+      "time": "2026-10-27T20:27:50+0800",
+      "topic": "is28/ack",
+      "code": 10,
+      "codeName": "BARCODE_GET",
+      "id": 68,
+      "result": 0,
+      "resultName": "accepted",
+      "accepted": true,
+      "state": 0,
+      "stateName": "Ready"
+    },
+    {
+      "time": "2026-10-27T20:28:51+0800",
+      "topic": "is28/tlm",
+      "src": 8,
+      "srcName": "Barcode mapping",
+      "seq": 43,
+      "len": 5,
+      "data": {
+        "configured": true,
+        "revision": 2,
+        "requestId": 69,
+        "letters": [
+          "Z",
+          "A",
+          "Q",
+          "M"
+        ]
+      }
+    },
+    {
+      "time": "2026-10-27T20:28:51+0800",
+      "topic": "is28/ack",
+      "code": 10,
+      "codeName": "BARCODE_GET",
+      "id": 69,
+      "result": 0,
+      "resultName": "accepted",
+      "accepted": true,
+      "state": 0,
+      "stateName": "Ready"
+    },
+    {
+      "time": "2026-10-27T20:29:51+0800",
+      "topic": "is28/tlm",
+      "src": 8,
+      "srcName": "Barcode mapping",
+      "seq": 44,
+      "len": 5,
+      "data": {
+        "configured": true,
+        "revision": 2,
+        "requestId": 70,
+        "letters": [
+          "Z",
+          "A",
+          "Q",
+          "M"
+        ]
+      }
+    },
+    {
+      "time": "2026-10-27T20:29:51+0800",
+      "topic": "is28/ack",
+      "code": 10,
+      "codeName": "BARCODE_GET",
+      "id": 70,
+      "result": 0,
+      "resultName": "accepted",
+      "accepted": true,
+      "state": 0,
+      "stateName": "Ready"
+    },
+    {
+      "time": "2026-10-27T20:30:50+0800",
+      "topic": "is28/tlm",
+      "src": 8,
+      "srcName": "Barcode mapping",
+      "seq": 45,
+      "len": 5,
+      "data": {
+        "configured": true,
+        "revision": 2,
+        "requestId": 71,
+        "letters": [
+          "Z",
+          "A",
+          "Q",
+          "M"
+        ]
+      }
+    },
+    {
+      "time": "2026-10-27T20:30:50+0800",
+      "topic": "is28/ack",
+      "code": 10,
+      "codeName": "BARCODE_GET",
+      "id": 71,
+      "result": 0,
+      "resultName": "accepted",
+      "accepted": true,
+      "state": 0,
+      "stateName": "Ready"
+    },
+    {
+      "time": "2026-10-27T20:31:11+0800",
+      "topic": "is28/lwt",
+      "payloadHex": "00"
+    },
+    {
+      "time": "2026-10-27T20:31:28+0800",
+      "topic": "is28/tlm",
+      "src": 8,
+      "srcName": "Barcode mapping",
+      "seq": 0,
+      "len": 5,
+      "data": {
+        "configured": false,
+        "revision": 0,
+        "requestId": 72,
+        "letters": []
+      }
+    },
+    {
+      "time": "2026-10-27T20:31:28+0800",
+      "topic": "is28/ack",
+      "code": 10,
+      "codeName": "BARCODE_GET",
+      "id": 72,
+      "result": 0,
+      "resultName": "accepted",
+      "accepted": true,
+      "state": 7,
+      "stateName": "unknown"
+    },
+    {
+      "time": "2026-10-27T20:31:39+0800",
+      "topic": "is28/tlm",
+      "src": 8,
+      "srcName": "Barcode mapping",
+      "seq": 1,
+      "len": 5,
+      "data": {
+        "configured": true,
+        "revision": 1,
+        "requestId": 73,
+        "letters": [
+          "Z",
+          "A",
+          "Q",
+          "M"
+        ]
+      }
+    },
+    {
+      "time": "2026-10-27T20:31:39+0800",
+      "topic": "is28/ack",
+      "code": 9,
+      "codeName": "BARCODE_MAP",
+      "id": 73,
+      "result": 0,
+      "resultName": "accepted",
+      "accepted": true,
+      "state": 7,
+      "stateName": "unknown"
+    },
+    {
+      "time": "2026-10-27T20:31:45+0800",
+      "topic": "is28/tlm",
+      "src": 8,
+      "srcName": "Barcode mapping",
+      "seq": 2,
+      "len": 5,
+      "data": {
+        "configured": true,
+        "revision": 1,
+        "requestId": 74,
+        "letters": [
+          "Z",
+          "A",
+          "Q",
+          "M"
+        ]
+      }
+    },
+    {
+      "time": "2026-10-27T20:31:45+0800",
+      "topic": "is28/ack",
+      "code": 10,
+      "codeName": "BARCODE_GET",
+      "id": 74,
+      "result": 0,
+      "resultName": "accepted",
+      "accepted": true,
+      "state": 7,
+      "stateName": "unknown"
+    },
+    {
+      "time": "2026-10-27T20:31:50+0800",
+      "topic": "is28/tlm",
+      "src": 8,
+      "srcName": "Barcode mapping",
+      "seq": 3,
+      "len": 5,
+      "data": {
+        "configured": true,
+        "revision": 1,
+        "requestId": 75,
+        "letters": [
+          "Z",
+          "A",
+          "Q",
+          "M"
+        ]
+      }
+    },
+    {
+      "time": "2026-10-27T20:31:50+0800",
+      "topic": "is28/ack",
+      "code": 10,
+      "codeName": "BARCODE_GET",
+      "id": 75,
+      "result": 0,
+      "resultName": "accepted",
+      "accepted": true,
+      "state": 7,
+      "stateName": "unknown"
+    }
+  ]
+}

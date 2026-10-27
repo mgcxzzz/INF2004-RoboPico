@@ -1,0 +1,70 @@
+BEFORE FIX (expected failure)
+PASS link-loss warning carries latched mask
+FAIL Normal reset then owner clear publishes zero mask
+PASS unchanged mask does not flood telemetry
+FAIL mask change without Safety transition is published
+FAIL clearing WiFi preserves other owners' bits
+PASS ESTOP reset still releases inhibit
+FAIL late owner clear after ESTOP reset publishes zero mask
+Safety mask regression: 4 failures
+
+AFTER FIX
+./test_b1
+PASS  H01a     START, PAUSE, RESUME, STOP, RESET, ESTOP, PING accepted
+PASS  H01b     STEER, DRIVE, TURN rejected as prohibited (FR-WIFI-03)
+PASS  H01c     codes 0, 11, 15 rejected as unknown
+PASS  H01d     CONFIG: telemetry on/off accepted, bad value / unknown parameter refused
+PASS  H01e     3 bytes: bad format, id and code still kept for the ack
+PASS  H01f     5 bytes: bad format
+PASS  H01g     empty message: bad format, nothing read
+PASS  H01h     wrong schema version: bad format
+PASS  H01i     foreign version checked before the code
+PASS  H01j     argument little-endian, id and byte 0 as documented
+PASS  H02a     ack echoes byte 0 and id, carries result and state
+PASS  H02b     state saturates to 3 bits (7 = unknown)
+PASS  H03a     all fields at their maximum survive a round trip
+PASS  H03b     uptime and fill saturate instead of wrapping
+PASS  H03c     header: version 2, source 1, payload 12 bytes
+PASS  H03d     reserved bits 26..31 of word 0 are zero
+PASS  H03e     wrong length is refused
+PASS  H03f     another source's frame is refused
+PASS  H04a     back-off 1, 2, 4, 8 s, then stays at 8 s
+PASS  H04b     queue fill percent
+PASS  H04c     names
+
+21 passed, 0 failed
+./test_mapping
+PASS M01 no hard-coded boot mapping
+PASS M02 arbitrary distinct letters accepted
+PASS M03 movement slots match the specified wire order
+PASS M04 unassigned, lowercase, punctuation, invalid state are not movement
+PASS M05 duplicate letters rejected, output untouched
+PASS M06 lowercase rejected
+PASS M07 out-of-range ASCII rejected
+PASS M08 invalid replacement leaves active map untouched
+PASS M09 identical retry is idempotent
+PASS M10 revision wraps without corrupting map
+PASS M11 all 358800 distinct A-Z assignments resolve correctly
+PASS M12 5-byte mapping command round trip
+PASS M13 wrong lengths cannot apply a mapping prefix
+PASS M14 reserved command bits rejected
+PASS M15 duplicate encoded letters rejected
+PASS M16 letter index above Z rejected
+PASS M17 GET accepted with no argument
+PASS M18 GET with unexpected argument rejected
+PASS M19 active map readback includes matching request id
+PASS M20 corrupt readback reserved bits rejected
+PASS M21 boot readback explicitly says not configured
+PASS M22 truncated readback rejected
+PASS M23 unconfigured status cannot contain an assignment
+
+23 passed, 0 failed
+./test_safety_mask
+PASS link-loss warning carries latched mask
+PASS Normal reset then owner clear publishes zero mask
+PASS unchanged mask does not flood telemetry
+PASS mask change without Safety transition is published
+PASS clearing WiFi preserves other owners' bits
+PASS ESTOP reset still releases inhibit
+PASS late owner clear after ESTOP reset publishes zero mask
+Safety mask regression: 0 failures

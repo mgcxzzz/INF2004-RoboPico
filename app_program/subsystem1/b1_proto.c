@@ -9,6 +9,7 @@
  */
 
 #include "b1_proto.h"
+#include "b1_mapping.h"
 
 #define B1_CFG_PARAM_SHIFT  (12U)
 #define B1_CFG_VALUE_MASK   (0x0FFFU)
@@ -35,6 +36,7 @@ b1_cmd_check (uint8_t const * p_msg, uint32_t len, b1_cmd_t * p_cmd)
     p_cmd->code  = B1_CMD_NONE;
     p_cmd->id    = 0U;
     p_cmd->arg   = 0U;
+    p_cmd->mapping = 0U;
 
     if (len >= 1U)
     {
@@ -46,12 +48,21 @@ b1_cmd_check (uint8_t const * p_msg, uint32_t len, b1_cmd_t * p_cmd)
         p_cmd->id = p_msg[1];
     }
 
-    if ((len != B1_CMD_BYTES) || ((p_msg[0] & 0x0FU) != TLM_VERSION))
+    if ((len < 1U) || ((p_msg[0] & 0x0FU) != TLM_VERSION) ||
+        (len != ((p_cmd->code == B1_CMD_BARCODE_MAP) ?
+                  B1_MAP_CMD_BYTES : B1_CMD_BYTES)))
     {
         return B1_ACK_FORMAT;
     }
 
     p_cmd->arg = (uint16_t)((uint16_t)p_msg[2] | ((uint16_t)p_msg[3] << 8));
+
+    if (p_cmd->code == B1_CMD_BARCODE_MAP)
+    {
+        p_cmd->mapping = (uint32_t)p_cmd->arg | ((uint32_t)p_msg[4] << 16);
+        return b1_mapping_check(p_cmd->mapping) ?
+               B1_ACK_ACCEPTED : B1_ACK_FORMAT;
+    }
 
     if (b1_cmd_is_navigation(p_cmd->code))
     {
@@ -78,6 +89,9 @@ b1_cmd_check (uint8_t const * p_msg, uint32_t len, b1_cmd_t * p_cmd)
             }
             return (value <= 1U) ? B1_ACK_ACCEPTED : B1_ACK_FORMAT;
 
+        case B1_CMD_BARCODE_GET:
+            return (p_cmd->arg == 0U) ? B1_ACK_ACCEPTED : B1_ACK_FORMAT;
+
         default:
             return B1_ACK_UNKNOWN;
     }
@@ -91,6 +105,17 @@ b1_cmd_pack (uint8_t code, uint8_t id, uint16_t arg,
     p_out[1] = id;
     p_out[2] = (uint8_t)(arg & 0xFFU);
     p_out[3] = (uint8_t)((arg >> 8) & 0xFFU);
+}
+
+void
+b1_map_cmd_pack (uint8_t id, uint32_t mapping,
+                 uint8_t p_out[B1_MAP_CMD_BYTES])
+{
+    p_out[0] = (uint8_t)(TLM_VERSION | (B1_CMD_BARCODE_MAP << 4));
+    p_out[1] = id;
+    p_out[2] = (uint8_t)mapping;
+    p_out[3] = (uint8_t)(mapping >> 8);
+    p_out[4] = (uint8_t)(mapping >> 16);
 }
 
 void
@@ -141,7 +166,7 @@ b1_cmd_name (uint8_t code)
     static char const * const names[16] =
     {
         "none", "START", "PAUSE", "RESUME", "STOP", "RESET", "ESTOP",
-        "CONFIG", "PING", "code9", "code10", "code11", "STEER", "DRIVE",
+        "CONFIG", "PING", "BARCODE_MAP", "BARCODE_GET", "code11", "STEER", "DRIVE",
         "TURN", "code15"
     };
 

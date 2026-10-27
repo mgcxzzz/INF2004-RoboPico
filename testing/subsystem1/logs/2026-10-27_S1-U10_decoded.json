@@ -1,0 +1,82 @@
+{
+  "scope": "Captured command acknowledgements",
+  "events": [
+    {
+      "time": "2026-10-27T20:00:50+0800",
+      "code": 10,
+      "codeName": "BARCODE_GET",
+      "id": 28,
+      "result": 0,
+      "resultName": "accepted",
+      "accepted": true,
+      "state": 0,
+      "stateName": "Ready"
+    },
+    {
+      "time": "2026-10-27T20:02:14+0800",
+      "code": 12,
+      "codeName": "STEER",
+      "id": 29,
+      "result": 1,
+      "resultName": "rejected: steering/navigation not allowed (FR-WIFI-03)",
+      "accepted": false,
+      "state": 0,
+      "stateName": "Ready"
+    },
+    {
+      "time": "2026-10-27T20:02:18+0800",
+      "code": 13,
+      "codeName": "DRIVE",
+      "id": 30,
+      "result": 1,
+      "resultName": "rejected: steering/navigation not allowed (FR-WIFI-03)",
+      "accepted": false,
+      "state": 0,
+      "stateName": "Ready"
+    },
+    {
+      "time": "2026-10-27T20:02:22+0800",
+      "code": 1,
+      "codeName": "START",
+      "id": 31,
+      "result": 3,
+      "resultName": "rejected: bad format",
+      "accepted": false,
+      "state": 0,
+      "stateName": "Ready"
+    },
+    {
+      "time": "2026-10-27T20:02:24+0800",
+      "code": 11,
+      "codeName": "code11",
+      "id": 32,
+      "result": 2,
+      "resultName": "rejected: unknown command",
+      "accepted": false,
+      "state": 0,
+      "stateName": "Ready"
+    },
+    {
+      "time": "2026-10-27T20:02:51+0800",
+      "code": 10,
+      "codeName": "BARCODE_GET",
+      "id": 33,
+      "result": 0,
+      "resultName": "accepted",
+      "accepted": true,
+      "state": 0,
+      "stateName": "Ready"
+    },
+    {
+      "time": "2026-10-27T20:03:50+0800",
+      "code": 10,
+      "codeName": "BARCODE_GET",
+      "id": 34,
+      "result": 0,
+      "resultName": "accepted",
+      "accepted": true,
+      "state": 0,
+      "stateName": "Ready"
+    }
+  ]
+}

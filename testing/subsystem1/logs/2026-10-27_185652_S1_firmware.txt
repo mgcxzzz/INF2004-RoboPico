@@ -1,0 +1,15 @@
+created_sgt: 2026-10-27_185652
+base_commit: 3f6ecf14b305e36b52a34f535ee00b2710ce2e67
+working_tree: local Buddy 1 changes, uncommitted
+flags: WIFI=cyw43 NET=lwip MQTT=1 SMP=1 CONSOLE=usb_cdc TEST=0 CRASH_REPORT=0
+build_output: /Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico/build_make/mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt.uf2
+laptop_copy: /Users/skyler/SIT/Y2T1/Embedded/bench_tools/buddy1/buddy1_mqtt_2026-10-27_185652.uf2
+sha256: 2d3724ee1f594c7339a5d8114776cb369c34eaf2d76f840403feb7e3dd4be409
+bytes: 695296
+settings: Local gitignored wifi_secrets.h used; values not included
+flashed: False
+Attempt 1: transfer stalled; no serial port in 90 seconds. Flash not confirmed. See 2026-10-27_S1-U07_flash_attempt1.txt.
+2026-10-27T19:03:23+08:00: Laptop copy renamed to /Users/skyler/SIT/Y2T1/Embedded/bench_tools/buddy1/buddy1_mqtt.uf2; SHA256 unchanged: 2d3724ee1f594c7339a5d8114776cb369c34eaf2d76f840403feb7e3dd4be409. Future builds use the stable filename.
+2026-10-27T19:06:13+08:00: User reports manual flash completed. Pico USB serial appeared as /dev/cu.usbmodemMTK3PICO1. Running firmware hash is inferred from the user-selected file, not read back from flash.
+Live S1-U07 attempt: WiFi authentication rejected (-3); MQTT not reached. Console saved in 2026-10-27_S1-U07_console.txt. Mac current WiFi IP is 192.168.1.45; flashed broker target was 192.168.1.90. Local broker setting updated to .45; rebuild/reflash pending credentials check.
+2026-10-27_190744: Stable laptop filename updated after settings check and broker IP correction. New SHA256 296245a64a6e1bedf29202de14206c7e487bc06a0a9058da2696ff6c696574f9. New build record: 2026-10-27_190744_S1_firmware_retry1.txt. Earlier firmware has not been kept as a separate dated UF2.

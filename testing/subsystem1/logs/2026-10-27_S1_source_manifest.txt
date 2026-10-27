@@ -1,0 +1,37 @@
+IS28 Buddy 1 verification source manifest
+Date: 2026-10-27 (Asia/Singapore)
+Branch: buddy1
+Base commit: 3f6ecf14b305e36b52a34f535ee00b2710ce2e67
+Working tree: modified, uncommitted; no commits/pushes made
+Scope: source/host tests/UI; no real broker or Pico test
+Default hardware: car Pico W on Robo Pico, all peripherals connected
+Build: WIFI=cyw43 NET=lwip MQTT=1; normal and TEST=1; example credentials via temporary CPATH
+Build objects cleaned afterwards so later real configuration cannot reuse placeholder objects
+SHA256  path
+698f1370ba3e70187e825bfdb717f332b9ba3502cbf0502245ef14c3040213fd  TEAM.md
+8e0b663423128061247a84ad0de2ab2932cfc3f36820779331ac926296a8fc97  app_program/subsystem1/b1_mapping.c
+276ceb6150c60e99a1263ed3d4d50cb119ac3fc3516a30b9818c48e86ac14561  app_program/subsystem1/b1_mapping.h
+6e284be1c28589e93fe2b3cf6a69da17bdf29e42c0f45bf68d51500204d7df1a  app_program/subsystem1/b1_net.h
+5449d47ca58e31467857cab0c2e4d6952f02fd25fec4d4906eef5e7c8d06dde4  app_program/subsystem1/b1_proto.c
+380e6c72ed337d36f25668ef421d5eeff6cd5778e60db5d521314a65f453edd0  app_program/subsystem1/b1_proto.h
+112c4e8ab27bdb5a71f17cb1d23a1a6e7f9540a7986ee659ad94966b20270adc  app_program/subsystem1/subsystem1.h
+bdb0585dd742ff227c6b72fe6e1692db7c654ed6a3655023058fe8390e85dd67  app_program/subsystem1/task_wifi.c
+73db67385b85a266eb35584235747f296a32dc279924d5c3abcc46d256db527e  app_program/system/sys_tlm.h
+c385949292f0a901f6ca2ecd34cca8d4e355c80bd166ede70a5d13a1631d0081  lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c
+e954a42735277495aefb47356d86422af6340a054b3bdbb3cdf5cb66965e1044  testing/subsystem1/HOW_TO_TEST.md
+d6d02d4400a4e893dccd497804ea8ae64475f6bed431cf09a55622d8d3fbc2b7  testing/subsystem1/TEST_LOG.md
+08e4b1500c822375a142ef9ed0b47fbc952fa16cfcf1ec2e5be1c4283024bbfa  testing/subsystem1/host/.gitignore
+31122904ee125773076f34e68e0814aef07be7d1d12be6b08d1c8c6dba249107  testing/subsystem1/host/Makefile
+c7d4fa39eb5d8195ef1911c224379b4e2e0ace01de2652eada699497dfe06e05  testing/subsystem1/host/check_dashboard.mjs
+80f983c0720351e8e1568db2ee99b2a45d3f3b8efe8238b054c0729913c40dce  testing/subsystem1/host/check_dashboard_ui.mjs
+8b97b6c8a28723dcf65a726e897ce3a00de97157c5b553fd6d6bb18a2386fddf  testing/subsystem1/host/test_b1.c
+b8670694f38875cc34d68fefb3a8063eef0c34ebe6619fe7f2fb2b7a7f878f2c  testing/subsystem1/host/test_mapping.c
+9c713c1b82704371636d08bf792bb6ff34ee37629424756677844885b95e9fa3  tools/dashboard/README.md
+a5182b0511f6a19f97191f1797d987bd85b2907d333f3c90aac364e38e6a4443  tools/dashboard/index.html
+a4b4d23afcb7fb69ce1843b9e57b9512a6295c88f313dbc93a9539c6b540e7e1  tools/dashboard/is28_schema.js
+4f33dfe6e072535b8a009de8a9dcad4ade743cf7f450edf4fd54cafaf6b6a210  testing/subsystem1/logs/2026-10-27_S1_working_changes.patch
+6c4a06e7f65207ad7b2d83ba094339c725d856f613f1f5fc0e3a2f67b52c6069  /private/tmp/is28-buddy1-build-config/compile-only_normal.uf2 (compile-only, example credentials)
+9940d48b58d9e91b48d5d0acec5b988083c4a2da5649d0d962c1d975db9f8f05  /private/tmp/is28-buddy1-build-config/compile-only_test.uf2 (compile-only, example credentials)
+Apple clang version 17.0.0 (clang-1700.0.13.5)
+arm-none-eabi-gcc (Arm GNU Toolchain 15.3.Rel1 (Build arm-15.149)) 15.3.1 20260627
+v24.22.1

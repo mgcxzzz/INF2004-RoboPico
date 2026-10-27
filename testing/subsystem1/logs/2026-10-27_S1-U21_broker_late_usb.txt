@@ -1,0 +1,402 @@
+_utk_task starting (proc 1)
+wifi: cyw43_init() ...
+wifi: cyw43_init() returned, bringing interface up ...
+monitor: alarm -- no batch for 2000 ms
+monitor: t=3355771866 ms  samples=4  min=0 max=30 avg=15  free slots=1  free blocks=1
+monitor: alarm -- no batch for 2000 ms
+monitor: t=3355773876 ms  samples=4  min=0 max=30 avg=15  free slots=0  free blocks=0
+monitor: alarm -- no batch for 2000 ms
+monitor: t=3355775886 ms  samples=4  min=0 max=30 avg=15  free slots=0  free blocks=0
+monitor: batch  n=5 last=40 from core 1
+monitor: t=3355776346 ms  samples=8  min=0 max=70 avg=35  free slots=3  free blocks=3
+monitor: batch  n=10 last=90 from core 1
+monitor: t=3355776656 ms  samples=10  min=0 max=90 avg=45  free slots=4  free blocks=4
+wifi: PM requested=0x00000010 active=0x00000010 set=0 read=0
+wifi: joining "SINGTEL-D290" ...
+wifi: link status -> joined AP, waiting for IP (1)
+monitor: batch  n=15 last=60 from core 1
+monitor: t=3355778206 ms  samples=15  min=0 max=100 avg=56  free slots=4  free blocks=4
+monitor: LED task paused, state=WAIT+SUSPEND, pri=14
+monitor: batch  n=20 last=10 from core 1
+monitor: t=3355779756 ms  samples=20  min=0 max=100 avg=50  free slots=4  free blocks=4
+wifi: link status -> joined AP, no IP yet (2)
+wifi: link up, ip=192.168.1.92
+mqtt: connecting to 192.168.1.45 ...
+mqtt: Connecting
+[wifi] Connecting
+mqtt: Operational
+mqtt: connected to 192.168.1.45
+mqtt: listening on is28/cmd
+[wifi] Operational
+[wifi] command BARCODE_GET (id 178): accepted
+monitor: batch  n=25 last=40 from core 1
+monitor: t=3355781306 ms  samples=25  min=0 max=100 avg=44  free slots=4  free blocks=4
+monitor: batch  n=30 last=90 from core 1
+monitor: t=3355782856 ms  samples=30  min=0 max=100 avg=48  free slots=4  free blocks=4
+monitor: batch  n=35 last=60 from core 1
+monitor: t=3355784406 ms  samples=35  min=0 max=100 avg=52  free slots=4  free blocks=4
+monitor: batch  n=40 last=10 from core 1
+monitor: t=3355785956 ms  samples=40  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=45 last=40 from core 1
+monitor: t=3355787506 ms  samples=45  min=0 max=100 avg=46  free slots=4  free blocks=4
+monitor: LED task resumed, state=WAIT, pri=13
+[wifi] command BARCODE_GET (id 179): accepted
+monitor: batch  n=50 last=90 from core 1
+monitor: t=3355789056 ms  samples=50  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=55 last=60 from core 1
+monitor: t=3355790606 ms  samples=55  min=0 max=100 avg=51  free slots=4  free blocks=4
+monitor: batch  n=60 last=10 from core 1
+monitor: t=3355792156 ms  samples=60  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=65 last=40 from core 1
+monitor: t=3355793706 ms  samples=65  min=0 max=100 avg=47  free slots=4  free blocks=4
+monitor: batch  n=70 last=90 from core 1
+monitor: t=3355795256 ms  samples=70  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=75 last=60 from core 1
+monitor: t=3355796806 ms  samples=75  min=0 max=100 avg=51  free slots=4  free blocks=4
+monitor: LED task paused, state=WAIT+SUSPEND, pri=14
+monitor: batch  n=80 last=10 from core 1
+monitor: t=3355798356 ms  samples=80  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=85 last=40 from core 1
+monitor: t=3355799906 ms  samples=85  min=0 max=100 avg=48  free slots=4  free blocks=4
+monitor: batch  n=90 last=90 from core 1
+monitor: t=3355801456 ms  samples=90  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=95 last=60 from core 1
+monitor: t=3355803006 ms  samples=95  min=0 max=100 avg=51  free slots=4  free blocks=4
+monitor: batch  n=100 last=10 from core 1
+monitor: t=3355804556 ms  samples=100  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=105 last=40 from core 1
+monitor: t=3355806106 ms  samples=105  min=0 max=100 avg=48  free slots=4  free blocks=4
+monitor: LED task resumed, state=WAIT, pri=13
+monitor: batch  n=110 last=90 from core 1
+monitor: t=3355807656 ms  samples=110  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=115 last=60 from core 1
+monitor: t=3355809206monitor: batch  n=1360 last=10 from core 1
+monitor: t=3356195156 ms  samples=1360  min=0 max=100 avg=50  free slots=4  free blocks=4
+mqtt: connecting to 192.168.1.45 ...
+mqtt: Connecting
+[wifi] Connecting
+mqtt: connection status 256
+mqtt: Reconnect wait
+[wifi] Reconnect wait
+monitor: batch  n=1365 last=40 from core 1
+monitor: t=3356196706 ms  samples=1365  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: LED task resumed, state=WAIT, pri=13
+monitor: batch  n=1370 last=90 from core 1
+monitor: t=3356198256 ms  samples=1370  min=0 max=100 avg=49  free slots=4  free blocks=4
+mqtt: connecting to 192.168.1.45 ...
+mqtt: Connecting
+mqtt: connection status 256
+mqtt: Reconnect wait
+monitor: batch  n=1375 last=60 from core 1
+monitor: t=3356199806 ms  samples=1375  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=1380 last=10 from core 1
+monitor: t=3356201356 ms  samples=1380  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=1385 last=40 from core 1
+monitor: t=3356202906 ms  samples=1385  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=1390 last=90 from core 1
+monitor: t=3356204456 ms  samples=1390  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=1395 last=60 from core 1
+monitor: t=3356206006 ms  samples=1395  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: LED task paused, state=WAIT+SUSPEND, pri=14
+monitor: batch  n=1400 last=10 from core 1
+monitor: t=3356207556 ms  samples=1400  min=0 max=100 avg=50  free slots=4  free blocks=4
+mqtt: connecting to 192.168.1.45 ...
+mqtt: Connecting
+mqtt: connection status 256
+mqtt: Reconnect wait
+monitor: batch  n=1405 last=40 from core 1
+monitor: t=3356209106 ms  samples=1405  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=1410 last=90 from core 1
+monitor: t=3356210656 ms  samples=1410  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=1415 last=60 from core 1
+monitor: t=3356212206 ms  samples=1415  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=1420 last=10 from core 1
+monitor: t=3356213756 ms  samples=1420  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=1425 last=40 from core 1
+monitor: t=3356215306 ms  samples=1425  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: LED task resumed, state=WAIT, pri=13
+mqtt: connecting to 192.168.1.45 ...
+mqtt: Connecting
+[wifi] Connecting
+mqtt: connection status 256
+mqtt: Reconnect wait
+[wifi] Reconnect wait
+monitor: batch  n=1430 last=90 from core 1
+monitor: t=3356216856 ms  samples=1430  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=1435 last=60 from core 1
+monitor: t=3356218406 ms  samples=1435  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=1440 last=10 from core 1
+monitor: t=3356219956 ms  samples=1440  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=1445 last=40 from core 1
+monitor: t=3356221506 ms  samples=1445  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=1450 last=90 from core 1
+monitor: t=3356223056 ms  samples=1450  min=0 max=100 avg=49  free slots=4  free blocks=4
+mqtt: connecting to 192.168.1.45 ...
+mqtt: Connecting
+[wifi] Connecting
+mqtt: connection status 256
+mqtt: Reconnect wait
+[wifi] Reconnect wait
+monitor: batch  n=1455 last=60 from core 1
+monitor: t=3356224606 ms  samples=1455  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: LED task paused, state=WAIT+SUSPEND, pri=14
+monitor: batch  n=1460 last=10 from core 1
+monitor: t=3356226156 ms  samples=1460  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=1465 last=40 from core 1
+monitor: t=3356227706 ms  samples=1465  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=1470 last=90 from core 1
+monitor: t=3356229256 ms  samples=1470  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=1475 last=60 from core 1
+monitor: t=3356230806 ms  samples=1475  min=0 max=100 avg=50  free slots=4  free blocks=4
+mqtt: connecting to 192.168.1.45 ...
+mqtt: Connecting
+[wifi] Connecting
+mqtt: connection status 256
+mqtt: Reconnect wait
+[wifi] Reconnect wait
+monitor: batch  n=1480 last=10 from core 1
+monitor: t=3356232356 ms  samples=1480  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=1485 last=40 from core 1
+monitor: t=3356233906 ms  samples=1485  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: LED task resumed, state=WAIT, pri=13
+monitor: batch  n=1490 last=90 from core 1
+monitor: t=3356235456 ms  samples=1490  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=1495 last=60 from core 1
+monitor: t=3356237006 ms  samples=1495  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=1500 last=10 from core 1
+monitor: t=3356238556 ms  samples=1500  min=0 max=100 avg=50  free slots=4  free blocks=4
+mqtt: connecting to 192.168.1.45 ...
+mqtt: Connecting
+monitor: batch  n=1505 last=40 from core 1
+monitor: t=3356240106 ms  samples=1505  min=0 max=100 avg=49  free slots=4  free blocks=4
+[wifi] Connecting
+mqtt: connection status 256
+mqtt: Reconnect wait
+[wifi] Reconnect wait
+monitor: batch  n=1510 last=90 from core 1
+monitor: t=3356241656 ms  samples=1510  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=1515 last=60 from core 1
+monitor: t=3356243206 ms  samples=1515  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: LED task paused, state=WAIT+SUSPEND, pri=14
+monitor: batch  n=1520 last=10 from core 1
+monitor: t=3356244756 ms  samples=1520  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=1525 last=40 from core 1
+monitor: t=3356246306 ms  samples=1525  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=5 last=40 from core 1
+monitor: t=3355771096 ms  samples=5  min=0 max=40 avg=20  free slots=4  free blocks=4
+wifi: PM requested=0x00000010 active=0x00000010 set=0 read=0
+wifi: joining "SINGTEL-D290" ...
+wifi: link status -> joined AP, waiting for IP (1)
+monitor: batch  n=10 last=90 from core 1
+monitor: t=3355772646 ms  samples=10  min=0 max=90 avg=45  free slots=4  free blocks=4
+monitor: batch  n=15 last=60 from core 1
+monitor: t=3355774196 ms  samples=15  min=0 max=100 avg=56  free slots=4  free blocks=4
+wifi: link status -> joined AP, no IP yet (2)
+wifi: link up, ip=192.168.1.92
+mqtt: connecting to 192.168.1.45 ...
+mqtt: Connecting
+mqtt: connection status 256
+mqtt: Reconnect wait
+[wifi] Reconnect wait
+monitor: batch  n=20 last=10 from core 1
+monitor: t=3355775746 ms  samples=20  min=0 max=100 avg=50  free slots=4  free blocks=4
+mqtt: connecting to 192.168.1.45 ...
+mqtt: Connecting
+[wifi] Connecting
+mqtt: connection status 256
+mqtt: Reconnect wait
+[wifi] Reconnect wait
+monitor: batch  n=25 last=40 from core 1
+monitor: t=3355777296 ms  samples=25  min=0 max=100 avg=44  free slots=4  free blocks=4
+mqtt: connecting to 192.168.1.45 ...
+mqtt: Connecting
+mqtt: connection status 256
+mqtt: Reconnect wait
+monitor: batch  n=30 last=90 from core 1
+monitor: t=3355778846 ms  samples=30  min=0 max=100 avg=48  free slots=4  free blocks=4
+monitor: LED task paused, state=WAIT+SUSPEND, pri=14
+monitor: batch  n=35 last=60 from core 1
+monitor: t=3355780396 ms  samples=35  min=0 max=100 avg=52  free slots=4  free blocks=4
+mqtt: connecting to 192.168.1.45 ...
+mqtt: Connecting
+monitor: batch  n=40 last=10 from core 1
+monitor: t=3355781946 ms  samples=40  min=0 max=100 avg=50  free slots=4  free blocks=4
+[wifi] Connecting
+mqtt: connection status 256
+mqtt: Reconnect wait
+[wifi] Reconnect wait
+monitor: batch  n=45 last=40 from core 1
+monitor: t=3355783496 ms  samples=45  min=0 max=100 avg=46  free slots=4  free blocks=4
+monitor: batch  n=50 last=90 from core 1
+monitor: t=3355785046 ms  samples=50  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=55 last=60 from core 1
+monitor: t=3355786596 ms  samples=55  min=0 max=100 avg=51  free slots=4  free blocks=4
+monitor: batch  n=60 last=10 from core 1
+monitor: t=3355788146 ms  samples=60  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: LED task resumed, state=WAIT, pri=13
+monitor: batch  n=65 last=40 from core 1
+monitor: t=3355789696 ms  samples=65  min=0 max=100 avg=47  free slots=4  free blocks=4
+mqtt: connecting to 192.168.1.45 ...
+mqtt: Connecting
+mqtt: connection status 256
+mqtt: Reconnect wait
+monitor: batch  n=70 last=90 from core 1
+monitor: t=3355791246 ms  samples=70  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=75 last=60 from core 1
+monitor: t=3355792796 ms  samples=75  min=0 max=100 avg=51  free slots=4  free blocks=4
+monitor: batch  n=80 last=10 from core 1
+monitor: t=3355794346 ms  samples=80  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=85 last=40 from core 1
+monitor: t=3355795896 ms  samples=85  min=0 max=100 avg=48  free slots=4  free blocks=4
+monitor: batch  n=90 last=90 from core 1
+monitor: t=3355797446 ms  samples=90  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: LED task paused, state=WAIT+SUSPEND, pri=14
+mqtt: connecting to 192.168.1.45 ...
+mqtt: Connecting
+[wifi] Connecting
+mqtt: connection status 256
+mqtt: Reconnect wait
+[wifi] Reconnect wait
+monitor: batch  n=95 last=60 from core 1
+monitor: t=3355798996 ms  samples=95  min=0 max=100 avg=51  free slots=4  free blocks=4
+monitor: batch  n=100 last=10 from core 1
+monitor: t=3355800546 ms  samples=100  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=105 last=40 from core 1
+monitor: t=3355802096 ms  samples=105  min=0 max=100 avg=48  free slots=4  free blocks=4
+monitor: batch  n=110 last=90 from core 1
+monitor: t=3355803646 ms  samples=110  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=115 last=60 from core 1
+monitor: t=3355805196 ms  samples=115  min=0 max=100 avg=50  free slots=4  free blocks=4
+mqtt: connecting to 192.168.1.45 ...
+mqtt: Connecting
+[wifi] Connecting
+mqtt: connection status 256
+mqtt: Reconnect wait
+[wifi] Reconnect wait
+monitor: batch  n=120 last=10 from core 1
+monitor: t=3355806746 ms  samples=120  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: LED task resumed, state=WAIT, pri=13
+monitor: batch  n=125 last=40 from core 1
+monitor: t=3355808296 ms  samples=125  min=0 max=100 avg=48  free slots=4  free blocks=4
+monitor: batch  n=130 last=90 from core 1
+monitor: t=3355809846 ms  samples=130  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=135 last=60 from core 1
+monitor: t=3355811396 ms  samples=135  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=140 last=10 from core 1
+monitor: t=3355812946 ms  samples=140  min=0 max=100 avg=50  free slots=4  free blocks=4
+mqtt: connecting to 192.168.1.45 ...
+mqtt: Connecting
+[wifi] Connecting
+mqtt: Operational
+mqtt: connected to 192.168.1.45
+mqtt: listening on is28/cmd
+[wifi] Operational
+[wifi] command BARCODE_GET (id 186): accepted
+monitor: batch  n=145 last=40 from core 1
+monitor: t=3355814496 ms  samples=145  min=0 max=100 avg=48  free slots=4  free blocks=4
+monitor: batch  n=150 last=90 from core 1
+monitor: t=3355816046 ms  samples=150  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: LED task paused, state=WAIT+SUSPEND, pri=14
+monitor: batch  n=155 last=60 from core 1
+monitor: t=3355817596 ms  samples=155  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=160 last=10 from core 1
+monitor: t=3355819146 ms  samples=160  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=165 last=40 from core 1
+monitor: t=3355820696 ms  samples=165  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=170 last=90 from core 1
+monitor: t=3355822246 ms  samples=170  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=175 last=60 from core 1
+monitor: t=3355823796 ms  samples=175  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=180 last=10 from core 1
+monitor: t=3355825346 ms  samples=180  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: LED task resumed, state=WAIT, pri=13
+monitor: batch  n=185 last=40 from core 1
+monitor: t=3355826896 ms  samples=185  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=190 last=90 from core 1
+monitor: t=3355828446 ms  samples=190  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=195 last=60 from core 1
+monitor: t=3355829996 ms  samples=195  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=200 last=10 from core 1
+monitor: t=3355831546 ms  samples=200  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=205 last=40 from core 1
+monitor: t=3355833096 ms  samples=205  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=210 last=90 from core 1
+monitor: t=3355834646 ms  samples=210  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: LED task paused, state=WAIT+SUSPEND, pri=14
+monitor: batch  n=215 last=60 from core 1
+monitor: t=3355836196 ms  samples=215  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=220 last=10 from core 1
+monitor: t=3355837746 ms  samples=220  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=225 last=40 from core 1
+monitor: t=3355839296 ms  samples=225  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=230 last=90 from core 1
+monitor: t=3355840846 ms  samples=230  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=235 last=60 from core 1
+monitor: t=3355842396 ms  samples=235  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=240 last=10 from core 1
+monitor: t=3355843946 ms  samples=240  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: LED task resumed, state=WAIT, pri=13
+monitor: batch  n=245 last=40 from core 1
+monitor: t=3355845496 ms  samples=245  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=250 last=90 from core 1
+monitor: t=3355847046 ms  samples=250  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=255 last=60 from core 1
+monitor: t=3355848596 ms  samples=255  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=260 last=10 from core 1
+monitor: t=3355850146 ms  samples=260  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=265 last=40 from core 1
+monitor: t=3355851696 ms  samples=265  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=270 last=90 from core 1
+monitor: t=3355853246 ms  samples=270  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: LED task paused, state=WAIT+SUSPEND, pri=14
+monitor: batch  n=275 last=60 from core 1
+monitor: t=3355854796 ms  samples=275  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=280 last=10 from core 1
+monitor: t=3355856346 ms  samples=280  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=285 last=40 from core 1
+monitor: t=3355857896 ms  samples=285  min=0 max=100 avg=49  free slots=4  free blocks=4
+[wifi] command PING (id 21): accepted
+monitor: batch  n=290 last=90 from core 1
+monitor: t=3355859446 ms  samples=290  min=0 max=100 avg=49  free slots=4  free blocks=4
+[wifi] command BARCODE_GET (id 22): accepted
+[wifi] command BARCODE_MAP (id 23): accepted
+[wifi] command BARCODE_GET (id 24): accepted
+monitor: batch  n=295 last=60 from core 1
+monitor: t=3355860996 ms  samples=295  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=300 last=10 from core 1
+monitor: t=3355862546 ms  samples=300  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: LED task resumed, state=WAIT, pri=13
+monitor: batch  n=305 last=40 from core 1
+monitor: t=3355864096 ms  samples=305  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=310 last=90 from core 1
+monitor: t=3355865646 ms  samples=310  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=315 last=60 from core 1
+monitor: t=3355867196 ms  samples=315  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=320 last=10 from core 1
+monitor: t=3355868746 ms  samples=320  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=325 last=40 from core 1
+monitor: t=3355870296 ms  samples=325  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=330 last=90 from core 1
+monitor: t=3355871846 ms  samples=330  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: LED task paused, state=WAIT+SUSPEND, pri=14
+monitor: batch  n=335 last=60 from core 1
+monitor: t=3355873396 ms  samples=335  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=340 last=10 from core 1
+monitor: t=3355874946 ms  samples=340  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=345 last=40 from core 1
+monitor: t=3355876496 ms  samples=345  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=350 last=90 from core 1
+monitor: t=3355878046 ms  samples=350  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=355 last=60 from core 1
+monitor: t=3355879596 ms  samples=355  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=360 last=10 from core 1
+monitor: t=3355881146 ms  samples=360  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: LED task resumed, state=WAIT, pri=13
+monitor: batch  n=365 last=40 from core 1
+monitor: t=3355882696 ms  samples=365  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=370 last=90 from core 1
+monitor: t=3355884246 ms  samples=370  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=375 last=60 from core 1
+monitor: t=3355885796 ms  samples=375  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=380 last=10 from core 1
+monitor: t=3355887346 ms  samples=380  min=0 max=100 avg=50  free slots=4  free blocks=4

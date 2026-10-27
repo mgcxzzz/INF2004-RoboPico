@@ -1,0 +1,26 @@
+Date: 2026-10-27 (Asia/Singapore)
+Base commit: 3f6ecf14b305e36b52a34f535ee00b2710ce2e67 plus uncommitted changes (see source manifest)
+Scope: automated host/simulated transport only; no physical Pico test
+
+PASS  D01    Buddy 1 status frame
+PASS  D02    Navigation frame
+PASS  D03    Safety frame
+PASS  D04    command bytes match the C packer
+PASS  D05    short frame refused
+PASS  D06    sequence gaps counted with 8-bit wrap; a jump of 128+ is a restart, not losses
+PASS  D07    four-letter command matches C bytes, including A/Z boundaries
+PASS  D08    active mapping readback matches C
+PASS  D09    boot has no fabricated mapping
+PASS  D10    all slots and unassigned letters
+PASS  D11    invalid, missing and duplicate UI assignments refused
+PASS  D12    corrupt or short readback refused
+PASS  D13    foreign-version acknowledgements refused
+PASS  D14    GET keeps the 4-byte command layout
+PASS  D15    every A-Z letter encodes in every movement slot
+PASS  D16    complete connectivity run can pass
+PASS  D17    short and running tests cannot pass
+PASS  D18    silent tail fails heartbeat even after two good heartbeats
+PASS  D19    one bad source cannot be hidden by good aggregate delivery
+PASS  D20    configuration readbacks alone do not pass connectivity
+
+20 passed, 0 failed

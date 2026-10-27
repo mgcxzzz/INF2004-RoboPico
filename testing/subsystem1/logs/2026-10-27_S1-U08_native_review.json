@@ -1,0 +1,64 @@
+{
+  "scope": "Independent native MQTT subscriber; dashboard start marker has one-second precision",
+  "startSGT": "27/10/2026, 8:46:57 pm",
+  "durationS": 300,
+  "received": 300,
+  "sequenceMissing": 0,
+  "maxGapS": 2.6454811096191406,
+  "gapsOver2S": 5,
+  "firstArrivalAfterStartS": 0.14357209205627441,
+  "lastArrivalBeforeEndS": 0.8563089370727539,
+  "boundaryPrecedingGapS": 0.9615070819854736,
+  "boundaryFollowingGapS": 1.0484299659729004,
+  "largestGaps": [
+    {
+      "s": 2.6454811096191406,
+      "fromSeq": 198,
+      "toSeq": 199,
+      "at": "2026-10-27T12:51:50.781Z"
+    },
+    {
+      "s": 2.5190839767456055,
+      "fromSeq": 78,
+      "toSeq": 79,
+      "at": "2026-10-27T12:49:50.662Z"
+    },
+    {
+      "s": 2.311537027359009,
+      "fromSeq": 138,
+      "toSeq": 139,
+      "at": "2026-10-27T12:50:50.507Z"
+    },
+    {
+      "s": 2.298909902572632,
+      "fromSeq": 214,
+      "toSeq": 215,
+      "at": "2026-10-27T12:47:50.439Z"
+    },
+    {
+      "s": 2.213550090789795,
+      "fromSeq": 18,
+      "toSeq": 19,
+      "at": "2026-10-27T12:48:50.352Z"
+    },
+    {
+      "s": 1.1518909931182861,
+      "fromSeq": 16,
+      "toSeq": 17,
+      "at": "2026-10-27T12:48:47.290Z"
+    },
+    {
+      "s": 1.1460068225860596,
+      "fromSeq": 128,
+      "toSeq": 129,
+      "at": "2026-10-27T12:50:39.286Z"
+    },
+    {
+      "s": 1.1305921077728271,
+      "fromSeq": 242,
+      "toSeq": 243,
+      "at": "2026-10-27T12:48:17.272Z"
+    }
+  ],
+  "allOperational": true
+}

@@ -1,0 +1,13 @@
+{"epoch": 1793110990.635017, "event": "proxy_listening", "listen": "127.0.0.1:9002", "upstream": "127.0.0.1:9001"}
+{"epoch": 1793111009.179782, "event": "client_connected"}
+{"epoch": 1793111027.9375072, "event": "mapping_readback_dropped", "mqttHex": "30120008697332382f746c6d82050718405600be"}
+{"epoch": 1793111032.977723, "event": "mapping_readback_dropped", "mqttHex": "30120008697332382f746c6d82050818405600bf"}
+{"epoch": 1793111038.9821959, "event": "mapping_readback_dropped", "mqttHex": "30120008697332382f746c6d82050918405600c0"}
+{"epoch": 1793111044.977948, "event": "mapping_readback_dropped", "mqttHex": "30120008697332382f746c6d82050a18405600c1"}
+{"epoch": 1793111047.517432, "event": "mapping_readback_dropped", "mqttHex": "30120008697332382f746c6d82050b1840560015"}
+{"epoch": 1793111051.0183449, "event": "mapping_readback_dropped", "mqttHex": "30120008697332382f746c6d82050c18405600c2"}
+{"epoch": 1793111057.004481, "event": "mapping_readback_dropped", "mqttHex": "30120008697332382f746c6d82050d18405600c3"}
+{"epoch": 1793111062.978627, "event": "mapping_readback_dropped", "mqttHex": "30120008697332382f746c6d82050e18405600c4"}
+{"epoch": 1793111068.986439, "event": "mapping_readback_dropped", "mqttHex": "30120008697332382f746c6d82050f18405600c5"}
+{"epoch": 1793111075.0275142, "event": "mapping_readback_dropped", "mqttHex": "30120008697332382f746c6d82051018405600c6"}
+{"epoch": 1793111081.340784, "event": "mapping_readback_dropped", "mqttHex": "30120008697332382f746c6d82051118405600c7"}

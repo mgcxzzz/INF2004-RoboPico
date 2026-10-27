@@ -1,0 +1,13 @@
+{
+  "scope": "Real dashboard and real Pico; source-8 readbacks withheld only on temporary local dashboard WebSocket proxy",
+  "expectedImageSha256": "d27c36e9751898f870a9cdaec482ce76da97e49094209c0d89bc0497df3714ce",
+  "pass": true,
+  "SETRequestId": 190,
+  "acceptedAckObserved": true,
+  "droppedReadbackPackets": 11,
+  "picoApplied": "Y/A/Q/M revision 2, independently verified with GET",
+  "dashboardWhileWithheld": "Accepted ACK; no new-map confirmation; waiting for active mapping; previous confirmed mapping remained displayed. Automatic GET retries also had readbacks withheld.",
+  "afterUnblocking": "Dashboard GET confirmed Y/A/Q/M revision 2. Then original Z/A/Q/M restored and confirmed at revision 3.",
+  "restoration": "Browser back on ws://127.0.0.1:9001, car online/Ready; local proxy stopped afterward",
+  "limits": "Tests readback loss on the dashboard path. Does not prove all arbitrary packet-loss or disconnection timings."
+}

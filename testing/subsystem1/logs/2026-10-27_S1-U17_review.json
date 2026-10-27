@@ -1,0 +1,271 @@
+{
+  "scope": "User-operated physical GP20/GP21 buttons; software-state evidence only",
+  "events": [
+    {
+      "time": "1793108109.030009000",
+      "src": 6,
+      "srcName": "Navigation",
+      "seq": 1,
+      "len": 6,
+      "data": {
+        "state": 1,
+        "stateName": "Running",
+        "owner": 1,
+        "ownerName": "line",
+        "slow": false,
+        "searchStep": 0,
+        "dropped": 0,
+        "commandsSent": 0
+      }
+    },
+    {
+      "time": "1793108109.030077000",
+      "src": 6,
+      "srcName": "Navigation",
+      "seq": 2,
+      "len": 6,
+      "data": {
+        "state": 1,
+        "stateName": "Running",
+        "owner": 1,
+        "ownerName": "line",
+        "slow": false,
+        "searchStep": 0,
+        "dropped": 0,
+        "commandsSent": 0
+      }
+    },
+    {
+      "time": "1793108114.449832000",
+      "src": 7,
+      "srcName": "Safety",
+      "seq": 1,
+      "len": 12,
+      "data": {
+        "state": 1,
+        "stateName": "Emergency Stop",
+        "inhibit": true,
+        "faultSrc": "none",
+        "warnSrc": "none",
+        "faultCode": 0,
+        "warnCode": 0,
+        "estops": 1,
+        "faults": 0,
+        "warnings": 0,
+        "slowStops": 0,
+        "lastStopMs": 0,
+        "maxStopMs": 0,
+        "faultMask": 0,
+        "faultNames": []
+      }
+    },
+    {
+      "time": "1793108114.449897000",
+      "src": 6,
+      "srcName": "Navigation",
+      "seq": 3,
+      "len": 6,
+      "data": {
+        "state": 5,
+        "stateName": "Emergency Stop",
+        "owner": 0,
+        "ownerName": "none",
+        "slow": false,
+        "searchStep": 0,
+        "dropped": 0,
+        "commandsSent": 0
+      }
+    },
+    {
+      "time": "1793108114.449972000",
+      "src": 6,
+      "srcName": "Navigation",
+      "seq": 4,
+      "len": 6,
+      "data": {
+        "state": 5,
+        "stateName": "Emergency Stop",
+        "owner": 0,
+        "ownerName": "none",
+        "slow": false,
+        "searchStep": 0,
+        "dropped": 0,
+        "commandsSent": 1
+      }
+    },
+    {
+      "time": "1793108114.537701000",
+      "src": 7,
+      "srcName": "Safety",
+      "seq": 2,
+      "len": 12,
+      "data": {
+        "state": 1,
+        "stateName": "Emergency Stop",
+        "inhibit": true,
+        "faultSrc": "none",
+        "warnSrc": "Safety",
+        "faultCode": 0,
+        "warnCode": 2,
+        "estops": 1,
+        "faults": 0,
+        "warnings": 1,
+        "slowStops": 0,
+        "lastStopMs": 0,
+        "maxStopMs": 0,
+        "faultMask": 0,
+        "faultNames": []
+      }
+    },
+    {
+      "time": "1793108114.843094000",
+      "src": 7,
+      "srcName": "Safety",
+      "seq": 3,
+      "len": 12,
+      "data": {
+        "state": 1,
+        "stateName": "Emergency Stop",
+        "inhibit": true,
+        "faultSrc": "none",
+        "warnSrc": "Safety",
+        "faultCode": 0,
+        "warnCode": 2,
+        "estops": 2,
+        "faults": 0,
+        "warnings": 1,
+        "slowStops": 0,
+        "lastStopMs": 0,
+        "maxStopMs": 0,
+        "faultMask": 0,
+        "faultNames": []
+      }
+    },
+    {
+      "time": "1793108121.204794000",
+      "src": 7,
+      "srcName": "Safety",
+      "seq": 4,
+      "len": 12,
+      "data": {
+        "state": 0,
+        "stateName": "Normal",
+        "inhibit": false,
+        "faultSrc": "none",
+        "warnSrc": "Safety",
+        "faultCode": 0,
+        "warnCode": 2,
+        "estops": 2,
+        "faults": 0,
+        "warnings": 1,
+        "slowStops": 0,
+        "lastStopMs": 0,
+        "maxStopMs": 0,
+        "faultMask": 0,
+        "faultNames": []
+      }
+    },
+    {
+      "time": "1793108121.204852000",
+      "src": 6,
+      "srcName": "Navigation",
+      "seq": 5,
+      "len": 6,
+      "data": {
+        "state": 0,
+        "stateName": "Ready",
+        "owner": 0,
+        "ownerName": "none",
+        "slow": false,
+        "searchStep": 0,
+        "dropped": 0,
+        "commandsSent": 1
+      }
+    },
+    {
+      "time": "1793108121.204913000",
+      "src": 6,
+      "srcName": "Navigation",
+      "seq": 6,
+      "len": 6,
+      "data": {
+        "state": 1,
+        "stateName": "Running",
+        "owner": 1,
+        "ownerName": "line",
+        "slow": false,
+        "searchStep": 0,
+        "dropped": 0,
+        "commandsSent": 1
+      }
+    },
+    {
+      "time": "1793108121.230006000",
+      "src": 6,
+      "srcName": "Navigation",
+      "seq": 7,
+      "len": 6,
+      "data": {
+        "state": 1,
+        "stateName": "Running",
+        "owner": 1,
+        "ownerName": "line",
+        "slow": false,
+        "searchStep": 0,
+        "dropped": 0,
+        "commandsSent": 1
+      }
+    },
+    {
+      "time": "1793108127.664767000",
+      "src": 6,
+      "srcName": "Navigation",
+      "seq": 8,
+      "len": 6,
+      "data": {
+        "state": 3,
+        "stateName": "Safe Stop",
+        "owner": 0,
+        "ownerName": "none",
+        "slow": false,
+        "searchStep": 0,
+        "dropped": 0,
+        "commandsSent": 1
+      }
+    },
+    {
+      "time": "1793108127.664820000",
+      "src": 6,
+      "srcName": "Navigation",
+      "seq": 9,
+      "len": 6,
+      "data": {
+        "state": 3,
+        "stateName": "Safe Stop",
+        "owner": 0,
+        "ownerName": "none",
+        "slow": false,
+        "searchStep": 0,
+        "dropped": 0,
+        "commandsSent": 2
+      }
+    },
+    {
+      "time": "1793108129.950670000",
+      "src": 6,
+      "srcName": "Navigation",
+      "seq": 10,
+      "len": 6,
+      "data": {
+        "state": 0,
+        "stateName": "Ready",
+        "owner": 0,
+        "ownerName": "none",
+        "slow": false,
+        "searchStep": 0,
+        "dropped": 0,
+        "commandsSent": 2
+      }
+    }
+  ]
+}

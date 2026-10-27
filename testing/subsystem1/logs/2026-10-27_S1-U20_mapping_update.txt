@@ -1,0 +1,15 @@
+8:24:16 PM  cmd       → BARCODE_GET id 60 [a2 3c 00 00]
+8:24:16 PM  is28/tlm  Barcode mapping #34 mapping rev 1: Z/A/M/Q (forward/U-turn/left/right), request 60
+8:24:16 PM  is28/ack  ← BARCODE_GET id 60: accepted in 71 ms, state Ready
+8:24:39 PM  cmd       → raw 92 3d 19 40 06 id 61 [92 3d 19 40 06]
+8:24:39 PM  is28/tlm  Barcode mapping #35 mapping rev 2: Z/A/Q/M (forward/U-turn/left/right), request 61
+8:24:39 PM  is28/ack  ← BARCODE_MAP id 61: accepted in 73 ms, state Ready
+8:24:43 PM  cmd       → BARCODE_GET id 62 [a2 3e 00 00]
+8:24:43 PM  is28/tlm  Barcode mapping #36 mapping rev 2: Z/A/Q/M (forward/U-turn/left/right), request 62
+8:24:43 PM  is28/ack  ← BARCODE_GET id 62: accepted in 73 ms, state Ready
+8:24:45 PM  cmd       → BARCODE_GET id 63 [a2 3f 00 00]
+8:24:45 PM  is28/tlm  Barcode mapping #37 mapping rev 2: Z/A/Q/M (forward/U-turn/left/right), request 63
+8:24:45 PM  is28/ack  ← BARCODE_GET id 63: accepted in 33 ms, state Ready
+8:24:47 PM  cmd       → BARCODE_GET id 64 [a2 40 00 00]
+8:24:47 PM  is28/tlm  Barcode mapping #38 mapping rev 2: Z/A/Q/M (forward/U-turn/left/right), request 64
+8:24:47 PM  is28/ack  ← BARCODE_GET id 64: accepted in 142 ms, state Ready

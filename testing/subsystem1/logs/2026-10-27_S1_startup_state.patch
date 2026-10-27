@@ -1,0 +1,14 @@
+diff --git a/app_program/system/nav_coordinator.c b/app_program/system/nav_coordinator.c
+index b2b3756..808095e 100644
+--- a/app_program/system/nav_coordinator.c
++++ b/app_program/system/nav_coordinator.c
+@@ -974,6 +974,9 @@ nav_task (INT stacd, void * p_exinf)
+     (void)stacd;
+     (void)p_exinf;
+ 
++    /* Seed Buddy 1's heartbeat/ACK snapshot before the first command;
++     * enter_state() otherwise notifies it only after a transition. */
++    wifi_notify_state(nav_get_state());
+     publish();
+ 
+     for (;;)

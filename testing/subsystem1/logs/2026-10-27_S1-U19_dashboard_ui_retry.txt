@@ -1,0 +1,16 @@
+PASS UI01 four empty selectors with every A-Z option
+PASS UI02 missing selections rejected
+PASS UI03 subscribes then queries active map
+PASS UI04 boot readback has no hard-coded letters
+PASS UI05 duplicate letters never published
+PASS UI06 whole-map command uses five bytes and retain=false
+PASS UI07 acceptance alone does not claim confirmed mapping
+PASS UI08 matching readback confirms exactly the applied letters
+PASS UI09 mapping readback still handled after telemetry-off command
+PASS UI10 malformed readback logged without replacing active letters
+PASS UI11 mobile page has no horizontal overflow
+PASS UI12 lost readback produces unknown status, not false success
+PASS UI13 disconnect invalidates previously confirmed mapping
+PASS UI14 no page JavaScript errors
+
+14 passed, 0 failed (simulated MQTT; no Pico)

@@ -1,0 +1,21 @@
+7:56:10 PM  cmd       → START id 21 [12 15 00 00]
+7:56:10 PM  is28/ack  ← START id 21: accepted in 123 ms, state Ready
+7:56:10 PM  is28/tlm  Navigation #6 Running, owner line
+7:56:10 PM  is28/tlm  Navigation #7 Running, owner line
+7:56:12 PM  cmd       → ESTOP id 22 [62 16 00 00]
+7:56:12 PM  is28/tlm  Safety #4 Emergency Stop, drive inhibited, mask 0x0
+7:56:12 PM  is28/ack  ← ESTOP id 22: accepted in 104 ms, state Running
+7:56:12 PM  is28/tlm  Navigation #8 Emergency Stop, owner none
+7:56:12 PM  is28/tlm  Navigation #9 Emergency Stop, owner none
+7:56:12 PM  is28/tlm  Safety #5 Emergency Stop, drive inhibited, mask 0x0
+7:56:13 PM  cmd       → START id 23 [12 17 00 00]
+7:56:13 PM  is28/ack  ← START id 23: accepted in 110 ms, state Emergency Stop
+7:56:14 PM  cmd       → START id 24 [12 18 00 00]
+7:56:14 PM  is28/ack  ← START id 24: accepted in 98 ms, state Emergency Stop
+7:56:16 PM  cmd       → RESET id 25 [52 19 00 00]
+7:56:16 PM  is28/tlm  Safety #6 Normal, mask 0x0
+7:56:16 PM  is28/tlm  Navigation #10 Ready, owner none
+7:56:16 PM  is28/ack  ← RESET id 25: accepted in 76 ms, state Ready
+7:56:50 PM  cmd       → BARCODE_GET id 26 [a2 1a 00 00]
+7:56:50 PM  is28/tlm  Barcode mapping #5 mapping not configured
+7:56:50 PM  is28/ack  ← BARCODE_GET id 26: accepted in 69 ms, state Ready

@@ -1,0 +1,12 @@
+{
+  "source": "/Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico/testing/subsystem1/logs/2026-10-27_S1-U20_mapping_validation.txt",
+  "checks": {
+    "reset_ack": true,
+    "readback_after_reset": true,
+    "same_map_reapply_1": true,
+    "same_map_reapply_2": true,
+    "final_readback": true
+  },
+  "duplicate_warning": "Not present in exported message log; user confirmation requested",
+  "scope": "Reset retention and unchanged revision on identical replacement; full S1-U20 still incomplete"
+}

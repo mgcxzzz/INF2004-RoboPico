@@ -1,0 +1,125 @@
+{
+  "scope": "Post-broker-loss reset state and Safety fault-mask publication",
+  "events": [
+    {
+      "time": "1793108657.780378000",
+      "topic": "is28/ack",
+      "code": 8,
+      "codeName": "PING",
+      "id": 155,
+      "result": 0,
+      "resultName": "accepted",
+      "accepted": true,
+      "state": 1,
+      "stateName": "Running"
+    },
+    {
+      "time": "1793108664.991272000",
+      "topic": "is28/ack",
+      "code": 4,
+      "codeName": "STOP",
+      "id": 156,
+      "result": 0,
+      "resultName": "accepted",
+      "accepted": true,
+      "state": 1,
+      "stateName": "Running"
+    },
+    {
+      "time": "1793108664.991401000",
+      "topic": "is28/tlm",
+      "src": 6,
+      "srcName": "Navigation",
+      "seq": 13,
+      "len": 6,
+      "data": {
+        "state": 3,
+        "stateName": "Safe Stop",
+        "owner": 0,
+        "ownerName": "none",
+        "slow": false,
+        "searchStep": 0,
+        "dropped": 0,
+        "commandsSent": 2
+      }
+    },
+    {
+      "time": "1793108664.991550000",
+      "topic": "is28/tlm",
+      "src": 6,
+      "srcName": "Navigation",
+      "seq": 14,
+      "len": 6,
+      "data": {
+        "state": 3,
+        "stateName": "Safe Stop",
+        "owner": 0,
+        "ownerName": "none",
+        "slow": false,
+        "searchStep": 0,
+        "dropped": 0,
+        "commandsSent": 3
+      }
+    },
+    {
+      "time": "1793108668.230959000",
+      "topic": "is28/ack",
+      "code": 5,
+      "codeName": "RESET",
+      "id": 157,
+      "result": 0,
+      "resultName": "accepted",
+      "accepted": true,
+      "state": 3,
+      "stateName": "Safe Stop"
+    },
+    {
+      "time": "1793108668.230989000",
+      "topic": "is28/tlm",
+      "src": 6,
+      "srcName": "Navigation",
+      "seq": 15,
+      "len": 6,
+      "data": {
+        "state": 0,
+        "stateName": "Ready",
+        "owner": 0,
+        "ownerName": "none",
+        "slow": false,
+        "searchStep": 0,
+        "dropped": 0,
+        "commandsSent": 3
+      }
+    },
+    {
+      "time": "1793108674.490973000",
+      "topic": "is28/ack",
+      "code": 5,
+      "codeName": "RESET",
+      "id": 158,
+      "result": 0,
+      "resultName": "accepted",
+      "accepted": true,
+      "state": 0,
+      "stateName": "Ready"
+    },
+    {
+      "time": "1793108691.716128000",
+      "topic": "is28/ack",
+      "code": 10,
+      "codeName": "BARCODE_GET",
+      "id": 159,
+      "result": 0,
+      "resultName": "accepted",
+      "accepted": true,
+      "state": 0,
+      "stateName": "Ready"
+    }
+  ],
+  "conclusion": {
+    "recovery": "Pico reconnected 2.483\u20133.483 s after broker restart; Running preserved; Ping accepted in 54 ms.",
+    "reset": "STOP and RESET accepted; Navigation reports Ready. No subsequent Safety frame after two RESETs; user reports old WiFi/broker-lost mask remains visible.",
+    "source_cause": "Buddy 1 clears its own bit after reset dispatch. Safety handle_reset returns without publish when already Normal; periodic checks did not publish shared mask changes. This explains stale dashboard Safety status; no direct on-target mask-memory read was made.",
+    "overall": "Recovery portion PASS; displayed fault-mask clearing FAIL; fixed build prepared, on-target retest pending."
+  }
+}

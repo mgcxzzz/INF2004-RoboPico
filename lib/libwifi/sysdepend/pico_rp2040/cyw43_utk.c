@@ -236,6 +236,25 @@ void cyw43_utk_task(int32_t stacd, void *exinf)
         (void)cyw43_wifi_get_mac(&cyw43_state, CYW43_ITF_STA,
                                  radio_status.mac);
 #if TM_NET_LWIP
+        /* Optional local timing experiment (wifi_secrets.h). Stay in the
+         * WiFi service context and under the existing driver lock. With
+         * no override, the template's default PM behaviour is unchanged.
+         * Read back the mode so a failed setting is visible in evidence. */
+#ifdef WIFI_PM_MODE
+        {
+            uint32_t requested_pm = (uint32_t)WIFI_PM_MODE;
+            uint32_t active_pm = 0xFFFFFFFFu;
+            int32_t set_pm_result;
+            int32_t read_pm_result;
+
+            set_pm_result = cyw43_wifi_pm(&cyw43_state, requested_pm);
+            read_pm_result = cyw43_wifi_get_pm(&cyw43_state, &active_pm);
+            tm_printf((UB*)"wifi: PM requested=0x%08x active=0x%08x "
+                      "set=%d read=%d\n", (unsigned int)requested_pm,
+                      (unsigned int)active_pm, (int)set_pm_result,
+                      (int)read_pm_result);
+        }
+#endif
         /* Join instead of scan: with lwIP wired in, the point of coming up
          * is a working network, not a diagnostic scan. cyw43_cb_tcpip_init()
          * already ran (from inside cyw43_wifi_set_up() above) and started

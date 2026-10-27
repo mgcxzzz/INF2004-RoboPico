@@ -36,6 +36,7 @@ typedef struct
     uint8_t  code;              /* B1_CMD_*                               */
     uint8_t  id;                /* echoed in the ack                      */
     uint16_t arg;               /* B1_CMD_CONFIG: param << 12 | value     */
+    uint32_t mapping;           /* BARCODE_MAP: four 5-bit letter indices */
 } b1_cmd_t;
 
 /**
@@ -52,6 +53,10 @@ bool b1_cmd_is_navigation(uint8_t code);
 /** Build a command (used by the tests and mirrored by the dashboard). */
 void b1_cmd_pack(uint8_t code, uint8_t id, uint16_t arg,
                  uint8_t p_out[B1_CMD_BYTES]);
+
+/** Pack an already validated 20-bit mapping (5-byte command). */
+void b1_map_cmd_pack(uint8_t id, uint32_t mapping,
+                     uint8_t p_out[B1_MAP_CMD_BYTES]);
 
 /** Build the acknowledgement for a command. state = nav_state_t or 7. */
 void b1_ack_pack(b1_cmd_t const * p_cmd, uint8_t result, uint8_t state,

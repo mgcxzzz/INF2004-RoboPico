@@ -1,0 +1,25 @@
+created_sgt: 2026-10-27_220741
+base_commit: 3f6ecf14b305e36b52a34f535ee00b2710ce2e67
+working_tree: local Buddy 1 changes including startup state and Safety mask refresh, uncommitted
+flags: WIFI=cyw43 NET=lwip MQTT=1 SMP=1 CONSOLE=usb_cdc TEST=0 CRASH_REPORT=0
+build_output: /Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico/build_make/mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt.uf2
+laptop_copy: /Users/skyler/SIT/Y2T1/Embedded/bench_tools/buddy1/buddy1_mqtt.uf2
+sha256: d27c36e9751898f870a9cdaec482ce76da97e49094209c0d89bc0497df3714ce
+bytes: 696320
+settings: Local gitignored wifi_secrets.h used; values not included
+flashed: False
+metadata_path: /Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico/testing/subsystem1/logs/2026-10-27_220741_S1_firmware_startup_state.txt
+naming_policy: Stable buddy1_mqtt.uf2; dates and checksums recorded in repo logs.
+flash_status: Awaiting user flash; broker-late startup and final timing check pending
+broker_ip: 192.168.1.45
+previous_sha256: d89b4a356021b733a9acc8bb7b629b68b3c1ec36700e09d2aec3c84e8e7a2c9e
+auth_mode: Original driver default: CYW43_AUTH_WPA2_MIXED_PSK
+power_management: WIFI_PM_MODE=CYW43_NONE_PM (optional local override)
+baseline_firmware: /Users/skyler/SIT/Y2T1/Embedded/bench_tools/buddy1/buddy1_mqtt_baseline.uf2
+baseline_sha256: 7a5d86db474f84c825a0a46073d551889cf8fad72a2029ee1b529ee341f49817
+pm_readback: 0x10 verified on previous PM-off image; same local build setting retained, not freshly read from this boot.
+performance_result: Final image not yet live-tested; prior PM-off image passed S1-U08
+change: Navigation seeds Buddy 1 state snapshot at startup; prior Safety mask refresh and PM-off setting retained
+User reported flashed. Current boot confirms PM requested/active=0x10 with API results 0/0. Broker-late startup and initial Ready heartbeat verified without supervisory state-changing commands; Ping and mapping SET/GET work. Final five-minute performance run pending.
+Final S1-U08 PASS: full 300 s, 300/300 heartbeats, max dashboard gap 1.155 s and native internal gap 1.155431 s; Buddy 1-only Ready baseline
+Live dashboard lost-readback fault injection PASS; normal connection and Z/A/Q/M restored. Wi-Fi outage deferred by user.
