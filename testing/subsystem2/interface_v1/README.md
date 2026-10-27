@@ -1,5 +1,8 @@
 # Buddy 2/3 Interface V1.3 — forward-effort test
 
+For the next **diagnostics-only V1.1 trial**, use [Interface V1.1 DIAG1](../interface_v1_1_diagnostics/README.md). It adds saved `d` observations without activating the V1.2/V1.3 drive changes.
+
+
 **V1.3 FAILED its physical follow-up:** the29.484s run averaged11.30mm/s with repeated stop/surge/steering oscillation. Do not treat it as a smoothness improvement. See [V1.3 physical regression](V1_3_PHYSICAL_REGRESSION.md). V1.1 remains the comparison baseline; V1.3 source/artifact and original test rationale below are retained for diagnosis.
 
 
