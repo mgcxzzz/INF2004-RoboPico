@@ -1,6 +1,6 @@
 """Verify packaged continuous-drive test identity, source scope and UF2 bounds."""
 from pathlib import Path
-import hashlib,json,struct
+import hashlib,json,struct,subprocess
 root=Path(__file__).resolve().parent
 sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
 base=json.loads((root/'CONTINUOUS_BASELINE.json').read_text())['sha256']
@@ -23,6 +23,12 @@ for rel in base:
         assert rel not in patch and sha(root/rel)==base[rel],rel
 meta=json.loads((root/'BUILD_METRICS.json').read_text());data=(root/meta['artifact']).read_bytes()
 assert len(data)==meta['bytes'] and sha(root/meta['artifact'])==meta['sha256']
+repo=root.parents[2]
+if (repo/'.git').exists():
+    rel=(root/meta['artifact']).relative_to(repo).as_posix()
+    tracked=subprocess.run(['git','ls-files','--error-unmatch','--',rel],cwd=repo,capture_output=True)
+    assert tracked.returncode==0,'Firmware is ignored/untracked and will not be published: '+rel
+
 assert len(data)%512==0 and len(data)//512==meta['blocks']
 payload=bytearray()
 for k in range(meta['blocks']):

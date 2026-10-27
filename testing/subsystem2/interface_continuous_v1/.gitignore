@@ -3,3 +3,4 @@
 *.exe
 *.pdb
 *.obj
+!/firmware/*.uf2
