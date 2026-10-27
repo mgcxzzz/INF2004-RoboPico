@@ -1,0 +1,33 @@
+{
+  "artifact": "firmware/buddy23_interface_continuous_v2.uf2",
+  "sha256": "591fa3c93e3e3cc33b900ec43b71f738964d87c17747b8db5df0f824cdc0e4a0",
+  "bytes": 334336,
+  "blocks": 653,
+  "date": "2026-10-28",
+  "base_commit": "577652daa73afd5f293d59fef7136188a6274974",
+  "host_executables": 26,
+  "arm_builds": {
+    "build": {
+      "text": 171232,
+      "data": 0,
+      "bss": 237508
+    },
+    "build-unpacked": {
+      "text": 170176,
+      "data": 0,
+      "bss": 242468
+    }
+  },
+  "symbols": {
+    "__bss_end__": "0x2003b474",
+    "__flash_binary_end": "0x10028ce4",
+    "__StackLimit": "0x20040000"
+  },
+  "packed_shared_ram_saving": 4960,
+  "bss_delta_from_continuous_v1": 36,
+  "diagnostic_bits": 464,
+  "diagnostic_row_bytes": 58,
+  "motion_record": 25,
+  "diagnostic_format": 4,
+  "default_buddy_extension": null
+}

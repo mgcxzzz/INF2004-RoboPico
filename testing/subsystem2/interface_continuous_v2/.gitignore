@@ -1,0 +1,6 @@
+/build*/
+*.log
+*.exe
+*.pdb
+*.obj
+!/firmware/*.uf2
