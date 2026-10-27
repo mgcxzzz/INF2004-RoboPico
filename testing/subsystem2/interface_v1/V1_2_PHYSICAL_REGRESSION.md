@@ -32,10 +32,10 @@ The counterfactual input replay held the old measured speeds and sensor-driven t
 ## Recommended next steps
 
 1. Return to V1.1 for a same-mat baseline. V1.2 saved record20 is newer than V1.1 can import; note CAL references and verify/recalibrate after downgrade. Do not return to original V1, which has the startup clock bug.
-2. Repeat the existing four-second45/45mm/s straight-drive probe on this same mat with the same power, mounting and slack cable. Optical steering is disabled but sensor readings are still logged. Its older record reader also needs valid calibration checked after downgrade. If smooth, focus on the steering/drive interaction; if jerky, characterize ordinary motor effort/feedback first.
+2. Historical proposal, superseded by the user: the fixed45/45 probe is accepted as smooth and does not need repeating. The original proposal was to repeat the existing four-second45/45mm/s straight-drive probe on this same mat with the same power, mounting and slack cable. Optical steering is disabled but sensor readings are still logged. Its older record reader also needs valid calibration checked after downgrade. If smooth, focus on the steering/drive interaction; if jerky, characterize ordinary motor effort/feedback first.
 3. Measure each wheel's breakaway effort separately from the lower running effort needed to maintain45mm/s on this setup. Reuse one ordinary speed controller with suitable per-wheel feedforward/anti-windup rather than adding another independent compensation layer.
 4. Retain a short bounded starting aid if genuinely needed to overcome stiction. Once moving, supply continuous appropriate effort. Ordinary/loaded transitions must be bumpless; do not jump150->410 and then hold elevated duty after the wheel is overspeed.
 5. Allow immediate power reduction/zero for overspeed, intentional slowing and STOP. Limiting positive effort changes can be useful, but a symmetric/slow output slew must not override the speed controller's request to remove drive.
 6. Restore the existing cruising qualification initially. Change one motor-control element at a time, then validate straight, bend, barcode and junction behavior before separately revisiting brighter/darker-independent cruise qualification.
 
-This is an analysis/recommendation update only. No V1.3 controller or new UF2 is published by this follow-up.
+This historical analysis preceded V1.3. The V1.3 test now addresses ordinary/loaded effort handover without repeating the established fixed-speed probe; see FORWARD_EFFORT_V1_3.md. Physical validation is pending.

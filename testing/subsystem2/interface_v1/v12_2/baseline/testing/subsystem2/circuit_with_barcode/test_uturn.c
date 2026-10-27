@@ -110,7 +110,7 @@ static void limits_and_saved_record(void) {
     assert(!levels.a && levels.b==(unsigned)-pwm);
     static BarcodeSaved saved;saved.magic=B_MAGIC;saved.profile=saved.recorded_profile=1;
     saved.calibration=cal;saved.side=(SideCalibration){0,1,3};
-    for(unsigned version=1;version<=20;++version) {
+    for(unsigned version=1;version<=21;++version) {
         saved.version=version;saved.decoded_z=saved.uturns=version>=11?3:0;
         saved.crc=log_crc((const uint8_t *)&saved+offsetof(BarcodeSaved,count),barcode_record_crc_size(version));
         assert(barcode_record_valid(&saved));

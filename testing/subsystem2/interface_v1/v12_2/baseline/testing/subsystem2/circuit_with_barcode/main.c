@@ -57,7 +57,7 @@ static ScanSmooth gentle;
 static uint16_t side_adc;static uint64_t last_side_sample;static bool status_enabled;
 static uint32_t last_nav_event;
 static uint8_t test_mode=1,recorded_mode=1;
-static uint8_t recorded_version=20;
+static uint8_t recorded_version=21;
 static bool last_fast;
 static CircuitCapture capture;
 static CircuitLoad load;
@@ -270,17 +270,17 @@ static void reset_log(void) {
     guard.duration_us=0;guard.reason=0;circuit=(Circuit){0};nav=(BarcodeNav){0};gentle=(ScanSmooth){0};
     for(unsigned w=0;w<2;++w) {cut_ticks[w]=0;cut_invalid[w]=0;travelled_ticks[w]=0;}
     restored_distance=0;
-    flash_loaded=false;recorded_key='-';recorded_version=20;
+    flash_loaded=false;recorded_key='-';recorded_version=21;
 }
 static void help(void) {
-    puts("\nBUDDY23 INTERFACE v1.2 | V12.2 BASELINE | AUTO ANALOG GP27 | *A* LEFT / *F* RIGHT / *Z* U-TURN | motors OFF on boot");
-    puts("V1.2 profiles1/3: gradual forward PWM/load support; cruise based on steering+encoder history, not equal ADC readings. Profile2/turn/search/API maneuver policy retained.");
+    puts("\nBUDDY23 INTERFACE v1.3 | V12.2 BASELINE | AUTO ANALOG GP27 | *A* LEFT / *F* RIGHT / *Z* U-TURN | motors OFF on boot");
+    puts("V1.3 ordinary/assisted forward: ONE PI; no pivot feedforward jump; one bounded start aid per positive-target episode; rise1800PWM/s, immediate power reduction for overspeed. Test version.");
     puts("V1.1 fixes accepted-start zero-output clock ordering; adds NAV_COORD live diagnostics. APIs, records, thresholds and speeds unchanged.");
     puts("Shared nav coordinator: all Buddy3 targets, Buddy4 terrain telemetry and Buddy5 avoidance requests pass through nav_api.h.");
-    puts("No extension loaded: V12.2 optical/decoder/turn logic retained; V1.2 normal motor effort and cruise qualification changed. Physical testing required.");
-    puts("z=separate coordinator audit (stop first); saved offline with CRC. Record20=interface1.2;Record19=interface1 family. Buddy hooks run cooperatively on core0.");
-    puts("V1.2: optical steering always active; NO heading lock.45mm/s barcode approach; qualified steady cruising profiles1/3 up to60/135mm/s.");
-    puts("Optical corrections:120ms normal/180ms scan; strong departures bypass smoothing. Forward PWM profile1/3 slews+900/-600permille/s; retained load trim<=90; original caps300/420.");
+    puts("No extension loaded by default: V1.1 optical/barcode/junction logic retained; V1.3 ordinary forward effort changed. New avoidance primitives require physical testing.");
+    puts("z=separate coordinator audit (stop first); saved offline with CRC. Record21=interface1.3. Buddy hooks run cooperatively on core0.");
+    puts("V12.2: V12 optical steering always active; NO heading lock. Gentle small-error filtering,45mm/s barcode approach,60mm/s default well-visible straight.");
+    puts("Small corrections:120ms normal/180ms scan; strong departures bypass smoothing. Gradual target acceleration; planned turn/search/ramp power remains V12; ordinary forward PI uses V1.3.");
     puts("Motion24=gentle scan,25=gentle follow;SCAN_SOFT_BEGIN/END width=travel_mm; no new calibration or centre bias. Record18=v12.2.");
     puts("V12 faster Z: forward90/55/35 and reverse80/45/30mm/s;120ms measured-still settle. U/search PWM60% sustained/75% start<=180ms, ends early at50mm/s or80% target.");
     puts("V11 Z queues U-turn at next junction: right wheel forward to90deg,settle,left wheel reverse to~180deg,settle,confirm original line then follow. Use profile1;V12 U-turn power limits apply.");
@@ -423,7 +423,7 @@ static void dump(void) {
     if(save_failed) puts("FLASH SAVE FAILED: RAM log only.");
     char version_name[12];snprintf(version_name,sizeof(version_name),"%u",recorded_version);
     printf("CIRCUIT WITH BARCODE v%s: key=%c mode=%s profile=%u rows=%lu overwritten=%lu turn_summaries=%lu\n",
-        recorded_version==20?"interface1.2":recorded_version==19?"interface1":recorded_version==18?"12.2":recorded_version==17?"12.1":version_name,recorded_key,recorded_offline?"offline":recorded_key=='g'?"USB hands-free":"USB hold",recorded_mode,
+        recorded_version==21?"interface1.3":recorded_version==20?"interface1.2":recorded_version==19?"interface1":recorded_version==18?"12.2":recorded_version==17?"12.1":version_name,recorded_key,recorded_offline?"offline":recorded_key=='g'?"USB hands-free":"USB hold",recorded_mode,
         (unsigned long)trace_count,(unsigned long)trace_dropped,(unsigned long)summary_count);
     if(recorded_version>=4) puts("ms,active,phase,side_black,distance_mm,L_mm,R_mm,L_mm_s,R_mm_s,PWM_L,PWM_R,ADC_L,ADC_R,levelL,levelR,targetL,targetR,decision,turns,assist,memory,recovery,reacquire,feedback,side_ADC,threshold_ADC,analog_black,bank");
     else puts("ms,active,phase,side_raw,distance_mm,L_mm,R_mm,L_mm_s,R_mm_s,PWM_L,PWM_R,ADC_L,ADC_R,levelL,levelR,targetL,targetR,decision,turns,assist,memory,recovery,reacquire,feedback,pending,last_decoded,action,scan");
@@ -460,9 +460,9 @@ static bool start_run(unsigned mode) {
     uint64_t now=time_us_64();uint32_t irq=save_and_disable_interrupts();
     bool ok=guard_start(&guard,now,mode!=LINE_USB_HOLD || !gpio_get(HOLD),!gpio_get(STOP));
     if(ok) {
-        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=20;last_fast=false;
+        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=21;last_fast=false;
+        memset(forward_effort,0,sizeof(forward_effort));
         barcode_raw_begin(&raw_capture,recorded_mode);raw_new=true;raw_loaded=raw_persisted=raw_save_failed=false;
-        memset(smooth_drive,0,sizeof(smooth_drive));tracking_cruise=(TrackingCruise){0};
         capture=(CircuitCapture){0};load=(CircuitLoad){0};steering=(SmoothFollow){0};gentle=(ScanSmooth){0};capture_outer=-1;assist_code=feedback_mask=0;
         guard.deadline_us=UINT64_MAX;guard.duration_us=0;restored_distance=0;
         for(unsigned w=0;w<2;++w) {
@@ -531,23 +531,25 @@ static void control_step(uint64_t now) {
     int effort_outer=search_outer>=0?search_outer:capture_outer>=0?capture_outer:load_outer;
     bool loaded[2]={turning || effort_outer==0,turning || effort_outer==1};
     for(unsigned w=0;w<2;++w) {
-        if(ramp_drive || maneuver_drive)smooth_drive[w]=(DriveSmooth){0};
         if(!ramp_drive)ramp_wheel_leave(&ramp_wheel[w],&controller[w],demand.target[w]);
         if(!maneuver_drive)maneuver_leave(&maneuver_power[w],&controller[w],demand.target[w]);
     }
-    if(!ramp_drive && !maneuver_drive && effort_outer>=0 && assist_code!=previous_assist) circuit_capture_prepare(&controller[effort_outer]);
-    if(last_fast && !circuit.fast) for(unsigned w=0;w<2;++w) circuit_leave_fast(&controller[w]);
+    bool forward_control=!external && recorded_mode!=2 && circuit.phase==C_FOLLOW && !circuit.busy &&
+        !recovering && !turning && capture_outer<0 && search_outer<0 && !demand.stop;
+    if(!ramp_drive && !maneuver_drive && effort_outer>=0 && assist_code!=previous_assist && !forward_control)
+        circuit_capture_prepare(&controller[effort_outer]);
+    if(last_fast && !circuit.fast && !forward_control) for(unsigned w=0;w<2;++w) circuit_leave_fast(&controller[w]);
     last_fast=circuit.fast;
     feedback_mask=0;
     for(unsigned w=0;w<2;++w) {
+        if(!forward_control)forward_effort[w]=(ForwardEffort){0};
         if(maneuver_drive)next[w]=maneuver_wheel_step(&maneuver_power[w],&controller[w],w,demand.target[w],velocity[w],dt,now);
         else if(ramp_drive) next[w]=ramp_wheel_step(&ramp_wheel[w],&controller[w],w,demand.target[w],velocity[w],dt,now);
         else {
             ramp_wheel_leave(&ramp_wheel[w],&controller[w],demand.target[w]);
-            bool smoothing=!external && recorded_mode!=2 && circuit.phase==C_FOLLOW && !circuit.busy &&
-                !recovering && !turning && effort_outer<0 && !demand.stop;
-            next[w]=drive_smooth_step(&smooth_drive[w],&controller[w],w,demand.target[w],velocity[w],dt,now,
-                loaded[w],wheel_profile,smoothing,output[w]);
+            next[w]=forward_control?forward_effort_step(&forward_effort[w],&controller[w],w,demand.target[w],velocity[w],dt,
+                load_outer==(int)w,wheel_profile,output[w]):
+                circuit_wheel_step(&controller[w],w,demand.target[w],velocity[w],dt,now,loaded[w],wheel_profile);
         }
         bad_direction_us[w]=demand.target[w]!=0 && velocity[w]*(demand.target[w]>0?1:-1)<-20?bad_direction_us[w]+elapsed:0;
         if(bad_direction_us[w]>=50000) failure=WHY_DIRECTION;
@@ -729,9 +731,10 @@ int main(void) {
             printf("NAV_COORD: mode=%u owner=%u session=%u stopped=%u command_id=%lu command_state=%u fault=0x%03x targets=%d,%d\n",
                 state.mode,state.owner,state.session_active,state.stopped,(unsigned long)state.command_id,
                 state.command_state,state.fault,state.target_mm_s[0],state.target_mm_s[1]);
-            printf("DRIVE_SMOOTH: active=%u,%u extra_pwm=%.1f,%.1f tracking_fast=%u good_ms=%u chatter=%.3f encoder_turn_ratio=%.3f\n",
-                (unsigned)(guard.active && smooth_drive[0].active),(unsigned)(guard.active && smooth_drive[1].active),(double)smooth_drive[0].extra,(double)smooth_drive[1].extra,
-                tracking_cruise.fast,tracking_cruise.good_us/1000,(double)tracking_cruise.chatter,(double)tracking_cruise.turn);
+            printf("FORWARD_EFFORT: active=%u,%u start=%u,%u duty=%.1f,%.1f I=%.1f,%.1f\n",
+                (unsigned)(guard.active && forward_effort[0].active),(unsigned)(guard.active && forward_effort[1].active),
+                forward_effort[0].pulse,forward_effort[1].pulse,(double)forward_effort[0].duty,(double)forward_effort[1].duty,
+                (double)controller[0].pi.integral,(double)controller[1].pi.integral);
             last_status=now;
         }
         sleep_us(100);

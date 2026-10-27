@@ -50,5 +50,5 @@ int main(void) {
             ++ticks;
         }
     }
-    printf("PASS V12.2 routing parity: %u optical/PI ticks across all profiles, both departure directions, white loss/recovery; %u model resets. No external takeover changes normal targets/PWM.\n",ticks,restarts);
+    printf("PASS V12.2 provider/routing parity (legacy PI reference; V1.3 forward driver tested separately): %u optical/PI ticks across all profiles, both departure directions, white loss/recovery; %u model resets. No external takeover changes normal targets/PWM.\n",ticks,restarts);
 }

@@ -1,45 +1,39 @@
-# Buddy 2/3 Interface V1.2 — frozen V12.2 navigation plus shared coordination
+# Buddy 2/3 Interface V1.3 — forward-effort test
 
-**V1.2 FAILED its physical follow-up: do not use it as the integration baseline.** The user's next run showed worse stall/surge/steering oscillation. See [physical regression analysis](V1_2_PHYSICAL_REGRESSION.md). Use the retained [V1.1 UF2](firmware/buddy23_interface_v1_1.uf2) / source commit `72e11ce` for comparison until a correction is physically validated. Original V1 still has the confirmed startup bug. The V1.2 source/artifact and test evidence below are retained for diagnosis, not a recommendation to continue using it.
+[Download V1.3 test UF2](firmware/buddy23_interface_v1_3.uf2). [Controller changes and test procedure](FORWARD_EFFORT_V1_3.md). [Buddy 5 integration instructions](BUDDY5_HANDOFF.md). [Build verification](BUILD.md).
 
-[V1.2 failed-test artifact (diagnosis only)](firmware/buddy23_interface_v1_2.uf2). [Buddy 5 handoff and build/start instructions](BUDDY5_HANDOFF.md). [Data representation and evidence scope](DATA_REPRESENTATION.md). [Build verification](BUILD.md).
+V1.3 is a **physical-test candidate**, not yet a validated smoothness improvement. It starts from V1.1 (`72e11ce`), which preserves the V12.2 optical provider and fixes the V1 startup clock bug. V1.2 performed worse physically; its extra drive trim, slow power reduction and cruise-qualification layer are not active here. Its artifact/source history is retained for diagnosis: [regression evidence](V1_2_PHYSICAL_REGRESSION.md).
 
-This is a separate integration baseline, based on `circuit_with_barcode_v12_2` at commit `9df1b95`. V12.2's optical steering, calibration, barcode thresholds, junction geometry, A/F/Z handling, recovery, speed maxima and motor power caps are retained. V1.2 changes ordinary forward effort and the qualification/ramp of cruising speed in profiles1/3; these are no longer an exact V12.2 motor-output baseline. There is no heading lock, new centre calibration or junction-gate fix. The original V12.2 firmware remains available in its original folder.
+The ordinary forward driver now uses one PI through ordinary tracking and qualified sharp-correction load assistance. Assistance opens the existing PWM ceiling instead of switching to pivot feedforward and clearing PI. Positive effort is limited to 1800 PWM counts/s; reductions are immediate. One bounded starting aid is allowed per positive-target episode, followed by the same speed controller; no independent compensation integrator. Measured overspeed releases retained positive I, and a large overspeed or deliberately slow inner wheel can coast immediately. This changes normal forward actuation in profiles 1/3. Planned turns, capture, search, ramp and external API commands retain their existing drivers. See the detailed scope and limitations in the controller note.
 
-The default UF2 still runs the circuit test. It includes no ultrasonic driver or obstacle planner. Buddy 5 adds his source to this same executable to produce a second standalone UF2; the two UF2 files do not communicate at runtime.
+Optical targets, calibration, barcode thresholds, A/F/Z handling, junction geometry, search rules and speed qualification are V1.1/V12.2. No new centre threshold, brightness assumption or heading lock is introduced. Profile 1 permits up to60mm/s, profile3 up to135mm/s when the original optical qualifier passes; scanning remains45mm/s. Profile2 is still the paused180mm/s ramp experiment. A higher profile maximum does not guarantee a higher average speed; the existing qualifier can still limit it. Use profile1 first.
 
-```text
-Buddy 3 line/barcode provider ──┐
-Buddy 4 terrain reports ───────┼── nav_api.h → nav_coordinator → motion executor → single motor writer
-Buddy 5 avoidance planner ─────┘                        ↑ command status / results
-```
+The default UF2 runs the autonomous circuit harness without ultrasonic code. Buddy5 adds his module into this same executable, using `nav_api.h`; UF2 files do not communicate at runtime. All Buddy3 wheel demands, Buddy4 terrain reports and Buddy5 avoidance requests pass through the shared coordinator and one generation-checked motor writer. Public interface signatures, ownership and cancellation behavior are unchanged.
 
-`nav_api.h` is the public entry point. Its `motion_*` aliases share the same implementation and do not bypass the coordinator. Public buddy modules must not write motor PWM/GPIO or directly call the internal coordinator/driver. The existing Buddy 3 planner computes its V12.2 wheel demands; all those demands now pass through coordinator ownership checks before the one hardware writer applies them. This preserves its existing navigation state machine rather than rewriting its turn planning.
+## Run the test
 
-| Interface | Purpose |
+1. Flash V1.3. Press `h` and check **BUDDY23 INTERFACE v1.3** and valid `CAL FRONT`. Existing valid calibration imports, including V1.2 record20. Recalibrate only if mounting/material changed or references are invalid: `w` both white, `l` left broad black, `r` right broad black, `k` save. Barcode A0 GP27 remains automatic.
+2. Select `1`. USB/PuTTY: `g` starts after2s; `s` or either board button stops. `f` requires GP21 held. Power bank: wait5s, both buttons3s, release, wait1s, tap GP21, allow2s countdown.
+3. Test ordinary line following on the same straight, then its bend. The fixed45/45 four-second result is already established; repeating that probe is not a prerequisite. Compare physical hunting/stall/surge before testing a barcode or faster profile.
+4. Stop and wait5s for saving. `p` is needed for target/speed/PWM diagnosis; `j` gives barcode events and summary; `z` gives the separate coordinator audit. `v` toggles live state including `FORWARD_EFFORT`. Dumps are refused while moving. Send the full saved `p` output if the trial is still jerky.
+
+## Public interfaces
+
+| Call | Purpose |
 |---|---|
-| `nav_request_takeover(owner, &lease)` | Remove drive immediately, claim ownership, wait for measured stop |
-| `nav_request_stop(requester)` | Cancel movement and stop; never automatically resume |
-| `nav_drive_distance(owner, lease, mm, speed, &id)` | Finite forward/reverse movement |
-| `nav_turn_relative(owner, lease, degrees, speed, style, &id)` | Finite left/right rolling or in-place turn |
-| `nav_get_status()`, `nav_get_command(id, &result)` | Ownership, running/completed/failed/cancelled result |
-| `nav_resume_line(owner, lease, abandon)` | Explicit handback after obstacle clearance and visible line |
-| `nav_submit_navigation(BUDDY3, left, right)` | Existing line/barcode provider's wheel demands |
-| `nav_submit_barcode(BUDDY3, code)` | Optional external verified A/F/Z provider; built-in reader already handles these |
-| `nav_report_terrain(BUDDY4, terrain)` | IMU telemetry, without changing motion in V1 |
+| `nav_request_takeover(owner, &lease)` | Stop drive immediately and acquire ownership |
+| `nav_request_stop(requester)` | Cancel and stop without automatic resume |
+| `nav_drive_distance(owner, lease, mm, speed, &id)` | Bounded forward/reverse movement |
+| `nav_turn_relative(owner, lease, degrees, speed, style, &id)` | Bounded rolling/in-place turn |
+| `nav_get_status()`, `nav_get_command(id, &result)` | Ownership, progress and completion/failure |
+| `nav_resume_line(owner, lease, abandon)` | Explicit handback once stopped with visible line |
+| `nav_submit_navigation(BUDDY3, left, right)` | Built-in line/barcode provider's wheel demands |
+| `nav_submit_barcode(BUDDY3, code)` | Optional externally verified A/F/Z code |
+| `nav_report_terrain(BUDDY4, terrain)` | IMU telemetry, no automatic power policy yet |
 | `nav_report_fault(owner, bitmap, active)` | Synchronized shared fault report |
-| `nav_request_speed_assist(...)` | Reserved; returns `UNSUPPORTED` in V1 |
+| `nav_request_speed_assist(...)` | Reserved, returns `UNSUPPORTED` |
 
-`owner` uses `MOTION_BUDDY1` through `MOTION_BUDDY5`. One movement is active at a time. Acceptance is not completion. All requests are bounded, non-blocking calls; caller code polls results. Buddy 5 can pre-empt another owner; other buddies cannot steal an existing external lease. Every finite move/resume validates the lease; stale commands cannot restart motion after a stop or takeover.
-
-## Run the unmodified test
-
-1. Flash the UF2; `h` must show **BUDDY23 INTERFACE v1.2 | V12.2 BASELINE**. Motors are off at boot.
-2. Verify the imported `CAL FRONT` line. Existing valid V12.2 calibration imports. If mounting/material changed, calibrate `w` with both over white, `l` with left centred on broad black, `r` with right centred on broad black, then select `1` and `k`. No barcode calibration is needed.
-3. USB/PuTTY: `g` starts after a two-second countdown; `f` requires GP21 held. `s` or either board button stops. Power bank: wait five seconds after boot, hold both buttons three seconds, release, wait one second, tap GP21, allow the two-second countdown.
-4. Stop and wait five seconds before changing power. Use `j` for barcode events/summary, `p` for motion plus barcode events, `a` for raw barcode ADC, and **`z` for the separate coordinator audit**. `v` toggles live output, including the added `NAV_COORD` mode/owner/fault/target diagnostic. Dumps are refused while moving.
-
-Profile 1 allows60mm/s and profile3 allows135mm/s after400ms settled steering/encoder history; the new qualifier does not read ADC values or require the two levels to match. Existing calibrated optical visibility/urgent-departure detection remains. Barcode approach remains45mm/s. Profile 2 remains the paused 180 mm/s ramp experiment, not a general faster circuit profile. Profile 3 retains its qualified 135 mm/s setting. Start with profile 1 for integration.
+Acceptance is not completion. Buddy5 owns the whole avoidance/line-reacquisition sequence until explicitly handing back. Stale leases or pre-stop outputs cannot restart motors. The default harness is cooperative on core0; future RTOS/multicore integration needs scheduling and flash-lockout validation.
 
 ## Coordinator log
 
@@ -54,7 +48,7 @@ The separate audit uses a CRC-checked 4 KiB flash sector at offset `0x1af000`, i
 - The new reverse/arbitrary-angle avoidance primitives are host-tested, not yet physically validated on this robot. In-place turns previously struggled with sensor housings dragging on the mat. Rolling turns shift the axle and must be planned accordingly.
 - This provides motion execution and arbitration, not ultrasonic sensing, path planning, automatic line search after avoidance, or an IMU speed policy. Buddy 5 must return the front sensors to the stripe before requesting resume.
 - The default harness is cooperative on core 0. Shared coordinator accesses and final motor commits use a Pico spinlock with IRQ exclusion. A dual-core/RTOS integration must additionally provide flash lockout and validate scheduling; do not launch this harness's flash-saving code alongside an unmanaged second core.
-- Saved motion record version20 imports earlier records. V1.1/V12.2 cannot import a newly saved version20 record; record calibration references before downgrading. Coordinator logs are separate and versioned independently.
+- Saved motion record version21 imports earlier records. V1.1/V12.2 cannot import a newly saved version21 record; record calibration references before downgrading. Coordinator logs are separate and versioned independently.
 - Known V12.2 limits remain, including straightness qualification of a cross near a recent steering correction and existing sensor-to-axle geometry assumptions. This interface handoff deliberately does not retune those behaviors.
 - Compact new request/log representations and shared-state packing are implemented. Whole-firmware minimum-bit compliance, MQTT binary telemetry, and on-target timing/physical evidence remain further work; see the representation document.
 

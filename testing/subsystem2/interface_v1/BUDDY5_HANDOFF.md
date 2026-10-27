@@ -1,14 +1,14 @@
-# Buddy 5 integration handoff — Interface V1.2 test (same V1 API)
+# Buddy 5 integration handoff — V1.3 test, same V1 API
 
-**V1.2 physical testing regressed: use V1.1 source commit `72e11ce` / its retained UF2 as the comparison integration baseline.** Current branch source contains the failed V1.2 drive experiment; do not adopt its motion changes without a validated correction. Public API/ownership signatures are unchanged. See [regression evidence](V1_2_PHYSICAL_REGRESSION.md). The V1.2 integration/build details below remain for diagnosis.
+V1.3 is a new forward-effort test candidate, pending physical validation. Use V1.1 source commit `72e11ce` / its retained UF2 for the comparison baseline. V1.2 failed physically and is not recommended. Current source restores V1.1 optical/speed policy and changes ordinary forward actuation only; API/ownership signatures are unchanged. See [V1.3 scope](FORWARD_EFFORT_V1_3.md).
 
 **Mandatory startup fix:** use V1.1 or later firmware/source, not original V1. If you already added Buddy5 code, bring in the updated `nav_coordinator.c` and rebuild your integrated UF2; the API and record layouts are unchanged. See [confirmed root cause and regression](STARTUP_FIX_V1_1.md).
 
-Use this folder as the integration baseline. It retains Buddy 2/3 V12.2 optical/barcode/turn logic with V1.2 ordinary-drive/cruise changes, and its standalone line/barcode/junction circuit test. Build Buddy 5's ultrasonic sensing and obstacle planner into the same executable. The supplied UF2 has the weak hooks only, so it follows the circuit normally and has no obstacle detection yet.
+Use this folder as the integration baseline. It retains Buddy 2/3 V12.2 optical/barcode/turn logic with V1.3 ordinary forward-effort changes, and its standalone line/barcode/junction circuit test. Build Buddy 5's ultrasonic sensing and obstacle planner into the same executable. The supplied UF2 has the weak hooks only, so it follows the circuit normally and has no obstacle detection yet.
 
 ## Start and test the baseline
 
-Flash `firmware/buddy23_interface_v1_2.uf2`. Open the Pico USB serial port in PuTTY (115200 is a convenient setting; USB CDC has no physical UART baud dependency). Press `h`; check the Interface v1.2 banner and valid front calibration. Press `1`, then `k`. Calibration `w/l/r/k` is needed only if the front references are invalid or mounting/material changed; the offset barcode sensor remains A0 on GP27 with automatic decoding.
+Flash `firmware/buddy23_interface_v1_3.uf2`. Open the Pico USB serial port in PuTTY (115200 is a convenient setting; USB CDC has no physical UART baud dependency). Press `h`; check the Interface v1.3 banner and valid front calibration. Press `1`, then `k`. Calibration `w/l/r/k` is needed only if the front references are invalid or mounting/material changed; the offset barcode sensor remains A0 on GP27 with automatic decoding.
 
 USB: `g` gives a two-second hands-free start. `f` runs with GP21 held. Either button or `s` stops. Power bank: boot, wait five seconds, both buttons three seconds, release, wait one second, tap GP21, wait two seconds. Stop and wait five seconds before changing power. `j` gives barcode results, `p` motion, `a` raw barcode ADC, and `z` the independent coordinator audit. Saved logs restore after reboot. Use profile 1 initially.
 
