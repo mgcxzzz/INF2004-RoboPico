@@ -1,5 +1,8 @@
 # Interface V1.3 forward-effort experiment
 
+**V1.3 FAILED its physical follow-up:** the29.484s run averaged11.30mm/s with repeated stop/surge/steering oscillation. Do not treat it as a smoothness improvement. See [V1.3 physical regression](V1_3_PHYSICAL_REGRESSION.md). V1.1 remains the comparison baseline; V1.3 source/artifact and original test rationale below are retained for diagnosis.
+
+
 ## Reason for the change
 
 The fixed45/45mm/s probe was already smooth. The user explicitly does not need to repeat it. V1.2's physical run was worse: an outer correction could switch from147 to410 PWM, then ordinary output stayed high while measured speed overshot. See V1_2_PHYSICAL_REGRESSION.md for the log evidence and limitations.

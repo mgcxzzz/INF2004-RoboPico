@@ -1,5 +1,8 @@
 # Buddy 2/3 Interface V1.3 — forward-effort test
 
+**V1.3 FAILED its physical follow-up:** the29.484s run averaged11.30mm/s with repeated stop/surge/steering oscillation. Do not treat it as a smoothness improvement. See [V1.3 physical regression](V1_3_PHYSICAL_REGRESSION.md). V1.1 remains the comparison baseline; V1.3 source/artifact and original test rationale below are retained for diagnosis.
+
+
 [Download V1.3 test UF2](firmware/buddy23_interface_v1_3.uf2). [Controller changes and test procedure](FORWARD_EFFORT_V1_3.md). [Buddy 5 integration instructions](BUDDY5_HANDOFF.md). [Build verification](BUILD.md).
 
 V1.3 is a **physical-test candidate**, not yet a validated smoothness improvement. It starts from V1.1 (`72e11ce`), which preserves the V12.2 optical provider and fixes the V1 startup clock bug. V1.2 performed worse physically; its extra drive trim, slow power reduction and cruise-qualification layer are not active here. Its artifact/source history is retained for diagnosis: [regression evidence](V1_2_PHYSICAL_REGRESSION.md).

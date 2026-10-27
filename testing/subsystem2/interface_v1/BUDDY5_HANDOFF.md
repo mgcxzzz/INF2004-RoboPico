@@ -1,5 +1,8 @@
 # Buddy 5 integration handoff — V1.3 test, same V1 API
 
+**V1.3 FAILED its physical follow-up:** the29.484s run averaged11.30mm/s with repeated stop/surge/steering oscillation. Do not treat it as a smoothness improvement. See [V1.3 physical regression](V1_3_PHYSICAL_REGRESSION.md). V1.1 remains the comparison baseline; V1.3 source/artifact and original test rationale below are retained for diagnosis.
+
+
 V1.3 is a new forward-effort test candidate, pending physical validation. Use V1.1 source commit `72e11ce` / its retained UF2 for the comparison baseline. V1.2 failed physically and is not recommended. Current source restores V1.1 optical/speed policy and changes ordinary forward actuation only; API/ownership signatures are unchanged. See [V1.3 scope](FORWARD_EFFORT_V1_3.md).
 
 **Mandatory startup fix:** use V1.1 or later firmware/source, not original V1. If you already added Buddy5 code, bring in the updated `nav_coordinator.c` and rebuild your integrated UF2; the API and record layouts are unchanged. See [confirmed root cause and regression](STARTUP_FIX_V1_1.md).
