@@ -17,6 +17,8 @@ The delivered network-enabled UF2 has **no embedded credentials**. Normal line f
 
 If Mosquitto's Windows service is already using only port1883, the launcher reports a conflict. Stop that service in Windows Services before using the supplied broker config, or configure the existing broker for both1883 and9001. The helper verifies both listeners before reporting its own broker ready; it never changes services automatically. Python3 is needed for the helpers; the `.cmd` shortcuts run them from the correct folder.
 
+Windows USB recovery: the Pico intentionally disconnects/reboots after saving settings. The helper reads the short confirmation one byte at a time. If USB disappears before confirmation, it reports an unconfirmed outcome rather than success. Wait for the COM port to return, reopen PuTTY and press `n`. `configured=1` confirms loaded settings; `stack_ready=1` confirms stack initialization, not Wi-Fi association. Only `mqtt=1 subscribed=1` confirms the broker link. An old helper may show `ClearCommError` during this reboot; it does not by itself mean settings failed or require reflashing.
+
 ## Calibration, mapping and start
 
 The first flash imports valid front calibration/profile from records1-25. Keep the current mounting and valid calibration; use `w,l,r,k` only if calibration is needed. `1`, then `k` selects the usual profile. Existing USB `g`/`f` and bank buttons remain: wait5s, BOTH3s, release, wait1s, tap GP21, then2s countdown. Either button or USB `s` stops.

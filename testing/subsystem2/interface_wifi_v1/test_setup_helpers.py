@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import Mock
-from provision_wifi import configuration_line
+from provision_wifi import configuration_line,wait_for_confirmation
 from run_dashboard import start_broker_if_needed
 
 
@@ -12,6 +12,31 @@ class ProvisionTests(unittest.TestCase):
     def test_invalid(self):
         for a,b,c in [('', '', '192.168.1.2'),('x'*33,'','192.168.1.2'),('test','x'*65,'192.168.1.2'),('test','secret\n','192.168.1.2'),('test','','127.0.0.1'),('test','','256.1.1.1')]:
             with self.assertRaises(ValueError):configuration_line(a,b,c)
+
+    def test_ack_is_consumed_before_reboot_discards_partial_read(self):
+        class Port:
+            remaining=bytearray(b'noise\nWIFI_PROVISIONED:')
+            def read(self,size):
+                if size!=1:raise OSError('Windows reset discarded partial read')
+                if not self.remaining:raise OSError('reboot')
+                return bytes([self.remaining.pop(0)])
+        wait_for_confirmation(Port(),OSError)
+
+    def test_disconnect_without_ack_is_not_success(self):
+        port=Mock();port.read.side_effect=OSError('USB reset')
+        with self.assertRaisesRegex(SystemExit,'Success was not confirmed'):
+            wait_for_confirmation(port,OSError)
+
+    def test_rejected_configuration_is_not_success(self):
+        port=Mock();port.read.side_effect=[bytes([x]) for x in b'WIFI_SETUP_REJECTED:']
+        with self.assertRaisesRegex(SystemExit,'Setup rejected'):
+            wait_for_confirmation(port,OSError)
+
+    def test_missing_ack_times_out(self):
+        port=Mock();port.read.return_value=b''
+        clock=Mock(side_effect=[0,0,9])
+        with self.assertRaisesRegex(SystemExit,'No verified setup response'):
+            wait_for_confirmation(port,OSError,clock=clock)
 
 
 class FakeProcess:

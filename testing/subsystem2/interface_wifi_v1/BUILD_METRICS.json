@@ -11,7 +11,7 @@
   "arm_compiler": "Arm GNU Toolchain 14.2.Rel1 14.2.1 20241119",
   "host_c_executables": 32,
   "javascript_schema_tests": 10,
-  "python_helper_tests": 6,
+  "python_helper_tests": 10,
   "browser_smoke": "Chrome desktop/mobile; simulated MQTT, no physical Pico or broker",
   "arm_builds": {
     "build-wifi-on": {

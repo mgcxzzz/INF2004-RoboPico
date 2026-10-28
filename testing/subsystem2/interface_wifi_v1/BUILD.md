@@ -5,7 +5,7 @@ Continuous V2 base: 1263390b069ae9617c412e47212177e77807c505. Buddy1 input: b094
 ## Executed software checks
 
 - 32 C test executables pass with C11, -Wall -Wextra -Werror. Tests cover existing motion/coordinator/lease/clock/stop behavior, controller models, A-Z in both scan directions across all four map slots, stable queued revisions, straight consumption, unassigned letters, CRC/settings/import and actual WiFi harness supervisory commands/downloads.
-- C-produced literal packets decode in the JavaScript consumer. Ten schema tests and six Python provisioning/broker-helper tests pass. Malformed lengths, numeric bounds, reserved bits and incomplete downloads are tested.
+- C-produced literal packets decode in the JavaScript consumer. Ten schema tests and ten Python provisioning/broker-helper tests pass. Malformed lengths, numeric bounds, reserved bits and incomplete downloads are tested.
 - Headless Chrome desktop/mobile smoke passes with simulated MQTT: mapping readback, active/paused download exclusion, fragmented diagnostics, bounded retry/rejection, unknown calibration, long history export, local vendor loading and no page errors/overflow. Screenshots/logs are local ignored build artifacts.
 - Three Pico W Release builds pass -Wall -Wextra -Werror. The network-disabled and unpacked variants are measurement/reference builds; the delivered UF2 is network-enabled, packed, with empty extension source.
 - verify_firmware.py validates provenance, unchanged V2 controls, source bundle, UF2 structure/markers/flash bounds and tracked publication artifacts. It runs after Git staging.

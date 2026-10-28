@@ -12,6 +12,22 @@ def configuration_line(ssid:str,password:str,broker:str)->bytes:
     if address.is_unspecified or address.is_multicast or address.is_loopback:raise ValueError('Use the laptop LAN IPv4 address, not localhost.')
     return ('!net|'+ssid+'|'+password+'|'+str(address)+'\n').encode('utf-8')
 
+def wait_for_confirmation(port,serial_error,*,timeout=8,clock=time.monotonic)->None:
+    """Consume the short ACK before the intentional USB reboot.
+
+    Windows can discard a partial multi-byte read when the device resets.
+    Read one byte at a time and never infer success merely from disconnect.
+    """
+    deadline=clock()+timeout;buffer=b''
+    while clock()<deadline:
+        try:buffer=(buffer+port.read(1))[-1024:]
+        except serial_error:
+            raise SystemExit('USB disconnected while waiting for confirmation. The Pico may have rebooted after saving. Wait a few seconds, reopen PuTTY and press n: configured=1 means settings were loaded. Success was not confirmed by this helper; do not reflash just for this error.') from None
+        if b'WIFI_SETUP_REJECTED:' in buffer:
+            raise SystemExit('Setup rejected: check the IP/field lengths and wait until the stopped run finishes saving.')
+        if b'WIFI_PROVISIONED:' in buffer:return
+    raise SystemExit('No verified setup response. Check the port and firmware banner, then retry. No credentials were printed.')
+
 def main()->None:
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--port',help='Pico COM port, for example COM7')
@@ -34,15 +50,7 @@ def main()->None:
     print('Close PuTTY first. Robot must be stopped, buttons released, and its run saved.')
     with serial.Serial(args.port,115200,timeout=.2,write_timeout=2) as port:
         time.sleep(1);port.reset_input_buffer();port.write(b's');port.flush();time.sleep(5)
-        port.write(line);port.flush();deadline=time.monotonic()+8;buffer=b''
-        while time.monotonic()<deadline:
-            try:buffer+=port.read(1024)
-            except serial.SerialException:
-                if b'WIFI_PROVISIONED:' in buffer:break
-                raise
-            if b'WIFI_SETUP_REJECTED:' in buffer:raise SystemExit('Setup rejected: check the IP/field lengths and wait until the stopped run finishes saving.')
-            if b'WIFI_PROVISIONED:' in buffer:
-                print('Settings verified on the Pico. It is rebooting; open PuTTY again and press n to check Wi-Fi.');return
-        if b'WIFI_PROVISIONED:' not in buffer:raise SystemExit('No verified setup response. Check the port and firmware banner, then retry. No credentials were printed.')
+        port.write(line);port.flush();wait_for_confirmation(port,serial.SerialException)
+        print('Settings verified on the Pico. It is rebooting; open PuTTY again and press n to check Wi-Fi.')
 
 if __name__=='__main__':main()
