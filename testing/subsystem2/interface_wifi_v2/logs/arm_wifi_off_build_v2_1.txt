@@ -1,0 +1,29 @@
+PICO_SDK_PATH is /Users/skyler/SIT/Y2T1/Embedded/pico-sdk
+Target board (PICO_BOARD) is 'pico_w'.
+Using board configuration from /Users/skyler/SIT/Y2T1/Embedded/pico-sdk/src/boards/include/boards/pico_w.h
+Pico Platform (PICO_PLATFORM) is 'rp2040'.
+Build type is Release
+TinyUSB available at /Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/tinyusb/hw/bsp/rp2040; enabling build support for USB.
+BTstack available at /Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/btstack
+cyw43-driver available at /Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/cyw43-driver
+Pico W Bluetooth build support available.
+mbedtls available at /Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/mbedtls
+lwIP available at /Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip
+Pico W Wi-Fi build support available.
+C library type is newlib
+-- Configuring done (0.2s)
+-- Generating done (0.1s)
+-- Build files have been written to: /private/tmp/is28_wifi_v2_off
+[  1%] Built target bs2_default
+[  4%] Built target bs2_default_library
+[  5%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/main.c.o
+[  6%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/wifi_transport.c.o
+[  6%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/nav_coordinator.c.o
+[  7%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/motion_executor.c.o
+[  8%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/wifi_protocol.c.o
+[ 10%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/nav_codec.c.o
+[ 11%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/motion_api.c.o
+[ 12%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/buddy_hooks.c.o
+[ 13%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/wifi_packets.c.o
+[ 14%] Linking CXX executable buddy123_interface_wifi_v2.elf
+[100%] Built target buddy123_interface_wifi_v2

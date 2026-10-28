@@ -298,7 +298,7 @@ static void reset_log(void) {
     flash_loaded=false;recorded_key='-';recorded_version=26;
 }
 static void help(void) {
-    puts("\nBUDDY123 INTERFACE WIFI v2 | AUTO ANALOG GP27 | A-Z MQTT MAPPING | no boot assignments | motors OFF on boot");
+    puts("\nBUDDY123 INTERFACE WIFI v2.1 | AUTO ANALOG GP27 | A-Z MQTT MAPPING | no boot assignments | motors OFF on boot");
     puts("Ordinary profiles1/3: continuous steering + continuous per-wheel PI, physical420 cap. No repeated running kick or load-driver switching.");
     puts("Running FF provisional: L150/R180 at45mm/s; encoder PI adjusts. Wheel reference +150/-250mm/s^2, physical PWM slew1200/s; explicit STOP immediate.");
     puts("One bounded150ms starting aid per positive segment, max300, ends early once rolling. Actual output tracked for smooth aid release.");

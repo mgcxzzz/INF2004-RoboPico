@@ -12,6 +12,9 @@
 #define LWIP_MQTT                       1
 #define MEM_ALIGNMENT                   4
 #define MEM_SIZE                        12000
+/* lwIP's default only budgets core timers. The MQTT cyclic timer is an
+ * application timer, started after TCP connects; reserve bounded headroom. */
+#define MEMP_NUM_SYS_TIMEOUT            (LWIP_NUM_SYS_TIMEOUT_INTERNAL + 4)
 #define MEMP_NUM_TCP_SEG                32
 #define MEMP_NUM_TCP_PCB                8
 #define MEMP_NUM_TCP_PCB_LISTEN         4

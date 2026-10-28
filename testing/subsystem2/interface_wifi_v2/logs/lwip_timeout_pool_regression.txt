@@ -1,0 +1,5 @@
+ld: warning: reducing alignment of section __DATA,__common from 0x8000 to 0x4000 because it exceeds segment maximum alignment
+PASS baseline reproduces exact MEMP_SYS_TIMEOUT-empty panic when app timer starts
+ld: warning: reducing alignment of section __DATA,__common from 0x8000 to 0x4000 because it exceeds segment maximum alignment
+PASS real lwIP timeout pool: core=7 capacity=11, 100 app callbacks, 1000 add/remove cycles
+PASS real lwIP default-failure/fixed-capacity regression; no physical networking tested.

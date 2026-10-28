@@ -1,0 +1,12 @@
+User-supplied V1.3 DIAG hardware report, 2026-10-28
+
+*** PANIC ***
+sys_timeout: timeout != NULL, pool MEMP_SYS_TIMEOUT is empty
+
+WIFI: configured=1 stack_ready=1 mqtt=0 subscribed=0 pm_off_verified=1 published=0 dropped_TX=967 dropped_RX=0 poll_gap_us=18238 map_configured=0 map_revision=0
+WIFI_LINK: sdk=3 ip=10.236.162.13 mqtt_attempts=1 mqtt_result=0
+WIFI_PROGRESS: polls=8052 last_ms=17388 phase=1 broker=10.236.162.47
+WIFI_POLL: worker=2 callback=0x100394f1 stack_used=1112 stack_capacity=8192 stack_ok=1
+WIFI_SETUP: last_code=255 reason=not_attempted active=0 settling=0 GP20_released=1 GP21_released=1
+
+Finding: timeout-pool allocation panic explains the stopped poll loop. The private firmware configuration inherits lwIP core-only default timeout capacity. MQTT schedules an extra cyclic timer from its TCP-connect callback. Actual allocator/list regression reproduces the exact old assertion, while internal+4 passes. The diagnostic stack watermark/canary did not indicate stack exhaustion. Physical retest of the fix is pending.

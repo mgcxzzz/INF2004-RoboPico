@@ -7,6 +7,7 @@ export PICO_SDK_PATH=/path/to/pico-sdk
 cmake -S . -B build-wifi-on -DCMAKE_BUILD_TYPE=Release
 cmake --build build-wifi-on -j8
 python3 run_tests.py
+python3 run_lwip_timeout_test.py
 python3 verify_firmware.py
 ```
 
@@ -15,3 +16,5 @@ CMake normally generates `build-wifi-on/buddy123_interface_wifi_v2.uf2` via the 
 To reproduce a credential-free release, do not place `wifi_config.local.h` in this folder. Device USB provisioning is supported and keeps normal reflashing independent of credentials. Source/binary checksums, build measurements and flash/RAM bounds are in `BUILD_METRICS.json`. Firmware ends before the settings sector at `0x101aa000`.
 
 `verify_firmware.py` checks all current ledger entries, preserved controller sources against V1, UF2 block structure/family/flash bounds/markers, RAM bounds, no local credential header, and packaged file integrity. It does not require staging or committing files. It verifies the recorded artifact; rebuilding may alter timestamps/paths and thus its hash. Repackaging after any edits requires regenerating source/artifact metadata.
+
+V2.1 reserves four application timeout slots above `LWIP_NUM_SYS_TIMEOUT_INTERNAL`. `run_lwip_timeout_test.py` uses the configured SDK source, verifies the old core-only configuration panics when the application timer is added, then tests the fixed pool. It is separate from the SDK-independent host suite.

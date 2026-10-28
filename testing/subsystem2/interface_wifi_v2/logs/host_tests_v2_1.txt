@@ -1,0 +1,86 @@
+small-error target variation V12=774 V12.2=0
+PASS V12.2:60mm/s gradual cruise;45mm/s scan;reduced small-error variation; persistent/mirrored steering; immediate strong departure after scan entry; real optical loss; generic A/F/Z both directions and cross dispatch priority.
+PASS: raw ADC A/F both sizes/directions/ratios; changing speed; reduced narrow-bar amplitude; missing-bars/malformed-stop/noise rejection; unsupported code; conflicting votes; distance-qualified cross;4 alternating turns/profile.
+CAPTURE V1 REPLAY: DECODE A/LEFT at36.315s; patterns094,109,094; span262.10mm
+CAPTURE V1 REPLAY: following16.27mm cross confirmed after4mm white; dispatched A/LEFT once.
+CAPTURE V2 REPLAY: DECODE A/LEFT at33.061s; patterns094,109,094; span258.95mm
+CAPTURE V2 REPLAY: following15.75mm cross confirmed after4mm white; dispatched A/LEFT once.
+record_bytes=64848 trace=56 summary=40
+PASS: PDF A/Z measured fixtures; A/F both sizes and directions; speed/jitter/framing rejection; D0 debounce/overflow; queued A/F;12 alternating turns/profile; mirrored acquisition; no-command straight; CRC/flash ABI.
+PASS: raw bytes=49408; bounded/no-overwrite capture; CRC/header/torn-data rejection; timestamp order; signed path; full flag; max gap; metadata.
+PASS: measured215..221 bars/203..206 gaps decode complete A/F/Z both ways; missing narrow bars reject; original thresholds retained; fine grid sorted; legacy log threshold mapping.
+PASS: minimum=50; actual references; observed white/black noise; normalized start gate; balanced follower; saved-record CRC; below-limit/incomplete/reversed rejection.
+PASS: five widening stages/both directions; zero-tick timeout/travel bound; brief gap/flash handling; opposite-sensor acquisition; visible-line parity; invalid-cal rejection; maneuver60%/bounded75% effort; off-wheel zero; pending command preserved/no junction while lost.
+PASS: physical60%/bounded75% effort;180ms ISR expiry;no repeated stalled kick;early moving cutoff;overspeed coast;zero OFF;signed pin mapping;reverse disallowed for search;normal-controller parity.
+PASS: independent underspeed effort;650 boost after40ms;1500ms ISR expiry;stall cannot renew;recovery re-arm;intentional slow/off wheel;overspeed coast;loss/junction bypass;profile1 parity;physical PWM mapping.
+target variation: old=7990 smooth=8
+PASS: reduced alternating target variation; mirrored steering; sustained bends converge; urgent/stop/search/junction bypass; weak400 boundary slew; all speed profiles retained.
+PASS:192 non-optical start combinations; reason11 removed; all start modes; no-history recovery remains bounded.
+U geometry: x=45.7 y=0.7 angle=177.9 travel=541.2 turn_ms=5320
+U geometry: x=45.7 y=0.7 angle=177.9 travel=541.2 turn_ms=5320
+U geometry: x=45.7 y=0.7 angle=177.9 travel=682.3 turn_ms=5320
+U geometry: x=45.7 y=0.7 angle=177.9 travel=682.3 turn_ms=5320
+U geometry: x=48.8 y=2.1 angle=178.3 travel=542.6 turn_ms=5560
+PASS: complete analogue Z both sizes/directions; queued crossing; 90deg arm ignored; reverse quarter and settled forward rejoin; original-line geometry; missing-return/time/drift rejection; signed PWM; next junction after reverse; V1..V12 record integrity.
+representation: request<=8 bytes wheels=4 bytes audit=31 bytes status=32 event_ram=40 request_working=16 command_status=16
+PASS shared coordinator ownership, stop atomicity, finite reverse/turn completion, route/terrain/fault APIs, interrupted junction resume, stale commands/leases, rejection/timeout, compact binary roundtrips and bounded audit.
+PASS real clock ordering:1..5000us newer requests remain AUTO for14000 ticks; stale100ms heartbeat and2s settling still fault; delayed takeover/resume never underflow.
+PASS real clock ordering:1..5000us newer requests remain AUTO for14000 ticks; stale100ms heartbeat and2s settling still fault; delayed takeover/resume never underflow.
+representation: request<=8 bytes wheels=4 bytes audit=31 bytes status=64 event_ram=72 request_working=16 command_status=20
+PASS shared coordinator ownership, stop atomicity, finite reverse/turn completion, route/terrain/fault APIs, interrupted junction resume, stale commands/leases, rejection/timeout, compact binary roundtrips and bounded audit.
+PASS separate coordinator flash layout: full/empty bank, data/header corruption, erased/partial header and event padding rejection.
+PASS minimum-width diagnostic codec: all field extrema, sign extension, quantisation and clipping flag.
+PASS triggered pre/post ring, latest-window fallback, whole-run timing after freeze, interrupted/corrupt flash rejection, reboot restore and short-run storage.
+DIAG row=58 bits=464 RAM=14936 flash=16384
+PASS diagnostic taps preserve V1.1 optical targets/state bit-for-bit across12000 ticks, all profiles, diag_filtered_count7164 diag_urgent_count3471 diag_bypass_count1365; no control overrides.
+CAPTURED EXIT oldPWM=103/110 H1=168/181 I=53.44/58.80 (recorded speed held; not a physical prediction)
+CAPTURED EXIT oldPWM=108/140 H1=155/166 I=38.67/21.54 (recorded speed held; not a physical prediction)
+PASS cruise handover scope: 1076 exact legacy bypass states; large overspeed/invalid speed/low target/turn state rejection; unchanged zero/coast/overspeed authority.
+PASS 12 simple load models:55->50mm/s settles without restart pulses after the selected handover. Physical validation remains required.
+continuous drive tests passed (software input/plant models only)
+continuous steering v2 tests passed
+continuous follow wrapper regression passed
+continuous integration test passed (coordinator ownership, STOP/off, stale commit rejection, controller reset, and profile routing)
+PASS opt-in Buddy5 example: takeover -> measured stop -> reverse -> right turn -> explicit clear/visible-line resume; no blocking hooks.
+wifi protocol tests passed
+wifi packet tests passed
+PASS runtime settings CRC, bounds, IPv4 validation and open-network password
+PASS TCP/IP readiness query: joined/no-IP do not authorize MQTT; DHCP-ready does; auth failure preserved.
+PASS real wifi_transport.c host harness: API-vs-CONNACK result, CONNACK/SUBACK callbacks, setup failures, TCP/CONNACK/SUBACK timeout paths, init-failure delay
+WIFI: n=network status. Settings via provision_wifi.py over USB while stopped; no password is printed. No boot barcode assignments.
+WIFI_SETUP_REJECTED: code=2 reason=run_active
+WIFI_SETUP_REJECTED: code=3 reason=run_settling
+WIFI_SETUP_REJECTED: code=4 reason=GP20_held
+WIFI_SETUP_REJECTED: code=5 reason=GP21_held
+WIFI_SETUP_REJECTED: code=6 reason=flash_overlap
+PASS actual Wi-Fi harness integration with coordinator, packets and fake transport
+PASS record26 bytes=30360, latest384 rows, CRC, V25 calibration-only import, RAW2 capacity2048
+PASS all26 Code39 letters both directions; four mapped actions; queued revision stable; straight consumed once; A-Z coordinator API
+PASS V12.2 routing parity: 9000 optical/PI ticks across all profiles, both departure directions, white loss/recovery; 0 model resets. No external takeover changes normal targets/PWM.
+C-generated telemetry vectors decode in the dashboard schema
+✔ decoder accepts exact current source payload lengths and rejects malformed frames (0.651458ms)
+✔ motion frame decodes signed speed, calibrated levels, distance, and timing (0.37475ms)
+✔ line event preserves decoded, pending, executing actions and their revisions (0.069042ms)
+✔ coordinator event distinguishes dispatch and completion identifiers (0.060833ms)
+✔ barcode map builder covers every A-Z letter in each distinct slot (0.643875ms)
+✔ map readback validates configured bits and exposes revision and letters (0.08ms)
+✔ map status distinguishes confirmed, empty, mismatch, and rejected readback data (0.108375ms)
+✔ map confirmation times out at its explicit five-second deadline (0.043334ms)
+✔ source-13 log chunks validate identity, reserved bytes, status, and chunk lengths (0.122625ms)
+✔ source-14 diagnostics decodes counters, flags, and gaps, and rejects invalid status values (0.138417ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 37.243458
+....................
+----------------------------------------------------------------------
+Ran 20 tests in 0.003s
+
+OK
+Started Mosquitto and confirmed local listeners on ports 1883 and 9001; remote Pico reachability is not tested.
+PASS V12.2 frozen algorithms: only explicit harness/record-version adaptations differ: ['baseline/testing/subsystem2/circuit_with_barcode/barcode_analog.h', 'baseline/testing/subsystem2/circuit_with_barcode/barcode_nav.h', 'baseline/testing/subsystem2/circuit_with_barcode/barcode_raw.h', 'baseline/testing/subsystem2/circuit_with_barcode/barcode_record.h', 'baseline/testing/subsystem2/circuit_with_barcode/barcode_scan.h', 'baseline/testing/subsystem2/circuit_with_barcode/main.c', 'baseline/testing/subsystem2/circuit_with_barcode/test_barcode.c', 'baseline/testing/subsystem2/circuit_with_barcode/test_uturn.c', 'scan_smooth.h']
+ALL INTERFACE AND WIFI TESTS PASSED; C test executables= 34

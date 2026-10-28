@@ -7,9 +7,18 @@ meta=json.loads((root/'BUILD_METRICS.json').read_text())
 ledger=json.loads((root/'SOURCE_SHA256.json').read_text())['files']
 for rel,h in ledger.items(): assert sha(root/rel)==h,'Source differs: '+rel
 base=json.loads((root/'WIFI_V2_BASELINE.json').read_text())
-for rel in base['protected']: assert sha(root/rel)==base['sha256'][rel],'Controller differs: '+rel
+for rel in base['protected']:
+    if rel=='lwipopts.h':
+        patch="""/* lwIP's default only budgets core timers. The MQTT cyclic timer is an
+ * application timer, started after TCP connects; reserve bounded headroom. */
+#define MEMP_NUM_SYS_TIMEOUT            (LWIP_NUM_SYS_TIMEOUT_INTERNAL + 4)
+"""
+        text=(root/rel).read_bytes();assert patch.encode() in text
+        assert hashlib.sha256(text.replace(patch.encode(),b'')).hexdigest()==base['sha256'][rel]
+        continue
+    assert sha(root/rel)==base['sha256'][rel],'Controller differs: '+rel
 main=base['banner_only_main']
-restored=(root/main).read_bytes().replace(b'BUDDY123 INTERFACE WIFI v2',b'BUDDY123 INTERFACE WIFI v1.2')
+restored=(root/main).read_bytes().replace(b'BUDDY123 INTERFACE WIFI v2.1',b'BUDDY123 INTERFACE WIFI v1.2')
 assert hashlib.sha256(restored).hexdigest()==base['sha256'][main],'Nested main changed beyond banner'
 assert not (root/'wifi_config.local.h').exists(),'Remove local credentials header for release verification'
 assert not meta['embedded_credentials'] and meta['default_buddy_extension'] is None
@@ -27,7 +36,7 @@ for k in range(meta['blocks']):
     assert address==0x10000000+256*k and address+size<=0x101aa000
     assert struct.unpack_from('<I',block,508)[0]==0x0ab16f30
     payload.extend(block[32:288])
-for marker in (b'BUDDY123 INTERFACE WIFI v2',b'WIFI_MQTT:',b'tcp_connect',b'await_connack',b'await_suback',
+for marker in (b'BUDDY123 INTERFACE WIFI v2.1',b'WIFI_MQTT:',b'tcp_connect',b'await_connack',b'await_suback',
                b'WIFI_PROGRESS:',b'WIFI_SETUP:',b'WIFI_PROVISIONED:',b'WIFI_SETUP_REJECTED:',b'is28/cmd',b'is28/tlm',b'is28/hb'):
     assert marker in payload,marker
 assert sha(root/'dashboard/vendor/mqtt.min.js')=='b088a7f9045df4e478dbc378f41125066e43d9c602755ee4c5cda0f3e9380ba0'

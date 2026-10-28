@@ -1,0 +1,123 @@
+PICO_SDK_PATH is /Users/skyler/SIT/Y2T1/Embedded/pico-sdk
+Target board (PICO_BOARD) is 'pico_w'.
+Using board configuration from /Users/skyler/SIT/Y2T1/Embedded/pico-sdk/src/boards/include/boards/pico_w.h
+Pico Platform (PICO_PLATFORM) is 'rp2040'.
+Build type is Release
+TinyUSB available at /Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/tinyusb/hw/bsp/rp2040; enabling build support for USB.
+BTstack available at /Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/btstack
+cyw43-driver available at /Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/cyw43-driver
+Pico W Bluetooth build support available.
+mbedtls available at /Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/mbedtls
+lwIP available at /Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip
+Pico W Wi-Fi build support available.
+C library type is newlib
+-- Configuring done (0.2s)
+-- Generating done (0.1s)
+-- Build files have been written to: /private/tmp/is28_wifi_v2_build
+[  0%] Built target cyw43_driver_picow_cyw43_bus_pio_spi_pio_h
+[  0%] Built target bs2_default
+[  1%] Built target bs2_default_library
+[  1%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/motion_api.c.o
+[  2%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/nav_coordinator.c.o
+[  3%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/main.c.o
+[  3%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/motion_executor.c.o
+[  4%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/nav_codec.c.o
+[  4%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/buddy_hooks.c.o
+[  4%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/wifi_protocol.c.o
+[  5%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/wifi_transport.c.o
+[  6%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/wifi_packets.c.o
+[  7%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/src/rp2_common/pico_lwip/lwip_nosys.c.o
+[  7%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/core/init.c.o
+[  8%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/core/def.c.o
+[  8%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/core/dns.c.o
+[  9%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/core/inet_chksum.c.o
+[  9%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/core/ip.c.o
+[ 10%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/core/mem.c.o
+[ 10%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/core/memp.c.o
+[ 11%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/core/netif.c.o
+[ 11%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/core/pbuf.c.o
+[ 11%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/core/raw.c.o
+[ 12%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/core/stats.c.o
+[ 12%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/core/sys.c.o
+[ 13%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/core/altcp.c.o
+[ 13%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/core/altcp_alloc.c.o
+[ 14%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/core/altcp_tcp.c.o
+[ 14%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/core/tcp.c.o
+[ 15%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/core/tcp_in.c.o
+[ 15%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/core/tcp_out.c.o
+[ 16%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/core/timeouts.c.o
+[ 16%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/core/udp.c.o
+[ 17%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/core/ipv4/autoip.c.o
+[ 17%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/core/ipv4/dhcp.c.o
+[ 18%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/core/ipv4/etharp.c.o
+[ 18%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/core/ipv4/icmp.c.o
+[ 19%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/core/ipv4/igmp.c.o
+[ 19%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/core/ipv4/ip4_frag.c.o
+[ 20%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/core/ipv4/ip4.c.o
+[ 20%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/core/ipv4/ip4_addr.c.o
+[ 21%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/core/ipv6/dhcp6.c.o
+[ 21%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/core/ipv4/acd.c.o
+[ 21%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/core/ipv6/ethip6.c.o
+[ 22%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/core/ipv6/icmp6.c.o
+[ 22%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/core/ipv6/inet6.c.o
+[ 23%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/core/ipv6/ip6.c.o
+[ 23%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/core/ipv6/ip6_addr.c.o
+[ 24%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/core/ipv6/ip6_frag.c.o
+[ 24%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/core/ipv6/mld6.c.o
+[ 25%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/core/ipv6/nd6.c.o
+[ 25%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/api/api_lib.c.o
+[ 26%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/api/api_msg.c.o
+[ 26%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/api/err.c.o
+[ 27%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/api/if_api.c.o
+[ 27%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/api/netbuf.c.o
+[ 28%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/api/netdb.c.o
+[ 28%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/api/netifapi.c.o
+[ 29%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/api/sockets.c.o
+[ 29%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/api/tcpip.c.o
+[ 29%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/netif/ethernet.c.o
+[ 30%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/netif/bridgeif.c.o
+[ 30%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/netif/bridgeif_fdb.c.o
+[ 31%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/netif/slipif.c.o
+[ 31%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/netif/lowpan6_common.c.o
+[ 32%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/netif/lowpan6.c.o
+[ 32%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/netif/lowpan6_ble.c.o
+[ 33%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/netif/zepif.c.o
+[ 33%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/netif/ppp/auth.c.o
+[ 34%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/netif/ppp/ccp.c.o
+[ 34%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/netif/ppp/chap-md5.c.o
+[ 35%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/netif/ppp/chap_ms.c.o
+[ 35%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/netif/ppp/chap-new.c.o
+[ 36%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/netif/ppp/demand.c.o
+[ 36%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/netif/ppp/eap.c.o
+[ 37%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/netif/ppp/ecp.c.o
+[ 37%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/netif/ppp/eui64.c.o
+[ 38%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/netif/ppp/fsm.c.o
+[ 38%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/netif/ppp/ipcp.c.o
+[ 38%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/netif/ppp/ipv6cp.c.o
+[ 39%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/netif/ppp/lcp.c.o
+[ 39%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/netif/ppp/magic.c.o
+[ 40%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/netif/ppp/mppe.c.o
+[ 40%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/netif/ppp/multilink.c.o
+[ 41%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/netif/ppp/ppp.c.o
+[ 41%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/netif/ppp/pppapi.c.o
+[ 42%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/netif/ppp/pppcrypt.c.o
+[ 42%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/netif/ppp/pppoe.c.o
+[ 43%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/netif/ppp/pppol2tp.c.o
+[ 43%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/netif/ppp/pppos.c.o
+[ 43%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/netif/ppp/utils.c.o
+[ 44%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/netif/ppp/upap.c.o
+[ 45%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/netif/ppp/vj.c.o
+[ 45%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/netif/ppp/polarssl/arc4.c.o
+[ 46%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/netif/ppp/polarssl/des.c.o
+[ 46%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/netif/ppp/polarssl/md4.c.o
+[ 47%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/netif/ppp/polarssl/md5.c.o
+[ 47%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/netif/ppp/polarssl/sha1.c.o
+[ 47%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/src/rp2_common/pico_cyw43_arch/cyw43_arch.c.o
+[ 47%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/src/rp2_common/pico_cyw43_driver/cyw43_bus_pio_spi.c.o
+[ 48%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/src/rp2_common/pico_cyw43_arch/cyw43_arch_poll.c.o
+[ 50%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/cyw43-driver/src/cyw43_lwip.c.o
+[ 50%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/cyw43-driver/src/cyw43_ctrl.c.o
+[ 50%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/src/rp2_common/pico_cyw43_driver/cyw43_driver.c.o
+[ 50%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip/src/apps/mqtt/mqtt.c.o
+[ 51%] Linking CXX executable buddy123_interface_wifi_v2.elf
+[100%] Built target buddy123_interface_wifi_v2

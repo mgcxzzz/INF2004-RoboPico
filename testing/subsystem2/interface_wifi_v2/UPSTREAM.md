@@ -1,3 +1,7 @@
+# V2.1 follow-up
+
+Based on V2 commit `c8155de`. User-supplied V1.3 diagnostic output identifies a MEMP_SYS_TIMEOUT-empty panic. V2.1 changes `lwipopts.h` to reserve four application timeout slots, plus the firmware banner and test/release material. Current source ledger and verifier preserve the original V1 baseline at `0285d74`, allowing the exact timeout option insertion and banner substitution. No motion code or settings schema changes.
+
 # V2 update provenance
 
 V2 starts from all tracked V1 source files at commit `0285d74` (excluding published V1 firmware). `WIFI_V2_BASELINE.json` records their hashes; `SOURCE_SHA256.json` records the current package. V1 remains untouched in its original folder. V2 changes networking recovery/diagnostics, PC helper diagnostics, tests, release metadata/docs and the firmware banner; the motor/navigation controller is preserved. No hardware validation is claimed.
