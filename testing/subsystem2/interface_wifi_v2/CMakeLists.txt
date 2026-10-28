@@ -10,6 +10,8 @@ pico_sdk_init()
 option(BUDDY_WIFI_ENABLED "Build the optional Pico W core1 Wi-Fi/MQTT transport" ON)
 
 add_executable(buddy123_interface_wifi_v2 main.c motion_api.c nav_coordinator.c motion_executor.c nav_codec.c buddy_hooks.c wifi_transport.c wifi_protocol.c wifi_packets.c)
+# Include the complete release version in generated ELF/BIN/UF2 filenames.
+set_target_properties(buddy123_interface_wifi_v2 PROPERTIES OUTPUT_NAME buddy123_interface_wifi_v2_2)
 target_include_directories(buddy123_interface_wifi_v2 PRIVATE "${CMAKE_CURRENT_LIST_DIR}")
 target_link_libraries(buddy123_interface_wifi_v2 pico_stdlib hardware_adc hardware_pwm hardware_clocks hardware_sync hardware_flash pico_multicore m)
 if(BUDDY_WIFI_ENABLED)

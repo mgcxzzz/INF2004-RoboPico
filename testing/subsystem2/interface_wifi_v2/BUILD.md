@@ -12,7 +12,7 @@ python3 verify_stack_layout.py --build build-wifi-on
 python3 verify_firmware.py
 ```
 
-CMake normally generates `build-wifi-on/buddy123_interface_wifi_v2.uf2` via the SDK extra-output tools. The recorded build used `-DPICO_NO_PICOTOOL=1`, then the Pico SDK `elf2uf2` converter on the ELF. The network-OFF build was also compiled with `-DBUDDY_WIFI_ENABLED=OFF` in a separate directory. Neither build is evidence of physical connectivity or driving.
+CMake normally generates `build-wifi-on/buddy123_interface_wifi_v2_2.uf2` via the SDK extra-output tools. The recorded build used `-DPICO_NO_PICOTOOL=1`, then the Pico SDK `elf2uf2` converter on the ELF. The network-OFF build was also compiled with `-DBUDDY_WIFI_ENABLED=OFF` in a separate directory. Neither build is evidence of physical connectivity or driving.
 
 To reproduce a credential-free release, do not place `wifi_config.local.h` in this folder. Device USB provisioning is supported and keeps normal reflashing independent of credentials. Source/binary checksums, build measurements and flash/RAM bounds are in `BUILD_METRICS.json`. Firmware ends before the settings sector at `0x101aa000`.
 

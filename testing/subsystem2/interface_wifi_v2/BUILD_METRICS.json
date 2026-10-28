@@ -1,6 +1,6 @@
 {
-  "artifact": "firmware/buddy123_interface_wifi_v2.uf2",
-  "bundle": "firmware/buddy123_interface_wifi_v2_bundle.zip",
+  "artifact": "firmware/buddy123_interface_wifi_v2_2.uf2",
+  "bundle": "firmware/buddy123_interface_wifi_v2_2_bundle.zip",
   "sha256": "df5052a0718fe05c7b3f4903b52835742793eff8d8a0593fc516b4766dd49a2c",
   "bytes": 1000448,
   "blocks": 1954,

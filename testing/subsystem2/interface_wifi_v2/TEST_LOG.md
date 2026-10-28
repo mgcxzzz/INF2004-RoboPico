@@ -42,3 +42,7 @@ V2.1 changes only the timeout-pool option plus banner/release material/tests. Th
 - Firmware/source/package checks pass: `logs/release_verification_v2_2.txt`, including boot SP and current stack/heap bounds.
 - V2.1 host and real-lwIP pool tests above remain the latest algorithm/schema regression results. They were not rerun for this linker-only change plus banner, documentation and new static verification script.
 - Physical Start / driving / heartbeat retest of V2.2: **PENDING**. No claim of complete worst-case stack usage or resolved hardware dropout until retested.
+
+## V2.2 explicit release filenames
+
+Renamed the existing V2.2 firmware to `firmware/buddy123_interface_wifi_v2_2.uf2` and its bundle to `firmware/buddy123_interface_wifi_v2_2_bundle.zip`. CMake generates versioned filenames, docs/metadata/checksums are updated, and the stack checker reads the filename from release metadata. Firmware payload/checksum must remain unchanged from the verified V2.2 image. This is a packaging change, not a new firmware version or hardware result.

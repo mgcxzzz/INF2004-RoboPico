@@ -1,0 +1,22 @@
+PICO_SDK_PATH is /Users/skyler/SIT/Y2T1/Embedded/pico-sdk
+Target board (PICO_BOARD) is 'pico_w'.
+Using board configuration from /Users/skyler/SIT/Y2T1/Embedded/pico-sdk/src/boards/include/boards/pico_w.h
+Pico Platform (PICO_PLATFORM) is 'rp2040'.
+Build type is Release
+TinyUSB available at /Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/tinyusb/hw/bsp/rp2040; enabling build support for USB.
+BTstack available at /Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/btstack
+cyw43-driver available at /Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/cyw43-driver
+Pico W Bluetooth build support available.
+mbedtls available at /Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/mbedtls
+lwIP available at /Users/skyler/SIT/Y2T1/Embedded/pico-sdk/lib/lwip
+Pico W Wi-Fi build support available.
+C library type is newlib
+-- Configuring done (0.2s)
+-- Generating done (0.2s)
+-- Build files have been written to: /private/tmp/is28_wifi_v2_build
+[  0%] Built target bs2_default
+[  0%] Built target cyw43_driver_picow_cyw43_bus_pio_spi_pio_h
+[  1%] Built target bs2_default_library
+[  2%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/main.c.o
+[  3%] Linking CXX executable buddy123_interface_wifi_v2_2.elf
+[100%] Built target buddy123_interface_wifi_v2

@@ -1,13 +1,14 @@
 """Check real ARM stack frames, call edges and linker stack/heap separation."""
 from pathlib import Path
-import argparse,re,subprocess
+import argparse,json,re,subprocess
 p=argparse.ArgumentParser(description=__doc__)
 p.add_argument('--build',type=Path)
 p.add_argument('--elf',type=Path)
 p.add_argument('--usage',type=Path)
 p.add_argument('--expect-unsafe',action='store_true')
 a=p.parse_args()
-elf=a.elf or a.build/'buddy123_interface_wifi_v2.elf'
+release=json.loads((Path(__file__).resolve().parent/'BUILD_METRICS.json').read_text())
+elf=a.elf or a.build/Path(release['artifact']).with_suffix('.elf').name
 usage=a.usage or a.build/'CMakeFiles/buddy123_interface_wifi_v2.dir/main.c.su'
 frames={}
 for line in usage.read_text().splitlines():
