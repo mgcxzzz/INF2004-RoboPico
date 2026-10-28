@@ -4,6 +4,14 @@
 #include <string.h>
 #include "nav_log_storage.h"
 enum { WIFI_SETTINGS_PAGE=256 };
+enum { WIFI_SETUP_OK=0,WIFI_SETUP_FIELDS=1,WIFI_SETUP_ACTIVE=2,WIFI_SETUP_SETTLING=3,
+       WIFI_SETUP_STOP_HELD=4,WIFI_SETUP_HOLD_HELD=5,WIFI_SETUP_OVERLAP=6,
+       WIFI_SETUP_ENCODE=7,WIFI_SETUP_LOCKOUT=8,WIFI_SETUP_VERIFY=9,WIFI_SETUP_NONE=255 };
+static inline const char *wifi_setup_reason(unsigned code) {
+    static const char *const reasons[]={"saved","invalid_fields","run_active","run_settling",
+        "GP20_held","GP21_held","flash_overlap","encode_failed","network_lockout_failed","flash_readback_failed"};
+    return code<sizeof(reasons)/sizeof(reasons[0])?reasons[code]:"not_attempted";
+}
 static inline bool wifi_text(const char *p,size_t cap,bool empty) {
     size_t n=0;while(n<cap && p[n]) {if((unsigned char)p[n]<32 || p[n]=='|')return false;++n;}
     return n<cap && (empty || n>0);

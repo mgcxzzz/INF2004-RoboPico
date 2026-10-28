@@ -241,6 +241,20 @@ static void test_calibration_summary_and_provision(void){
     guard.active=true;unsigned writes=flash_write_calls,begins=transport_flash_begins;
     const char *provision="!net|ssid|password|192.168.1.5\n";for(const char *q=provision;*q;++q)(void)wifi_console_byte(*q);
     assert(flash_write_calls==writes && transport_flash_begins==begins);
+    assert(wifi_setup_last_code==WIFI_SETUP_ACTIVE);
+    guard.active=false;trace_settling=true;
+    for(const char *q=provision;*q;++q)(void)wifi_console_byte(*q);
+    assert(wifi_setup_last_code==WIFI_SETUP_SETTLING);
+    trace_settling=false;button_stop_released=false;
+    for(const char *q=provision;*q;++q)(void)wifi_console_byte(*q);
+    assert(wifi_setup_last_code==WIFI_SETUP_STOP_HELD);
+    button_stop_released=true;button_hold_pressed=false;
+    for(const char *q=provision;*q;++q)(void)wifi_console_byte(*q);
+    assert(wifi_setup_last_code==WIFI_SETUP_HOLD_HELD);
+    button_hold_pressed=true;
+    for(const char *q=provision;*q;++q)(void)wifi_console_byte(*q);
+    assert(wifi_setup_last_code==WIFI_SETUP_OVERLAP); /* host has no real flash window */
+    assert(flash_write_calls==writes && transport_flash_begins==begins);
     guard.active=false;
 }
 

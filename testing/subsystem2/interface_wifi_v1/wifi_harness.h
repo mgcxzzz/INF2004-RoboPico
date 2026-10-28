@@ -12,6 +12,7 @@ static uint8_t wifi_seq[16],wifi_last_cmd,wifi_last_result=7,wifi_accepted,wifi_
 static uint64_t wifi_last_motion,wifi_last_hb,wifi_start_at;
 static bool wifi_download;static WifiCommand wifi_download_command;
 static uint8_t wifi_provision_state;static unsigned wifi_provision_size;
+static uint8_t wifi_setup_last_code=WIFI_SETUP_NONE;
 static char wifi_provision_line[192];
 
 static uint8_t wifi_state(void) {
@@ -273,6 +274,13 @@ static bool wifi_console_byte(int ch) {
             (int)s.link_status,(unsigned)(s.ipv4>>24),(unsigned)((s.ipv4>>16)&255u),
             (unsigned)((s.ipv4>>8)&255u),(unsigned)(s.ipv4&255u),
             (unsigned long)s.mqtt_attempts,(int)s.mqtt_result);
+        printf("WIFI_PROGRESS: polls=%lu last_ms=%lu phase=%u broker=%u.%u.%u.%u\n",
+            (unsigned long)s.polls,(unsigned long)s.last_poll_ms,(unsigned)s.phase,
+            (unsigned)(s.broker_ipv4>>24),(unsigned)((s.broker_ipv4>>16)&255u),
+            (unsigned)((s.broker_ipv4>>8)&255u),(unsigned)(s.broker_ipv4&255u));
+        printf("WIFI_SETUP: last_code=%u reason=%s active=%u settling=%u GP20_released=%u GP21_released=%u\n",
+            wifi_setup_last_code,wifi_setup_reason(wifi_setup_last_code),guard.active,trace_settling,
+            gpio_get(STOP),gpio_get(HOLD));
         return true;
     }
     if(!wifi_provision_state && ch!='!')return false;
@@ -292,16 +300,25 @@ static bool wifi_console_byte(int ch) {
         valid=!strcmp(a,"!net") && strlen(b)<sizeof(config.ssid) && strlen(c)<sizeof(config.password) && strlen(d)<sizeof(config.broker);
         if(valid){strcpy(config.ssid,b);strcpy(config.password,c);strcpy(config.broker,d);valid=wifi_settings_valid(&config);}
     }
-    uint8_t page[256];bool saved_ok=false;
-    if(valid && !guard.active && !trace_settling && gpio_get(STOP) && gpio_get(HOLD) &&
-       (uintptr_t)&__flash_binary_end<XIP_BASE+WIFI_SETTINGS_OFFSET && wifi_settings_encode(page,&config) && wifi_transport_flash_begin()) {
+    uint8_t page[256];wifi_setup_last_code=WIFI_SETUP_OK;
+    if(!valid)wifi_setup_last_code=WIFI_SETUP_FIELDS;
+    else if(guard.active)wifi_setup_last_code=WIFI_SETUP_ACTIVE;
+    else if(trace_settling)wifi_setup_last_code=WIFI_SETUP_SETTLING;
+    else if(!gpio_get(STOP))wifi_setup_last_code=WIFI_SETUP_STOP_HELD;
+    else if(!gpio_get(HOLD))wifi_setup_last_code=WIFI_SETUP_HOLD_HELD;
+    else if((uintptr_t)&__flash_binary_end>=XIP_BASE+WIFI_SETTINGS_OFFSET)wifi_setup_last_code=WIFI_SETUP_OVERLAP;
+    else if(!wifi_settings_encode(page,&config))wifi_setup_last_code=WIFI_SETUP_ENCODE;
+    else if(!wifi_transport_flash_begin())wifi_setup_last_code=WIFI_SETUP_LOCKOUT;
+    else {
         outputs_off();uint32_t irq=save_and_disable_interrupts();flash_range_erase(WIFI_SETTINGS_OFFSET,FLASH_SECTOR_SIZE);
         flash_range_program(WIFI_SETTINGS_OFFSET,page,sizeof(page));restore_interrupts(irq);wifi_transport_flash_end();
-        saved_ok=!memcmp((const uint8_t *)(XIP_BASE+WIFI_SETTINGS_OFFSET),page,sizeof(page));
+        if(memcmp((const uint8_t *)(XIP_BASE+WIFI_SETTINGS_OFFSET),page,sizeof(page)))wifi_setup_last_code=WIFI_SETUP_VERIFY;
     }
     memset(&config,0,sizeof(config));memset(page,0,sizeof(page));memset(wifi_provision_line,0,sizeof(wifi_provision_line));
     wifi_provision_state=0;wifi_provision_size=0;
-    puts(saved_ok?"WIFI_PROVISIONED: verified; rebooting. Password hidden.":"WIFI_SETUP_REJECTED: stop/release buttons/wait for save, check field lengths and broker IPv4, then retry.");
-    if(saved_ok){stdio_flush();sleep_ms(100);watchdog_reboot(0,0,0);}
+    if(wifi_setup_last_code==WIFI_SETUP_OK) {
+        puts("WIFI_PROVISIONED: verified; rebooting. Password hidden.");
+        stdio_flush();sleep_ms(100);watchdog_reboot(0,0,0);
+    } else printf("WIFI_SETUP_REJECTED: code=%u reason=%s\n",wifi_setup_last_code,wifi_setup_reason(wifi_setup_last_code));
     return true;
 }

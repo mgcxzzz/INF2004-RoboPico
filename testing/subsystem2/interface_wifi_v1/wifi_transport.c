@@ -63,27 +63,35 @@ static bool has_terminator(const char *text, size_t capacity)
     return text != NULL && memchr(text, '\0', capacity) != NULL;
 }
 
-static bool valid_ipv4(const char *text)
+static bool parse_ipv4_host_order(const char *text, uint32_t *address)
 {
+    uint32_t octets[4] = {0u, 0u, 0u, 0u};
+    unsigned part = 0u;
     unsigned octet = 0u;
     unsigned digits = 0u;
     unsigned dots = 0u;
     const char *p = text;
 
-    if (text == NULL || *text == '\0') return false;
-    for (; *p != '\0'; ++p) {
+    if (text == NULL || address == NULL || *text == '\0') return false;
+    for (; ; ++p) {
         if (*p >= '0' && *p <= '9') {
             octet = octet * 10u + (unsigned)(*p - '0');
             if (octet > 255u || ++digits > 3u) return false;
         } else if (*p == '.' && digits != 0u && dots < 3u) {
+            octets[part++] = octet;
             dots++;
             digits = 0u;
             octet = 0u;
+        } else if (*p == '\0' && digits != 0u && dots == 3u) {
+            octets[part] = octet;
+            break;
         } else {
             return false;
         }
     }
-    return dots == 3u && digits != 0u;
+    *address = (octets[0] << 24) | (octets[1] << 16) |
+               (octets[2] << 8) | octets[3];
+    return true;
 }
 
 static bool valid_config(const WifiTransportConfig *config)
@@ -94,7 +102,7 @@ static bool valid_config(const WifiTransportConfig *config)
            has_terminator(config->broker, sizeof(config->broker)) &&
            has_terminator(config->client_id, sizeof(config->client_id)) &&
            config->ssid[0] != '\0' && config->client_id[0] != '\0' &&
-           valid_ipv4(config->broker);
+           parse_ipv4_host_order(config->broker, &(uint32_t){0u});
 }
 #endif
 
@@ -292,6 +300,22 @@ static void discard_stale_tx(void)
     unlock_queues(irq_state);
 }
 
+static void set_phase(unsigned phase)
+{
+    uint32_t irq_state = lock_queues();
+    g_status.phase = phase;
+    unlock_queues(irq_state);
+}
+
+static void record_completed_poll(uint32_t now_ms)
+{
+    uint32_t irq_state = lock_queues();
+    g_status.polls++;
+    g_status.last_poll_ms = now_ms;
+    g_status.phase = 6u;
+    unlock_queues(irq_state);
+}
+
 static const char *mqtt_topic(unsigned topic)
 {
     switch (topic) {
@@ -447,6 +471,7 @@ static void begin_connect(uint32_t now)
     g_status.mqtt_attempts++;
     unlock_queues(status_irq);
 
+    set_phase(3u);
     if (g_mqtt == NULL) {
         g_mqtt = mqtt_client_new();
     if (g_mqtt == NULL || !ip4addr_aton(g_network_config.broker, ip_2_ip4(&g_broker))) {
@@ -456,7 +481,9 @@ static void begin_connect(uint32_t now)
         }
         IP_SET_TYPE(&g_broker, IPADDR_TYPE_V4);
     }
+    set_phase(4u);
     mqtt_disconnect(g_mqtt);
+    set_phase(3u);
     memset(&info, 0, sizeof(info));
     info.client_id = g_network_config.client_id;
     info.keep_alive = WIFI_KEEPALIVE_SECONDS;
@@ -511,6 +538,7 @@ static void pump_publish(void)
         if (!g_pending_valid) {
             if (!take_tx_packet()) break;
         }
+        set_phase(5u);
         result = mqtt_publish(g_mqtt, mqtt_topic(g_pending.topic),
                               (const char *)g_pending.data, g_pending.len,
                               0u, 0u, NULL, NULL);
@@ -556,6 +584,7 @@ static void network_core(void)
         uint32_t gap;
         int link_status;
 
+        set_phase(1u);
         cyw43_arch_poll();
         now_us = time_us_32();
         gap = g_last_poll_us == 0u ? 0u : now_us - g_last_poll_us;
@@ -567,6 +596,7 @@ static void network_core(void)
         unlock_queues(irq_state);
 
         now = to_ms_since_boot(get_absolute_time());
+        set_phase(2u);
         link_status = g_wifi_started ? wifi_network_link_status() : CYW43_LINK_DOWN;
         irq_state=lock_queues();
         g_status.link_status=(int8_t)link_status;
@@ -584,6 +614,7 @@ static void network_core(void)
                 (int32_t)(now - g_retry_at) >= 0) {
                 begin_connect(now);
             } else if (g_connecting && (now - g_connect_started) > WIFI_CONNECT_TIMEOUT_MS) {
+                set_phase(4u);
                 mqtt_disconnect(g_mqtt);
                 schedule_retry(now);
             } else if (g_mqtt_connected) {
@@ -591,7 +622,10 @@ static void network_core(void)
             }
         } else {
             if (g_mqtt_connected || g_connecting) {
-                if (g_mqtt != NULL) mqtt_disconnect(g_mqtt);
+                if (g_mqtt != NULL) {
+                    set_phase(4u);
+                    mqtt_disconnect(g_mqtt);
+                }
                 schedule_retry(now);
             } else {
                 discard_stale_tx();
@@ -611,6 +645,7 @@ static void network_core(void)
                 start_wifi_join(now);
             }
         }
+        record_completed_poll(to_ms_since_boot(get_absolute_time()));
         sleep_ms(WIFI_POLL_INTERVAL_MS);
     }
 }
@@ -645,6 +680,10 @@ _Static_assert(sizeof(MQTT_CLIENT_ID) <= sizeof(((WifiTransportConfig *)0)->clie
     g_status.ready = 0u;
     g_status.connected = 0u;
     g_status.subscribed = 0u;
+    g_status.phase = 0u;
+    if (g_config_is_valid) {
+        (void)parse_ipv4_host_order(g_network_config.broker, &g_status.broker_ipv4);
+    }
     g_retry_at = 0u;
     g_initialized = true;
     if (g_config_is_valid) {

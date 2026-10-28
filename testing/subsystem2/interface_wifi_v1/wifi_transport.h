@@ -25,6 +25,10 @@ typedef struct {
     int16_t mqtt_result; /* latest connect API/callback result; -32768 before an attempt */
     uint32_t ipv4; /* host-order address, copied from netif by core1 */
     uint32_t mqtt_attempts;
+    uint32_t polls; /* completed core1 network poll iterations */
+    uint32_t last_poll_ms; /* millis since boot at last completed poll */
+    uint32_t broker_ipv4; /* host-order configured broker IPv4 */
+    unsigned phase : 3; /* 0 init, 1 poll, 2 link, 3 mqtt_connect, 4 mqtt_disconnect, 5 publish, 6 sleep */
 } WifiTransportStatus;
 
 typedef struct {

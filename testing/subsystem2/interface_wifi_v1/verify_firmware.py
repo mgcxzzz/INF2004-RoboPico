@@ -29,7 +29,7 @@ for k in range(meta['blocks']):
     assert address==0x10000000+256*k and address+size<=0x101aa000
     assert struct.unpack_from('<I',block,508)[0]==0x0ab16f30
     payload.extend(block[32:288])
-for marker in [b'BUDDY123 INTERFACE WIFI v1.1',b'WIFI_LINK:',b'no boot assignments',b'WIFI_PROVISIONED:',b'WIFI_SETUP_REJECTED:',
+for marker in [b'BUDDY123 INTERFACE WIFI v1.2',b'WIFI_LINK:',b'WIFI_PROGRESS:',b'WIFI_SETUP:',b'network_lockout_failed',b'no boot assignments',b'WIFI_PROVISIONED:',b'WIFI_SETUP_REJECTED:',
     b'interface-wifi1',b'DRIVE_DIAG_BEGIN:',b'NAV_LOG_BEGIN:',b'is28/cmd',b'is28/tlm',b'is28/hb']:
     assert marker in payload,marker
 assert b'*A* LEFT / *F* RIGHT' not in payload

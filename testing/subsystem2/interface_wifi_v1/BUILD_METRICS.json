@@ -1,9 +1,9 @@
 {
-  "artifact": "firmware/buddy123_interface_wifi_v1_1.uf2",
-  "bundle": "firmware/buddy123_interface_wifi_v1_1_bundle.zip",
-  "sha256": "ad9dbf7b356a6403bd5e5cc55e5b305f63743efd0faddccd2a34ceda0aea48d1",
-  "bytes": 1005056,
-  "blocks": 1963,
+  "artifact": "firmware/buddy123_interface_wifi_v1_2.uf2",
+  "bundle": "firmware/buddy123_interface_wifi_v1_2_bundle.zip",
+  "sha256": "c3807c485a79a83f1a2e83f6d3ff4dfd05b558aed1695041443dcb310b5ff5aa",
+  "bytes": 1008128,
+  "blocks": 1969,
   "date": "2026-10-28",
   "base_commit": "1263390b069ae9617c412e47212177e77807c505",
   "buddy1_commit": "b09403074939f45cf4d7c11b7606148f6c2a4e73",
@@ -11,28 +11,28 @@
   "arm_compiler": "Arm GNU Toolchain 14.2.Rel1 14.2.1 20241119",
   "host_c_executables": 33,
   "javascript_schema_tests": 10,
-  "python_helper_tests": 10,
+  "python_helper_tests": 11,
   "browser_smoke": "Chrome desktop/mobile; simulated MQTT, no physical Pico or broker",
   "arm_builds": {
     "build-wifi-on": {
-      "text": 506560,
+      "text": 508008,
       "data": 0,
-      "bss": 193128
+      "bss": 193144
     },
     "build-wifi-off": {
-      "text": 209876,
+      "text": 210596,
       "data": 0,
-      "bss": 148056
+      "bss": 148072
     },
     "build-wifi-unpacked": {
-      "text": 505392,
+      "text": 506680,
       "data": 0,
-      "bss": 198088
+      "bss": 198104
     }
   },
   "symbols": {
-    "__flash_binary_end": "0x1007aac4",
-    "__bss_end__": "0x200300f8",
+    "__flash_binary_end": "0x1007b06c",
+    "__bss_end__": "0x20030108",
     "__HeapLimit": "0x20040000",
     "__StackLimit": "0x20040000",
     "__StackOneBottom": "0x20040800",

@@ -35,16 +35,18 @@ A-Z route still uses2 bytes. Coordinator audit:241 meaningful bits+7 padding in3
 
 | Identical WiFi features | ELF BSS bytes |
 |---|---:|
-|Packed shared interface|193128|
-|Unpacked shared-state reference|198088|
+|Packed shared interface|193144|
+|Unpacked shared-state reference|198104|
 |Saving|**4960**|
 
 The reference expands shared enum/flag fields only:152 event slots save4864B,16 result slots64B,status32B. Host object comparisons remain MotionStatus64 to32B,MotionCommandStatus20 to16B,MotionEvent72 to40B. Audit encoding31B.
 
-Network-on adds45072B versus network-off148056B. Total BSS is44380B below Continuous V2's237508B because histories/storage scratch were reduced; this is **not** a like-for-like packing saving. BUILD_METRICS.json records variants.
+Network-on adds45072B versus network-off148072B. Total BSS is44364B below Continuous V2's237508B because histories/storage scratch were reduced; this is **not** a like-for-like packing saving. BUILD_METRICS.json records variants.
 
 Core0 atomically replaces mapping/captures revisions. Coordinator faults/leases/audit and generation-checked commits retain spinlock/IRQ discipline. Core1 owns networking; copied queues/status use a separate spinlock. SDK flash lockout parks core1 before stopped writes mask IRQs.
 
 Remaining project work: inventory all fields/ranges, migrate remaining legacy/byte-aligned fields, agree physical precision, measure complete-system timing/worst-case stack/heap, and physically demonstrate networking/following/barcode/junction/IMU/obstacles. Tests/linker symbols do not replace hardware evidence.
 
 V1.1 adds copied network diagnostics: SDK link state -3..3 in int8, latest MQTT result with -32768 unavailable sentinel in int16, IPv4 and attempt count in uint32. These native diagnostic fields are byte-aligned, not a claim of minimum-bit completion. Core1 updates them under the transport spinlock; core0 n reads a locked copy. The added status state increases each variant BSS by8B after existing padding.
+
+V1.2 adds three-bit network phase (0..6), full-width uint32 completed-loop count/boot-ms/stored broker IPv4, and a core0-private byte setup-result code (0..9 or255 not attempted). Shared network diagnostics retain the transport lock. This diagnostic representation is still only partial minimum-bit compliance. Each ARM variant adds16B BSS versus V1.1; protocol packets, control thresholds and log formats are unchanged.

@@ -18,14 +18,23 @@ def wait_for_confirmation(port,serial_error,*,timeout=8,clock=time.monotonic)->N
     Windows can discard a partial multi-byte read when the device resets.
     Read one byte at a time and never infer success merely from disconnect.
     """
-    deadline=clock()+timeout;buffer=b''
+    deadline=clock()+timeout;buffer=b'';rejected=False
     while clock()<deadline:
         try:buffer=(buffer+port.read(1))[-1024:]
         except serial_error:
+            if rejected:raise SystemExit('Setup rejected by Pico; USB disconnected before its full reason was received. Reopen PuTTY and press n for WIFI_SETUP.') from None
             raise SystemExit('USB disconnected while waiting for confirmation. The Pico may have rebooted after saving. Wait a few seconds, reopen PuTTY and press n: configured=1 means settings were loaded. Success was not confirmed by this helper; do not reflash just for this error.') from None
         if b'WIFI_SETUP_REJECTED:' in buffer:
-            raise SystemExit('Setup rejected: check the IP/field lengths and wait until the stopped run finishes saving.')
+            rejected=True
+            detail=buffer.split(b'WIFI_SETUP_REJECTED:',1)[1]
+            if b'\n' in detail:
+                # Firmware sends only a reason code here; never echo config data.
+                import re
+                match=re.fullmatch(rb'\s*code=(\d{1,3}) reason=([A-Za-z0-9_]+)\s*',detail.split(b'\n',1)[0])
+                reason=('code='+match[1].decode()+' reason='+match[2].decode()) if match else 'unspecified (press n in PuTTY for status)'
+                raise SystemExit('Setup rejected by Pico: '+reason)
         if b'WIFI_PROVISIONED:' in buffer:return
+    if rejected:raise SystemExit('Setup rejected by Pico; incomplete reason. Press n in PuTTY for WIFI_SETUP.')
     raise SystemExit('No verified setup response. Check the port and firmware banner, then retry. No credentials were printed.')
 
 def main()->None:

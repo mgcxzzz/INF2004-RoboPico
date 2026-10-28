@@ -28,9 +28,14 @@ class ProvisionTests(unittest.TestCase):
             wait_for_confirmation(port,OSError)
 
     def test_rejected_configuration_is_not_success(self):
-        port=Mock();port.read.side_effect=[bytes([x]) for x in b'WIFI_SETUP_REJECTED:']
-        with self.assertRaisesRegex(SystemExit,'Setup rejected'):
+        port=Mock();port.read.side_effect=[bytes([x]) for x in b'WIFI_SETUP_REJECTED: code=8 reason=network_lockout_failed\n']
+        with self.assertRaisesRegex(SystemExit,'code=8 reason=network_lockout_failed'):
             wait_for_confirmation(port,OSError)
+
+    def test_reject_detail_never_echoes_unexpected_configuration_text(self):
+        port=Mock();port.read.side_effect=[bytes([x]) for x in b'WIFI_SETUP_REJECTED: secret-passphrase\n']
+        with self.assertRaises(SystemExit) as result:wait_for_confirmation(port,OSError)
+        self.assertNotIn('secret-passphrase',str(result.exception))
 
     def test_missing_ack_times_out(self):
         port=Mock();port.read.return_value=b''
