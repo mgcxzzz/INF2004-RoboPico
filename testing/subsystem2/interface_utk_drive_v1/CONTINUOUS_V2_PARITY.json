@@ -1,0 +1,30 @@
+{
+  "continuous_drive.h": {
+    "sha256": "9eadf64b31f81f7f37d8664462bf7863c63d21a3f469a4664d1b2b014601bc18",
+    "matches_continuous_v2": true
+  },
+  "continuous_follow.h": {
+    "sha256": "17f43775e4fb33ccf6913e780dcb303b9c1667a6d9acdf54233ea99a7b6a6db7",
+    "matches_continuous_v2": true
+  },
+  "continuous_steering.h": {
+    "sha256": "c08d5e26858593344064bf0256950c3743a87a593ddb0b653f4aa5a1b145c62f",
+    "matches_continuous_v2": true
+  },
+  "motion_api.c": {
+    "sha256": "1558742b9f1bb7084fa574e19a60c1ad7475462f475e19290d652714f67d4854",
+    "matches_continuous_v2": false
+  },
+  "nav_coordinator.c": {
+    "sha256": "821e677d895e92e2e1680c2109d3df7ea652b2f7b99b0ee6cb0172933064c910",
+    "matches_continuous_v2": false
+  },
+  "motion_executor.c": {
+    "sha256": "eceffbadb80447c12cb4483e447902b85119654a1840b24fce2a7a619bf5bb70",
+    "matches_continuous_v2": true
+  },
+  "nav_codec.c": {
+    "sha256": "a0bcd3334a453beba33ae4f5a355c0301231a7eae8d650374853dba0766663c6",
+    "matches_continuous_v2": false
+  }
+}

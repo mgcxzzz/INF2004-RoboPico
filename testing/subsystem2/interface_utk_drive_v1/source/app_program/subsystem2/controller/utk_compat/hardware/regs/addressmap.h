@@ -1,0 +1,5 @@
+#ifndef UTK_COMPAT_HARDWARE_REGS_ADDRESSMAP_H
+#define UTK_COMPAT_HARDWARE_REGS_ADDRESSMAP_H
+#include "hardware/flash.h"
+#define XIP_BASE 0x10000000u
+#endif

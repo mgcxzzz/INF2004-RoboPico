@@ -1,0 +1,67 @@
+{
+  "artifact": "firmware/buddy123_utk_drive_v1.uf2",
+  "build": {
+    "__flash_binary_end": "0x10074188",
+    "compiler": "arm-none-eabi-gcc.exe (Arm GNU Toolchain 14.2.Rel1 (Build arm-14.52)) 14.2.1 20241119",
+    "elf": "source/build_make/mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt.elf",
+    "profile": "smp1-usb_cdc-wificyw43-netlwip-mqtt1-crash0-test0",
+    "ram_flash_symbols": {
+      "flash_range_erase": "0x20000498",
+      "flash_range_program": "0x2000050c",
+      "utk_flash_end": "0x20000460",
+      "utk_flash_service": "0x20000408"
+    },
+    "settings_sector_start": "0x101aa000",
+    "size_bytes": {
+      "bss": 225108,
+      "data": 0,
+      "text": 475528
+    }
+  },
+  "bundle": "firmware/buddy123_utk_drive_v1_bundle.zip",
+  "calibration": {
+    "mutable_controls": [
+      "w",
+      "l",
+      "r",
+      "k",
+      "c"
+    ],
+    "preset_adc": {
+      "black_left": 3457,
+      "black_right": 3700,
+      "white_left": 163,
+      "white_right": 160
+    },
+    "saved_log_record_version": 27,
+    "startup_behavior": "valid saved calibration overrides preset; otherwise use preset",
+    "verification": "test_successful_calibration.c checks preset values, record 27 override and restore behavior"
+  },
+  "controller_preservation": {
+    "baseline": "interface_continuous_v2",
+    "byte_identical_headers": {
+      "continuous_drive.h": "9eadf64b31f81f7f37d8664462bf7863c63d21a3f469a4664d1b2b014601bc18",
+      "continuous_follow.h": "17f43775e4fb33ccf6913e780dcb303b9c1667a6d9acdf54233ea99a7b6a6db7",
+      "continuous_steering.h": "c08d5e26858593344064bf0256950c3743a87a593ddb0b653f4aa5a1b145c62f"
+    }
+  },
+  "firmware": {
+    "blocks": 1858,
+    "bytes": 951296,
+    "max_flash_end": "0x10074200",
+    "settings_sector_start": "0x101aa000"
+  },
+  "generated_utc": "2026-10-28T12:08:22+00:00",
+  "source_file_count": 881,
+  "source_manifest": "SOURCE_SHA256.json",
+  "source_origins": {
+    "buddy1_upstream": "reviewed Buddy 1 protocol, mapping, and dashboard snapshot: b09403074939f45cf4d7c11b7606148f6c2a4e73",
+    "kernel_wifi_service": "micro T-Kernel kernel/Wi-Fi service snapshot: 12f2f66b16ffc2b9c68b624629ce0859772b38bc",
+    "wifi_v2_upstream": "Wi-Fi V2 packet and dashboard baseline: 10d7886b1ef9c5f5df681467fdf788566edeab6e"
+  },
+  "validation_scope": {
+    "embedded_credentials": false,
+    "physical_driving": "not validated",
+    "wifi_network_bench": "reported by user"
+  }
+}
