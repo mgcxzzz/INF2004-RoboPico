@@ -1,4 +1,11 @@
-# Validation, 28 October 2026
+# V1.1 validation, 28 October 2026
+
+- Real `sys_hal_init` and clock-validation regression: PASS for running/wrong divider, correct and disabled tick, rejected writes, wrong reference clock, frozen/slow/fast timer and wraparound. MMIO and kernel waits are test models.
+- Actual application startup regression: PASS; register-init or time-check failures cannot create/start the driving task, and motor GPIOs are held off.
+- V1.1 ARM build: PASS, text 476328, BSS 225124. One linker warning for the RAM read/write/execute segment is expected because flash-writing helpers execute from SRAM.
+- New clock-check hardware result is pending. Earlier V1 hardware timing was wrong despite its software build passing.
+
+## V1 baseline checks (did not validate hardware timer rate)
 
 - ARM kernel Wi-Fi/MQTT + driving build: passed. ELF text 475528 bytes, BSS 225108 bytes. RAM-executable flash helpers are counted in text by GNU size; the linker map records their RAM VMA and flash load address.
 - Original Continuous V2 drive, follow, steering and coordinator integration regressions: passed. Three steering/drive headers are byte-identical to interface_continuous_v2. Host steering tests use MinGW SSE single-precision arithmetic; x87 extended precision did not meet a boundary assertion, so it is not used as an RP2040 arithmetic model.

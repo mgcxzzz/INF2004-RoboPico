@@ -1,7 +1,7 @@
-# Build the UTK Drive V1 image
+# Build the UTK Drive V1.1 image
 
 The release artifacts are the drive image
-`firmware/buddy123_utk_drive_v1.uf2` and the accompanying
+`firmware/buddy123_utk_drive_v1_1.uf2` and the accompanying
 `firmware/buddy123_utk_drive_v1.zip` bundle. The build helper produces the
 profile-named UF2; the release staging step copies it to the generic filename.
 
@@ -37,7 +37,7 @@ The expected output is
 
 ```bash
 mkdir -p ../../firmware
-cp mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt.uf2 ../../firmware/buddy123_utk_drive_v1.uf2
+cp mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt.uf2 ../../firmware/buddy123_utk_drive_v1_1.uf2
 ```
 
 The helper does not create the release ZIP. Use the supplied bundle for the
@@ -58,13 +58,13 @@ make -j8 WIFI=cyw43 NET=lwip MQTT=1 SMP=1 CONSOLE=usb_cdc CRASH_REPORT=0 TEST=0
 ```
 
 See [`source/README.md`](source/README.md) for Pico SDK setup. Keep the
-profile-named build output for comparisons; `buddy123_utk_drive_v1.uf2` is the
+profile-named build output for comparisons; `buddy123_utk_drive_v1_1.uf2` is the
 release-friendly artifact name, not a different build configuration.
 
 ## Current build status
 
 The current firmware build completed and generated a UF2. Reported memory use
-is 475,232 bytes of text, 0 bytes of data, and 225,140 bytes of BSS. The image
+is 476,328 bytes of text, 0 bytes of data, and 225,124 bytes of BSS. The image
 has not yet been flashed or tested on the physical robot. The dashboard's
 schema and browser smoke checks are separate software checks and do not
 validate motor or sensor behavior.

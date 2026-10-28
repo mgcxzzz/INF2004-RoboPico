@@ -17,6 +17,7 @@ int utk_printf(const char *format, ...);
 int utk_puts(const char *text);
 int utk_putchar(int value);
 int32_t utk_kernel_delay(uint32_t delay_ms);
+void utk_kernel_timebase_report(void);
 int32_t utk_kernel_define_int(uint32_t intno, void (*handler)(unsigned int));
 void utk_kernel_enable_int(uint32_t intno, int32_t level);
 void utk_kernel_clear_int(uint32_t intno);

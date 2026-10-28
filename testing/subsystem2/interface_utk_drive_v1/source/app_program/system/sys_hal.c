@@ -2,10 +2,9 @@
  * @file    sys_hal.c
  * @brief   Microsecond clock and shared GPIO interrupt dispatcher (RP2040).
  *
- * The micro T-Kernel Pico BSP runs its tick from SysTick and does not start
- * the RP2040 TIMER block or the watchdog tick generator that feeds it.
- * sys_hal_init() releases TIMER from reset and starts the 1 us tick from the
- * 12 MHz crystal reference, exactly as the Pico SDK does at boot.
+ * Kernel time uses SysTick. The BSP now establishes the independent RP2040
+ * TIMER's 1 MHz source before services start. sys_hal_init verifies the
+ * registers again; the driving task is gated on a timed cross-check.
  *
  * Register addresses are from the RP2040 datasheet (sections 2.19, 4.6, 4.7).
  *
@@ -16,17 +15,14 @@
 #include <tm/tmonitor.h>
 
 #include "sys_hal.h"
+#include <sys/sysdepend/pico_rp2040/timebase.h>
 
 /* RP2040 atomic register aliases: write 1s to set / clear bits. */
 #define REG_ALIAS_SET           (0x2000U)
 #define REG_ALIAS_CLR           (0x3000U)
 
-/* Watchdog tick generator -> TIMER (1 us from the 12 MHz clk_ref). */
-#define WATCHDOG_BASE           (0x40058000U)
-#define WATCHDOG_TICK           (WATCHDOG_BASE + 0x2CU)
-#define WATCHDOG_TICK_ENABLE    (1U << 9)
-#define WATCHDOG_TICK_RUNNING   (1U << 10)
-#define WATCHDOG_TICK_CYCLES    (12U)           /* XOSC_MHz */
+static uint32_t timebase_kernel_ms,timebase_timer_us;
+static uint8_t timebase_flags; /* bit0 checked, bit1 passed */
 
 /* IO_BANK0 interrupt registers, 8 GPIOs x 4 event bits per register. */
 #define IO_INTR(n)              (IO_BANK0_BASE + 0x0F0U + (4U * (n)))
@@ -63,19 +59,44 @@ sys_unreset (uint32_t mask)
 }
 
 /**
- * @brief  Start the 1 MHz TIMER if the BSP has not already done so.
+ * @brief  Establish the required divider even if the tick is running.
  */
 ER
 sys_hal_init (void)
 {
-    if ((in_w(WATCHDOG_TICK) & WATCHDOG_TICK_RUNNING) == 0U)
-    {
-        out_w(WATCHDOG_TICK, WATCHDOG_TICK_ENABLE | WATCHDOG_TICK_CYCLES);
-    }
-
+    if(!utk_timebase_program()) {timebase_flags=1u;return E_SYS;}
     sys_unreset(RESETS_RESET_TIMER);
-
     return E_OK;
+}
+
+ER sys_timebase_validate(void)
+{
+    SYSTIM start,end;
+    timebase_flags=1u;
+    if(tk_get_otm(&start)<E_OK)return E_SYS;
+    uint32_t timer_start=sys_time_us();
+    if(tk_dly_tsk(250)<E_OK)return E_SYS;
+    uint32_t timer_end=sys_time_us();
+    if(tk_get_otm(&end)<E_OK)return E_SYS;
+    timebase_kernel_ms=(uint32_t)(end.lo-start.lo);
+    timebase_timer_us=timer_end-timer_start;
+    if(!utk_timebase_elapsed_ok(timebase_timer_us,timebase_kernel_ms) ||
+       !utk_timebase_registers_ok(UTK_TB_READ(UTK_TB_TICK_ADDR),
+           UTK_TB_READ(UTK_TB_REF_SELECTED),UTK_TB_READ(UTK_TB_REF_DIV_ADDR)))return E_SYS;
+    timebase_flags=3u;
+    return E_OK;
+}
+
+void sys_timebase_report(void)
+{
+    uint32_t tick=UTK_TB_READ(UTK_TB_TICK_ADDR);
+    uint32_t selected=UTK_TB_READ(UTK_TB_REF_SELECTED);
+    uint32_t divider=UTK_TB_READ(UTK_TB_REF_DIV_ADDR);
+    bool ok=timebase_flags==3u && utk_timebase_registers_ok(tick,selected,divider);
+    tm_printf((UB*)"TIMEBASE: %s cycles=%u enable=%u running=%u ref_selected=0x%x ref_div=0x%x kernel_ms=%u timer_us=%u\n",
+        ok?"PASS":timebase_flags?"FAIL":"PENDING",(unsigned)(tick&UTK_TB_CYCLES_MASK),
+        (unsigned)((tick&UTK_TB_ENABLE)!=0),(unsigned)((tick&UTK_TB_RUNNING)!=0),
+        (unsigned)selected,(unsigned)divider,(unsigned)timebase_kernel_ms,(unsigned)timebase_timer_us);
 }
 
 /**

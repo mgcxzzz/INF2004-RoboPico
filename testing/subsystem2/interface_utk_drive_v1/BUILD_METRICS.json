@@ -1,7 +1,7 @@
 {
-  "artifact": "firmware/buddy123_utk_drive_v1.uf2",
+  "artifact": "firmware/buddy123_utk_drive_v1_1.uf2",
   "build": {
-    "__flash_binary_end": "0x10074188",
+    "__flash_binary_end": "0x100744a8",
     "compiler": "arm-none-eabi-gcc.exe (Arm GNU Toolchain 14.2.Rel1 (Build arm-14.52)) 14.2.1 20241119",
     "elf": "source/build_make/mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt.elf",
     "profile": "smp1-usb_cdc-wificyw43-netlwip-mqtt1-crash0-test0",
@@ -13,12 +13,12 @@
     },
     "settings_sector_start": "0x101aa000",
     "size_bytes": {
-      "bss": 225108,
+      "bss": 225124,
       "data": 0,
-      "text": 475528
+      "text": 476328
     }
   },
-  "bundle": "firmware/buddy123_utk_drive_v1_bundle.zip",
+  "bundle": "firmware/buddy123_utk_drive_v1_1_bundle.zip",
   "calibration": {
     "mutable_controls": [
       "w",
@@ -46,18 +46,37 @@
     }
   },
   "firmware": {
-    "blocks": 1858,
-    "bytes": 951296,
-    "max_flash_end": "0x10074200",
+    "blocks": 1861,
+    "bytes": 952832,
+    "max_flash_end": "0x10074500",
     "settings_sector_start": "0x101aa000"
   },
-  "generated_utc": "2026-10-28T12:08:22+00:00",
-  "source_file_count": 881,
+  "firmware_version": "v1.1",
+  "generated_utc": "2026-10-28T13:47:35+00:00",
+  "source_file_count": 889,
   "source_manifest": "SOURCE_SHA256.json",
   "source_origins": {
     "buddy1_upstream": "reviewed Buddy 1 protocol, mapping, and dashboard snapshot: b09403074939f45cf4d7c11b7606148f6c2a4e73",
     "kernel_wifi_service": "micro T-Kernel kernel/Wi-Fi service snapshot: 12f2f66b16ffc2b9c68b624629ce0859772b38bc",
+    "utk_drive_v1": "UTK Drive V1 before hardware-clock correction: e7d78e31aff330b68f99a1da128e1b07c9b4bd79",
     "wifi_v2_upstream": "Wi-Fi V2 packet and dashboard baseline: 10d7886b1ef9c5f5df681467fdf788566edeab6e"
+  },
+  "timebase": {
+    "before_services": true,
+    "clk_ref_hz": 12000000,
+    "compatible_with_v1_laptop_files": true,
+    "hardware_timing_retest": "pending",
+    "motor_start_gate": "250 ms against independent kernel SysTick",
+    "timer_hz": 1000000,
+    "unchanged_from_v1": [
+      "dashboard/index.html",
+      "dashboard/is28_schema.js",
+      "run_dashboard.py",
+      "source/app_program/subsystem2/controller/wifi_packets.c",
+      "source/app_program/subsystem2/controller/wifi_protocol.c",
+      "source/app_program/subsystem2/controller/successful_calibration.h"
+    ],
+    "watchdog_tick_cycles": 12
   },
   "validation_scope": {
     "embedded_credentials": false,

@@ -258,6 +258,9 @@ static void wifi_harness_init(void) {
 static bool wifi_console_byte(int ch) {
     if(ch==PICO_ERROR_TIMEOUT)return false;
     if(ch=='n') {
+#ifdef BUDDY_UTK_DRIVE
+        utk_kernel_timebase_report();
+#endif
         WifiTransportStatus s=wifi_transport_status();
         printf("WIFI: configured=%u stack_ready=%u mqtt=%u subscribed=%u pm_off_verified=%u published=%lu dropped_TX=%lu dropped_RX=%lu poll_gap_us=%lu map_configured=%u map_revision=%u\n",
             s.configured,s.ready,s.connected,s.subscribed,s.pm_disabled,(unsigned long)s.published,(unsigned long)s.tx_dropped,

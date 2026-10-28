@@ -32,6 +32,7 @@
 #include <tm/tmonitor.h>
 
 #include "sysdepend.h"
+#include <sys/sysdepend/pico_rp2040/timebase.h>
 
 /* 
  * Setup register data 
@@ -48,6 +49,7 @@ LOCAL const UW module_tbl[] = {
 	RESETS_RESET_IO_BANK0,		/* IO_BANK0 */
 	RESETS_RESET_PADS_BANK0,	/* PADS_BANK0 */
 	RESETS_RESET_UART0,		/* UART0 */
+	RESETS_RESET_TIMER,		/* Hardware microsecond clock, before USB/Wi-Fi */
 
 #if TM_WIFI_CYW43
 	/* The Pico W radio transport runs a PIO state machine with two DMA
@@ -186,6 +188,9 @@ EXPORT void knl_startup_hw(void)
 
 	/* Startup System Clock */
 	startup_clock(CLKATR_USB | CLKATR_ADC | CLKATR_RTC | CLKATR_PREI);
+	/* Before any task or USB/radio code can use the hardware timer.
+	 * sys_hal_init() verifies again, then gates driving on a timed check. */
+	(void)utk_timebase_program();
 
 	for(INT i = 0; (rst = module_tbl[i]); i++) {
 		set_w(RESETS_RESET, rst);

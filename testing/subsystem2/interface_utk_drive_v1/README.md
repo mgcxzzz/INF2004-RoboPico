@@ -1,4 +1,4 @@
-# Buddy 1/2/3 UTK Drive V1
+# Buddy 1/2/3 UTK Drive V1.1
 
 This is the full V2 steering/controller and kernel-network integration for
 the micro T-Kernel migration. It combines the validated Continuous V2
@@ -13,6 +13,35 @@ on the robot has not yet been validated**. Keep the robot secured, wheels
 clear for initial tests, and emergency stop accessible. Do not treat dashboard
 telemetry or a successful network check as physical validation.
 
+## V1.1 timing correction and upgrading V1
+
+V1.1 fixes the hardware TIMER clock initialization. The old V1 application
+accepted an already-running watchdog tick without checking its divider;
+passive hardware telemetry showed application time about 42.7 times too slow.
+The V1 UF2 is retained as historical evidence; use the explicit V1.1 UF2.
+
+**Existing V1 dashboard and Python helpers remain compatible. Reflashing only
+`buddy123_utk_drive_v1_1.uf2` is enough.** No protocol, dashboard, saved Wi-Fi,
+calibration, profile, or log layout changes are required. The V1.1 ZIP is an
+optional complete source/helper bundle. Reapply the RAM barcode map after reboot.
+
+Before Start, open PuTTY at 115200 and press `n`. V1.1 reports:
+
+```text
+TIMEBASE: PASS cycles=12 enable=1 running=1 ref_selected=0x4 ref_div=0x100 kernel_ms=... timer_us=...
+```
+
+The stored boot measurement should show roughly 250 kernel milliseconds and
+250000 hardware microseconds (values may differ slightly with scheduling).
+If the check fails, no drive task is started and failure diagnostics repeat
+every two kernel seconds. Do not issue Start while checking idle timing.
+Verify roughly one heartbeat per second, motion updates about every 50 ms,
+and uptime increasing by about one second per wall second. Forced heartbeats
+from other connected clients can produce additional messages. Then test the
+normal two-second Start countdown. Keep steering/calibration settings as before.
+
+See [TIMEBASE_FIX_V1_1.md](TIMEBASE_FIX_V1_1.md) for evidence and regressions.
+
 ## First Windows setup
 
 1. Put the robot on a stable surface with the wheels clear. Start the laptop
@@ -20,11 +49,11 @@ telemetry or a successful network check as physical validation.
    starts Mosquitto when available, serves the dashboard, and prints the
    laptop's LAN address. The browser uses `ws://localhost:9001`; the Pico must
    use the laptop's LAN IPv4 as its broker address.
-2. Flash **[`firmware/buddy123_utk_drive_v1.uf2`](firmware/buddy123_utk_drive_v1.uf2)**
+2. Flash **[`firmware/buddy123_utk_drive_v1_1.uf2`](firmware/buddy123_utk_drive_v1_1.uf2)**
    with BOOTSEL: hold BOOTSEL while connecting USB, release when the
    `RPI-RP2` drive appears, then copy the UF2 to that drive. The Pico reboots.
    The accompanying release bundle is
-   **[`firmware/buddy123_utk_drive_v1_bundle.zip`](firmware/buddy123_utk_drive_v1_bundle.zip)**.
+   **[`firmware/buddy123_utk_drive_v1_1_bundle.zip`](firmware/buddy123_utk_drive_v1_1_bundle.zip)**.
 3. The Wi-Fi settings use the existing WCF1 sector at `0x101AA000`. A valid
    saved WCF1 page remains usable across this firmware update. Run
    **`Configure WiFi.cmd`** only if settings are missing/invalid or the SSID
@@ -34,7 +63,7 @@ telemetry or a successful network check as physical validation.
 4. Wait for the dashboard to report **broker connected** and **car: online**.
    Check the live Buddy 1 state, motion telemetry and active barcode map. A
    map change is complete only after the dashboard confirms the source-8
-   readback and revision. Choose four different Aâ€“Z letters in Forward,
+   readback and revision. Choose four different AÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“Z letters in Forward,
    U-turn, Left, Right order before testing junctions.
 
 On first boot, the front-sensor calibration preset is **white 163/160, black

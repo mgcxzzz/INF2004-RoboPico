@@ -11,10 +11,13 @@ EXPORT INT usermain(void)
     for(UINT pin=8;pin<=11;++pin) {
         (void)gpio_set_val(pin,0);(void)gpio_set_pin(pin,GPIO_MODE_OUT);
     }
-    tm_printf((UB*)"\nBUDDY123 UTK DRIVE V1 | Continuous V2 steering + kernel MQTT\n");
+    tm_printf((UB*)"\nBUDDY123 UTK DRIVE V1.1 | verified 1MHz timer | Continuous V2 steering + kernel MQTT\n");
     tm_printf((UB*)"Motors OFF on boot. Await explicit start. Buddy5/IMU hooks only.\n");
     ER er=sys_hal_init();
     if(er<E_OK)goto failed;
+    er=sys_timebase_validate();
+    sys_timebase_report();
+    if(er<E_OK)goto failed; /* no drive task, no ADC/PWM start on a bad clock */
     er=drive_bridge_init();
     if(er<E_OK)goto failed;
     T_CTSK task={0};
@@ -26,6 +29,9 @@ EXPORT INT usermain(void)
     if(er<E_OK)goto failed;
     for(;;)(void)tk_slp_tsk(TMO_FEVR);
 failed:
-    tm_printf((UB*)"UTK DRIVE init failed (%d); motors remain OFF.\n",(int)er);
-    for(;;)(void)tk_slp_tsk(TMO_FEVR);
+    for(;;) {
+        tm_printf((UB*)"UTK DRIVE V1.1 init failed (%d); driving disabled; motors remain OFF.\n",(int)er);
+        sys_timebase_report();
+        (void)tk_dly_tsk(2000);
+    }
 }

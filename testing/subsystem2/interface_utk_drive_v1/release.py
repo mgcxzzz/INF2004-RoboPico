@@ -35,8 +35,8 @@ PROFILE_ELF = ROOT / "source" / "build_make" / f"{PROFILE_NAME}.elf"
 PROFILE_MAP = ROOT / "source" / "build_make" / f"{PROFILE_NAME}.map"
 PROFILE_FILE = ROOT / "source" / "build_make" / ".build_profile"
 FIRMWARE_DIR = ROOT / "firmware"
-GENERIC_UF2 = FIRMWARE_DIR / "buddy123_utk_drive_v1.uf2"
-BUNDLE_ZIP = FIRMWARE_DIR / "buddy123_utk_drive_v1_bundle.zip"
+GENERIC_UF2 = FIRMWARE_DIR / "buddy123_utk_drive_v1_1.uf2"
+BUNDLE_ZIP = FIRMWARE_DIR / "buddy123_utk_drive_v1_1_bundle.zip"
 SUMS_FILE = FIRMWARE_DIR / "SHA256SUMS.txt"
 SOURCE_MANIFEST = ROOT / "SOURCE_SHA256.json"
 METRICS_FILE = ROOT / "BUILD_METRICS.json"
@@ -50,11 +50,12 @@ UF2_MAGIC1 = 0x9E5D5157
 UF2_MAGIC_END = 0x0AB16F30
 UF2_FLAG_FAMILY_ID_PRESENT = 0x00002000
 RP2040_FAMILY_ID = 0xE48BFF56
-EXPECTED_SIZE_METRICS = {"text": 475528, "data": 0, "bss": 225108}
+EXPECTED_SIZE_METRICS = {"text": 476328, "data": 0, "bss": 225124}
 SOURCE_ORIGINS = {
     "kernel_wifi_service": "12f2f66b16ffc2b9c68b624629ce0859772b38bc",
     "buddy1_upstream": "b09403074939f45cf4d7c11b7606148f6c2a4e73",
     "wifi_v2_upstream": "10d7886b1ef9c5f5df681467fdf788566edeab6e",
+    "utk_drive_v1": "e7d78e31aff330b68f99a1da128e1b07c9b4bd79",
 }
 PARITY_HEADERS = (
     "continuous_drive.h",
@@ -117,6 +118,7 @@ def verify_origins() -> dict[str, str]:
         "kernel_wifi_service": "micro T-Kernel kernel/Wi-Fi service snapshot",
         "buddy1_upstream": "reviewed Buddy 1 protocol, mapping, and dashboard snapshot",
         "wifi_v2_upstream": "Wi-Fi V2 packet and dashboard baseline",
+        "utk_drive_v1": "UTK Drive V1 before hardware-clock correction",
     }
     for label, commit in SOURCE_ORIGINS.items():
         run_checked(["git", "-C", str(REPO), "cat-file", "-e", f"{commit}^{{commit}}"])
@@ -237,10 +239,37 @@ def verify_uf2(path: Path) -> dict:
         ranges.append((target, end))
         image.extend(block[32:32 + payload_size])
     max_end = max(end for _, end in ranges)
-    banner = b"BUDDY123 UTK DRIVE V1"
+    banner = b"BUDDY123 UTK DRIVE V1.1"
     if banner not in image:
         fail("UF2 does not contain the expected UTK Drive V1 firmware banner")
+    if b"TIMEBASE: %s cycles=" not in image:
+        fail("UF2 does not contain the timebase verification report")
     return {"bytes": len(raw), "blocks": blocks, "max_flash_end": f"0x{max_end:08x}", "settings_sector_start": f"0x{SETTINGS_OFFSET:08x}"}
+
+
+def verify_timebase_and_compatibility() -> dict:
+    app=(ROOT/"source/app_program/app_main.c").read_text()
+    order=[app.index(marker) for marker in (
+        "er=sys_hal_init()", "er=sys_timebase_validate()", "er=drive_bridge_init()", "tk_cre_tsk(&task)")]
+    if order!=sorted(order):fail("clock gate is not before drive task creation")
+    bsp=(ROOT/"source/kernel/sysdepend/pico_rp2040/hw_setting.c").read_text()
+    if bsp.index("startup_clock(CLKATR_USB")>bsp.index("(void)utk_timebase_program()"):
+        fail("tick configuration must follow reference-clock setup")
+    if bsp.index("(void)utk_timebase_program()")>bsp.index("for(INT i = 0; (rst = module_tbl[i])"):
+        fail("tick configuration must occur before service startup")
+    unchanged=["dashboard/index.html","dashboard/is28_schema.js","run_dashboard.py",
+        "source/app_program/subsystem2/controller/wifi_packets.c",
+        "source/app_program/subsystem2/controller/wifi_protocol.c",
+        "source/app_program/subsystem2/controller/successful_calibration.h"]
+    for rel in unchanged:
+        previous=subprocess.check_output(["git","-C",str(REPO),"show",
+            SOURCE_ORIGINS["utk_drive_v1"]+":"+REL_ROOT+"/"+rel])
+        if hashlib.sha256(previous).hexdigest()!=sha256(ROOT/rel):
+            fail("unexpected dashboard/protocol/calibration change: "+rel)
+    return {"timer_hz":1000000,"clk_ref_hz":12000000,"watchdog_tick_cycles":12,
+        "before_services":True,"motor_start_gate":"250 ms against independent kernel SysTick",
+        "hardware_timing_retest":"pending","compatible_with_v1_laptop_files":True,
+        "unchanged_from_v1":unchanged}
 
 
 def parse_nm(nm_output: str) -> dict[str, int]:
@@ -359,6 +388,7 @@ def main() -> None:
     uf2 = verify_uf2(input_uf2)
     calibration = verify_calibration()
     steering = verify_steering()
+    timebase = verify_timebase_and_compatibility()
     source_files = list_release_sources()
     manifest = source_manifest(source_files)
 
@@ -366,13 +396,15 @@ def main() -> None:
     shutil.copyfile(input_uf2, GENERIC_UF2)
     write_json(SOURCE_MANIFEST, manifest)
     write_json(METRICS_FILE, {
-        "artifact": "firmware/buddy123_utk_drive_v1.uf2",
-        "bundle": "firmware/buddy123_utk_drive_v1_bundle.zip",
+        "artifact": "firmware/buddy123_utk_drive_v1_1.uf2",
+        "firmware_version": "v1.1",
+        "bundle": "firmware/buddy123_utk_drive_v1_1_bundle.zip",
         "generated_utc": dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat(),
         "source_origins": origins,
         "build": build,
         "firmware": uf2,
         "calibration": calibration,
+        "timebase": timebase,
         "controller_preservation": steering,
         "validation_scope": {
             "wifi_network_bench": "reported by user",

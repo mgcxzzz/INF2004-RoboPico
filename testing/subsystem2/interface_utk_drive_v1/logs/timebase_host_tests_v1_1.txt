@@ -1,0 +1,2 @@
+PASS actual timer initialization and startup cross-check: inherited wrong divider, readback failure, wrong reference, slow/frozen/fast clocks, wraparound.
+PASS actual app startup: motors held off; no drive task on timer/config/check/bridge failure; valid clock admits exactly one drive task.

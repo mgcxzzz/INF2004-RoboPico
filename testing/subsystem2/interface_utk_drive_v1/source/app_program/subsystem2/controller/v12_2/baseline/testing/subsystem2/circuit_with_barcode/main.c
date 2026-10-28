@@ -299,7 +299,7 @@ static void reset_log(void) {
     flash_loaded=false;recorded_key='-';recorded_version=27;
 }
 static void help(void) {
-    puts("\nBUDDY123 UTK DRIVE v1 | Continuous V2 steering | AUTO ANALOG GP27 | A-Z MQTT MAPPING | no boot assignments | motors OFF on boot");
+    puts("\nBUDDY123 UTK DRIVE v1.1 | verified 1MHz timer | Continuous V2 steering | AUTO ANALOG GP27 | A-Z MQTT MAPPING | no boot assignments | motors OFF on boot");
     puts("Ordinary profiles1/3: continuous steering + continuous per-wheel PI, physical420 cap. No repeated running kick or load-driver switching.");
     puts("Running FF provisional: L150/R180 at45mm/s; encoder PI adjusts. Wheel reference +150/-250mm/s^2, physical PWM slew1200/s; explicit STOP immediate.");
     puts("One bounded150ms starting aid per positive segment, max300, ends early once rolling. Actual output tracked for smooth aid release.");

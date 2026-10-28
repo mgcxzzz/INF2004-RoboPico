@@ -54,7 +54,7 @@ def find_drives()->list[Path]:
 def main()->None:
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--drive',type=Path)
     args=parser.parse_args()
-    print('UTK Drive V1 Wi-Fi setup. Drive firmware: buddy123_utk_drive_v1.uf2. Keep the robot stopped.')
+    print('UTK Drive V1.1 Wi-Fi setup. Drive firmware: buddy123_utk_drive_v1_1.uf2. Keep the robot stopped.')
     ssid=input('2.4 GHz Wi-Fi / hotspot name: ')
     password=getpass.getpass('Wi-Fi password (hidden; Enter for open network): ')
     broker=input('Laptop broker LAN IPv4 address: ').strip()

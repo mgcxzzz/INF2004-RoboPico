@@ -17,6 +17,11 @@ int32_t utk_kernel_delay(uint32_t delay_ms)
     return (int32_t)tk_dly_tsk(delay_ms);
 }
 
+void utk_kernel_timebase_report(void)
+{
+    sys_timebase_report();
+}
+
 int32_t utk_kernel_define_int(uint32_t intno, void (*handler)(unsigned int))
 {
     T_DINT definition;

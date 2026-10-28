@@ -21,6 +21,7 @@ C_DEPS += $(subst ../, ./mtkernel_3/, $(TEMP_DEPS))
 mtkernel_3/app_program/subsystem2/drive_task.o mtkernel_3/app_program/subsystem2/utk_hal.o: INCPATH := -I../app_program/subsystem2/controller/utk_compat -I../app_program/subsystem2/controller -I../app_program/subsystem2 $(INCPATH)
 mtkernel_3/app_program/subsystem2/drive_task.o: CFLAGS += -fstack-usage -Wall -Wextra -Werror -DBUDDY_UTK_DRIVE=1 -DBUDDY_RUNTIME_MAPPING=1 -DBUDDY_WIFI_LOGGING=1 -DLINE_CAL_MIN_SPAN=50 -DCIRCUIT_SWEEP_SEARCH=1
 mtkernel_3/app_program/subsystem2/controller/%.o: CFLAGS += -Wall -Wextra -Werror -DBUDDY_RUNTIME_MAPPING=1 -DBUDDY_WIFI_LOGGING=1 -DLINE_CAL_MIN_SPAN=50 -DCIRCUIT_SWEEP_SEARCH=1
+mtkernel_3/app_program/app_main.o mtkernel_3/app_program/system/sys_hal.o mtkernel_3/lib/libtm/libtm_printf.o: CFLAGS += -fstack-usage
 
 mtkernel_3/app_program/%.o: ../app_program/%.c
 	@echo 'Building file: $<'

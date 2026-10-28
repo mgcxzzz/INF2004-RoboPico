@@ -36,6 +36,8 @@
 typedef void (* sys_gpio_cb_t)(uint32_t gpio, uint32_t edges, uint32_t t_us);
 
 ER       sys_hal_init(void);
+ER       sys_timebase_validate(void); /* task context; motors off; kernel-timed 250 ms */
+void     sys_timebase_report(void);   /* read-only boot result + current registers */
 uint32_t sys_time_us(void);
 void     sys_busy_wait_us(uint32_t us);
 ER       sys_gpio_irq_attach(uint32_t gpio, uint32_t edges, sys_gpio_cb_t cb,
