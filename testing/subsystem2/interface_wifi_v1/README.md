@@ -1,4 +1,8 @@
-# Buddy 1/2/3 Interface WiFi V1.2
+# Buddy 1/2/3 Interface WiFi V1.3 diagnostic build
+
+V1.3 DIAG investigates the physical freeze inside the SDK poll confirmed on V1.2. It reserves a dedicated8KiB network stack (rather than the SDK default2KiB) and adds WIFI_POLL callback-kind/address breadcrumbs plus estimated stack high-water and bottom canary status. This is an experiment, not proof that stack exhaustion caused the stall. Callback kind1=timed worker,2=pending worker,3=timeout-list refresh,0=idle. Match a stuck callback PC to this build's ELF/map; Thumb addresses may have bit0 set.
+
+The observed poll preserves the pinned SDK's timed-worker drain, pending flag clearing/order and next-timeout refresh; its added markers run on the network core. See wifi_observed_poll.h, its ordering regression and LICENSE.pico-sdk.txt. Stack scanning runs at most every100ms outside the queue lock. It is an approximate historical watermark, not guaranteed maximum stack usage. No automatic reset/watchdog, network retry policy or motor thresholds are changed.
 
 V1.2 adds diagnostics for rejected setup and stalled networking; it does not claim to fix an unconfirmed physical stall. n additionally prints WIFI_PROGRESS (stored broker address, completed-loop count, last completed-loop ms, phase) and WIFI_SETUP (last setup code, run/settling/buttons). Phase0=init,1=poll,2=link query,3=MQTT connect,4=MQTT disconnect,5=publish,6=sleep. A constant loop count across two samples while phase stays fixed helps locate a blocked worker; last_ms is a boot-relative timestamp, not an age.
 
@@ -14,7 +18,7 @@ Baselines: V2 `1263390b069ae9617c412e47212177e77807c505`; Buddy 1 `b09403074939f
 
 ## First setup
 
-1. Flash [buddy123_interface_wifi_v1_2.uf2](firmware/buddy123_interface_wifi_v1_2.uf2) using BOOTSEL. PuTTY `h` must say **BUDDY123 INTERFACE WIFI v1.2**. Motors stay off on boot.
+1. Flash [buddy123_interface_wifi_v1_3_diag.uf2](firmware/buddy123_interface_wifi_v1_3_diag.uf2) using BOOTSEL. PuTTY `h` must say **BUDDY123 INTERFACE WIFI v1.3 DIAG**. Motors stay off on boot. For this diagnostic first leave the robot stopped and compare two n outputs20s apart, including WIFI_POLL. Saved WiFi settings remain compatible; do not reprovision if the stored broker is already correct.
 2. Install [Mosquitto for Windows](https://mosquitto.org/download/) on the laptop. The supplied config listens on MQTT TCP **1883** and browser WebSockets **9001**. Put laptop and Pico on the same 2.4 GHz Wi-Fi/hotspot. A shared hotspot is useful when a school network isolates clients.
 3. In this folder, run `py run_dashboard.py`. It starts Mosquitto if installed, serves/opens the dashboard and prints the laptop's LAN IPv4. Leave that terminal running. For an unusual install path: `py run_dashboard.py --mosquitto "C:\path\mosquitto.exe"`.
 4. Close PuTTY to release the COM port. Install the USB helper dependency once: `py -m pip install pyserial`.

@@ -28,6 +28,10 @@ typedef struct {
     uint32_t polls; /* completed core1 network poll iterations */
     uint32_t last_poll_ms; /* millis since boot at last completed poll */
     uint32_t broker_ipv4; /* host-order configured broker IPv4 */
+    uint8_t poll_worker; /* last observed async-context worker kind: 0 idle, 1 at-time, 2 pending, 3 refresh */
+    uint32_t poll_callback; /* PC of last async-context callback observed during poll */
+    uint16_t stack_used; /* approximate high-water use of diagnostic 8 KiB core1 stack */
+    unsigned stack_ok : 1; /* bottom stack canary is intact */
     unsigned phase : 3; /* 0 init, 1 poll, 2 link, 3 mqtt_connect, 4 mqtt_disconnect, 5 publish, 6 sleep */
 } WifiTransportStatus;
 

@@ -24,6 +24,8 @@
 #define WIFI_JOIN_TIMEOUT_MS 15000u
 #define WIFI_POLL_INTERVAL_MS 2u
 #define WIFI_FLASH_TIMEOUT_US 50000u
+#define WIFI_CORE1_STACK_SIZE 8192u
+#define WIFI_STACK_CANARY_SIZE 32u
 
 typedef struct {
     uint8_t topic;
@@ -257,6 +259,7 @@ void wifi_transport_flash_end(void)
 #include "pico/cyw43_arch.h"
 #include "cyw43.h"
 #include "wifi_link_state.h"
+#include "wifi_observed_poll.h"
 #if BUDDY_WIFI_LOCAL_CONFIG
 #include "wifi_config.local.h"
 #endif
@@ -287,6 +290,9 @@ static uint32_t g_attempts;
 static uint32_t g_wifi_attempts;
 static uint32_t g_last_poll_us;
 static uint32_t g_poll_gap_max_us;
+static uint32_t g_last_stack_scan_ms;
+static bool g_stack_scanned;
+static uint8_t g_core1_stack[WIFI_CORE1_STACK_SIZE] __attribute__((aligned(8)));
 
 static void discard_stale_tx(void)
 {
@@ -309,10 +315,43 @@ static void set_phase(unsigned phase)
 
 static void record_completed_poll(uint32_t now_ms)
 {
+    size_t unused_from_bottom = 0u;
+    size_t i;
+    bool canary_intact = true;
+    bool scan_stack = now_ms >= 100u &&
+        (!g_stack_scanned || (uint32_t)(now_ms - g_last_stack_scan_ms) >= 100u);
+    volatile const uint8_t *stack = g_core1_stack;
+    if (scan_stack) {
+        for (i = 0u; i < WIFI_STACK_CANARY_SIZE; ++i) {
+            if (stack[i] != 0xA5u) canary_intact = false;
+        }
+        for (i = 0u; i < WIFI_CORE1_STACK_SIZE; ++i) {
+            if (stack[i] != 0xA5u) break;
+            unused_from_bottom++;
+        }
+    }
+    {
+        uint32_t irq_state = lock_queues();
+        g_status.polls++;
+        g_status.last_poll_ms = now_ms;
+        g_status.phase = 6u;
+        if (scan_stack) {
+            g_status.stack_used = (uint16_t)(WIFI_CORE1_STACK_SIZE - unused_from_bottom);
+            g_status.stack_ok = canary_intact ? 1u : 0u;
+        }
+        unlock_queues(irq_state);
+    }
+    if (scan_stack) {
+        g_last_stack_scan_ms = now_ms;
+        g_stack_scanned = true;
+    }
+}
+
+static void observed_poll_callback(unsigned kind, uintptr_t pc)
+{
     uint32_t irq_state = lock_queues();
-    g_status.polls++;
-    g_status.last_poll_ms = now_ms;
-    g_status.phase = 6u;
+    g_status.poll_worker = (uint8_t)kind;
+    g_status.poll_callback = (uint32_t)pc;
     unlock_queues(irq_state);
 }
 
@@ -585,7 +624,7 @@ static void network_core(void)
         int link_status;
 
         set_phase(1u);
-        cyw43_arch_poll();
+        wifi_observed_poll(cyw43_arch_async_context(), observed_poll_callback);
         now_us = time_us_32();
         gap = g_last_poll_us == 0u ? 0u : now_us - g_last_poll_us;
         g_last_poll_us = now_us;
@@ -687,8 +726,11 @@ _Static_assert(sizeof(MQTT_CLIENT_ID) <= sizeof(((WifiTransportConfig *)0)->clie
     g_retry_at = 0u;
     g_initialized = true;
     if (g_config_is_valid) {
+        memset(g_core1_stack, 0xA5, sizeof(g_core1_stack));
         g_worker_launched = true;
-        multicore_launch_core1(network_core);
+        multicore_launch_core1_with_stack(network_core,
+                                          (uint32_t *)(void *)g_core1_stack,
+                                          sizeof(g_core1_stack));
     } else {
         puts("Wi-Fi/MQTT is unconfigured. Use USB setup to provide SSID, password, laptop broker IPv4, and client ID.");
     }

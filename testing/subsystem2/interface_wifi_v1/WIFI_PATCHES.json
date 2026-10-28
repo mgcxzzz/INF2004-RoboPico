@@ -62,6 +62,6 @@
   {
     "path": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/main.c",
     "v2_sha256": "373ebd7446d7b27f8415fbdd12b8287baecf2aeb6c78d1c178601e4694d52555",
-    "wifi_sha256": "bb855de5c3f9d3bbb05d2a99f336d601c76d9ca937b9744d721335bc794d18ee"
+    "wifi_sha256": "284a77f4bed0929c3385cac3fe080bee7dbaca2e04b7c214fa82bf6b3708d430"
   }
 ]

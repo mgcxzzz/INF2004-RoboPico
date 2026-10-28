@@ -278,6 +278,8 @@ static bool wifi_console_byte(int ch) {
             (unsigned long)s.polls,(unsigned long)s.last_poll_ms,(unsigned)s.phase,
             (unsigned)(s.broker_ipv4>>24),(unsigned)((s.broker_ipv4>>16)&255u),
             (unsigned)((s.broker_ipv4>>8)&255u),(unsigned)(s.broker_ipv4&255u));
+        printf("WIFI_POLL: worker=%u callback=0x%08lx stack_used=%u stack_capacity=8192 stack_ok=%u\n",
+            (unsigned)s.poll_worker,(unsigned long)s.poll_callback,(unsigned)s.stack_used,(unsigned)s.stack_ok);
         printf("WIFI_SETUP: last_code=%u reason=%s active=%u settling=%u GP20_released=%u GP21_released=%u\n",
             wifi_setup_last_code,wifi_setup_reason(wifi_setup_last_code),guard.active,trace_settling,
             gpio_get(STOP),gpio_get(HOLD));

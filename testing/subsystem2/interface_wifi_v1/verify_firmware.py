@@ -29,7 +29,7 @@ for k in range(meta['blocks']):
     assert address==0x10000000+256*k and address+size<=0x101aa000
     assert struct.unpack_from('<I',block,508)[0]==0x0ab16f30
     payload.extend(block[32:288])
-for marker in [b'BUDDY123 INTERFACE WIFI v1.2',b'WIFI_LINK:',b'WIFI_PROGRESS:',b'WIFI_SETUP:',b'network_lockout_failed',b'no boot assignments',b'WIFI_PROVISIONED:',b'WIFI_SETUP_REJECTED:',
+for marker in [b'BUDDY123 INTERFACE WIFI v1.3 DIAG',b'WIFI_POLL:',b'WIFI_LINK:',b'WIFI_PROGRESS:',b'WIFI_SETUP:',b'network_lockout_failed',b'no boot assignments',b'WIFI_PROVISIONED:',b'WIFI_SETUP_REJECTED:',
     b'interface-wifi1',b'DRIVE_DIAG_BEGIN:',b'NAV_LOG_BEGIN:',b'is28/cmd',b'is28/tlm',b'is28/hb']:
     assert marker in payload,marker
 assert b'*A* LEFT / *F* RIGHT' not in payload
@@ -41,6 +41,8 @@ assert sha(root/'dashboard/vendor/mqtt.min.js')=='b088a7f9045df4e478dbc378f41125
 assert not (root/'wifi_config.local.h').exists(),'Published artifact must be built without a local credentials header.'
 assert 'return cyw43_tcpip_link_status(' in (root/'wifi_link_state.h').read_text()
 assert 'cyw43_wifi_link_status(' not in (root/'wifi_transport.c').read_text()
+assert meta['network_core_stack_bytes']==8192
+assert 'multicore_launch_core1_with_stack(' in (root/'wifi_transport.c').read_text()
 build=root/'build-wifi-on'
 if build.exists():
     assert artifact.read_bytes()==(build/'buddy123_interface_wifi_v1.uf2').read_bytes()
