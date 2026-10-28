@@ -1,4 +1,8 @@
-# Buddy 1/2/3 Interface WiFi V1
+# Buddy 1/2/3 Interface WiFi V1.1
+
+V1.1 fixes a blocking network readiness check: the radio-only SDK query returns JOIN (1), while IP-ready UP (3) comes from cyw43_tcpip_link_status. V1 compared the wrong query with UP, preventing MQTT attempts even on a joined network. Motor/steering parameters, routing, settings and stored-log schemas are unchanged. Flash V1.1; normal flashing preserves the settings sector, so check n before repeating provisioning.
+
+The extra n line WIFI_LINK reports SDK status (0 down,1 joined,2 waiting for IP,3 IP ready,-1 failure,-2 SSID not found,-3 authentication failure), Pico IPv4, MQTT attempts and latest result. mqtt_result=-32768 means no attempt yet; result0 alone is not connection proof. mqtt=1 subscribed=1 remains the required broker confirmation. Hardware verification is still needed.
 
 This independent Pico W firmware combines the smoother **Continuous V2** controller with Buddy 1's MQTT v2 protocol/mapping and an extended browser dashboard. It retains one navigation coordinator and motor writer. Buddy 5's default hooks are empty; Buddy 4 assistance is still unsupported.
 
@@ -6,7 +10,7 @@ Baselines: V2 `1263390b069ae9617c412e47212177e77807c505`; Buddy 1 `b09403074939f
 
 ## First setup
 
-1. Flash [buddy123_interface_wifi_v1.uf2](firmware/buddy123_interface_wifi_v1.uf2) using BOOTSEL. PuTTY `h` must say **BUDDY123 INTERFACE WIFI v1**. Motors stay off on boot.
+1. Flash [buddy123_interface_wifi_v1_1.uf2](firmware/buddy123_interface_wifi_v1_1.uf2) using BOOTSEL. PuTTY `h` must say **BUDDY123 INTERFACE WIFI v1.1**. Motors stay off on boot.
 2. Install [Mosquitto for Windows](https://mosquitto.org/download/) on the laptop. The supplied config listens on MQTT TCP **1883** and browser WebSockets **9001**. Put laptop and Pico on the same 2.4 GHz Wi-Fi/hotspot. A shared hotspot is useful when a school network isolates clients.
 3. In this folder, run `py run_dashboard.py`. It starts Mosquitto if installed, serves/opens the dashboard and prints the laptop's LAN IPv4. Leave that terminal running. For an unusual install path: `py run_dashboard.py --mosquitto "C:\path\mosquitto.exe"`.
 4. Close PuTTY to release the COM port. Install the USB helper dependency once: `py -m pip install pyserial`.

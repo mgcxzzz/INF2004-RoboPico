@@ -248,6 +248,7 @@ void wifi_transport_flash_end(void)
 #include "lwip/ip_addr.h"
 #include "pico/cyw43_arch.h"
 #include "cyw43.h"
+#include "wifi_link_state.h"
 #if BUDDY_WIFI_LOCAL_CONFIG
 #include "wifi_config.local.h"
 #endif
@@ -409,6 +410,9 @@ static void connection_callback(mqtt_client_t *client, void *arg,
     uint32_t now = to_ms_since_boot(get_absolute_time());
     (void)client;
     (void)arg;
+    uint32_t status_irq=lock_queues();
+    g_status.mqtt_result=(int16_t)status;
+    unlock_queues(status_irq);
     g_connecting = false;
     if (status == MQTT_CONNECT_ACCEPTED) {
         err_t result;
@@ -439,6 +443,9 @@ static void begin_connect(uint32_t now)
     struct mqtt_connect_client_info_t info;
     err_t result;
     static const uint8_t offline = 0u;
+    uint32_t status_irq=lock_queues();
+    g_status.mqtt_attempts++;
+    unlock_queues(status_irq);
 
     if (g_mqtt == NULL) {
         g_mqtt = mqtt_client_new();
@@ -460,6 +467,9 @@ static void begin_connect(uint32_t now)
     info.will_retain = 0u;
     result = mqtt_client_connect(g_mqtt, &g_broker, WIFI_MQTT_PORT,
                                  connection_callback, NULL, &info);
+    status_irq=lock_queues();
+    g_status.mqtt_result=(int16_t)result;
+    unlock_queues(status_irq);
     if (result == ERR_OK) {
         g_connecting = true;
         g_connect_started = now;
@@ -557,8 +567,12 @@ static void network_core(void)
         unlock_queues(irq_state);
 
         now = to_ms_since_boot(get_absolute_time());
-        link_status = g_wifi_started ?
-            cyw43_wifi_link_status(&cyw43_state, CYW43_ITF_STA) : CYW43_LINK_DOWN;
+        link_status = g_wifi_started ? wifi_network_link_status() : CYW43_LINK_DOWN;
+        irq_state=lock_queues();
+        g_status.link_status=(int8_t)link_status;
+        g_status.ipv4=link_status==CYW43_LINK_UP ?
+            lwip_ntohl(netif_ip4_addr(&cyw43_state.netif[CYW43_ITF_STA])->addr) : 0u;
+        unlock_queues(irq_state);
         if (link_status == CYW43_LINK_UP) {
             g_wifi_was_up = true;
             g_wifi_joining = false;
@@ -626,6 +640,7 @@ _Static_assert(sizeof(MQTT_CLIENT_ID) <= sizeof(((WifiTransportConfig *)0)->clie
     }
 #endif
     memset(&g_status, 0, sizeof(g_status));
+    g_status.mqtt_result=INT16_MIN;
     g_status.configured = g_config_is_valid ? 1u : 0u;
     g_status.ready = 0u;
     g_status.connected = 0u;

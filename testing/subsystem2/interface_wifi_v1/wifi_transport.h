@@ -21,6 +21,10 @@ typedef struct {
     uint32_t reconnects;
     uint32_t max_poll_gap_us;
     uint8_t tx_fill_pct; /* queued ring occupancy; excludes core1's in-flight packet */
+    int8_t link_status; /* SDK: 0 down,1 join,2 no IP,3 IP ready,-1 fail,-2 no SSID,-3 auth */
+    int16_t mqtt_result; /* latest connect API/callback result; -32768 before an attempt */
+    uint32_t ipv4; /* host-order address, copied from netif by core1 */
+    uint32_t mqtt_attempts;
 } WifiTransportStatus;
 
 typedef struct {

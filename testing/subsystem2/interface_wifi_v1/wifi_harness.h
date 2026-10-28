@@ -269,6 +269,10 @@ static bool wifi_console_byte(int ch) {
         printf("WIFI: configured=%u stack_ready=%u mqtt=%u subscribed=%u pm_off_verified=%u published=%lu dropped_TX=%lu dropped_RX=%lu poll_gap_us=%lu map_configured=%u map_revision=%u\n",
             s.configured,s.ready,s.connected,s.subscribed,s.pm_disabled,(unsigned long)s.published,(unsigned long)s.tx_dropped,
             (unsigned long)s.rx_dropped,(unsigned long)s.max_poll_gap_us,(wifi_mapping&WP_MAP_CONFIGURED)!=0,(unsigned)(wifi_mapping>>21));
+        printf("WIFI_LINK: sdk=%d ip=%u.%u.%u.%u mqtt_attempts=%lu mqtt_result=%d\n",
+            (int)s.link_status,(unsigned)(s.ipv4>>24),(unsigned)((s.ipv4>>16)&255u),
+            (unsigned)((s.ipv4>>8)&255u),(unsigned)(s.ipv4&255u),
+            (unsigned long)s.mqtt_attempts,(int)s.mqtt_result);
         return true;
     }
     if(!wifi_provision_state && ch!='!')return false;
