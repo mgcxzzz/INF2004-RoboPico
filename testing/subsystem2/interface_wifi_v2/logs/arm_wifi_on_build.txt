@@ -1,0 +1,15 @@
+[  0%] Built target bs2_default
+[  1%] Performing build step for 'pioasmBuild'
+[  2%] Built target bs2_default_library
+[100%] Built target pioasm
+[  2%] Performing install step for 'pioasmBuild'
+[100%] Built target pioasm
+Install the project...
+-- Install configuration: "Release"
+[  2%] Completed 'pioasmBuild'
+[  5%] Built target pioasmBuild
+[  5%] Built target cyw43_driver_picow_cyw43_bus_pio_spi_pio_h
+[  6%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/main.c.o
+[  6%] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/wifi_transport.c.o
+[  7%] Linking CXX executable buddy123_interface_wifi_v2.elf
+[100%] Built target buddy123_interface_wifi_v2

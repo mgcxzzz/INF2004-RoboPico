@@ -1,0 +1,38 @@
+{
+  "artifact": "firmware/buddy123_interface_wifi_v2.uf2",
+  "bundle": "firmware/buddy123_interface_wifi_v2_bundle.zip",
+  "sha256": "dea5933f5cc54604cd8e0e25389cc6ac2356d5cb840061d2032d43344fd50148",
+  "bytes": 1000448,
+  "blocks": 1954,
+  "date": "2026-10-28",
+  "base_commit": "0285d7451cf330ed12bf1af2407dd98db7f9fe26",
+  "pico_sdk_commit": "98a542c1a62fb549ffb5d66a3e5892b06276b670",
+  "arm_compiler": "arm-none-eabi-gcc (Arm GNU Toolchain 15.3.Rel1 (Build arm-15.149)) 15.3.1 20260627",
+  "arm_builds": {
+    "network_on": {
+      "text": 504208,
+      "data": 0,
+      "bss": 192436
+    },
+    "network_off": {
+      "text": 185816,
+      "data": 0,
+      "bss": 147360
+    }
+  },
+  "symbols": {
+    "__HeapLimit": "0x20040000",
+    "__StackLimit": "0x20040000",
+    "__StackOneBottom": "0x20040800",
+    "__StackOneTop": "0x20041000",
+    "__bss_end__": "0x2002ff04",
+    "__flash_binary_end": "0x1007a194"
+  },
+  "host_c_executables": 34,
+  "javascript_schema_tests": 10,
+  "python_helper_tests_initial_suite": 17,
+  "python_helper_tests_final": 20,
+  "embedded_credentials": false,
+  "default_buddy_extension": null,
+  "physical_network_and_driving_validated": false
+}

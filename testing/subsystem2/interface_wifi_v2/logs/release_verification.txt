@@ -1,0 +1,3 @@
+PASS V2 source ledger, preserved V1 controller, banner-only main, UF2 RP2040 blocks/flash bounds, RAM bounds and source/dashboard package.
+No embedded credentials or default Buddy5 extension. Physical networking/driving NOT TESTED.
+UF2: 1000448 bytes; dea5933f5cc54604cd8e0e25389cc6ac2356d5cb840061d2032d43344fd50148
