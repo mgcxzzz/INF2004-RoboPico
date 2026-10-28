@@ -1,0 +1,8 @@
+{
+  "desktop": "C:\\Users\\nguic\\Documents\\ChatGPT\\Embedded Systems Project\\INF2004-RoboPico\\testing\\subsystem2\\interface_utk_v1\\build\\interface-utk-v1-dashboard-smoke\\desktop.png",
+  "mobile": "C:\\Users\\nguic\\Documents\\ChatGPT\\Embedded Systems Project\\INF2004-RoboPico\\testing\\subsystem2\\interface_utk_v1\\build\\interface-utk-v1-dashboard-smoke\\mobile.png",
+  "heartbeat": "source-1 decoded",
+  "mapReadback": "source-8 mismatch then confirmation",
+  "command": "Buddy 1 supervisory route",
+  "errors": []
+}

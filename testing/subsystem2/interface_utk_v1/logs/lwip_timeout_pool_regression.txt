@@ -1,0 +1,3 @@
+PASS baseline reproduces exact MEMP_SYS_TIMEOUT-empty panic when app timer starts
+PASS real lwIP timeout pool: core=6 capacity=10, 100 app callbacks, 1000 add/remove cycles
+PASS actual RTOS options: default pool reproduces panic; reserved pool survives rescheduling. No physical networking tested.

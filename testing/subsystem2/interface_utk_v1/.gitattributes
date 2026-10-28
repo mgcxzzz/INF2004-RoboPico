@@ -1,0 +1,5 @@
+* text eol=lf
+source/** -text
+dashboard/vendor/** -text
+firmware/** -text
+logs/** -text

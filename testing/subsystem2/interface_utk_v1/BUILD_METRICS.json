@@ -1,0 +1,26 @@
+{
+  "date": "2026-10-28",
+  "scope": "motors-off kernel network/map/state proof",
+  "upstream_commit": "b09403074939f45cf4d7c11b7606148f6c2a4e73",
+  "teammate_comparison_commit": "10d7886",
+  "pico_sdk_commit": "a1438dff1d38bd9c65dbd693f0e5db4b9ae91779",
+  "compiler": "arm-none-eabi-gcc.exe (Arm GNU Toolchain 14.2.Rel1 (Build arm-14.52)) 14.2.1 20241119",
+  "profile": "WIFI=cyw43 NET=lwip MQTT=1 SMP=1 CONSOLE=usb_cdc CRASH_REPORT=0",
+  "elf": {
+    "text": 342284,
+    "data": 100,
+    "bss": 82660
+  },
+  "artifact": "firmware/buddy123_utk_network_v1.uf2",
+  "sha256": "a8cb918390244953229b16484699db17204a6f9e8b7b526944d25b8c5792ad8e",
+  "bytes": 685056,
+  "timeout_pool": {
+    "core_slots": 6,
+    "total_slots": 10,
+    "application_allowance": 4,
+    "real_allocator_regression": "default assertion reproduced; fixed 100 callbacks and 1000 add/remove cycles passed"
+  },
+  "physical_network_validated": false,
+  "physical_motion_enabled": false,
+  "embedded_credentials": false
+}

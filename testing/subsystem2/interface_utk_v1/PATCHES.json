@@ -1,0 +1,53 @@
+{
+  "base_commit": "b09403074939f45cf4d7c11b7606148f6c2a4e73",
+  "modified": {
+    "app_program/app_main.c": {
+      "before": "884758f53f4dd5aa002fb05b3fceb0280b824b3f15320fdd537a5b71469838ab",
+      "after": "e1565fda7db764808fbfa4bda760bffe4b419c58109fdbdc872baf1cfb48f34a"
+    },
+    "app_program/subsystem1/b1_net.h": {
+      "before": "f692e7d05f437eacd7197454b43c5d8f65b96f0d57062b0a06b8dc2e08d47dd9",
+      "after": "1a11f558cb6317bc0ba573b3549756b4b311d7349f2f9820f64a1593022f5ba2"
+    },
+    "app_program/subsystem1/task_wifi.c": {
+      "before": "68e5afed4ec4ff707eb42c1c6130b3aadc550d9cb795fbb80969e25f411d0123",
+      "after": "4aa3b37830a14dcf2cb7efb9ea8826e5925964a881f897ccf92a1a9ec8809b7a"
+    },
+    "app_program/system/sys_config.h": {
+      "before": "377bd92e95f3e4faf9e5bc0f4548cf7d1ea57659d2997e929395fca1732fb1b8",
+      "after": "f5e819eeee1b84ed75cf3cb30af52d85d0431dce8b150610fb924f85a0312061"
+    },
+    "etc/linker/pico_rp2040/tkernel_map.ld": {
+      "before": "70bad2c5478bb5858cc15f5ab49e99d67db35b8be5681bcf4d8235492303e4d6",
+      "after": "d7bf0c3a9c840b678f40b49312fae979fb0e66db0080b30e687c0af7ae3737fd"
+    },
+    "lib/liblwip/sysdepend/pico_rp2040/lwipopts.h": {
+      "before": "7d3b33cdb251098ee1304bc25c18d54897d1378bcc61cdcc65d5279b84d61066",
+      "after": "8e61160d88f3ba7cdab6e008ba5836c4c40ff9e4c637d6915ce166a52b054cd3"
+    },
+    "lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c": {
+      "before": "8fa56cdbb75239b78004053cf9a677b4c2cb95dceea9d1b3afd7c1f64e7361e5",
+      "after": "3f7bd0345326ff3334727933f01724b38f6978218b8b5552d3a5d90128040ae4"
+    },
+    "lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.h": {
+      "before": "727c85c861bb736155d2372a3f7f49ac39696e3c318ce0fcb518df731709acd9",
+      "after": "82adf29603ad45eedfffcf5a691f35bda30f46890d99beaffa792fdc6601fb9f"
+    },
+    "lib/libwifi/sysdepend/pico_rp2040/cyw43_utk.c": {
+      "before": "20bd7787ec0e61d3cbc1fe729785e9e424776844d9ca1a28cf916fb2eea326a4",
+      "after": "d9f07f3ac777db3a9b4edfa7638bda7759e9a69f3896a2c3c6100fba3c8024b3"
+    },
+    "lib/libwifi/sysdepend/pico_rp2040/cyw43_utk.h": {
+      "before": "4aa2fd08057d14bdacc0ba9a99925346ea318fe14b0281d9996b73840e8b7d70",
+      "after": "e324668f1759f5ed6267cab0e2f0e4fded15a2d9e4d0fb5e21be2e640cdf018a"
+    },
+    "testing/subsystem1/host/check_dashboard.mjs": {
+      "before": "b791e3d9b60721ffee43c9817d0cc7aa08f31dc959f907fbf70adaff8c7fdd38",
+      "after": "2e66116d70a2cce5ffe06667980ef7b1f24b7faa2d2bcff6118b32b3c3e560a0"
+    }
+  },
+  "added": {
+    "build_make/build_wifi_msys.sh": "28a631626b6c485c730233eea8d832dedbee233e5c33c7a2ea235fc12238d274",
+    "lib/libwifi/sysdepend/pico_rp2040/network_settings.h": "3c0be82e12185e955e348eb2616fea68ca81a541bd22bcf91215fc38d0f580a8"
+  }
+}

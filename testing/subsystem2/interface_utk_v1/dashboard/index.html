@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RoboPico RTOS · Buddy 1 link</title>
+  <style>
+    :root{font-family:Inter,Segoe UI,system-ui,sans-serif;color:#172033;background:#f3f6fb;font-synthesis:none;font-optical-sizing:auto}
+    *{box-sizing:border-box}body{margin:0}header{display:flex;align-items:center;gap:.65rem;flex-wrap:wrap;padding:1rem max(1rem,calc((100vw - 1160px)/2));background:#10213c;color:#f4f7ff}
+    header strong{font-size:1.1rem;margin-right:auto}main{max-width:1160px;margin:1.2rem auto;padding:0 1rem 2rem;display:grid;gap:1rem}
+    .card{background:#fff;border:1px solid #dce4ef;border-radius:14px;padding:1rem;box-shadow:0 5px 20px #132c5010}
+    h1{font-size:1.35rem;margin:.1rem 0 .5rem}h2{font-size:1rem;margin:0 0 .8rem}.intro{display:grid;grid-template-columns:1.5fr 1fr;gap:1rem}
+    .banner{background:#eef5ff;border:1px solid #bcd3f4;border-radius:10px;padding:.8rem;line-height:1.5}.banner b{color:#174b91}
+    .row{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap}.row label{font-weight:650}input,select,button{font:inherit;border:1px solid #c5cfdd;border-radius:8px;padding:.55rem .7rem;background:#fff;color:inherit}
+    input[type=url]{min-width:min(340px,100%);flex:1}button{cursor:pointer;font-weight:650}button.primary{background:#245db5;border-color:#245db5;color:white}button.danger{background:#ad2531;border-color:#ad2531;color:#fff}button:disabled{opacity:.5;cursor:not-allowed}
+    .pill{display:inline-flex;border-radius:99px;padding:.28rem .6rem;font-size:.84rem;font-weight:700;background:#e8edf4;color:#4a5870}.ok{background:#e4f8eb;color:#176b39}.bad{background:#ffebea;color:#982d2b}.warn{background:#fff4dc;color:#805800}
+    .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.7rem}.metric{border:1px solid #e4e9f0;border-radius:10px;padding:.7rem;min-width:0}.metric label{display:block;color:#68758a;font-size:.74rem;text-transform:uppercase;letter-spacing:.045em;margin-bottom:.3rem}.metric strong{font-size:1rem;overflow-wrap:anywhere}
+    dl{display:grid;grid-template-columns:minmax(145px,.7fr) 1.3fr;gap:.55rem;margin:0}dt{color:#68758a}dd{margin:0;font-weight:650;overflow-wrap:anywhere}
+    table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:.55rem;border-bottom:1px solid #e7ebf2}th{font-size:.8rem;color:#68758a}select{min-width:130px}
+    #events{height:210px;overflow:auto;background:#f8fafc;border:1px solid #e1e7ef;border-radius:9px;padding:.6rem;font: .82rem ui-monospace,Consolas,monospace;white-space:pre-wrap}
+    .muted{color:#6b778a}.small{font-size:.84rem}.wide{grid-column:1/-1}#lastAck{min-height:1.3em}.section-title{display:flex;justify-content:space-between;align-items:center;gap:.5rem;flex-wrap:wrap}
+    @media(max-width:720px){main{margin:.75rem auto}.intro{grid-template-columns:1fr}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}header{padding:.85rem 1rem}dl{grid-template-columns:1fr 1.2fr}}
+    @media(max-width:410px){.grid{grid-template-columns:1fr 1fr}.metric{padding:.55rem}.metric strong{font-size:.9rem}input[type=url]{min-width:100%}table{font-size:.88rem}select{min-width:110px}}
+  </style>
+</head>
+<body>
+<header><strong>RoboPico · RTOS bench</strong><span id="broker" class="pill">not connected</span><span id="car" class="pill">car link unknown</span></header>
+<main>
+  <section class="intro">
+    <div class="card">
+      <h1>Buddy 1 network and command bridge</h1>
+      <p class="muted">Connect this browser to the laptop broker. The Pico must join the same Wi-Fi network and use the laptop’s LAN address for its broker.</p>
+      <div class="banner"><b>Current RTOS build: motors are disabled.</b> This bench image integrates Buddy 1 Wi-Fi/MQTT, supervisory commands and barcode-map storage with the kernel navigation stub. It currently reports Buddy 1 heartbeat and map readback only. Motion, line, IMU, obstacle and safety telemetry are not available in this image, so this page does not show simulated values for them.</div>
+    </div>
+    <div class="card">
+      <h2>Connection check</h2>
+      <div class="row"><label for="url">Broker WebSocket</label><input id="url" type="url" spellcheck="false"><button id="connect" class="primary">Connect</button></div>
+      <p id="linkGuide" class="small muted">Waiting for browser-to-broker connection.</p>
+      <dl><dt>Wi-Fi/MQTT state</dt><dd id="net">—</dd><dt>Last heartbeat</dt><dd id="heartbeat">—</dd><dt>Heartbeat gap · max</dt><dd id="gap">—</dd><dt>Frame delivery</dt><dd id="delivery">—</dd></dl>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="section-title"><h2>Live Buddy 1 status</h2><span id="navState" class="pill">Waiting for heartbeat</span></div>
+    <div class="grid">
+      <div class="metric"><label>Car uptime</label><strong id="uptime">—</strong></div>
+      <div class="metric"><label>Published / lost</label><strong id="published">—</strong></div>
+      <div class="metric"><label>Commands accepted / rejected</label><strong id="commandCounts">—</strong></div>
+      <div class="metric"><label>Network connections</label><strong id="connects">—</strong></div>
+      <div class="metric"><label>Outgoing queue</label><strong id="queue">—</strong></div>
+      <div class="metric"><label>Last command / result</label><strong id="lastCommand">—</strong></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Supervisory commands · Buddy 1 → kernel navigation stub</h2>
+    <div class="row">
+      <button data-cmd="START">Start</button><button data-cmd="PAUSE">Pause</button><button data-cmd="RESUME">Resume</button>
+      <button data-cmd="STOP">Stop</button><button data-cmd="RESET">Reset</button><button id="estop" class="danger">Emergency stop</button>
+      <button id="ping">Ping Buddy 1</button>
+    </div>
+    <p id="lastAck" class="small muted">Commands are supervisory requests. An accepted ACK means Buddy 1 accepted the request; it does not report physical movement or completion.</p>
+  </section>
+
+  <section class="card">
+    <div class="section-title"><h2>Barcode letter map</h2><span class="small muted">Forward · U-turn · Left · Right</span></div>
+    <p class="muted small">The active values below come from source-8 readback. A command ACK alone does not confirm the map.</p>
+    <table><thead><tr><th>Kernel navigation slot</th><th>New letter</th><th>Read back from car</th></tr></thead><tbody id="mapRows"></tbody></table>
+    <div class="row" style="margin-top:.8rem"><button id="applyMap" class="primary">Apply map</button><button id="readMap">Read active map</button><span id="mapStatus" class="small muted">Not read yet.</span></div>
+  </section>
+
+  <section class="card">
+    <div class="section-title"><h2>Broker and command event timeline</h2><button id="clearEvents">Clear visible timeline</button></div>
+    <div id="events" role="log" aria-live="off"><span class="muted">Waiting for live broker and Buddy 1 events.</span></div>
+  </section>
+</main>
+<script src="vendor/mqtt.min.js"></script><script src="is28_schema.js"></script>
+<script>
+'use strict';
+const $=id=>document.getElementById(id), host=location.hostname||'localhost';
+let client=null, commandId=0, mapping=null, mapPending=null, queried=false, lastUptime=null, previousBeat=0, maxGap=0;
+const pending=new Map(), seq=new IS28.SeqTracker(), slots=IS28.MAP_MOVEMENTS;
+$('url').value=localStorage.getItem('is28.rtos.url')||`ws://${host}:9001`;
+function time(){return new Date().toLocaleTimeString();}
+function pill(id,text,kind=''){ $(id).textContent=text;$(id).className='pill '+kind; }
+function event(text){const box=$('events'),empty=box.querySelector('.muted');if(empty)box.replaceChildren();box.append(document.createTextNode(`${time()}  ${text}\n`));while(box.childNodes.length>250)box.removeChild(box.firstChild);box.scrollTop=box.scrollHeight;}
+function unknownMap(text){mapping=null;mapPending=null;queried=false;document.querySelectorAll('[data-active]').forEach(e=>e.textContent='unknown');$('mapStatus').textContent=text;$('mapStatus').className='small warn';}
+function send(code,arg=0,raw=null){if(!client||!client.connected){$('lastAck').textContent='Connect to the broker first.';return null;}commandId=(commandId+1)&255;const bytes=raw||IS28.encodeCommand(code,commandId,arg);const id=bytes[1];pending.set(id,{code:bytes[0]>>4,time:performance.now()});client.publish('is28/cmd',bytes,{qos:0,retain:false});$('lastAck').textContent=`Sent ${raw?'BARCODE_MAP':IS28.CMD_NAME[code]} (request ${id}); waiting for Buddy 1.`;event(`Command sent: ${raw?'BARCODE_MAP':IS28.CMD_NAME[code]} id ${id}.`);return id;}
+function requestMap(){const id=send(IS28.CMD.BARCODE_GET);if(id===null)return;mapPending={id,time:performance.now(),wanted:null};queried=true;$('mapStatus').textContent='Waiting for source-8 readback…';$('mapStatus').className='small warn';}
+function updateMap(d){if(mapPending&&d.requestId!==mapPending.id)return;if(!d||d.error){unknownMap(`Invalid source-8 map readback: ${d?.error||'missing data'}.`);return;}mapping=d;$('mapRows').querySelectorAll('[data-active]').forEach((e,i)=>e.textContent=d.configured?d.letters[i]:'not configured');const status=IS28.mappingReadbackStatus(d,mapPending?.wanted||null);$('mapStatus').textContent=status==='confirmed'?`Confirmed by source-8 readback · revision ${d.revision} · ${d.letters.join('/')}`:status==='not_configured'?'Car reports no configured map.':status==='mismatch'?'Readback differs from requested map; active values shown.': 'Invalid map readback.';$('mapStatus').className='small '+(status==='confirmed'?'ok':status==='not_configured'?'warn':'bad');if(status==='mismatch')mapping=d;mapPending=null;queried=true;}
+function onMessage(topic,payload){const b=new Uint8Array(payload);
+  if(topic==='is28/hb'||topic==='is28/tlm'){const f=IS28.decodeFrame(b);if(f.error){event(`${topic}: invalid frame (${f.error}).`);return;}if(f.src!==IS28.SRC.BARCODE_MAP)seq.add(f.src,f.seq);const all=seq.summary();$('delivery').textContent=`${all.received} received · ${all.missing} sequence gaps · ${all.pct.toFixed(1)}% estimated`;if(f.src===IS28.SRC.WIFI){const d=f.data,t=performance.now();if(previousBeat){const gap=(t-previousBeat)/1000;maxGap=Math.max(maxGap,gap);$('gap').textContent=`${gap.toFixed(2)} s · ${maxGap.toFixed(2)} s max`;}previousBeat=t;pill('car','car: online','ok');$('heartbeat').textContent=`${time()} · seq ${f.seq}`;$('net').textContent=`${d.netName} · ${d.stateName}`;$('navState').textContent=d.stateName;$('navState').className='pill '+(d.state===1?'ok':d.state===5||d.state===6?'bad':'');$('uptime').textContent=`${Math.floor(d.uptimeS/60)} min ${d.uptimeS%60} s`;if(lastUptime!==null&&d.uptimeS<lastUptime){unknownMap('Pico restarted; map readback required.');requestMap();}lastUptime=d.uptimeS;$('published').textContent=`${d.published} / ${d.lost}`;$('commandCounts').textContent=`${d.accepted} / ${d.rejected}`;$('connects').textContent=d.connects;$('queue').textContent=`${d.fillPct}% full`;$('lastCommand').textContent=`${d.lastCmdName} / ${d.lastResultName}`;$('linkGuide').textContent=`Buddy 1 heartbeat is live. Wi-Fi/MQTT state: ${d.netName}. Map data is confirmed only by the source-8 readback.`;if(!queried)requestMap();}else if(f.src===IS28.SRC.BARCODE_MAP)updateMap(f.data);else event(`Received source ${f.src} (${f.srcName}); no RTOS UI is enabled for this telemetry source.`);}
+  else if(topic==='is28/ack'){const a=IS28.decodeAck(b);if(a.error){event(`Invalid ACK: ${a.error}`);return;}const p=pending.get(a.id),known=p&&p.code===a.code;if(known)pending.delete(a.id);$('lastAck').textContent=`${a.codeName} request ${a.id}: ${a.resultName}; Buddy 1 state ${a.stateName}${known?` · ${Math.round(performance.now()-p.time)} ms`:''}.`;pill('car','car: online','ok');event(`ACK ${a.codeName} id ${a.id}: ${a.resultName}, state ${a.stateName}.`);if(mapPending?.id===a.id&&!a.accepted){mapPending=null;$('mapStatus').textContent=`Buddy 1 rejected map request: ${a.resultName}.`;$('mapStatus').className='small bad';}}
+  else if(topic==='is28/lwt'){pill('car','car offline','bad');unknownMap('Car offline; read the map again after it reconnects.');event('Broker reports Buddy 1 went offline.');}
+}
+function setConnected(){if(client){client.end(true);client=null;pill('broker','not connected');pill('car','car link unknown');unknownMap('Disconnected. Read the mapping again after reconnecting.');$('connect').textContent='Connect';event('Dashboard disconnected.');return;}const url=$('url').value.trim();try{localStorage.setItem('is28.rtos.url',url);}catch{}pill('broker','connecting…','warn');client=mqtt.connect(url,{clientId:'is28-rtos-'+Math.random().toString(16).slice(2,8),reconnectPeriod:2000,connectTimeout:5000});$('connect').textContent='Disconnect';client.on('connect',()=>{pill('broker','broker connected','ok');client.subscribe('is28/#',err=>{if(err)event(`Subscription failed: ${err.message}`);else event(`Connected to ${url}; subscribed to is28/#.`);});});client.on('reconnect',()=>pill('broker','reconnecting…','warn'));client.on('close',()=>{pill('broker','broker connection lost','bad');pill('car','car link unknown');unknownMap('Broker connection lost. Read the map after reconnecting.');});client.on('error',e=>event(`MQTT error: ${e.message}`));client.on('message',onMessage);}
+IS28.MAP_MOVEMENTS.forEach((movement,i)=>{const tr=document.createElement('tr'),name=document.createElement('td'),edit=document.createElement('td'),active=document.createElement('td'),select=document.createElement('select');name.textContent=movement;select.id=`letter${i}`;select.setAttribute('aria-label',`${movement} barcode letter`);select.add(new Option('Choose letter',''));for(let n=65;n<=90;n++){const c=String.fromCharCode(n);select.add(new Option(c,c));}edit.append(select);active.textContent='unknown';active.dataset.active='';tr.append(name,edit,active);$('mapRows').append(tr);});
+$('connect').onclick=setConnected;$('readMap').onclick=requestMap;$('clearEvents').onclick=()=>$('events').replaceChildren(document.createTextNode('Visible timeline cleared.\n'));$('ping').onclick=()=>send(IS28.CMD.PING);$('estop').onclick=()=>send(IS28.CMD.ESTOP);document.querySelectorAll('[data-cmd]').forEach(b=>b.onclick=()=>send(IS28.CMD[b.dataset.cmd]));
+$('applyMap').onclick=()=>{try{const letters=IS28.MAP_MOVEMENTS.map((_,i)=>$(`letter${i}`).value),bytes=IS28.encodeMapping((commandId+1)&255,letters),id=send(IS28.CMD.BARCODE_MAP,0,bytes);if(id===null)return;mapPending={id,time:performance.now(),wanted:letters};$('mapStatus').textContent='Map sent; waiting for ACK and matching source-8 readback.';$('mapStatus').className='small warn';}catch(e){$('mapStatus').textContent=e.message;$('mapStatus').className='small bad';}};
+setInterval(()=>{if(mapPending&&performance.now()-mapPending.time>5000){mapPending=null;$('mapStatus').textContent='No matching readback within 5 s. Active map is unknown; read it from the car before retrying.';$('mapStatus').className='small bad';}if(previousBeat&&performance.now()-previousBeat>2200){pill('car','car heartbeat stale','bad');unknownMap('Heartbeat stale. Re-read active mapping when the car returns.');}},250);
+</script>
+</body>
+</html>
