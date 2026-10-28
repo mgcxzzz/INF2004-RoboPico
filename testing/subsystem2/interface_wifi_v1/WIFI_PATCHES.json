@@ -1,0 +1,67 @@
+[
+  {
+    "path": "drive_diag_pico.h",
+    "v2_sha256": "9a8d1ece98d2315e1403b9837b42ba41ae919fcf3c1085a2e29129939b6768c1",
+    "wifi_sha256": "b41e19b1298bd43cdc1bdd93716bf9b0cb9a0a479af3a72bf0046faebf642760"
+  },
+  {
+    "path": "harness_adapter.h",
+    "v2_sha256": "48e184dca7dc8c7d0b43e15d05e478d7144feee747ecbd2e63e57a480d09931f",
+    "wifi_sha256": "c596d507618d5e412c082931c99b9d0961c88a9ebdf270b924d594104d45cc3c"
+  },
+  {
+    "path": "motion_api.c",
+    "v2_sha256": "7c2a46e88e4c869c0a2ca8f4a30627b9234680212ea2a1921863892de9a47936",
+    "wifi_sha256": "1558742b9f1bb7084fa574e19a60c1ad7475462f475e19290d652714f67d4854"
+  },
+  {
+    "path": "motion_api.h",
+    "v2_sha256": "d3b8180d99945f43d14f8cc68311b609d56fc5f7250c40796a8feefee7fbd29d",
+    "wifi_sha256": "4bed1ed00116b7ed5638cc314cfb432a85b14f5ff697b3ffe97add0d091db220"
+  },
+  {
+    "path": "nav_codec.c",
+    "v2_sha256": "b16753bf9cd3fe9704575c3f84779d0b925acafacfa2164c476a643bf0489b6a",
+    "wifi_sha256": "a0bcd3334a453beba33ae4f5a355c0301231a7eae8d650374853dba0766663c6"
+  },
+  {
+    "path": "nav_coordinator.c",
+    "v2_sha256": "de37330eab4c533a99d1989415422cd3c34f992607db46def0352af898d1ad69",
+    "wifi_sha256": "821e677d895e92e2e1680c2109d3df7ea652b2f7b99b0ee6cb0172933064c910"
+  },
+  {
+    "path": "nav_log_harness.h",
+    "v2_sha256": "cd1534aab3a65688232656bfe4b9bcca2b4b991cc48cce05ffa22a76befe1fc6",
+    "wifi_sha256": "76c68816a103891fcfbc0174aab1ed1c844a2ce761cfe42b46deb389458c7615"
+  },
+  {
+    "path": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/barcode_analog.h",
+    "v2_sha256": "ec9fcc6ccdfc625277459aa0e6dcb4545b1c9fb0ad0712e6a4418ed78a92112b",
+    "wifi_sha256": "d58bce3a942eee1c1ec2f2dde1755c4a8153741b84916feabf394999c71cc795"
+  },
+  {
+    "path": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/barcode_nav.h",
+    "v2_sha256": "1d44e19985bd782fe50e9f91c1066f8c19858b6d67128c582f7ac156e702f7ff",
+    "wifi_sha256": "865367b4f161b5d8a1e01cfa9b3ba31356757c196ae9d82463ba40ab36689455"
+  },
+  {
+    "path": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/barcode_raw.h",
+    "v2_sha256": "34c0af19520329fe1c6a0852a4571aaec46d1944d9901232ec602b70020f7b52",
+    "wifi_sha256": "2c8b432f91fc0b149eb9f4c3677090fb847873585ec2e303d0592a0ef6db2f19"
+  },
+  {
+    "path": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/barcode_record.h",
+    "v2_sha256": "b9195e7777c8d27019fb6b900c3f01fa24e20c08e9c90d3ea1f27b95e853db37",
+    "wifi_sha256": "50080f340fa1214965de6dc0933a7c7c50e7b7b389c4f0bf86424bc1e041782a"
+  },
+  {
+    "path": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/barcode_scan.h",
+    "v2_sha256": "2586672816883089bfc7e9e93be0b82c6a55689ce3a5cad59af896a708bf844d",
+    "wifi_sha256": "c49c7e2754c8961899c4034dcc55703f15314ab7aa571615b47b0174871d9d23"
+  },
+  {
+    "path": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/main.c",
+    "v2_sha256": "373ebd7446d7b27f8415fbdd12b8287baecf2aeb6c78d1c178601e4694d52555",
+    "wifi_sha256": "05b79119e4bd57c38e7891ea843c3594de8957020ba159d9d7fe77f9aea6e270"
+  }
+]

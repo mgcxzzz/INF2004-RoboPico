@@ -1,0 +1,57 @@
+{
+  "artifact": "firmware/buddy123_interface_wifi_v1.uf2",
+  "bundle": "firmware/buddy123_interface_wifi_v1_bundle.zip",
+  "sha256": "939f916d35a88f24fa36c58f1fba000c9c2f2ea055c219a25dd1ebadc8d9d916",
+  "bytes": 1004544,
+  "blocks": 1962,
+  "date": "2026-10-28",
+  "base_commit": "1263390b069ae9617c412e47212177e77807c505",
+  "buddy1_commit": "b09403074939f45cf4d7c11b7606148f6c2a4e73",
+  "pico_sdk_commit": "a1438dff1d38bd9c65dbd693f0e5db4b9ae91779",
+  "arm_compiler": "Arm GNU Toolchain 14.2.Rel1 14.2.1 20241119",
+  "host_c_executables": 32,
+  "javascript_schema_tests": 10,
+  "python_helper_tests": 6,
+  "browser_smoke": "Chrome desktop/mobile; simulated MQTT, no physical Pico or broker",
+  "arm_builds": {
+    "build-wifi-on": {
+      "text": 506200,
+      "data": 0,
+      "bss": 193120
+    },
+    "build-wifi-off": {
+      "text": 209676,
+      "data": 0,
+      "bss": 148048
+    },
+    "build-wifi-unpacked": {
+      "text": 505032,
+      "data": 0,
+      "bss": 198080
+    }
+  },
+  "symbols": {
+    "__flash_binary_end": "0x1007a95c",
+    "__bss_end__": "0x200300f0",
+    "__HeapLimit": "0x20040000",
+    "__StackLimit": "0x20040000",
+    "__StackOneBottom": "0x20040800",
+    "__StackOneTop": "0x20041000"
+  },
+  "packed_shared_ram_saving": 4960,
+  "network_bss_delta": 45072,
+  "motion_record": 26,
+  "raw_record": 2,
+  "diagnostic_format": 4,
+  "capacities": {
+    "motion_latest": 384,
+    "raw_first": 2048,
+    "diagnostics": 256,
+    "barcode_events": 192,
+    "nav_events": 120,
+    "turn_summaries": 64
+  },
+  "default_buddy_extension": null,
+  "embedded_credentials": false,
+  "physical_network_and_driving_validated": false
+}
