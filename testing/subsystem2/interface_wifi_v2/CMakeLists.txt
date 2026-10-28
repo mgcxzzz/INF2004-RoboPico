@@ -39,4 +39,20 @@ set(BUDDY_EXTENSION_SOURCE "" CACHE FILEPATH "Optional Buddy5 extension with str
 if(BUDDY_EXTENSION_SOURCE)
     target_sources(buddy123_interface_wifi_v2 PRIVATE "${BUDDY_EXTENSION_SOURCE}")
 endif()
+# RP2040: reserve the top 16 KiB of main SRAM for two disjoint 8 KiB stacks.
+# SDK default stack regions are too small for the inherited driving call chain.
+# Override SDK memory-region symbols so BSS/heap also stop below BOTH stacks.
+if(NOT PICO_RP2040)
+    message(FATAL_ERROR "This firmware memory layout requires RP2040 / Pico W")
+endif()
+target_compile_definitions(buddy123_interface_wifi_v2 PRIVATE
+    PICO_STACK_SIZE=8192 PICO_CORE1_STACK_SIZE=8192)
+target_link_options(buddy123_interface_wifi_v2 PRIVATE
+    "LINKER:--defsym=RAM_LENGTH=0x3c000"
+    "LINKER:--defsym=SCRATCH_X_ORIGIN=0x2003c000"
+    "LINKER:--defsym=SCRATCH_X_LENGTH=8192"
+    "LINKER:--defsym=SCRATCH_Y_ORIGIN=0x2003e000"
+    "LINKER:--defsym=SCRATCH_Y_LENGTH=8192")
+# Retain compiler frame measurements for the actual optimized application.
+set_source_files_properties(main.c PROPERTIES COMPILE_OPTIONS "-fstack-usage")
 pico_add_extra_outputs(buddy123_interface_wifi_v2)

@@ -8,6 +8,7 @@ cmake -S . -B build-wifi-on -DCMAKE_BUILD_TYPE=Release
 cmake --build build-wifi-on -j8
 python3 run_tests.py
 python3 run_lwip_timeout_test.py
+python3 verify_stack_layout.py --build build-wifi-on
 python3 verify_firmware.py
 ```
 
@@ -18,3 +19,5 @@ To reproduce a credential-free release, do not place `wifi_config.local.h` in th
 `verify_firmware.py` checks all current ledger entries, preserved controller sources against V1, UF2 block structure/family/flash bounds/markers, RAM bounds, no local credential header, and packaged file integrity. It does not require staging or committing files. It verifies the recorded artifact; rebuilding may alter timestamps/paths and thus its hash. Repackaging after any edits requires regenerating source/artifact metadata.
 
 V2.1 reserves four application timeout slots above `LWIP_NUM_SYS_TIMEOUT_INTERNAL`. `run_lwip_timeout_test.py` uses the configured SDK source, verifies the old core-only configuration panics when the application timer is added, then tests the fixed pool. It is separate from the SDK-independent host suite.
+
+V2.2 uses RP2040-only SDK memory-region symbol overrides: top 16 KiB of main SRAM reserved for separate 8 KiB stacks; heap ends below both. main.c is compiled with `-fstack-usage`; the linked ELF plus its `.su` report are required for `verify_stack_layout.py`. SDK 2.2.0 and its symbol-based default linker scripts are required for the recorded layout.

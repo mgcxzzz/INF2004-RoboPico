@@ -1,3 +1,7 @@
+# V2.2 follow-up
+
+Based on V2.1 commit `10d7886`. Preserves the timeout-pool correction. Actual ARM compiler frames and linked calls expose a 4328-byte driving chain entering the other core's default stack address range. V2.2 changes target stack sizes and linker memory-region symbols to reserve two disjoint 8 KiB stacks with heap separation; no motion/network control algorithms change. Physical dropout resolution remains pending. See STACK_LAYOUT.md and logs.
+
 # V2.1 follow-up
 
 Based on V2 commit `c8155de`. User-supplied V1.3 diagnostic output identifies a MEMP_SYS_TIMEOUT-empty panic. V2.1 changes `lwipopts.h` to reserve four application timeout slots, plus the firmware banner and test/release material. Current source ledger and verifier preserve the original V1 baseline at `0285d74`, allowing the exact timeout option insertion and banner substitution. No motion code or settings schema changes.

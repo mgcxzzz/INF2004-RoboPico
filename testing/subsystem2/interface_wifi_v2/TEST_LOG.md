@@ -1,4 +1,4 @@
-# Wi-Fi V2 / V2.1 validation — 2026-10-28
+# Wi-Fi V2 / V2.1 / V2.2 validation — 2026-10-28
 
 Baseline branch: `codex/buddy2-left-motor-test`, pulled at `0285d74`. V1 preserved. All changes and evidence for this request are contained in `testing/subsystem2/interface_wifi_v2`.
 
@@ -32,3 +32,13 @@ V2.1 changes only the timeout-pool option plus banner/release material/tests. Th
 - `logs/arm_wifi_on_build_v2_1.txt` and `logs/arm_wifi_off_build_v2_1.txt`: ARM Release builds pass.
 - `logs/release_verification_v2_1.txt`: updated source/UF2/bundle and precise timeout-option-only provenance check pass.
 - Physical V2.1 retest: **PENDING**, do not mark overall hardware connectivity passed from host/build results.
+
+## V2.2 follow-up: driving stack collision
+
+- Saved actual telemetry-off Start/Running/LWT log: `logs/start_heartbeat_loss_2026-10-28.txt`. No USB+power-bank test was performed or requested for this retest.
+- Old application compiler frames and actual ELF direct calls prove a driving path consuming at least 4328 bytes, intruding into the core1 stack under the default layout: `logs/arm_stack_usage_v2_1.txt`, `logs/stack_layout_baseline_v2_1.txt`. This is a proven layout defect; the physical corruption event itself was not captured.
+- V2.2 links separate 8192-byte stacks with heap limited below both. `logs/stack_layout_v2_2.txt` validates the real linked layout and call-frame budget; `logs/arm_stack_usage_v2_2.txt` records current frame sizes.
+- ARM Release network ON/OFF builds pass: `logs/arm_wifi_on_build_v2_2.txt`, `logs/arm_wifi_off_build_v2_2.txt`.
+- Firmware/source/package checks pass: `logs/release_verification_v2_2.txt`, including boot SP and current stack/heap bounds.
+- V2.1 host and real-lwIP pool tests above remain the latest algorithm/schema regression results. They were not rerun for this linker-only change plus banner, documentation and new static verification script.
+- Physical Start / driving / heartbeat retest of V2.2: **PENDING**. No claim of complete worst-case stack usage or resolved hardware dropout until retested.

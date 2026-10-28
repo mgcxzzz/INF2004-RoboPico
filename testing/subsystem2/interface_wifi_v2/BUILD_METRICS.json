@@ -1,7 +1,7 @@
 {
   "artifact": "firmware/buddy123_interface_wifi_v2.uf2",
   "bundle": "firmware/buddy123_interface_wifi_v2_bundle.zip",
-  "sha256": "bf32ae61d8a143922d0244340a1e9f9fa1bcaba09b4c4f60fd3b0602c3365c10",
+  "sha256": "df5052a0718fe05c7b3f4903b52835742793eff8d8a0593fc516b4766dd49a2c",
   "bytes": 1000448,
   "blocks": 1954,
   "date": "2026-10-28",
@@ -10,23 +10,26 @@
   "arm_compiler": "arm-none-eabi-gcc (Arm GNU Toolchain 15.3.Rel1 (Build arm-15.149)) 15.3.1 20260627",
   "arm_builds": {
     "network_on": {
-      "text": 504208,
+      "text": 510352,
       "data": 0,
-      "bss": 192500
+      "bss": 198644
     },
     "network_off": {
-      "text": 185816,
+      "text": 191960,
       "data": 0,
-      "bss": 147360
+      "bss": 153504
     }
   },
   "symbols": {
-    "__HeapLimit": "0x20040000",
-    "__StackLimit": "0x20040000",
-    "__StackOneBottom": "0x20040800",
-    "__StackOneTop": "0x20041000",
+    "__HeapLimit": "0x2003c000",
+    "__StackLimit": "0x2003c000",
+    "__StackOneBottom": "0x2003c000",
+    "__StackOneTop": "0x2003e000",
     "__bss_end__": "0x2002ff44",
-    "__flash_binary_end": "0x1007a194"
+    "__flash_binary_end": "0x1007a194",
+    "__StackBottom": "0x2003e000",
+    "__StackTop": "0x20040000",
+    "core1_stack": "0x2003c000"
   },
   "host_c_executables": 34,
   "javascript_schema_tests": 10,
@@ -35,7 +38,7 @@
   "embedded_credentials": false,
   "default_buddy_extension": null,
   "physical_network_and_driving_validated": false,
-  "firmware_version": "v2.1",
+  "firmware_version": "v2.2",
   "previous_v2_sha256": "dea5933f5cc54604cd8e0e25389cc6ac2356d5cb840061d2032d43344fd50148",
   "timeout_pool": {
     "core_slots": 7,
@@ -43,5 +46,15 @@
     "additional_bss_bytes": 64,
     "real_allocator_regression": "default panics; fixed 100 callback reschedules and 1000 add/remove cycles pass",
     "physical_v2_1_retest": "pending"
+  },
+  "previous_v2_1_sha256": "bf32ae61d8a143922d0244340a1e9f9fa1bcaba09b4c4f60fd3b0602c3365c10",
+  "stack_layout": {
+    "core0_bytes": 8192,
+    "core1_bytes": 8192,
+    "heap_limit": "0x2003c000",
+    "verified_driving_chain_frame_bytes": 4328,
+    "complete_worst_case_bound": false,
+    "physical_v2_2_retest": "pending",
+    "checks": "logs/stack_layout_v2_2.txt"
   }
 }

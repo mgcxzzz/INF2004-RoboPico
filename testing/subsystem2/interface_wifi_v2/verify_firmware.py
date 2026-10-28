@@ -18,13 +18,19 @@ for rel in base['protected']:
         continue
     assert sha(root/rel)==base['sha256'][rel],'Controller differs: '+rel
 main=base['banner_only_main']
-restored=(root/main).read_bytes().replace(b'BUDDY123 INTERFACE WIFI v2.1',b'BUDDY123 INTERFACE WIFI v1.2')
+restored=(root/main).read_bytes().replace(b'BUDDY123 INTERFACE WIFI v2.2',b'BUDDY123 INTERFACE WIFI v1.2')
 assert hashlib.sha256(restored).hexdigest()==base['sha256'][main],'Nested main changed beyond banner'
 assert not (root/'wifi_config.local.h').exists(),'Remove local credentials header for release verification'
 assert not meta['embedded_credentials'] and meta['default_buddy_extension'] is None
 assert 'return cyw43_tcpip_link_status(' in (root/'wifi_link_state.h').read_text()
 assert int(meta['symbols']['__flash_binary_end'],16)<0x101aa000
 assert int(meta['symbols']['__bss_end__'],16)<int(meta['symbols']['__StackLimit'],16)
+ss={k:int(v,16) for k,v in meta['symbols'].items()}
+assert ss['__StackTop']-ss['__StackBottom']==8192
+assert ss['__StackOneTop']-ss['__StackOneBottom']==8192
+assert ss['__bss_end__']<=ss['__HeapLimit']==ss['__StackLimit']<=ss['__StackOneBottom']
+assert ss['__StackOneTop']<=ss['__StackBottom']<ss['__StackTop']<=0x20040000
+
 artifact=root/meta['artifact'];data=artifact.read_bytes()
 assert sha(artifact)==meta['sha256'] and len(data)==meta['bytes']
 assert len(data)%512==0 and len(data)//512==meta['blocks']
@@ -36,7 +42,8 @@ for k in range(meta['blocks']):
     assert address==0x10000000+256*k and address+size<=0x101aa000
     assert struct.unpack_from('<I',block,508)[0]==0x0ab16f30
     payload.extend(block[32:288])
-for marker in (b'BUDDY123 INTERFACE WIFI v2.1',b'WIFI_MQTT:',b'tcp_connect',b'await_connack',b'await_suback',
+assert struct.unpack_from('<I',payload,256)[0]==ss['__StackTop'],'Boot vector stack pointer differs'
+for marker in (b'BUDDY123 INTERFACE WIFI v2.2',b'WIFI_MQTT:',b'tcp_connect',b'await_connack',b'await_suback',
                b'WIFI_PROGRESS:',b'WIFI_SETUP:',b'WIFI_PROVISIONED:',b'WIFI_SETUP_REJECTED:',b'is28/cmd',b'is28/tlm',b'is28/hb'):
     assert marker in payload,marker
 assert sha(root/'dashboard/vendor/mqtt.min.js')=='b088a7f9045df4e478dbc378f41125066e43d9c602755ee4c5cda0f3e9380ba0'

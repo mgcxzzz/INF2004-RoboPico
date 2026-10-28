@@ -1,6 +1,14 @@
-# Buddy 1/2/3 interface Wi-Fi V2.1
+# Buddy 1/2/3 interface Wi-Fi V2.2
 
 This folder preserves the Continuous V2 driving, barcode and navigation implementation from `interface_wifi_v1` at commit `0285d74`. It improves MQTT recovery and diagnostics, and avoids guessing the laptop broker address from an unrelated network route. V1 is unchanged. This is an independent Pico SDK application: core 1 owns CYW43/lwIP/MQTT; core 0 communicates through bounded copied queues. It does not modify the RTOS MQTT implementation.
+
+## V2.2 driving/network stack separation
+
+A subsequent power-bank test accepted Start and emitted a Running heartbeat at 17:37:02, then broker LWT at 17:37:10. Disabling telemetry did not resolve it; the user reports driving continues and networking does not return after a physical stop. This is distinct from the earlier timer-pool panic, whose fix is retained.
+
+The compiled driving call chain has **4328 bytes of local frames alone**. With the old default linker layout, that reaches into the other core's network stack. V2.2 reserves separate **8 KiB stacks** for both cores in the top 16 KiB of main SRAM, and lowers the heap limit below both stacks. The application uses the same driving and networking algorithms; no dual power supply or USB debugging is required for the retest. [STACK_LAYOUT.md](STACK_LAYOUT.md) contains the measured frames and real ELF checks. This proves a layout defect and removes that collision; it does not yet prove the physical dropout is resolved.
+
+After pulling, flash the stable `buddy123_interface_wifi_v2.uf2` filename, which now contains **v2.2**. Use **one power source at a time** for this setup. Start the laptop broker first, boot the car from the power bank, and wait for stable heartbeats. Keep telemetry disabled for the first driving test. Press Start and run on the normal test track for at least 30 seconds while watching heartbeats, then stop with the physical button and check that heartbeats persist. Save the message log. Repeat with telemetry enabled if that passes. If networking still drops, stop physically and save both the dashboard messages and laptop `dashboard_session/broker.log`; do not assume remote Stop is available after disconnection. Physical V2.2 testing remains pending.
 
 ## V2.1 timeout-pool fix
 
@@ -8,7 +16,7 @@ The V1.3 diagnostic hardware report identified `sys_timeout: timeout != NULL, po
 
 The copied `lwipopts.h` inherited lwIP's default **core-only** timeout budget. MQTT registers an application cyclic timer in its TCP-connect callback, before CONNACK. V2.1 explicitly reserves `LWIP_NUM_SYS_TIMEOUT_INTERNAL + 4` slots (7 core + 4 spare with this build's options). The real lwIP allocator/list regression reproduces the exact panic with the old default and passes with the fix. These additional slots are bounded headroom for this single-client configuration, not a remedy for arbitrary timer leaks.
 
-Use the existing stable `buddy123_interface_wifi_v2.uf2` filename and confirm the **v2.1** banner. Start the broker first, boot the Pico stopped, capture `n` twice 20 seconds apart, then leave it online for two minutes. Poll counts and `last_ms` must advance, `mqtt=1 subscribed=1` and fresh heartbeats must persist, and no panic should appear. Physical retest of V2.1 is pending. Existing settings remain compatible; do not reprovision if the saved laptop IP is already correct. This fix does not by itself validate firewall/hotspot reachability, although the diagnostic panic occurs when the MQTT TCP-connect callback schedules its timer.
+Historical V2.1 retest instructions follow; use V2.2 above for the current firmware. Start the broker first, boot the Pico stopped, capture `n` twice 20 seconds apart, then leave it online for two minutes. Poll counts and `last_ms` must advance, `mqtt=1 subscribed=1` and fresh heartbeats must persist, and no panic should appear. Physical retest of V2.1 is pending. Existing settings remain compatible; do not reprovision if the saved laptop IP is already correct. This fix does not by itself validate firewall/hotspot reachability, although the diagnostic panic occurs when the MQTT TCP-connect callback schedules its timer.
 
 ## What the initial reported failure means
 
@@ -18,7 +26,7 @@ The browser connects to WebSockets on port **9001**; the Pico connects to plain 
 
 ## Teammate setup on Windows
 
-1. Flash [buddy123_interface_wifi_v2.uf2](firmware/buddy123_interface_wifi_v2.uf2) through BOOTSEL. PuTTY `h` should show `BUDDY123 INTERFACE WIFI v2.1`. Normal flashing preserves existing device settings. Motors remain off at boot.
+1. Flash [buddy123_interface_wifi_v2.uf2](firmware/buddy123_interface_wifi_v2.uf2) through BOOTSEL. PuTTY `h` should show `BUDDY123 INTERFACE WIFI v2.2`. Normal flashing preserves existing device settings. Motors remain off at boot.
 2. From this folder run `py run_dashboard.py --pico-ip 10.236.162.13` using the **current** Pico IP printed by `n`. The helper prints the laptop interface routed to that Pico. Check this against the Wi-Fi adapter IPv4 in `ipconfig`; a VPN can affect routing. Mosquitto must listen on both 1883 and 9001. The helper starts a broker when available; it does not change services or firewall rules.
 3. Press `n` in PuTTY and compare `WIFI_PROGRESS broker=` with that laptop address. If different, close PuTTY, then run `py provision_wifi.py --port COM4 --broker LAPTOP_IP` with the real COM port/address. Enter hotspot credentials locally. The helper stops the car, saves settings and reboots. Open PuTTY again after USB returns. No password belongs in Git or chat.
 4. Run `py check_mqtt.py --broker LAPTOP_IP --pico-ip PICO_IP`. It performs MQTT CONNECT/SUBSCRIBE and waits up to 20 seconds for a fresh binary heartbeat; it sends no car commands. A local success proves the laptop broker accepts MQTT, **not** that Windows permits incoming traffic from the Pico.

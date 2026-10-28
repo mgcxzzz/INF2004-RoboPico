@@ -1,0 +1,4 @@
+Compiler frames on verified driving call chain: main=2344, control_step=1176, interface_navigation_step=472, barcode_circuit_step.constprop=336
+Known chain total: 4328 bytes; excludes deeper callees, interrupt frames and runtime watermark.
+PASS core0 stack [0x2003e000,0x20040000), core1 [0x2003c000,0x2003e000); heap ends 0x2003c000.
+Static checks pass; physical Start/heartbeat test and runtime maximum stack use remain unverified.

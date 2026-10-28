@@ -1,0 +1,328 @@
+17:36:41  is28/tlm  Motion telemetry #25 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:41  is28/tlm  Line/barcode event #25 status, decoded -, pending -/-, executing -, rev 0
+17:36:41  is28/tlm  Motion telemetry #26 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:41  is28/tlm  Line/barcode event #26 status, decoded -, pending -/-, executing -, rev 0
+17:36:41  is28/tlm  Motion telemetry #27 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:41  is28/tlm  Line/barcode event #27 status, decoded -, pending -/-, executing -, rev 0
+17:36:41  is28/tlm  Motion telemetry #28 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:41  is28/tlm  Line/barcode event #28 status, decoded -, pending -/-, executing -, rev 0
+17:36:42  is28/tlm  Motion telemetry #29 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:42  is28/tlm  Line/barcode event #29 status, decoded -, pending -/-, executing -, rev 0
+17:36:42  is28/tlm  Motion telemetry #30 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:42  is28/tlm  Line/barcode event #30 status, decoded -, pending -/-, executing -, rev 0
+17:36:42  is28/tlm  Motion telemetry #31 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:42  is28/tlm  Line/barcode event #31 status, decoded -, pending -/-, executing -, rev 0
+17:36:42  is28/tlm  Motion telemetry #32 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:42  is28/tlm  Line/barcode event #32 status, decoded -, pending -/-, executing -, rev 0
+17:36:42  is28/tlm  Motion telemetry #33 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:42  is28/tlm  Line/barcode event #33 status, decoded -, pending -/-, executing -, rev 0
+17:36:42  is28/tlm  Motion telemetry #34 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:42  is28/tlm  Line/barcode event #34 status, decoded -, pending -/-, executing -, rev 0
+17:36:42  is28/tlm  Motion telemetry #35 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:42  is28/tlm  Line/barcode event #35 status, decoded -, pending -/-, executing -, rev 0
+17:36:42  is28/tlm  Motion telemetry #36 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:42  is28/tlm  Line/barcode event #36 status, decoded -, pending -/-, executing -, rev 0
+17:36:42  is28/tlm  Motion telemetry #37 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:42  is28/tlm  Line/barcode event #37 status, decoded -, pending -/-, executing -, rev 0
+17:36:42  is28/tlm  Motion telemetry #38 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:42  cmd       → BARCODE_GET id 25 [a2 19 00 00]
+17:36:42  is28/hb   WiFi link #14 Operational, Ready, pub 26, lost 572
+17:36:42  is28/tlm  Line/barcode event #38 status, decoded -, pending -/-, executing -, rev 0
+17:36:42  is28/tlm  Coordinator event #14 status, mode 7, owner 0, -/-, map rev 0
+17:36:42  is28/tlm  Diagnostics status #14 barcode threshold 212, bank 11, decoded 0, bad frames 0
+17:36:42  is28/tlm  Motion telemetry #39 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:42  is28/tlm  Line/barcode event #39 status, decoded -, pending -/-, executing -, rev 0
+17:36:42  is28/tlm  Motion telemetry #40 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:42  is28/tlm  Line/barcode event #40 status, decoded -, pending -/-, executing -, rev 0
+17:36:42  is28/ack  ← BARCODE_GET id 25: accepted in 99 ms, state Ready
+17:36:42  is28/hb   WiFi link #15 Operational, Ready, pub 34, lost 572
+17:36:42  is28/tlm  Motion telemetry #41 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:42  is28/tlm  Line/barcode event #41 status, decoded -, pending -/-, executing -, rev 0
+17:36:42  is28/tlm  Motion telemetry #42 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:42  is28/tlm  Line/barcode event #42 status, decoded -, pending -/-, executing -, rev 0
+17:36:42  is28/tlm  Motion telemetry #43 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:42  is28/tlm  Line/barcode event #43 status, decoded -, pending -/-, executing -, rev 0
+17:36:42  is28/tlm  Coordinator event #15 command_request, mode 7, owner 0, -/-, map rev 0
+17:36:42  is28/tlm  Barcode map #0 mapping not configured
+17:36:42  is28/tlm  Coordinator event #16 command_result, mode 7, owner 0, -/-, map rev 0
+17:36:42  is28/tlm  Coordinator event #17 status, mode 7, owner 0, -/-, map rev 0
+17:36:42  is28/tlm  Motion telemetry #44 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:42  is28/tlm  Line/barcode event #44 status, decoded -, pending -/-, executing -, rev 0
+17:36:42  is28/tlm  Motion telemetry #45 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:43  is28/tlm  Line/barcode event #45 status, decoded -, pending -/-, executing -, rev 0
+17:36:43  is28/tlm  Motion telemetry #46 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:43  is28/tlm  Line/barcode event #46 status, decoded -, pending -/-, executing -, rev 0
+17:36:43  is28/tlm  Motion telemetry #47 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:43  is28/tlm  Line/barcode event #47 status, decoded -, pending -/-, executing -, rev 0
+17:36:43  is28/tlm  Motion telemetry #48 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:43  is28/tlm  Line/barcode event #48 status, decoded -, pending -/-, executing -, rev 0
+17:36:43  is28/tlm  Motion telemetry #49 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:43  is28/tlm  Line/barcode event #49 status, decoded -, pending -/-, executing -, rev 0
+17:36:43  is28/ack  ← BARCODE_GET id 14: accepted, state Ready
+17:36:43  is28/hb   WiFi link #16 Operational, Ready, pub 58, lost 573
+17:36:43  is28/tlm  Line/barcode event #50 status, decoded -, pending -/-, executing -, rev 0
+17:36:43  is28/tlm  Motion telemetry #51 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:43  is28/tlm  Line/barcode event #51 status, decoded -, pending -/-, executing -, rev 0
+17:36:43  is28/tlm  Motion telemetry #52 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:43  is28/tlm  Line/barcode event #52 status, decoded -, pending -/-, executing -, rev 0
+17:36:43  is28/tlm  Motion telemetry #53 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:43  is28/tlm  Line/barcode event #53 status, decoded -, pending -/-, executing -, rev 0
+17:36:43  is28/tlm  Coordinator event #18 command_request, mode 7, owner 0, -/-, map rev 0
+17:36:43  is28/tlm  Barcode map #1 mapping not configured
+17:36:43  is28/tlm  Coordinator event #19 command_result, mode 7, owner 0, -/-, map rev 0
+17:36:43  is28/tlm  Motion telemetry #54 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:43  is28/tlm  Line/barcode event #54 status, decoded -, pending -/-, executing -, rev 0
+17:36:43  is28/tlm  Motion telemetry #55 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:43  is28/tlm  Line/barcode event #55 status, decoded -, pending -/-, executing -, rev 0
+17:36:43  is28/tlm  Motion telemetry #56 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:43  is28/tlm  Line/barcode event #56 status, decoded -, pending -/-, executing -, rev 0
+17:36:43  is28/tlm  Motion telemetry #57 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:43  is28/tlm  Line/barcode event #57 status, decoded -, pending -/-, executing -, rev 0
+17:36:43  is28/tlm  Motion telemetry #58 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:43  is28/tlm  Line/barcode event #58 status, decoded -, pending -/-, executing -, rev 0
+17:36:43  is28/tlm  Motion telemetry #59 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:44  is28/tlm  Line/barcode event #59 status, decoded -, pending -/-, executing -, rev 0
+17:36:44  is28/tlm  Motion telemetry #60 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:44  is28/tlm  Line/barcode event #60 status, decoded -, pending -/-, executing -, rev 0
+17:36:44  is28/tlm  Motion telemetry #61 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:44  is28/tlm  Line/barcode event #61 status, decoded -, pending -/-, executing -, rev 0
+17:36:44  is28/tlm  Motion telemetry #62 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:44  is28/tlm  Line/barcode event #62 status, decoded -, pending -/-, executing -, rev 0
+17:36:44  is28/tlm  Motion telemetry #63 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:44  is28/tlm  Line/barcode event #63 status, decoded -, pending -/-, executing -, rev 0
+17:36:44  is28/tlm  Motion telemetry #64 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:44  is28/tlm  Line/barcode event #64 status, decoded -, pending -/-, executing -, rev 0
+17:36:44  is28/tlm  Motion telemetry #65 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:44  is28/tlm  Line/barcode event #65 status, decoded -, pending -/-, executing -, rev 0
+17:36:44  is28/hb   WiFi link #17 Operational, Ready, pub 94, lost 582
+17:36:44  is28/tlm  Motion telemetry #66 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:44  is28/tlm  Line/barcode event #66 status, decoded -, pending -/-, executing -, rev 0
+17:36:44  is28/tlm  Motion telemetry #67 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:44  is28/tlm  Line/barcode event #67 status, decoded -, pending -/-, executing -, rev 0
+17:36:44  is28/tlm  Motion telemetry #71 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:44  is28/tlm  Line/barcode event #71 status, decoded -, pending -/-, executing -, rev 0
+17:36:44  is28/tlm  Motion telemetry #72 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:44  is28/tlm  Line/barcode event #72 status, decoded -, pending -/-, executing -, rev 0
+17:36:44  is28/tlm  Coordinator event #21 status, mode 7, owner 0, -/-, map rev 0
+17:36:44  is28/tlm  Diagnostics status #17 barcode threshold 212, bank 11, decoded 0, bad frames 0
+17:36:44  is28/tlm  Motion telemetry #73 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:44  is28/tlm  Motion telemetry #75 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:44  is28/tlm  Line/barcode event #75 status, decoded -, pending -/-, executing -, rev 0
+17:36:44  is28/tlm  Motion telemetry #76 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:44  is28/tlm  Line/barcode event #76 status, decoded -, pending -/-, executing -, rev 0
+17:36:44  is28/tlm  Motion telemetry #77 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:44  is28/tlm  Line/barcode event #77 status, decoded -, pending -/-, executing -, rev 0
+17:36:44  is28/tlm  Motion telemetry #78 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:44  is28/tlm  Line/barcode event #78 status, decoded -, pending -/-, executing -, rev 0
+17:36:44  is28/tlm  Motion telemetry #79 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:44  is28/tlm  Line/barcode event #79 status, decoded -, pending -/-, executing -, rev 0
+17:36:44  is28/tlm  Motion telemetry #80 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:44  is28/tlm  Line/barcode event #80 status, decoded -, pending -/-, executing -, rev 0
+17:36:44  is28/tlm  Motion telemetry #81 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:44  is28/tlm  Line/barcode event #81 status, decoded -, pending -/-, executing -, rev 0
+17:36:44  is28/tlm  Motion telemetry #82 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:45  is28/tlm  Line/barcode event #82 status, decoded -, pending -/-, executing -, rev 0
+17:36:45  is28/tlm  Motion telemetry #83 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:45  is28/tlm  Line/barcode event #83 status, decoded -, pending -/-, executing -, rev 0
+17:36:45  is28/tlm  Motion telemetry #84 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:45  is28/tlm  Line/barcode event #84 status, decoded -, pending -/-, executing -, rev 0
+17:36:45  is28/tlm  Motion telemetry #85 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:45  is28/tlm  Line/barcode event #85 status, decoded -, pending -/-, executing -, rev 0
+17:36:45  is28/tlm  Motion telemetry #86 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:45  is28/tlm  Line/barcode event #86 status, decoded -, pending -/-, executing -, rev 0
+17:36:45  is28/tlm  Motion telemetry #87 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:45  is28/tlm  Line/barcode event #87 status, decoded -, pending -/-, executing -, rev 0
+17:36:45  is28/tlm  Motion telemetry #88 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:45  is28/tlm  Line/barcode event #88 status, decoded -, pending -/-, executing -, rev 0
+17:36:45  is28/hb   WiFi link #18 Operational, Ready, pub 134, lost 585
+17:36:45  is28/tlm  Motion telemetry #89 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:45  is28/tlm  Line/barcode event #89 status, decoded -, pending -/-, executing -, rev 0
+17:36:45  is28/tlm  Motion telemetry #90 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:45  is28/tlm  Line/barcode event #90 status, decoded -, pending -/-, executing -, rev 0
+17:36:45  is28/tlm  Motion telemetry #91 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:45  is28/tlm  Line/barcode event #91 status, decoded -, pending -/-, executing -, rev 0
+17:36:45  is28/tlm  Motion telemetry #92 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:45  is28/tlm  Line/barcode event #92 status, decoded -, pending -/-, executing -, rev 0
+17:36:45  is28/tlm  Coordinator event #22 status, mode 7, owner 0, -/-, map rev 0
+17:36:45  is28/tlm  Diagnostics status #18 barcode threshold 212, bank 11, decoded 0, bad frames 0
+17:36:46  is28/tlm  Motion telemetry #93 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:46  is28/tlm  Motion telemetry #98 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:46  is28/tlm  Line/barcode event #98 status, decoded -, pending -/-, executing -, rev 0
+17:36:46  is28/tlm  Motion telemetry #99 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:46  is28/tlm  Line/barcode event #99 status, decoded -, pending -/-, executing -, rev 0
+17:36:46  is28/tlm  Motion telemetry #100 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:46  is28/tlm  Line/barcode event #100 status, decoded -, pending -/-, executing -, rev 0
+17:36:46  is28/tlm  Motion telemetry #101 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:46  is28/tlm  Line/barcode event #101 status, decoded -, pending -/-, executing -, rev 0
+17:36:46  is28/tlm  Motion telemetry #102 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:46  is28/tlm  Line/barcode event #102 status, decoded -, pending -/-, executing -, rev 0
+17:36:46  is28/tlm  Motion telemetry #103 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:46  is28/tlm  Line/barcode event #103 status, decoded -, pending -/-, executing -, rev 0
+17:36:46  is28/hb   WiFi link #19 Operational, Ready, pub 158, lost 600
+17:36:46  is28/tlm  Line/barcode event #104 status, decoded -, pending -/-, executing -, rev 0
+17:36:46  is28/tlm  Motion telemetry #105 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:46  is28/tlm  Line/barcode event #105 status, decoded -, pending -/-, executing -, rev 0
+17:36:46  is28/tlm  Motion telemetry #106 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:46  is28/tlm  Line/barcode event #106 status, decoded -, pending -/-, executing -, rev 0
+17:36:46  is28/tlm  Motion telemetry #107 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:46  is28/tlm  Line/barcode event #107 status, decoded -, pending -/-, executing -, rev 0
+17:36:46  is28/tlm  Motion telemetry #111 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:46  is28/tlm  Line/barcode event #111 status, decoded -, pending -/-, executing -, rev 0
+17:36:46  is28/tlm  Motion telemetry #112 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:46  is28/tlm  Line/barcode event #112 status, decoded -, pending -/-, executing -, rev 0
+17:36:46  is28/tlm  Motion telemetry #117 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:46  is28/tlm  Line/barcode event #117 status, decoded -, pending -/-, executing -, rev 0
+17:36:46  is28/tlm  Motion telemetry #118 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:46  is28/tlm  Line/barcode event #118 status, decoded -, pending -/-, executing -, rev 0
+17:36:46  is28/tlm  Motion telemetry #119 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:46  is28/tlm  Line/barcode event #119 status, decoded -, pending -/-, executing -, rev 0
+17:36:46  is28/tlm  Motion telemetry #120 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:46  is28/tlm  Line/barcode event #120 status, decoded -, pending -/-, executing -, rev 0
+17:36:46  is28/tlm  Motion telemetry #121 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:46  is28/tlm  Line/barcode event #121 status, decoded -, pending -/-, executing -, rev 0
+17:36:46  is28/tlm  Motion telemetry #122 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:47  is28/tlm  Line/barcode event #122 status, decoded -, pending -/-, executing -, rev 0
+17:36:47  is28/tlm  Motion telemetry #123 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:47  is28/tlm  Line/barcode event #123 status, decoded -, pending -/-, executing -, rev 0
+17:36:47  is28/tlm  Motion telemetry #124 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:47  is28/tlm  Line/barcode event #124 status, decoded -, pending -/-, executing -, rev 0
+17:36:47  is28/tlm  Motion telemetry #125 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:47  is28/tlm  Line/barcode event #125 status, decoded -, pending -/-, executing -, rev 0
+17:36:47  is28/tlm  Motion telemetry #126 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:47  is28/tlm  Line/barcode event #126 status, decoded -, pending -/-, executing -, rev 0
+17:36:47  is28/tlm  Motion telemetry #127 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:47  is28/tlm  Line/barcode event #127 status, decoded -, pending -/-, executing -, rev 0
+17:36:47  is28/tlm  Motion telemetry #128 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:47  is28/tlm  Line/barcode event #128 status, decoded -, pending -/-, executing -, rev 0
+17:36:47  is28/hb   WiFi link #20 Operational, Ready, pub 194, lost 611
+17:36:47  is28/tlm  Motion telemetry #129 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:47  is28/tlm  Line/barcode event #129 status, decoded -, pending -/-, executing -, rev 0
+17:36:47  is28/tlm  Motion telemetry #130 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:47  is28/tlm  Line/barcode event #130 status, decoded -, pending -/-, executing -, rev 0
+17:36:47  is28/tlm  Motion telemetry #131 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:47  is28/tlm  Line/barcode event #131 status, decoded -, pending -/-, executing -, rev 0
+17:36:47  is28/tlm  Motion telemetry #132 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:47  is28/tlm  Line/barcode event #132 status, decoded -, pending -/-, executing -, rev 0
+17:36:47  is28/tlm  Coordinator event #24 status, mode 7, owner 0, -/-, map rev 0
+17:36:47  is28/tlm  Diagnostics status #20 barcode threshold 212, bank 11, decoded 0, bad frames 0
+17:36:47  is28/tlm  Motion telemetry #133 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:47  is28/tlm  Motion telemetry #134 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:47  is28/tlm  Line/barcode event #134 status, decoded -, pending -/-, executing -, rev 0
+17:36:47  is28/tlm  Motion telemetry #135 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:47  is28/tlm  Line/barcode event #135 status, decoded -, pending -/-, executing -, rev 0
+17:36:47  is28/tlm  Motion telemetry #138 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:47  is28/tlm  Line/barcode event #138 status, decoded -, pending -/-, executing -, rev 0
+17:36:47  is28/tlm  Motion telemetry #139 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:47  is28/tlm  Line/barcode event #139 status, decoded -, pending -/-, executing -, rev 0
+17:36:47  is28/tlm  Motion telemetry #140 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:47  is28/tlm  Line/barcode event #140 status, decoded -, pending -/-, executing -, rev 0
+17:36:47  is28/tlm  Motion telemetry #141 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:48  is28/tlm  Line/barcode event #141 status, decoded -, pending -/-, executing -, rev 0
+17:36:48  is28/tlm  Motion telemetry #142 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:48  is28/tlm  Line/barcode event #142 status, decoded -, pending -/-, executing -, rev 0
+17:36:48  is28/tlm  Motion telemetry #143 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:48  is28/tlm  Line/barcode event #143 status, decoded -, pending -/-, executing -, rev 0
+17:36:48  is28/tlm  Motion telemetry #145 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:48  is28/tlm  Line/barcode event #145 status, decoded -, pending -/-, executing -, rev 0
+17:36:48  is28/tlm  Motion telemetry #146 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:48  is28/tlm  Line/barcode event #146 status, decoded -, pending -/-, executing -, rev 0
+17:36:48  is28/tlm  Motion telemetry #147 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:48  is28/tlm  Line/barcode event #147 status, decoded -, pending -/-, executing -, rev 0
+17:36:48  is28/tlm  Motion telemetry #148 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:48  is28/tlm  Line/barcode event #148 status, decoded -, pending -/-, executing -, rev 0
+17:36:48  is28/hb   WiFi link #21 Operational, Ready, pub 230, lost 618
+17:36:48  is28/tlm  Motion telemetry #149 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:48  is28/tlm  Line/barcode event #149 status, decoded -, pending -/-, executing -, rev 0
+17:36:48  is28/tlm  Motion telemetry #150 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:48  is28/tlm  Line/barcode event #150 status, decoded -, pending -/-, executing -, rev 0
+17:36:48  is28/tlm  Motion telemetry #151 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:48  is28/tlm  Line/barcode event #151 status, decoded -, pending -/-, executing -, rev 0
+17:36:48  is28/tlm  Motion telemetry #152 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:48  is28/tlm  Line/barcode event #152 status, decoded -, pending -/-, executing -, rev 0
+17:36:48  is28/tlm  Coordinator event #25 status, mode 7, owner 0, -/-, map rev 0
+17:36:48  is28/tlm  Diagnostics status #21 barcode threshold 212, bank 11, decoded 0, bad frames 0
+17:36:48  is28/tlm  Motion telemetry #153 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:48  is28/tlm  Motion telemetry #155 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:48  is28/tlm  Line/barcode event #155 status, decoded -, pending -/-, executing -, rev 0
+17:36:48  is28/tlm  Motion telemetry #156 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:49  is28/tlm  Line/barcode event #156 status, decoded -, pending -/-, executing -, rev 0
+17:36:49  is28/tlm  Motion telemetry #158 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:49  is28/tlm  Line/barcode event #158 status, decoded -, pending -/-, executing -, rev 0
+17:36:49  is28/tlm  Motion telemetry #159 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:49  is28/tlm  Line/barcode event #159 status, decoded -, pending -/-, executing -, rev 0
+17:36:49  is28/tlm  Motion telemetry #162 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:49  is28/tlm  Line/barcode event #162 status, decoded -, pending -/-, executing -, rev 0
+17:36:49  is28/tlm  Motion telemetry #163 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:49  is28/tlm  Line/barcode event #163 status, decoded -, pending -/-, executing -, rev 0
+17:36:49  is28/tlm  Motion telemetry #164 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:49  is28/tlm  Line/barcode event #164 status, decoded -, pending -/-, executing -, rev 0
+17:36:49  is28/tlm  Motion telemetry #165 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:49  is28/tlm  Line/barcode event #165 status, decoded -, pending -/-, executing -, rev 0
+17:36:49  is28/hb   WiFi link #22 Operational, Ready, pub 258, lost 631
+17:36:49  is28/tlm  Motion telemetry #168 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:49  is28/tlm  Line/barcode event #168 status, decoded -, pending -/-, executing -, rev 0
+17:36:49  is28/tlm  Motion telemetry #169 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:49  is28/tlm  Line/barcode event #169 status, decoded -, pending -/-, executing -, rev 0
+17:36:49  is28/tlm  Motion telemetry #170 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:49  is28/tlm  Line/barcode event #170 status, decoded -, pending -/-, executing -, rev 0
+17:36:49  is28/tlm  Motion telemetry #171 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:49  is28/tlm  Line/barcode event #171 status, decoded -, pending -/-, executing -, rev 0
+17:36:49  is28/tlm  Motion telemetry #172 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:49  is28/tlm  Line/barcode event #172 status, decoded -, pending -/-, executing -, rev 0
+17:36:49  is28/tlm  Coordinator event #26 status, mode 7, owner 0, -/-, map rev 0
+17:36:49  is28/tlm  Motion telemetry #174 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:49  is28/tlm  Line/barcode event #174 status, decoded -, pending -/-, executing -, rev 0
+17:36:49  is28/tlm  Motion telemetry #175 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:49  is28/tlm  Line/barcode event #175 status, decoded -, pending -/-, executing -, rev 0
+17:36:49  is28/tlm  Motion telemetry #176 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:49  is28/tlm  Line/barcode event #176 status, decoded -, pending -/-, executing -, rev 0
+17:36:49  is28/tlm  Motion telemetry #177 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:50  is28/tlm  Line/barcode event #177 status, decoded -, pending -/-, executing -, rev 0
+17:36:50  is28/tlm  Motion telemetry #179 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:50  is28/tlm  Line/barcode event #179 status, decoded -, pending -/-, executing -, rev 0
+17:36:50  is28/tlm  Motion telemetry #180 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:50  is28/tlm  Line/barcode event #180 status, decoded -, pending -/-, executing -, rev 0
+17:36:50  is28/tlm  Motion telemetry #181 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:50  is28/tlm  Line/barcode event #181 status, decoded -, pending -/-, executing -, rev 0
+17:36:50  is28/tlm  Motion telemetry #182 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:50  is28/tlm  Line/barcode event #182 status, decoded -, pending -/-, executing -, rev 0
+17:36:50  is28/tlm  Motion telemetry #183 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:50  is28/tlm  Line/barcode event #183 status, decoded -, pending -/-, executing -, rev 0
+17:36:50  is28/tlm  Motion telemetry #184 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:50  is28/tlm  Line/barcode event #184 status, decoded -, pending -/-, executing -, rev 0
+17:36:50  is28/hb   WiFi link #23 Operational, Ready, pub 290, lost 644
+17:36:50  is28/tlm  Motion telemetry #185 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:50  is28/tlm  Line/barcode event #185 status, decoded -, pending -/-, executing -, rev 0
+17:36:50  cmd       → CONFIG id 26 [72 1a 00 10]
+17:36:50  is28/tlm  Motion telemetry #186 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:50  is28/tlm  Line/barcode event #186 status, decoded -, pending -/-, executing -, rev 0
+17:36:50  is28/tlm  Motion telemetry #189 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:50  is28/tlm  Line/barcode event #189 status, decoded -, pending -/-, executing -, rev 0
+17:36:50  is28/tlm  Motion telemetry #190 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:50  is28/ack  ← CONFIG id 26: accepted in 150 ms, state Ready
+17:36:50  is28/hb   WiFi link #24 Operational, Ready, pub 298, lost 655
+17:36:50  is28/tlm  Coordinator event #27 status, mode 7, owner 0, -/-, map rev 0
+17:36:50  is28/tlm  Diagnostics status #23 barcode threshold 212, bank 11, decoded 0, bad frames 0
+17:36:50  is28/tlm  Motion telemetry #193 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:50  is28/tlm  Motion telemetry #194 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:50  is28/tlm  Line/barcode event #194 status, decoded -, pending -/-, executing -, rev 0
+17:36:50  is28/tlm  Motion telemetry #195 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:50  is28/tlm  Line/barcode event #195 status, decoded -, pending -/-, executing -, rev 0
+17:36:50  is28/tlm  Motion telemetry #201 run 0, measured 0/0 mm/s, target 0/0, PWM 0/0, phase 0, profile 1
+17:36:50  is28/tlm  Line/barcode event #201 status, decoded -, pending -/-, executing -, rev 0
+17:36:51  is28/tlm  Coordinator event #28 command_request, mode 7, owner 0, -/-, map rev 0
+17:36:51  is28/hb   WiFi link #25 Operational, Ready, pub 311, lost 656
+17:36:52  is28/hb   WiFi link #26 Operational, Ready, pub 312, lost 656
+17:36:53  is28/hb   WiFi link #27 Operational, Ready, pub 313, lost 656
+17:36:54  is28/hb   WiFi link #28 Operational, Ready, pub 314, lost 656
+17:36:55  is28/hb   WiFi link #29 Operational, Ready, pub 315, lost 656
+17:36:56  is28/hb   WiFi link #30 Operational, Ready, pub 316, lost 656
+17:36:57  is28/hb   WiFi link #31 Operational, Ready, pub 317, lost 656
+17:36:58  is28/hb   WiFi link #32 Operational, Ready, pub 318, lost 656
+17:36:59  is28/hb   WiFi link #33 Operational, Ready, pub 319, lost 656
+17:37:00  cmd       → START id 27 [12 1b 00 00]
+17:37:00  is28/ack  ← START id 27: accepted in 48 ms, state Ready
+17:37:00  is28/hb   WiFi link #34 Operational, Ready, pub 320, lost 656
+17:37:01  is28/hb   WiFi link #35 Operational, Ready, pub 322, lost 656
+17:37:02  is28/hb   WiFi link #36 Operational, Running, pub 323, lost 656
+17:37:10  is28/lwt  broker reports the car went offline
