@@ -1,0 +1,23 @@
+{
+ "version": "v2.3 + Buddy4 add-on v0.1 + ramp-assist v0.2 (crest-hold detector fix)",
+ "date": "2026-10-30",
+ "baseline_commit": "8d7f3aa4935565636bba013c74e563f5e8135bcb",
+ "previous": "ramp-assist v0.1 (files in archive/ra_v0_1/, UF2s preserved in bench_tools/buddy4)",
+ "change": "detector only: 3-sample median; DESCENT = filtered |h| <= peak/2 (peak >= 6 mm) for 100 ms; LEVEL = filtered |h| <= 2 for 100 ms; flags bits4-6 = 2. Boost 0.20/cap 40/ramp 1.0 per s, activation 4 mm x 80 ms, timeout 2.5 s, invalid 40 ms, stale 60 ms, stop/pause/fault/search/junction gates and all controller limits unchanged.",
+ "firmware": {
+  "shadow": {"uf2": "/sessions/rcw-017hqgabks7kjqonwrihylxk/mnt/Embedded/bench_tools/buddy4/buddy123_interface_wifi_v2_3_b4_v0_1_ra_v0_2_shadow.uf2", "uf2_sha256": "9566d070b92f16d8284e25243bf10fc5c6992da57ed173e623dc43daadb07a9b", "uf2_bytes": 1019904, "uf2_blocks": 1992,
+             "elf_sha256": "0a91f36585711ecd4c5ba3814c4c10cc982046f5bacb1977d14493c8ca1717ef", "RAMP_ASSIST_ACTIVE": 0, "motor_effect": "none (shadow)", "text_bytes": 519936},
+  "active": {"uf2": "/sessions/rcw-017hqgabks7kjqonwrihylxk/mnt/Embedded/bench_tools/buddy4/buddy123_interface_wifi_v2_3_b4_v0_1_ra_v0_2_active.uf2", "uf2_sha256": "d4634ecb8f2f1f1c2f6130e105b85c2f00af2ab1718fde244337238df99c8e72", "uf2_bytes": 1019904, "uf2_blocks": 1992,
+             "elf_sha256": "a3c93e4d9bf505683d997e69c4318c5bcf260579b385f49abc7daf44488dd576", "RAMP_ASSIST_ACTIVE": 1, "motor_effect": "bounded feedforward assist applied", "text_bytes": 519992}
+ },
+ "uf2_checks": "magic/sequence/256-byte payload valid; family RP2040 0xe48bff56; range 0x10000000..0x1007c800 (both)",
+ "bss_bytes": 200032,
+ "compiler_warnings": {"shadow": 0, "active": 0}, "errors": 0,
+ "contains_credentials": true, "local_only": true, "credentials_in_build_logs": 0,
+ "git": "never commit UF2/ELF (credentials); wifi_config.local.h is git-ignored and unchanged since the v0.1 build",
+ "toolchain": "xPack arm-none-eabi-gcc 13.3.1-1.1 (Mac VM), incremental Ninja rebuild of the v0.1 build dirs (~/rabuild_shadow, ~/rabuild_active); only main.c recompiled",
+ "pico_sdk": "pico-sdk @ 98a542c1a62fb549ffb5d66a3e5892b06276b670",
+ "source_sha256": {"ramp_assist.h": "d73261cdc2e6d6db89ed40733bf659c484c8105e7ac8fc9ae0147407f6f0089c","ramp_assist_harness.h": "a08657876298bee56ced471301895ccabc652650d1ee5ed96150c32230c5e889","CMakeLists.txt": "526b45dabe0d598ce21d35b50baf193b40b155d1f84dd6bffd5af801d78348e2","main.c": "fd87cb26e5de87db3ed265c3d8344bc11c57194341fc4a5ab9d9c0cae9ad3d51","continuous_drive.h": "455c6293aacf9ba25c6804bdaff68a926d05f04c1abef631fade38f8df7b59a0"},
+ "host_tests": "RAMP_ASSIST_HOST_TESTS_v0_2.txt (cloud clang+gcc, gcc ASan/UBSan, decoder, run_tests.py 35); VM: gcc test_ramp_assist PASS, run_tests.py gcc 35 PASS, Buddy4 add-on host test PASS",
+ "flashed": false, "motor_commands_sent": false
+}

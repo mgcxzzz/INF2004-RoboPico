@@ -1,0 +1,1890 @@
+{
+  "baseline_commit": "8d7f3aa4935565636bba013c74e563f5e8135bcb",
+  "reports": {
+    "buddy4_current": {
+      "directory": "testing/subsystem2/interface_wifi_v2_3",
+      "changed": [
+        {
+          "file": "CMakeLists.txt",
+          "baseline_sha256": "629e45fe2cd64416788b3685cc11cb1159d4d2ea51fce74e4b9dbd3e23d370b3",
+          "current_sha256": "16b6825c5fe6511a6dc768f2705c2738d6499c4cb19242e0d875d3e73f5a81bd"
+        },
+        {
+          "file": "continuous_drive.h",
+          "baseline_sha256": "9eadf64b31f81f7f37d8664462bf7863c63d21a3f469a4664d1b2b014601bc18",
+          "current_sha256": "455c6293aacf9ba25c6804bdaff68a926d05f04c1abef631fade38f8df7b59a0"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/main.c",
+          "baseline_sha256": "ab81c1b429d6ec9ea1b03dff53846efd656192fd249aa38daec57d9e0a831221",
+          "current_sha256": "c0d412368b8f408c2fba9030ca2d1cce3cc83eb9c289f7e52f9e6f2e06c5846e"
+        },
+        {
+          "file": "wifi_harness.h",
+          "baseline_sha256": "66e3006c531d2a1813229baf6713c40e0c00faabd44c0865156d28b3926e7d23",
+          "current_sha256": "c8330a32b29cb2867e4af2eb43c42fc93c5c5d59430b38fec55029f8cf8b5612"
+        }
+      ],
+      "unchanged": [
+        {
+          "file": ".gitattributes",
+          "baseline_sha256": "99dedf952a05c2037c779cd1e170bc590fa6c450e076777a683e6122398e759f",
+          "current_sha256": "99dedf952a05c2037c779cd1e170bc590fa6c450e076777a683e6122398e759f"
+        },
+        {
+          "file": ".gitignore",
+          "baseline_sha256": "3063f896a14c06886f3b9c335c0e0497edf92bd0a47bb674e48ff7874108b01b",
+          "current_sha256": "3063f896a14c06886f3b9c335c0e0497edf92bd0a47bb674e48ff7874108b01b"
+        },
+        {
+          "file": "BUDDY5_HANDOFF.md",
+          "baseline_sha256": "021537e1477de120060b9382382016c58f8f85788344c05102e6c0c73846effe",
+          "current_sha256": "021537e1477de120060b9382382016c58f8f85788344c05102e6c0c73846effe"
+        },
+        {
+          "file": "BUILD.md",
+          "baseline_sha256": "3622ff46aeb7dbe576d450cd5e4c36d1845be0a0f0a16824bbad3cd68e638f76",
+          "current_sha256": "3622ff46aeb7dbe576d450cd5e4c36d1845be0a0f0a16824bbad3cd68e638f76"
+        },
+        {
+          "file": "BUILD_METRICS.json",
+          "baseline_sha256": "5808ba68909170d2d811686e25be606e689899aef1f65f05baa5817d27da9aad",
+          "current_sha256": "5808ba68909170d2d811686e25be606e689899aef1f65f05baa5817d27da9aad"
+        },
+        {
+          "file": "BUILD_METRICS_V1.json",
+          "baseline_sha256": "eafb049d50ad0f08dfe495f61e23a8e7481d9c900226301e272d6ce3a742879b",
+          "current_sha256": "eafb049d50ad0f08dfe495f61e23a8e7481d9c900226301e272d6ce3a742879b"
+        },
+        {
+          "file": "BUILD_V1.md",
+          "baseline_sha256": "3bfeae930136ad2b74f3ea0e9fef98f78bfc72c3aba3ad11ae4668c5eb812e60",
+          "current_sha256": "3bfeae930136ad2b74f3ea0e9fef98f78bfc72c3aba3ad11ae4668c5eb812e60"
+        },
+        {
+          "file": "CALIBRATION_CHANGES.patch",
+          "baseline_sha256": "ee99496d909cececcf5f73f38b2023daf919b3b7325d87010a004852dd89a079",
+          "current_sha256": "ee99496d909cececcf5f73f38b2023daf919b3b7325d87010a004852dd89a079"
+        },
+        {
+          "file": "CALIBRATION_PATCH.json",
+          "baseline_sha256": "f4dc28cc35967e4e2acd426f2cff310a084effbcc336586b654d0564899aed3b",
+          "current_sha256": "f4dc28cc35967e4e2acd426f2cff310a084effbcc336586b654d0564899aed3b"
+        },
+        {
+          "file": "CONTINUOUS_BASELINE.json",
+          "baseline_sha256": "21a23a042a2c44ce776b11e03bbc0c34077caffe50f99c496de9c10fb93ca862",
+          "current_sha256": "21a23a042a2c44ce776b11e03bbc0c34077caffe50f99c496de9c10fb93ca862"
+        },
+        {
+          "file": "CONTINUOUS_PATCHES.json",
+          "baseline_sha256": "7c837b3924a76a9b3b735898c0137ce26c0f3aa5b6697a202f3199ad078b1a80",
+          "current_sha256": "7c837b3924a76a9b3b735898c0137ce26c0f3aa5b6697a202f3199ad078b1a80"
+        },
+        {
+          "file": "Configure WiFi.cmd",
+          "baseline_sha256": "7c9693e2e67c071c867df57857b0e8c50e7db27eecb0304742384da7925e33ea",
+          "current_sha256": "7c9693e2e67c071c867df57857b0e8c50e7db27eecb0304742384da7925e33ea"
+        },
+        {
+          "file": "DATA_REPRESENTATION.md",
+          "baseline_sha256": "54f897859a7183560f04740bc241916eb7c1e6bf851304d0ed20b4a1ffa2ce05",
+          "current_sha256": "54f897859a7183560f04740bc241916eb7c1e6bf851304d0ed20b4a1ffa2ce05"
+        },
+        {
+          "file": "DIAG1_BASELINE.json",
+          "baseline_sha256": "36c0b2efa600fa69c96a03afa1d1c80191fd4495e819888332549a27a70ea130",
+          "current_sha256": "36c0b2efa600fa69c96a03afa1d1c80191fd4495e819888332549a27a70ea130"
+        },
+        {
+          "file": "DIAG_PATCHES.json",
+          "baseline_sha256": "4d33ec9e6e51a4231df6cf7f40d836b761f7c6dd53aebda9ad7ba403248c9e3e",
+          "current_sha256": "4d33ec9e6e51a4231df6cf7f40d836b761f7c6dd53aebda9ad7ba403248c9e3e"
+        },
+        {
+          "file": "GUIDE_V1_2.md",
+          "baseline_sha256": "a96dc3f023c995d8d83764ad26f1d2891e9cff4d01db214ae558a8545313ed57",
+          "current_sha256": "a96dc3f023c995d8d83764ad26f1d2891e9cff4d01db214ae558a8545313ed57"
+        },
+        {
+          "file": "HANDOVER_PATCHES.json",
+          "baseline_sha256": "141733ab2c9339d984ed8d75d368eb7acf8f24bdc899ba3c5bfa5afde27575c6",
+          "current_sha256": "141733ab2c9339d984ed8d75d368eb7acf8f24bdc899ba3c5bfa5afde27575c6"
+        },
+        {
+          "file": "README.md",
+          "baseline_sha256": "33aa99dcaeb68c7a10f5e055b5f0bd8cf50167b49fe4ee2e39d72c817c67f2bd",
+          "current_sha256": "33aa99dcaeb68c7a10f5e055b5f0bd8cf50167b49fe4ee2e39d72c817c67f2bd"
+        },
+        {
+          "file": "SETUP.md",
+          "baseline_sha256": "7de6338999dd6f50a74f19d191defa37798a72eb7c7750ed5ec2c817cdf2bf4a",
+          "current_sha256": "7de6338999dd6f50a74f19d191defa37798a72eb7c7750ed5ec2c817cdf2bf4a"
+        },
+        {
+          "file": "SOURCE_SHA256.json",
+          "baseline_sha256": "b973f798529ae87c0aec6e5a6dc118f51bd113d8313708cd8bc8d1ea754c75fa",
+          "current_sha256": "b973f798529ae87c0aec6e5a6dc118f51bd113d8313708cd8bc8d1ea754c75fa"
+        },
+        {
+          "file": "STACK_LAYOUT.md",
+          "baseline_sha256": "9dfc325133230cc164c405d371dfe0e22ab62b1ddbf4f8c85d76173be89beaf4",
+          "current_sha256": "9dfc325133230cc164c405d371dfe0e22ab62b1ddbf4f8c85d76173be89beaf4"
+        },
+        {
+          "file": "STARTUP_FIX_V1_1.md",
+          "baseline_sha256": "19b94ba992451cc1fd736eb22bb99741bca6fcd172c79c0e6bcd858ea31627c2",
+          "current_sha256": "19b94ba992451cc1fd736eb22bb99741bca6fcd172c79c0e6bcd858ea31627c2"
+        },
+        {
+          "file": "Start dashboard.cmd",
+          "baseline_sha256": "cb8ccae500dc917316a3aaa6649cc28c39c91126b8a5ddaace13200aaed630ef",
+          "current_sha256": "cb8ccae500dc917316a3aaa6649cc28c39c91126b8a5ddaace13200aaed630ef"
+        },
+        {
+          "file": "TEST_LOG.md",
+          "baseline_sha256": "38a0f8e498675909dcc31d30cb8d1e91c41827e97fccd1b876b1a5e17e30a523",
+          "current_sha256": "38a0f8e498675909dcc31d30cb8d1e91c41827e97fccd1b876b1a5e17e30a523"
+        },
+        {
+          "file": "UPSTREAM.md",
+          "baseline_sha256": "bfb55ccd3dd9e2d66b3911c3f21016b6bd816f35d0edb46e37a5ee7fe483d06d",
+          "current_sha256": "bfb55ccd3dd9e2d66b3911c3f21016b6bd816f35d0edb46e37a5ee7fe483d06d"
+        },
+        {
+          "file": "V12_2_BASELINE.json",
+          "baseline_sha256": "381e230bb8f83054da046581cfbf13c6f1fe1258a9e7d524c2d996c49283836c",
+          "current_sha256": "381e230bb8f83054da046581cfbf13c6f1fe1258a9e7d524c2d996c49283836c"
+        },
+        {
+          "file": "V12_2_PATCHES.json",
+          "baseline_sha256": "dee7130174a287c4354fa45fc61502566273fa07d1baf396d6bf9f81809b2a0e",
+          "current_sha256": "dee7130174a287c4354fa45fc61502566273fa07d1baf396d6bf9f81809b2a0e"
+        },
+        {
+          "file": "V1_1_BASELINE.json",
+          "baseline_sha256": "a21237786bc6aa9b4d55d0d0111553dbd98b3f1fd5eba1c185aceea93ec40240",
+          "current_sha256": "a21237786bc6aa9b4d55d0d0111553dbd98b3f1fd5eba1c185aceea93ec40240"
+        },
+        {
+          "file": "WIFI_BASELINE.json",
+          "baseline_sha256": "6a966c89c61cc79e1c30577c975db4d8a717e2cddca52a70b080ce04c946c359",
+          "current_sha256": "6a966c89c61cc79e1c30577c975db4d8a717e2cddca52a70b080ce04c946c359"
+        },
+        {
+          "file": "WIFI_CONTRACT.md",
+          "baseline_sha256": "7b0f5362183e19258c9e1f23b160a07ae9c0c2dee5c55adb7c583b1ea1df0c84",
+          "current_sha256": "7b0f5362183e19258c9e1f23b160a07ae9c0c2dee5c55adb7c583b1ea1df0c84"
+        },
+        {
+          "file": "WIFI_PATCHES.json",
+          "baseline_sha256": "72d4d074e9ea1d7856f16dd7e490132ea1fed9b94df18e1fd91684dffb3f07df",
+          "current_sha256": "72d4d074e9ea1d7856f16dd7e490132ea1fed9b94df18e1fd91684dffb3f07df"
+        },
+        {
+          "file": "WIFI_PROTOCOL_ATTRIBUTION.md",
+          "baseline_sha256": "93173a58437adb4330ac286499eb09839c126a60cae5f705bb6ef5408d76068a",
+          "current_sha256": "93173a58437adb4330ac286499eb09839c126a60cae5f705bb6ef5408d76068a"
+        },
+        {
+          "file": "WIFI_V2_BASELINE.json",
+          "baseline_sha256": "fed8168355b0532702ac3a0e648a394940b86a95fe7785b98da20a06d5d48612",
+          "current_sha256": "fed8168355b0532702ac3a0e648a394940b86a95fe7785b98da20a06d5d48612"
+        },
+        {
+          "file": "WORKING_V2_2_BASELINE.json",
+          "baseline_sha256": "648dfc15c97641af789acbdd739fc85904364265f3a4598ad7a1876052cb8ac3",
+          "current_sha256": "648dfc15c97641af789acbdd739fc85904364265f3a4598ad7a1876052cb8ac3"
+        },
+        {
+          "file": "buddy_hooks.c",
+          "baseline_sha256": "52505bd1c19b4ff1e5cd58f199a4a33c7759f735fc7b83ee12bf46d5745b9f26",
+          "current_sha256": "52505bd1c19b4ff1e5cd58f199a4a33c7759f735fc7b83ee12bf46d5745b9f26"
+        },
+        {
+          "file": "buddy_hooks.h",
+          "baseline_sha256": "a60b4d472acdfdf766b533897bfcedf4671ad40865c6919e65591e5fa0ec8e50",
+          "current_sha256": "a60b4d472acdfdf766b533897bfcedf4671ad40865c6919e65591e5fa0ec8e50"
+        },
+        {
+          "file": "check_mqtt.py",
+          "baseline_sha256": "78990428047086cdc145bb7ba9b6ca23d42193743e19d92d33ec8be538facfd3",
+          "current_sha256": "78990428047086cdc145bb7ba9b6ca23d42193743e19d92d33ec8be538facfd3"
+        },
+        {
+          "file": "continuous_follow.h",
+          "baseline_sha256": "17f43775e4fb33ccf6913e780dcb303b9c1667a6d9acdf54233ea99a7b6a6db7",
+          "current_sha256": "17f43775e4fb33ccf6913e780dcb303b9c1667a6d9acdf54233ea99a7b6a6db7"
+        },
+        {
+          "file": "continuous_steering.h",
+          "baseline_sha256": "c08d5e26858593344064bf0256950c3743a87a593ddb0b653f4aa5a1b145c62f",
+          "current_sha256": "c08d5e26858593344064bf0256950c3743a87a593ddb0b653f4aa5a1b145c62f"
+        },
+        {
+          "file": "cruise_handover.h",
+          "baseline_sha256": "736e45bc87898f01d29abfe96fb3e26693fb9fe2817848c2aca3cc949d289137",
+          "current_sha256": "736e45bc87898f01d29abfe96fb3e26693fb9fe2817848c2aca3cc949d289137"
+        },
+        {
+          "file": "dashboard/README.md",
+          "baseline_sha256": "f9cef474755286b12607c04b440ff1d666c57b630256f242bc65b0c3f5cc1c69",
+          "current_sha256": "f9cef474755286b12607c04b440ff1d666c57b630256f242bc65b0c3f5cc1c69"
+        },
+        {
+          "file": "dashboard/index.html",
+          "baseline_sha256": "21dbaaf3be8946a62e47d723d66b312c1f2917c79ca75fbd4160f04887a8de04",
+          "current_sha256": "21dbaaf3be8946a62e47d723d66b312c1f2917c79ca75fbd4160f04887a8de04"
+        },
+        {
+          "file": "dashboard/is28_schema.js",
+          "baseline_sha256": "ae24305ebe4e35d57719435cd536604387eb8f2b5af704383930ebfb28c320bf",
+          "current_sha256": "ae24305ebe4e35d57719435cd536604387eb8f2b5af704383930ebfb28c320bf"
+        },
+        {
+          "file": "dashboard/mosquitto.conf",
+          "baseline_sha256": "d8de8b520d6526bf55b6b36c8f63b78c78a62b72953b9b42a7f154e975f502e7",
+          "current_sha256": "d8de8b520d6526bf55b6b36c8f63b78c78a62b72953b9b42a7f154e975f502e7"
+        },
+        {
+          "file": "dashboard/test_schema.js",
+          "baseline_sha256": "fa1b6f12b2eafe198a8565b652920647825ee2cf71e9a97d4aaa13498ba1ec9b",
+          "current_sha256": "fa1b6f12b2eafe198a8565b652920647825ee2cf71e9a97d4aaa13498ba1ec9b"
+        },
+        {
+          "file": "dashboard/ui_smoke.mjs",
+          "baseline_sha256": "977029ba24c8ede34d8ddb90309ebe308d5a232d9a107a71a5bb13fffa3f1154",
+          "current_sha256": "977029ba24c8ede34d8ddb90309ebe308d5a232d9a107a71a5bb13fffa3f1154"
+        },
+        {
+          "file": "dashboard/vendor/LICENSE.mqtt.md",
+          "baseline_sha256": "81b51ef8ac2a8ac8f111ed34ab1a32d63e7f4f7de586bd65f5510fb1ba3a89eb",
+          "current_sha256": "81b51ef8ac2a8ac8f111ed34ab1a32d63e7f4f7de586bd65f5510fb1ba3a89eb"
+        },
+        {
+          "file": "dashboard/vendor/mqtt.min.js",
+          "baseline_sha256": "b088a7f9045df4e478dbc378f41125066e43d9c602755ee4c5cda0f3e9380ba0",
+          "current_sha256": "b088a7f9045df4e478dbc378f41125066e43d9c602755ee4c5cda0f3e9380ba0"
+        },
+        {
+          "file": "drive_diag.h",
+          "baseline_sha256": "fd892dbcae8a460882d529feec9ffa80fe0db82c03a5f36192c2fd090fe1f59f",
+          "current_sha256": "fd892dbcae8a460882d529feec9ffa80fe0db82c03a5f36192c2fd090fe1f59f"
+        },
+        {
+          "file": "drive_diag_pico.h",
+          "baseline_sha256": "b41e19b1298bd43cdc1bdd93716bf9b0cb9a0a479af3a72bf0046faebf642760",
+          "current_sha256": "b41e19b1298bd43cdc1bdd93716bf9b0cb9a0a479af3a72bf0046faebf642760"
+        },
+        {
+          "file": "drive_diag_storage.h",
+          "baseline_sha256": "b45ef497197b85215ebb73a7f3205a9fa34201549aba38b75983d53b15137ac5",
+          "current_sha256": "b45ef497197b85215ebb73a7f3205a9fa34201549aba38b75983d53b15137ac5"
+        },
+        {
+          "file": "examples/buddy5_extension.c",
+          "baseline_sha256": "59548f6956c37f34c70239eb5bb34af513d583afd821771f4aedfe7c47e56dd6",
+          "current_sha256": "59548f6956c37f34c70239eb5bb34af513d583afd821771f4aedfe7c47e56dd6"
+        },
+        {
+          "file": "examples/buddy5_extension.h",
+          "baseline_sha256": "1dfbca9b83be9fd260d7e299f1cc5eabef0eac497445187816bea7f99a78a0d9",
+          "current_sha256": "1dfbca9b83be9fd260d7e299f1cc5eabef0eac497445187816bea7f99a78a0d9"
+        },
+        {
+          "file": "firmware/SHA256SUMS.txt",
+          "baseline_sha256": "f225e66fed95c451df55cb18467139be0556a664c4418e85c6b93cf3b00d18d8",
+          "current_sha256": "f225e66fed95c451df55cb18467139be0556a664c4418e85c6b93cf3b00d18d8"
+        },
+        {
+          "file": "harness_adapter.h",
+          "baseline_sha256": "c596d507618d5e412c082931c99b9d0961c88a9ebdf270b924d594104d45cc3c",
+          "current_sha256": "c596d507618d5e412c082931c99b9d0961c88a9ebdf270b924d594104d45cc3c"
+        },
+        {
+          "file": "logs/arm_compile_tail.txt",
+          "baseline_sha256": "202a1b6fde0b90b0b19c245377df709b2cb805d5df06d22bd2d43af590882d30",
+          "current_sha256": "202a1b6fde0b90b0b19c245377df709b2cb805d5df06d22bd2d43af590882d30"
+        },
+        {
+          "file": "logs/arm_stack_usage.txt",
+          "baseline_sha256": "edc951d651a6530be0bbfa9ca36d9a373ce171e7d6c28d468b728c4235d4b02a",
+          "current_sha256": "edc951d651a6530be0bbfa9ca36d9a373ce171e7d6c28d468b728c4235d4b02a"
+        },
+        {
+          "file": "logs/host_tests.txt",
+          "baseline_sha256": "2526916e715e5dc0dcc8610e2d1317523021da136400503e1042c24148021861",
+          "current_sha256": "2526916e715e5dc0dcc8610e2d1317523021da136400503e1042c24148021861"
+        },
+        {
+          "file": "logs/lwip_timeouts.txt",
+          "baseline_sha256": "7c8cef89c40e42a4da09181d892d7305384a09ba7a555b57570dd3014478df9b",
+          "current_sha256": "7c8cef89c40e42a4da09181d892d7305384a09ba7a555b57570dd3014478df9b"
+        },
+        {
+          "file": "logs/stack_layout.txt",
+          "baseline_sha256": "9687da08658d3775d80e27705eb1552d2d1254df43969132dc6889d4abb53b43",
+          "current_sha256": "9687da08658d3775d80e27705eb1552d2d1254df43969132dc6889d4abb53b43"
+        },
+        {
+          "file": "lwip_test_port/arch/cc.h",
+          "baseline_sha256": "0cd0cea3e37680fc321493f50139a71ec617ab090187351ecc7fda2d2faf5b27",
+          "current_sha256": "0cd0cea3e37680fc321493f50139a71ec617ab090187351ecc7fda2d2faf5b27"
+        },
+        {
+          "file": "lwipopts.h",
+          "baseline_sha256": "7799a86c38acaec6d8d14eda34e7ff328a7e4f8f3a4a67d5f917c36b639ee469",
+          "current_sha256": "7799a86c38acaec6d8d14eda34e7ff328a7e4f8f3a4a67d5f917c36b639ee469"
+        },
+        {
+          "file": "main.c",
+          "baseline_sha256": "fd87cb26e5de87db3ed265c3d8344bc11c57194341fc4a5ab9d9c0cae9ad3d51",
+          "current_sha256": "fd87cb26e5de87db3ed265c3d8344bc11c57194341fc4a5ab9d9c0cae9ad3d51"
+        },
+        {
+          "file": "motion_api.c",
+          "baseline_sha256": "1558742b9f1bb7084fa574e19a60c1ad7475462f475e19290d652714f67d4854",
+          "current_sha256": "1558742b9f1bb7084fa574e19a60c1ad7475462f475e19290d652714f67d4854"
+        },
+        {
+          "file": "motion_api.h",
+          "baseline_sha256": "4bed1ed00116b7ed5638cc314cfb432a85b14f5ff697b3ffe97add0d091db220",
+          "current_sha256": "4bed1ed00116b7ed5638cc314cfb432a85b14f5ff697b3ffe97add0d091db220"
+        },
+        {
+          "file": "motion_executor.c",
+          "baseline_sha256": "eceffbadb80447c12cb4483e447902b85119654a1840b24fce2a7a619bf5bb70",
+          "current_sha256": "eceffbadb80447c12cb4483e447902b85119654a1840b24fce2a7a619bf5bb70"
+        },
+        {
+          "file": "motion_executor.h",
+          "baseline_sha256": "79fa528996fa22100a8465f8fc97cacb8e015e20c09097c4de451247c75763d9",
+          "current_sha256": "79fa528996fa22100a8465f8fc97cacb8e015e20c09097c4de451247c75763d9"
+        },
+        {
+          "file": "motion_port.h",
+          "baseline_sha256": "a56d84355f69df4732216a62d67cb79687d8696f86cbf1e5e1d8d26eaa848920",
+          "current_sha256": "a56d84355f69df4732216a62d67cb79687d8696f86cbf1e5e1d8d26eaa848920"
+        },
+        {
+          "file": "nav_api.h",
+          "baseline_sha256": "6efbb7380c5f58d7bcc5a800a0b1035625f3cd39093130b087ed4e98f327600b",
+          "current_sha256": "6efbb7380c5f58d7bcc5a800a0b1035625f3cd39093130b087ed4e98f327600b"
+        },
+        {
+          "file": "nav_codec.c",
+          "baseline_sha256": "a0bcd3334a453beba33ae4f5a355c0301231a7eae8d650374853dba0766663c6",
+          "current_sha256": "a0bcd3334a453beba33ae4f5a355c0301231a7eae8d650374853dba0766663c6"
+        },
+        {
+          "file": "nav_codec.h",
+          "baseline_sha256": "20a782b1d60010f108c650528e2101d8ec9f3d4835f2bb255d13b9db6d396c4f",
+          "current_sha256": "20a782b1d60010f108c650528e2101d8ec9f3d4835f2bb255d13b9db6d396c4f"
+        },
+        {
+          "file": "nav_coordinator.c",
+          "baseline_sha256": "821e677d895e92e2e1680c2109d3df7ea652b2f7b99b0ee6cb0172933064c910",
+          "current_sha256": "821e677d895e92e2e1680c2109d3df7ea652b2f7b99b0ee6cb0172933064c910"
+        },
+        {
+          "file": "nav_coordinator.h",
+          "baseline_sha256": "67078a4d6be77593df6d7c6911a8ff82ce4baf77bc12af78041595cebc8a6958",
+          "current_sha256": "67078a4d6be77593df6d7c6911a8ff82ce4baf77bc12af78041595cebc8a6958"
+        },
+        {
+          "file": "nav_log_harness.h",
+          "baseline_sha256": "76c68816a103891fcfbc0174aab1ed1c844a2ce761cfe42b46deb389458c7615",
+          "current_sha256": "76c68816a103891fcfbc0174aab1ed1c844a2ce761cfe42b46deb389458c7615"
+        },
+        {
+          "file": "nav_log_storage.h",
+          "baseline_sha256": "0f12d30f128105b096d2454cd53047db447b970444997a6d812d3b4eae09ba31",
+          "current_sha256": "0f12d30f128105b096d2454cd53047db447b970444997a6d812d3b4eae09ba31"
+        },
+        {
+          "file": "provision_wifi.py",
+          "baseline_sha256": "a13337fc67a0ed0521f32add512dced32c6f0c031101393123771fea65e67134",
+          "current_sha256": "a13337fc67a0ed0521f32add512dced32c6f0c031101393123771fea65e67134"
+        },
+        {
+          "file": "run_dashboard.py",
+          "baseline_sha256": "468f948a777ac6d17085207c67e14a1571f576a49ee88d20e2308e10b4fee488",
+          "current_sha256": "468f948a777ac6d17085207c67e14a1571f576a49ee88d20e2308e10b4fee488"
+        },
+        {
+          "file": "run_lwip_timeout_test.py",
+          "baseline_sha256": "a0ce43e958b2d7d508c6849fbc798a9adfad0a261bb7a12f5d603b3bcd20309a",
+          "current_sha256": "a0ce43e958b2d7d508c6849fbc798a9adfad0a261bb7a12f5d603b3bcd20309a"
+        },
+        {
+          "file": "run_tests.py",
+          "baseline_sha256": "ebfc276fe907afef18cd121089c3198cacf6d8d300903bd9285e101f24f4dcda",
+          "current_sha256": "ebfc276fe907afef18cd121089c3198cacf6d8d300903bd9285e101f24f4dcda"
+        },
+        {
+          "file": "successful_calibration.h",
+          "baseline_sha256": "20a7369fc609cd54d676b66ef9a26960b2f8226bf1ccea89fb39d66d072210e4",
+          "current_sha256": "20a7369fc609cd54d676b66ef9a26960b2f8226bf1ccea89fb39d66d072210e4"
+        },
+        {
+          "file": "test_buddy5.c",
+          "baseline_sha256": "75a29838876c662787a58e5444080181b5987c0e4826c3af97d6b34e42a3880b",
+          "current_sha256": "75a29838876c662787a58e5444080181b5987c0e4826c3af97d6b34e42a3880b"
+        },
+        {
+          "file": "test_clock.c",
+          "baseline_sha256": "bdba09e0c0b0b151606e1523e2a9029200721910e65868977f8b5e9ad311984a",
+          "current_sha256": "bdba09e0c0b0b151606e1523e2a9029200721910e65868977f8b5e9ad311984a"
+        },
+        {
+          "file": "test_continuous_drive.c",
+          "baseline_sha256": "29c68fedf0a5245a6f189f46ad80fd326d6169ebd3eff5e500552f3584910eb2",
+          "current_sha256": "29c68fedf0a5245a6f189f46ad80fd326d6169ebd3eff5e500552f3584910eb2"
+        },
+        {
+          "file": "test_continuous_follow.c",
+          "baseline_sha256": "b4cda9f98e414caa2edf19ea0f1d383ac0b50eec5206fa5aadbd0cd8d5e2b7d1",
+          "current_sha256": "b4cda9f98e414caa2edf19ea0f1d383ac0b50eec5206fa5aadbd0cd8d5e2b7d1"
+        },
+        {
+          "file": "test_continuous_integration.c",
+          "baseline_sha256": "b9bc65db9cae60dbdbcf7cf6d74ff026362abcec1d5766a1073a09a6238c2864",
+          "current_sha256": "b9bc65db9cae60dbdbcf7cf6d74ff026362abcec1d5766a1073a09a6238c2864"
+        },
+        {
+          "file": "test_continuous_steering.c",
+          "baseline_sha256": "cf3a3aea602233e4d185dd63c954d06b5f6cf3c9178b1122adf6ba7793dc6b38",
+          "current_sha256": "cf3a3aea602233e4d185dd63c954d06b5f6cf3c9178b1122adf6ba7793dc6b38"
+        },
+        {
+          "file": "test_cruise_handover.c",
+          "baseline_sha256": "2b3478778280e6abd03e6265b0c25c983e92504e2dc099f017d937796564e4e7",
+          "current_sha256": "2b3478778280e6abd03e6265b0c25c983e92504e2dc099f017d937796564e4e7"
+        },
+        {
+          "file": "test_diag_parity.c",
+          "baseline_sha256": "64224677655a653272ad5bed4d2441c9cc7e2780f643fd7a85567d1ce08c4b1d",
+          "current_sha256": "64224677655a653272ad5bed4d2441c9cc7e2780f643fd7a85567d1ce08c4b1d"
+        },
+        {
+          "file": "test_drive_diag.c",
+          "baseline_sha256": "8eae08fb085e7c529d5d4c8646ab0130e4c9ec93149a245a8bd47045f6129be9",
+          "current_sha256": "8eae08fb085e7c529d5d4c8646ab0130e4c9ec93149a245a8bd47045f6129be9"
+        },
+        {
+          "file": "test_interface.c",
+          "baseline_sha256": "5ff15713f19d06d93f6987881771c25cee60eb4927c50bbb09d16193dbe2f988",
+          "current_sha256": "5ff15713f19d06d93f6987881771c25cee60eb4927c50bbb09d16193dbe2f988"
+        },
+        {
+          "file": "test_lwip_timeouts.c",
+          "baseline_sha256": "84e09df67ce130e4e34fcffd8f9406175ec08d3209285e0d82bcb5b131e2ad89",
+          "current_sha256": "84e09df67ce130e4e34fcffd8f9406175ec08d3209285e0d82bcb5b131e2ad89"
+        },
+        {
+          "file": "test_network_diagnostics.py",
+          "baseline_sha256": "ea4b1c411453c3458072145733378a74989ba4394505f840b290bd6cd68ebb75",
+          "current_sha256": "ea4b1c411453c3458072145733378a74989ba4394505f840b290bd6cd68ebb75"
+        },
+        {
+          "file": "test_parity.c",
+          "baseline_sha256": "41cb78792ae00638cc125a70eb1701988c651198a4bb8a1aeb16387d4705f987",
+          "current_sha256": "41cb78792ae00638cc125a70eb1701988c651198a4bb8a1aeb16387d4705f987"
+        },
+        {
+          "file": "test_setup_helpers.py",
+          "baseline_sha256": "a696d0bcb47e4e054ca249870a510aa9fcbc5faa9221eb144ced61c82a52b703",
+          "current_sha256": "a696d0bcb47e4e054ca249870a510aa9fcbc5faa9221eb144ced61c82a52b703"
+        },
+        {
+          "file": "test_storage.c",
+          "baseline_sha256": "6bc6ad0276aef4b4968413ade021cfd2b2ff06181a73af3235b8ae7cf73e4c77",
+          "current_sha256": "6bc6ad0276aef4b4968413ade021cfd2b2ff06181a73af3235b8ae7cf73e4c77"
+        },
+        {
+          "file": "test_successful_calibration.c",
+          "baseline_sha256": "f1db4f2b41e3b412828a7649ed774606b5d613954bb8d0d1da031a6dfbf78ae9",
+          "current_sha256": "f1db4f2b41e3b412828a7649ed774606b5d613954bb8d0d1da031a6dfbf78ae9"
+        },
+        {
+          "file": "test_wifi_harness.c",
+          "baseline_sha256": "afa1c1cc2afb463b4f64e7627058db01b3a45eb5f15cd344f673c947486628a6",
+          "current_sha256": "afa1c1cc2afb463b4f64e7627058db01b3a45eb5f15cd344f673c947486628a6"
+        },
+        {
+          "file": "test_wifi_link_state.c",
+          "baseline_sha256": "4a2053effa9ed5282e109f7c6d64789f5eaf118029280d4179240c6421f13828",
+          "current_sha256": "4a2053effa9ed5282e109f7c6d64789f5eaf118029280d4179240c6421f13828"
+        },
+        {
+          "file": "test_wifi_packets.c",
+          "baseline_sha256": "2b0f572c14674e9b5faae8b4867fefb8d1e628da690c2cc6c63de6241ba8e71a",
+          "current_sha256": "2b0f572c14674e9b5faae8b4867fefb8d1e628da690c2cc6c63de6241ba8e71a"
+        },
+        {
+          "file": "test_wifi_protocol.c",
+          "baseline_sha256": "2134431aaf7cdf7f3444231731d48ca6992477edd1c8fd2a70ad3f61dc20c75d",
+          "current_sha256": "2134431aaf7cdf7f3444231731d48ca6992477edd1c8fd2a70ad3f61dc20c75d"
+        },
+        {
+          "file": "test_wifi_routes.c",
+          "baseline_sha256": "767601d3e7bc3fcfa60271bd20a01f6b2fdf8ac788b55bfc8a0eb96554ec4869",
+          "current_sha256": "767601d3e7bc3fcfa60271bd20a01f6b2fdf8ac788b55bfc8a0eb96554ec4869"
+        },
+        {
+          "file": "test_wifi_settings.c",
+          "baseline_sha256": "a584e62bf1ffab4848ba036c368bc7c61553d391dfc089c7c69c82e2d5141d3d",
+          "current_sha256": "a584e62bf1ffab4848ba036c368bc7c61553d391dfc089c7c69c82e2d5141d3d"
+        },
+        {
+          "file": "test_wifi_storage.c",
+          "baseline_sha256": "038fb431cc8675c321e3436ba3097e2e563e01ba3b0080893c8994eddef76b81",
+          "current_sha256": "038fb431cc8675c321e3436ba3097e2e563e01ba3b0080893c8994eddef76b81"
+        },
+        {
+          "file": "test_wifi_transport.c",
+          "baseline_sha256": "b432286172750ed1cf9a79d7f358e361e83183e9ac4ab1019e338eb58e19bb85",
+          "current_sha256": "b432286172750ed1cf9a79d7f358e361e83183e9ac4ab1019e338eb58e19bb85"
+        },
+        {
+          "file": "test_wifi_vectors.mjs",
+          "baseline_sha256": "f0c036384c845aa4cc5ca4385a868bfd886da6f4879833fcef561ef80d93d41d",
+          "current_sha256": "f0c036384c845aa4cc5ca4385a868bfd886da6f4879833fcef561ef80d93d41d"
+        },
+        {
+          "file": "transport_test_stubs/cyw43.h",
+          "baseline_sha256": "890c4839ce4f61496911c7a85d0c0ae142b95f04ee3bf06f0e3c72589e0472a8",
+          "current_sha256": "890c4839ce4f61496911c7a85d0c0ae142b95f04ee3bf06f0e3c72589e0472a8"
+        },
+        {
+          "file": "transport_test_stubs/hardware/sync.h",
+          "baseline_sha256": "a27c59a5de264b244f2a67f80c5607b2ca8380bab44a53edf52cfb0eead41bb8",
+          "current_sha256": "a27c59a5de264b244f2a67f80c5607b2ca8380bab44a53edf52cfb0eead41bb8"
+        },
+        {
+          "file": "transport_test_stubs/lwip/apps/mqtt.h",
+          "baseline_sha256": "a452e9741d124b916572fb1278e13f1ad478ab43ce73316a04767476afba335f",
+          "current_sha256": "a452e9741d124b916572fb1278e13f1ad478ab43ce73316a04767476afba335f"
+        },
+        {
+          "file": "transport_test_stubs/lwip/apps/mqtt_priv.h",
+          "baseline_sha256": "2c67d2e5aea997aede74806e4b2440ff77057beb8c3e3e17fb5cb4e2bc3e6feb",
+          "current_sha256": "2c67d2e5aea997aede74806e4b2440ff77057beb8c3e3e17fb5cb4e2bc3e6feb"
+        },
+        {
+          "file": "transport_test_stubs/lwip/err.h",
+          "baseline_sha256": "a2195e048a0da6184d698ed59b05523480d68f5d5343f2d4cd409771f858a8c4",
+          "current_sha256": "a2195e048a0da6184d698ed59b05523480d68f5d5343f2d4cd409771f858a8c4"
+        },
+        {
+          "file": "transport_test_stubs/lwip/ip_addr.h",
+          "baseline_sha256": "20cf2cdf1bd9088a1a00732d8920d764afde34714f8feace32c97007df755e95",
+          "current_sha256": "20cf2cdf1bd9088a1a00732d8920d764afde34714f8feace32c97007df755e95"
+        },
+        {
+          "file": "transport_test_stubs/pico/cyw43_arch.h",
+          "baseline_sha256": "e0c71d2d4d3b601ae383b5ebd8b4526d6f8c59bbbbbd7fdf4fb7b0a7b16ca815",
+          "current_sha256": "e0c71d2d4d3b601ae383b5ebd8b4526d6f8c59bbbbbd7fdf4fb7b0a7b16ca815"
+        },
+        {
+          "file": "transport_test_stubs/pico/multicore.h",
+          "baseline_sha256": "7330fb04ed85bf3fdabdd05030e3dc5116b0c67f853033f6d4ae053b2b35e8f5",
+          "current_sha256": "7330fb04ed85bf3fdabdd05030e3dc5116b0c67f853033f6d4ae053b2b35e8f5"
+        },
+        {
+          "file": "transport_test_stubs/pico/stdlib.h",
+          "baseline_sha256": "285f1a33e6c3e4feb9313c545b63e543d7c9d5858819dceb927dcdfc15d0ff56",
+          "current_sha256": "285f1a33e6c3e4feb9313c545b63e543d7c9d5858819dceb927dcdfc15d0ff56"
+        },
+        {
+          "file": "v12_2/.gitattributes",
+          "baseline_sha256": "0ef3e7537a348f8912cda68f8a47bd94044cecc685b7073ab82338c74cbcf0d4",
+          "current_sha256": "0ef3e7537a348f8912cda68f8a47bd94044cecc685b7073ab82338c74cbcf0d4"
+        },
+        {
+          "file": "v12_2/.gitignore",
+          "baseline_sha256": "020c2606e8ed484089c2083e0be438b9d0736bee1558a6b76af0d58bd23f69cf",
+          "current_sha256": "020c2606e8ed484089c2083e0be438b9d0736bee1558a6b76af0d58bd23f69cf"
+        },
+        {
+          "file": "v12_2/BASELINE.json",
+          "baseline_sha256": "5b23f3dfa4fbdcffbbcf7eb48a8cf3546ccf8f2609221fa75c748865ed761d93",
+          "current_sha256": "5b23f3dfa4fbdcffbbcf7eb48a8cf3546ccf8f2609221fa75c748865ed761d93"
+        },
+        {
+          "file": "v12_2/BASELINE_PATCHES.json",
+          "baseline_sha256": "cbd71e07dd8e95b2311c05f43153dd41caa273b172d4ce3e611ed510f7e38c73",
+          "current_sha256": "cbd71e07dd8e95b2311c05f43153dd41caa273b172d4ce3e611ed510f7e38c73"
+        },
+        {
+          "file": "v12_2/BUILD_V12_2.md",
+          "baseline_sha256": "72b51bd0509b075833eb918d502cb1a47ac9f8d7eb13432dcd6d1d5e1da2793a",
+          "current_sha256": "72b51bd0509b075833eb918d502cb1a47ac9f8d7eb13432dcd6d1d5e1da2793a"
+        },
+        {
+          "file": "v12_2/CMakeLists.txt",
+          "baseline_sha256": "71e57cc0185f51c06b697eb3d7dd55c459614affc9d5f2a8819dcfda27ef5b30",
+          "current_sha256": "71e57cc0185f51c06b697eb3d7dd55c459614affc9d5f2a8819dcfda27ef5b30"
+        },
+        {
+          "file": "v12_2/README.md",
+          "baseline_sha256": "36e0e155d8e3872b1d34e1504db9e07b4afadd27ac1bafa70fb8ff2878360893",
+          "current_sha256": "36e0e155d8e3872b1d34e1504db9e07b4afadd27ac1bafa70fb8ff2878360893"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/analog_line_follow/line_logic.h",
+          "baseline_sha256": "bf1546b47a0e9c339d650624448fd7b80b3f0e1d20043e8ac7538136ec168653",
+          "current_sha256": "bf1546b47a0e9c339d650624448fd7b80b3f0e1d20043e8ac7538136ec168653"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/analog_line_follow/symmetric_logic.h",
+          "baseline_sha256": "c63b566cb53f7c410dc786e899ab272912b55cb25e84100abbacb0357dd59771",
+          "current_sha256": "c63b566cb53f7c410dc786e899ab272912b55cb25e84100abbacb0357dd59771"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/analog_line_follow/wheel_control.h",
+          "baseline_sha256": "9a0d13c034de050c12d95a6a8a16593610ea0eaf713e14d9b65e348781ea72db",
+          "current_sha256": "9a0d13c034de050c12d95a6a8a16593610ea0eaf713e14d9b65e348781ea72db"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_left_test/circuit_capture.h",
+          "baseline_sha256": "8cbbeaa19638c6d452d533dfc937b41d4f8a5f6f2d67e91fc27407559a332b3e",
+          "current_sha256": "8cbbeaa19638c6d452d533dfc937b41d4f8a5f6f2d67e91fc27407559a332b3e"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_left_test/circuit_feedback.h",
+          "baseline_sha256": "31be40d7cc7c4a8a8b03d28bd004491ca9ab0f90366b4a1b0456a3d4392104a8",
+          "current_sha256": "31be40d7cc7c4a8a8b03d28bd004491ca9ab0f90366b4a1b0456a3d4392104a8"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_left_test/circuit_load.h",
+          "baseline_sha256": "b4a255e468698d41c6e37a9e0640aafa989c4c564bda3e151b07db64ec330673",
+          "current_sha256": "b4a255e468698d41c6e37a9e0640aafa989c4c564bda3e151b07db64ec330673"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_left_test/circuit_logic.h",
+          "baseline_sha256": "e1fb1b3d0483251a5a8c47d3792e3ef094f3be70f12d9b6a3b9d080cfb86f578",
+          "current_sha256": "e1fb1b3d0483251a5a8c47d3792e3ef094f3be70f12d9b6a3b9d080cfb86f578"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_left_test/circuit_record.h",
+          "baseline_sha256": "04c960ec0ca557d589168aaae5f7440724fdcd70c7e04b853def7e39c7a097b1",
+          "current_sha256": "04c960ec0ca557d589168aaae5f7440724fdcd70c7e04b853def7e39c7a097b1"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_left_test/circuit_recovery.h",
+          "baseline_sha256": "4b328292de939d66582897d41b61b9f4d8048d3679aab28e57e5cfb5164b0588",
+          "current_sha256": "4b328292de939d66582897d41b61b9f4d8048d3679aab28e57e5cfb5164b0588"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_left_test/circuit_wheel.h",
+          "baseline_sha256": "7cb06cc8f4c6f2cec69170962d5fc5321544c7b1335ebef01acda6fc9c7ff3fb",
+          "current_sha256": "7cb06cc8f4c6f2cec69170962d5fc5321544c7b1335ebef01acda6fc9c7ff3fb"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/barcode_analog.h",
+          "baseline_sha256": "d58bce3a942eee1c1ec2f2dde1755c4a8153741b84916feabf394999c71cc795",
+          "current_sha256": "d58bce3a942eee1c1ec2f2dde1755c4a8153741b84916feabf394999c71cc795"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/barcode_capture.h",
+          "baseline_sha256": "053c2f311b0970429f16d102845be0178d02e2fdf6e15cf9af994b0d3a4728b6",
+          "current_sha256": "053c2f311b0970429f16d102845be0178d02e2fdf6e15cf9af994b0d3a4728b6"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/barcode_nav.h",
+          "baseline_sha256": "865367b4f161b5d8a1e01cfa9b3ba31356757c196ae9d82463ba40ab36689455",
+          "current_sha256": "865367b4f161b5d8a1e01cfa9b3ba31356757c196ae9d82463ba40ab36689455"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/barcode_raw.h",
+          "baseline_sha256": "2c8b432f91fc0b149eb9f4c3677090fb847873585ec2e303d0592a0ef6db2f19",
+          "current_sha256": "2c8b432f91fc0b149eb9f4c3677090fb847873585ec2e303d0592a0ef6db2f19"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/barcode_record.h",
+          "baseline_sha256": "f69f08c4c1b91a3c398989eafa8c7c4c3752d7da7fe63dde828e25b8ef20c101",
+          "current_sha256": "f69f08c4c1b91a3c398989eafa8c7c4c3752d7da7fe63dde828e25b8ef20c101"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/barcode_scan.h",
+          "baseline_sha256": "c49c7e2754c8961899c4034dcc55703f15314ab7aa571615b47b0174871d9d23",
+          "current_sha256": "c49c7e2754c8961899c4034dcc55703f15314ab7aa571615b47b0174871d9d23"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/barcode_start.h",
+          "baseline_sha256": "0fb36d8ede3e39b919344460ed44140659548bf7fa4b392104d7d39f395c7132",
+          "current_sha256": "0fb36d8ede3e39b919344460ed44140659548bf7fa4b392104d7d39f395c7132"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/fixtures/captured_a.h",
+          "baseline_sha256": "5d23aa8251a248461fc1422773e2102367f1f2ef810f7abc3b6947efdf874c14",
+          "current_sha256": "5d23aa8251a248461fc1422773e2102367f1f2ef810f7abc3b6947efdf874c14"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/fixtures/captured_a_v2.h",
+          "baseline_sha256": "0885439baee79cea6ae03ecdf970e19f7e5adbd38f692a23a481c5ca92bce8c2",
+          "current_sha256": "0885439baee79cea6ae03ecdf970e19f7e5adbd38f692a23a481c5ca92bce8c2"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/fixtures/pdf_runs.h",
+          "baseline_sha256": "04884ca9c4efba1d1fdb0759742f4533a773413c3e33ff346e3393448e2877c5",
+          "current_sha256": "04884ca9c4efba1d1fdb0759742f4533a773413c3e33ff346e3393448e2877c5"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/line_search.h",
+          "baseline_sha256": "01326239989ead7094d25cb5ad3f4f5711191836c3399809fd41ac140516e6ec",
+          "current_sha256": "01326239989ead7094d25cb5ad3f4f5711191836c3399809fd41ac140516e6ec"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/maneuver_power.h",
+          "baseline_sha256": "25a9ee503b848da1b8eba1fd5bb3ecd1fbc87fd2dfdc4d054ce660f0c32e69ac",
+          "current_sha256": "25a9ee503b848da1b8eba1fd5bb3ecd1fbc87fd2dfdc4d054ce660f0c32e69ac"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/ramp_profile.h",
+          "baseline_sha256": "f6a4fb4988f895f0cec892216f1257a8a631c84ac4be724a9741f413b78ad2b5",
+          "current_sha256": "f6a4fb4988f895f0cec892216f1257a8a631c84ac4be724a9741f413b78ad2b5"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/smooth_follow.h",
+          "baseline_sha256": "ef69d84cea67cc8df16e21500baa2173757db4622fbb64905a61bbe488f428f1",
+          "current_sha256": "ef69d84cea67cc8df16e21500baa2173757db4622fbb64905a61bbe488f428f1"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/test_analog.c",
+          "baseline_sha256": "aab8b4fbb5fd3779c66d17636391f9b6f9da7788bdf4460935bed7082ff3f3b0",
+          "current_sha256": "aab8b4fbb5fd3779c66d17636391f9b6f9da7788bdf4460935bed7082ff3f3b0"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/test_barcode.c",
+          "baseline_sha256": "197e456fa794a95ad1f363ea59173d9e356f05e0ee0198a18d1ef7205140343b",
+          "current_sha256": "197e456fa794a95ad1f363ea59173d9e356f05e0ee0198a18d1ef7205140343b"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/test_barcode_raw.c",
+          "baseline_sha256": "af65ce51938cffe86149084194763e40b57bf3bc43cc0329151ea32b778d2655",
+          "current_sha256": "af65ce51938cffe86149084194763e40b57bf3bc43cc0329151ea32b778d2655"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/test_barcode_sensitivity.c",
+          "baseline_sha256": "53c72232a98148d68bd766c896a8fc707ff42def080fa26a043e566d69163c4b",
+          "current_sha256": "53c72232a98148d68bd766c896a8fc707ff42def080fa26a043e566d69163c4b"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/test_front_calibration.c",
+          "baseline_sha256": "2365216afa4eb28af966cd11f8bb490e4a9be28d8b129cbbfd044026c10948bb",
+          "current_sha256": "2365216afa4eb28af966cd11f8bb490e4a9be28d8b129cbbfd044026c10948bb"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/test_line_search.c",
+          "baseline_sha256": "5bcc2ecf8f921c92bc4e8f433042c58c0e9999466256cd21989274264ad0c635",
+          "current_sha256": "5bcc2ecf8f921c92bc4e8f433042c58c0e9999466256cd21989274264ad0c635"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/test_maneuver_power.c",
+          "baseline_sha256": "66a332c3aea34edbf2fb76216891bbe507888c08d2cae0f412df503ff7284dcd",
+          "current_sha256": "66a332c3aea34edbf2fb76216891bbe507888c08d2cae0f412df503ff7284dcd"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/test_ramp_profile.c",
+          "baseline_sha256": "3c8a8292a943f7b80c07b5922ff5d0c376fbc2cda2d785eabe624e1bd1044769",
+          "current_sha256": "3c8a8292a943f7b80c07b5922ff5d0c376fbc2cda2d785eabe624e1bd1044769"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/test_smooth_follow.c",
+          "baseline_sha256": "78a549d7da1fde2ac22fd696e2b016208efbe2dddfd2d083693ad4b3075cbd76",
+          "current_sha256": "78a549d7da1fde2ac22fd696e2b016208efbe2dddfd2d083693ad4b3075cbd76"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/test_start.c",
+          "baseline_sha256": "ecad308aabecf68d2fc4b45c1bb0e799575bf08c1a64c78f1b77b4fc69c566a3",
+          "current_sha256": "ecad308aabecf68d2fc4b45c1bb0e799575bf08c1a64c78f1b77b4fc69c566a3"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/test_uturn.c",
+          "baseline_sha256": "607978d95810aacc52d118d1e101f267b6b735085099727b3ff4f26aff897028",
+          "current_sha256": "607978d95810aacc52d118d1e101f267b6b735085099727b3ff4f26aff897028"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/uturn_logic.h",
+          "baseline_sha256": "915d0a1389dcc0378792271a2cdfa8a35389f6e44a05f49e3fc19c4019c80246",
+          "current_sha256": "915d0a1389dcc0378792271a2cdfa8a35389f6e44a05f49e3fc19c4019c80246"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/dual_wheel_bench/dual_logic.h",
+          "baseline_sha256": "070db0d10a5de9dd6ffc266c80bdf737961976436ad9089aef60e80e683b8689",
+          "current_sha256": "070db0d10a5de9dd6ffc266c80bdf737961976436ad9089aef60e80e683b8689"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/dual_wheel_bench/log_store.h",
+          "baseline_sha256": "75a744ae1b2c29f5a2221015b43b02a759f5476f54b02538957f7ffde31ed301",
+          "current_sha256": "75a744ae1b2c29f5a2221015b43b02a759f5476f54b02538957f7ffde31ed301"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/effort_scale.h",
+          "baseline_sha256": "117304f0907dacb8237bf466a365d9e80f6552d4b4a2bd91201e61dc5e306646",
+          "current_sha256": "117304f0907dacb8237bf466a365d9e80f6552d4b4a2bd91201e61dc5e306646"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/junction_left_test/boosted_wheel.h",
+          "baseline_sha256": "e9ade0804704ee4f6e39bf616422a6f9b9b1cba4ddc5b98a447c2664f889c376",
+          "current_sha256": "e9ade0804704ee4f6e39bf616422a6f9b9b1cba4ddc5b98a447c2664f889c376"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/junction_left_test/junction_logic.h",
+          "baseline_sha256": "fab752b430aeb103c827ab06cacf148bcab36a5b66d91eb3f861461f74425460",
+          "current_sha256": "fab752b430aeb103c827ab06cacf148bcab36a5b66d91eb3f861461f74425460"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/junction_left_test/signed_wheel.h",
+          "baseline_sha256": "02cef2da9a89414fc060ef3b6b3c91390da653f05a1b4fe967391685e587cd98",
+          "current_sha256": "02cef2da9a89414fc060ef3b6b3c91390da653f05a1b4fe967391685e587cd98"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/left_motor_bench/bench_logic.h",
+          "baseline_sha256": "43d2db87bae5ce6b60e8f933f18e30d018aa84e524654f2002db5bab69b25952",
+          "current_sha256": "43d2db87bae5ce6b60e8f933f18e30d018aa84e524654f2002db5bab69b25952"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/line_motion_integration/logic.h",
+          "baseline_sha256": "0e864b24e55b58e87728fc4aa49280f196f63bb4b34cabe98d83edb79fa2c186",
+          "current_sha256": "0e864b24e55b58e87728fc4aa49280f196f63bb4b34cabe98d83edb79fa2c186"
+        },
+        {
+          "file": "v12_2/main.c",
+          "baseline_sha256": "ae5051aadfb571382b7d269865a306021ca9b4e185f0354c446f290902fd4be6",
+          "current_sha256": "ae5051aadfb571382b7d269865a306021ca9b4e185f0354c446f290902fd4be6"
+        },
+        {
+          "file": "v12_2/run_tests.py",
+          "baseline_sha256": "d4ca698f6475948a5a83602eb73144fa91fa24cf0f465976135ea7d3d8d3f1ae",
+          "current_sha256": "d4ca698f6475948a5a83602eb73144fa91fa24cf0f465976135ea7d3d8d3f1ae"
+        },
+        {
+          "file": "v12_2/scan_smooth.h",
+          "baseline_sha256": "83bb8f03280cad833c5f3b27efe9fc99d2f7719866dbd5cec22c05a17a2527b3",
+          "current_sha256": "83bb8f03280cad833c5f3b27efe9fc99d2f7719866dbd5cec22c05a17a2527b3"
+        },
+        {
+          "file": "v12_2/scan_smooth_reference.h",
+          "baseline_sha256": "2cb70dece832555ea602e36b2fc7267410679402c12bde380e00033200090728",
+          "current_sha256": "2cb70dece832555ea602e36b2fc7267410679402c12bde380e00033200090728"
+        },
+        {
+          "file": "v12_2/test_scan_smooth.c",
+          "baseline_sha256": "186a1236dea460c32b265bd894d6c0bcbb869eff9ae801404970cad892ea878a",
+          "current_sha256": "186a1236dea460c32b265bd894d6c0bcbb869eff9ae801404970cad892ea878a"
+        },
+        {
+          "file": "v12_2/verify_firmware.py",
+          "baseline_sha256": "b17c3bb5e942dd540b698cc6e219e2f7a3f131bf4c074f1e856aede959aaf2a0",
+          "current_sha256": "b17c3bb5e942dd540b698cc6e219e2f7a3f131bf4c074f1e856aede959aaf2a0"
+        },
+        {
+          "file": "verify_firmware.py",
+          "baseline_sha256": "fa2ee8cde1631190b9366445c60faa57cdc01c40e7e029439b0953c8f72d853e",
+          "current_sha256": "fa2ee8cde1631190b9366445c60faa57cdc01c40e7e029439b0953c8f72d853e"
+        },
+        {
+          "file": "verify_stack_layout.py",
+          "baseline_sha256": "091c2f27e964cae2ef01bb9a2a578ad92b430560854a25276270202f0255a244",
+          "current_sha256": "091c2f27e964cae2ef01bb9a2a578ad92b430560854a25276270202f0255a244"
+        },
+        {
+          "file": "wifi_config.example.h",
+          "baseline_sha256": "707d6c23ce3263f18fbb2b30750959e52a0bdfe0b24c8224d8df751c97d2add4",
+          "current_sha256": "707d6c23ce3263f18fbb2b30750959e52a0bdfe0b24c8224d8df751c97d2add4"
+        },
+        {
+          "file": "wifi_link_state.h",
+          "baseline_sha256": "b18bfcc6f1742a165d918c8da27c8b9616990440e0721316a0729b9545242e6d",
+          "current_sha256": "b18bfcc6f1742a165d918c8da27c8b9616990440e0721316a0729b9545242e6d"
+        },
+        {
+          "file": "wifi_mqtt_diag.h",
+          "baseline_sha256": "b939c3bbb18a3ffbc72b9ccba62a7d323e5d819979a9b2085338d58c07f491cf",
+          "current_sha256": "b939c3bbb18a3ffbc72b9ccba62a7d323e5d819979a9b2085338d58c07f491cf"
+        },
+        {
+          "file": "wifi_packets.c",
+          "baseline_sha256": "67755b933b6c0f2a4855aa921ddce3a51333f3dd1a41be0d74f49b5898b1b5ab",
+          "current_sha256": "67755b933b6c0f2a4855aa921ddce3a51333f3dd1a41be0d74f49b5898b1b5ab"
+        },
+        {
+          "file": "wifi_packets.h",
+          "baseline_sha256": "d3474414772ba64025a72aceb974c51b17a6ab3c081aa5a211034a0f25a61d60",
+          "current_sha256": "d3474414772ba64025a72aceb974c51b17a6ab3c081aa5a211034a0f25a61d60"
+        },
+        {
+          "file": "wifi_protocol.c",
+          "baseline_sha256": "dacd3b1981cbe0476c35cf478875476cfdb9448364eda5e73b30a9c9109af9f7",
+          "current_sha256": "dacd3b1981cbe0476c35cf478875476cfdb9448364eda5e73b30a9c9109af9f7"
+        },
+        {
+          "file": "wifi_protocol.h",
+          "baseline_sha256": "8a32732333f2ee1dfe7916a55401a66b3addeacfdf15a5732fd1e413760e9028",
+          "current_sha256": "8a32732333f2ee1dfe7916a55401a66b3addeacfdf15a5732fd1e413760e9028"
+        },
+        {
+          "file": "wifi_settings.h",
+          "baseline_sha256": "e2030da517ada1e62d8e47d07a2613e66c4ab9a636bb51ccbd5ea37ac1ae2d95",
+          "current_sha256": "e2030da517ada1e62d8e47d07a2613e66c4ab9a636bb51ccbd5ea37ac1ae2d95"
+        },
+        {
+          "file": "wifi_transport.c",
+          "baseline_sha256": "285acea73ab71d183b280e54ecebc0ff5100df522d65a18a2f335ff18c7d2a99",
+          "current_sha256": "285acea73ab71d183b280e54ecebc0ff5100df522d65a18a2f335ff18c7d2a99"
+        },
+        {
+          "file": "wifi_transport.h",
+          "baseline_sha256": "3b5bf6d469b270194da2473e541bd9359c2bd13f582c8dfee6af6ba358df6e43",
+          "current_sha256": "3b5bf6d469b270194da2473e541bd9359c2bd13f582c8dfee6af6ba358df6e43"
+        },
+        {
+          "file": "wifi_vectors.c",
+          "baseline_sha256": "37e6ad631188ae226024baa4c5c59d90bc5324dc0933cae1dd413f5e249dc0f5",
+          "current_sha256": "37e6ad631188ae226024baa4c5c59d90bc5324dc0933cae1dd413f5e249dc0f5"
+        }
+      ],
+      "missing": []
+    },
+    "barcode_fine_v0_3": {
+      "directory": "testing/subsystem2/interface_wifi_v2_3_barcode_fine_v0_3",
+      "changed": [
+        {
+          "file": "CMakeLists.txt",
+          "baseline_sha256": "629e45fe2cd64416788b3685cc11cb1159d4d2ea51fce74e4b9dbd3e23d370b3",
+          "current_sha256": "37410639e3abb661294201a5c3d7d9fe4c7e3ef6f2cc07536dd0ede5f1de7352"
+        },
+        {
+          "file": "dashboard/is28_schema.js",
+          "baseline_sha256": "ae24305ebe4e35d57719435cd536604387eb8f2b5af704383930ebfb28c320bf",
+          "current_sha256": "cd94d8a0a79d074c2e2df74f3296f199d63b955ce224ae70113ad50f7771687b"
+        },
+        {
+          "file": "dashboard/test_schema.js",
+          "baseline_sha256": "fa1b6f12b2eafe198a8565b652920647825ee2cf71e9a97d4aaa13498ba1ec9b",
+          "current_sha256": "cd513709f143c30b549bd5056be1d2b37b744bddbaef4e57391913691f5b291c"
+        },
+        {
+          "file": "run_tests.py",
+          "baseline_sha256": "ebfc276fe907afef18cd121089c3198cacf6d8d300903bd9285e101f24f4dcda",
+          "current_sha256": "161abda41119ba5bd35a0383e486f671c518b20e40f7a6f4b918529afda1ab7a"
+        },
+        {
+          "file": "successful_calibration.h",
+          "baseline_sha256": "20a7369fc609cd54d676b66ef9a26960b2f8226bf1ccea89fb39d66d072210e4",
+          "current_sha256": "877e7872e5e052558a57956786211f8f087eb3d1175bce9e4835d1dc4b272bc8"
+        },
+        {
+          "file": "test_wifi_harness.c",
+          "baseline_sha256": "afa1c1cc2afb463b4f64e7627058db01b3a45eb5f15cd344f673c947486628a6",
+          "current_sha256": "c69b6a33832e3865f6cfc64dd594c6ce2ceedfb8f68eba2ec0d20cce1e073f74"
+        },
+        {
+          "file": "test_wifi_packets.c",
+          "baseline_sha256": "2b0f572c14674e9b5faae8b4867fefb8d1e628da690c2cc6c63de6241ba8e71a",
+          "current_sha256": "d0bc533ba25426c90158febba93966d0dc57a62cf579d3d3f206e9abf550296c"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/barcode_analog.h",
+          "baseline_sha256": "d58bce3a942eee1c1ec2f2dde1755c4a8153741b84916feabf394999c71cc795",
+          "current_sha256": "3362ab94d8c69894bdc0ac38a6f934354d7dedf854b0edeccc6ced8282b33590"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/barcode_record.h",
+          "baseline_sha256": "f69f08c4c1b91a3c398989eafa8c7c4c3752d7da7fe63dde828e25b8ef20c101",
+          "current_sha256": "09dd438501cd611f5f3fb72d5fbb2b50274aa21042d746ed8604e41f770da191"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/barcode_scan.h",
+          "baseline_sha256": "c49c7e2754c8961899c4034dcc55703f15314ab7aa571615b47b0174871d9d23",
+          "current_sha256": "40a3b8d608353783a40d68b69f8e468a88c2e530c185a50b5de9a56ec4a5eb57"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/main.c",
+          "baseline_sha256": "ab81c1b429d6ec9ea1b03dff53846efd656192fd249aa38daec57d9e0a831221",
+          "current_sha256": "a514b8945a89acc2bf1ec03a96dbe248365a3f776cf7708821c4ad6c73d7ca6b"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/test_barcode_sensitivity.c",
+          "baseline_sha256": "53c72232a98148d68bd766c896a8fc707ff42def080fa26a043e566d69163c4b",
+          "current_sha256": "40cb7fe141cdf5e3be8bd53ad12dbc1663ad3b55e141a4ad0d6dab03ddf8db07"
+        },
+        {
+          "file": "wifi_harness.h",
+          "baseline_sha256": "66e3006c531d2a1813229baf6713c40e0c00faabd44c0865156d28b3926e7d23",
+          "current_sha256": "9c51a65b51b9cde72738c1f813833d1d43f4acbf3ab17c9d2def79277cd7202f"
+        },
+        {
+          "file": "wifi_packets.c",
+          "baseline_sha256": "67755b933b6c0f2a4855aa921ddce3a51333f3dd1a41be0d74f49b5898b1b5ab",
+          "current_sha256": "a2af9fbc95555cfcf904152fa87e3620017eaf829aeeccff78f65490ecdb53fa"
+        }
+      ],
+      "unchanged": [
+        {
+          "file": ".gitattributes",
+          "baseline_sha256": "99dedf952a05c2037c779cd1e170bc590fa6c450e076777a683e6122398e759f",
+          "current_sha256": "99dedf952a05c2037c779cd1e170bc590fa6c450e076777a683e6122398e759f"
+        },
+        {
+          "file": ".gitignore",
+          "baseline_sha256": "3063f896a14c06886f3b9c335c0e0497edf92bd0a47bb674e48ff7874108b01b",
+          "current_sha256": "3063f896a14c06886f3b9c335c0e0497edf92bd0a47bb674e48ff7874108b01b"
+        },
+        {
+          "file": "BUDDY5_HANDOFF.md",
+          "baseline_sha256": "021537e1477de120060b9382382016c58f8f85788344c05102e6c0c73846effe",
+          "current_sha256": "021537e1477de120060b9382382016c58f8f85788344c05102e6c0c73846effe"
+        },
+        {
+          "file": "BUILD.md",
+          "baseline_sha256": "3622ff46aeb7dbe576d450cd5e4c36d1845be0a0f0a16824bbad3cd68e638f76",
+          "current_sha256": "3622ff46aeb7dbe576d450cd5e4c36d1845be0a0f0a16824bbad3cd68e638f76"
+        },
+        {
+          "file": "BUILD_METRICS_V1.json",
+          "baseline_sha256": "eafb049d50ad0f08dfe495f61e23a8e7481d9c900226301e272d6ce3a742879b",
+          "current_sha256": "eafb049d50ad0f08dfe495f61e23a8e7481d9c900226301e272d6ce3a742879b"
+        },
+        {
+          "file": "BUILD_V1.md",
+          "baseline_sha256": "3bfeae930136ad2b74f3ea0e9fef98f78bfc72c3aba3ad11ae4668c5eb812e60",
+          "current_sha256": "3bfeae930136ad2b74f3ea0e9fef98f78bfc72c3aba3ad11ae4668c5eb812e60"
+        },
+        {
+          "file": "CALIBRATION_CHANGES.patch",
+          "baseline_sha256": "ee99496d909cececcf5f73f38b2023daf919b3b7325d87010a004852dd89a079",
+          "current_sha256": "ee99496d909cececcf5f73f38b2023daf919b3b7325d87010a004852dd89a079"
+        },
+        {
+          "file": "CALIBRATION_PATCH.json",
+          "baseline_sha256": "f4dc28cc35967e4e2acd426f2cff310a084effbcc336586b654d0564899aed3b",
+          "current_sha256": "f4dc28cc35967e4e2acd426f2cff310a084effbcc336586b654d0564899aed3b"
+        },
+        {
+          "file": "CONTINUOUS_BASELINE.json",
+          "baseline_sha256": "21a23a042a2c44ce776b11e03bbc0c34077caffe50f99c496de9c10fb93ca862",
+          "current_sha256": "21a23a042a2c44ce776b11e03bbc0c34077caffe50f99c496de9c10fb93ca862"
+        },
+        {
+          "file": "CONTINUOUS_PATCHES.json",
+          "baseline_sha256": "7c837b3924a76a9b3b735898c0137ce26c0f3aa5b6697a202f3199ad078b1a80",
+          "current_sha256": "7c837b3924a76a9b3b735898c0137ce26c0f3aa5b6697a202f3199ad078b1a80"
+        },
+        {
+          "file": "Configure WiFi.cmd",
+          "baseline_sha256": "7c9693e2e67c071c867df57857b0e8c50e7db27eecb0304742384da7925e33ea",
+          "current_sha256": "7c9693e2e67c071c867df57857b0e8c50e7db27eecb0304742384da7925e33ea"
+        },
+        {
+          "file": "DATA_REPRESENTATION.md",
+          "baseline_sha256": "54f897859a7183560f04740bc241916eb7c1e6bf851304d0ed20b4a1ffa2ce05",
+          "current_sha256": "54f897859a7183560f04740bc241916eb7c1e6bf851304d0ed20b4a1ffa2ce05"
+        },
+        {
+          "file": "DIAG1_BASELINE.json",
+          "baseline_sha256": "36c0b2efa600fa69c96a03afa1d1c80191fd4495e819888332549a27a70ea130",
+          "current_sha256": "36c0b2efa600fa69c96a03afa1d1c80191fd4495e819888332549a27a70ea130"
+        },
+        {
+          "file": "DIAG_PATCHES.json",
+          "baseline_sha256": "4d33ec9e6e51a4231df6cf7f40d836b761f7c6dd53aebda9ad7ba403248c9e3e",
+          "current_sha256": "4d33ec9e6e51a4231df6cf7f40d836b761f7c6dd53aebda9ad7ba403248c9e3e"
+        },
+        {
+          "file": "GUIDE_V1_2.md",
+          "baseline_sha256": "a96dc3f023c995d8d83764ad26f1d2891e9cff4d01db214ae558a8545313ed57",
+          "current_sha256": "a96dc3f023c995d8d83764ad26f1d2891e9cff4d01db214ae558a8545313ed57"
+        },
+        {
+          "file": "HANDOVER_PATCHES.json",
+          "baseline_sha256": "141733ab2c9339d984ed8d75d368eb7acf8f24bdc899ba3c5bfa5afde27575c6",
+          "current_sha256": "141733ab2c9339d984ed8d75d368eb7acf8f24bdc899ba3c5bfa5afde27575c6"
+        },
+        {
+          "file": "README.md",
+          "baseline_sha256": "33aa99dcaeb68c7a10f5e055b5f0bd8cf50167b49fe4ee2e39d72c817c67f2bd",
+          "current_sha256": "33aa99dcaeb68c7a10f5e055b5f0bd8cf50167b49fe4ee2e39d72c817c67f2bd"
+        },
+        {
+          "file": "SETUP.md",
+          "baseline_sha256": "7de6338999dd6f50a74f19d191defa37798a72eb7c7750ed5ec2c817cdf2bf4a",
+          "current_sha256": "7de6338999dd6f50a74f19d191defa37798a72eb7c7750ed5ec2c817cdf2bf4a"
+        },
+        {
+          "file": "STACK_LAYOUT.md",
+          "baseline_sha256": "9dfc325133230cc164c405d371dfe0e22ab62b1ddbf4f8c85d76173be89beaf4",
+          "current_sha256": "9dfc325133230cc164c405d371dfe0e22ab62b1ddbf4f8c85d76173be89beaf4"
+        },
+        {
+          "file": "STARTUP_FIX_V1_1.md",
+          "baseline_sha256": "19b94ba992451cc1fd736eb22bb99741bca6fcd172c79c0e6bcd858ea31627c2",
+          "current_sha256": "19b94ba992451cc1fd736eb22bb99741bca6fcd172c79c0e6bcd858ea31627c2"
+        },
+        {
+          "file": "Start dashboard.cmd",
+          "baseline_sha256": "cb8ccae500dc917316a3aaa6649cc28c39c91126b8a5ddaace13200aaed630ef",
+          "current_sha256": "cb8ccae500dc917316a3aaa6649cc28c39c91126b8a5ddaace13200aaed630ef"
+        },
+        {
+          "file": "TEST_LOG.md",
+          "baseline_sha256": "38a0f8e498675909dcc31d30cb8d1e91c41827e97fccd1b876b1a5e17e30a523",
+          "current_sha256": "38a0f8e498675909dcc31d30cb8d1e91c41827e97fccd1b876b1a5e17e30a523"
+        },
+        {
+          "file": "UPSTREAM.md",
+          "baseline_sha256": "bfb55ccd3dd9e2d66b3911c3f21016b6bd816f35d0edb46e37a5ee7fe483d06d",
+          "current_sha256": "bfb55ccd3dd9e2d66b3911c3f21016b6bd816f35d0edb46e37a5ee7fe483d06d"
+        },
+        {
+          "file": "V12_2_BASELINE.json",
+          "baseline_sha256": "381e230bb8f83054da046581cfbf13c6f1fe1258a9e7d524c2d996c49283836c",
+          "current_sha256": "381e230bb8f83054da046581cfbf13c6f1fe1258a9e7d524c2d996c49283836c"
+        },
+        {
+          "file": "V12_2_PATCHES.json",
+          "baseline_sha256": "dee7130174a287c4354fa45fc61502566273fa07d1baf396d6bf9f81809b2a0e",
+          "current_sha256": "dee7130174a287c4354fa45fc61502566273fa07d1baf396d6bf9f81809b2a0e"
+        },
+        {
+          "file": "V1_1_BASELINE.json",
+          "baseline_sha256": "a21237786bc6aa9b4d55d0d0111553dbd98b3f1fd5eba1c185aceea93ec40240",
+          "current_sha256": "a21237786bc6aa9b4d55d0d0111553dbd98b3f1fd5eba1c185aceea93ec40240"
+        },
+        {
+          "file": "WIFI_BASELINE.json",
+          "baseline_sha256": "6a966c89c61cc79e1c30577c975db4d8a717e2cddca52a70b080ce04c946c359",
+          "current_sha256": "6a966c89c61cc79e1c30577c975db4d8a717e2cddca52a70b080ce04c946c359"
+        },
+        {
+          "file": "WIFI_CONTRACT.md",
+          "baseline_sha256": "7b0f5362183e19258c9e1f23b160a07ae9c0c2dee5c55adb7c583b1ea1df0c84",
+          "current_sha256": "7b0f5362183e19258c9e1f23b160a07ae9c0c2dee5c55adb7c583b1ea1df0c84"
+        },
+        {
+          "file": "WIFI_PATCHES.json",
+          "baseline_sha256": "72d4d074e9ea1d7856f16dd7e490132ea1fed9b94df18e1fd91684dffb3f07df",
+          "current_sha256": "72d4d074e9ea1d7856f16dd7e490132ea1fed9b94df18e1fd91684dffb3f07df"
+        },
+        {
+          "file": "WIFI_PROTOCOL_ATTRIBUTION.md",
+          "baseline_sha256": "93173a58437adb4330ac286499eb09839c126a60cae5f705bb6ef5408d76068a",
+          "current_sha256": "93173a58437adb4330ac286499eb09839c126a60cae5f705bb6ef5408d76068a"
+        },
+        {
+          "file": "WIFI_V2_BASELINE.json",
+          "baseline_sha256": "fed8168355b0532702ac3a0e648a394940b86a95fe7785b98da20a06d5d48612",
+          "current_sha256": "fed8168355b0532702ac3a0e648a394940b86a95fe7785b98da20a06d5d48612"
+        },
+        {
+          "file": "WORKING_V2_2_BASELINE.json",
+          "baseline_sha256": "648dfc15c97641af789acbdd739fc85904364265f3a4598ad7a1876052cb8ac3",
+          "current_sha256": "648dfc15c97641af789acbdd739fc85904364265f3a4598ad7a1876052cb8ac3"
+        },
+        {
+          "file": "buddy_hooks.c",
+          "baseline_sha256": "52505bd1c19b4ff1e5cd58f199a4a33c7759f735fc7b83ee12bf46d5745b9f26",
+          "current_sha256": "52505bd1c19b4ff1e5cd58f199a4a33c7759f735fc7b83ee12bf46d5745b9f26"
+        },
+        {
+          "file": "buddy_hooks.h",
+          "baseline_sha256": "a60b4d472acdfdf766b533897bfcedf4671ad40865c6919e65591e5fa0ec8e50",
+          "current_sha256": "a60b4d472acdfdf766b533897bfcedf4671ad40865c6919e65591e5fa0ec8e50"
+        },
+        {
+          "file": "check_mqtt.py",
+          "baseline_sha256": "78990428047086cdc145bb7ba9b6ca23d42193743e19d92d33ec8be538facfd3",
+          "current_sha256": "78990428047086cdc145bb7ba9b6ca23d42193743e19d92d33ec8be538facfd3"
+        },
+        {
+          "file": "continuous_drive.h",
+          "baseline_sha256": "9eadf64b31f81f7f37d8664462bf7863c63d21a3f469a4664d1b2b014601bc18",
+          "current_sha256": "9eadf64b31f81f7f37d8664462bf7863c63d21a3f469a4664d1b2b014601bc18"
+        },
+        {
+          "file": "continuous_follow.h",
+          "baseline_sha256": "17f43775e4fb33ccf6913e780dcb303b9c1667a6d9acdf54233ea99a7b6a6db7",
+          "current_sha256": "17f43775e4fb33ccf6913e780dcb303b9c1667a6d9acdf54233ea99a7b6a6db7"
+        },
+        {
+          "file": "continuous_steering.h",
+          "baseline_sha256": "c08d5e26858593344064bf0256950c3743a87a593ddb0b653f4aa5a1b145c62f",
+          "current_sha256": "c08d5e26858593344064bf0256950c3743a87a593ddb0b653f4aa5a1b145c62f"
+        },
+        {
+          "file": "cruise_handover.h",
+          "baseline_sha256": "736e45bc87898f01d29abfe96fb3e26693fb9fe2817848c2aca3cc949d289137",
+          "current_sha256": "736e45bc87898f01d29abfe96fb3e26693fb9fe2817848c2aca3cc949d289137"
+        },
+        {
+          "file": "dashboard/README.md",
+          "baseline_sha256": "f9cef474755286b12607c04b440ff1d666c57b630256f242bc65b0c3f5cc1c69",
+          "current_sha256": "f9cef474755286b12607c04b440ff1d666c57b630256f242bc65b0c3f5cc1c69"
+        },
+        {
+          "file": "dashboard/index.html",
+          "baseline_sha256": "21dbaaf3be8946a62e47d723d66b312c1f2917c79ca75fbd4160f04887a8de04",
+          "current_sha256": "21dbaaf3be8946a62e47d723d66b312c1f2917c79ca75fbd4160f04887a8de04"
+        },
+        {
+          "file": "dashboard/mosquitto.conf",
+          "baseline_sha256": "d8de8b520d6526bf55b6b36c8f63b78c78a62b72953b9b42a7f154e975f502e7",
+          "current_sha256": "d8de8b520d6526bf55b6b36c8f63b78c78a62b72953b9b42a7f154e975f502e7"
+        },
+        {
+          "file": "dashboard/ui_smoke.mjs",
+          "baseline_sha256": "977029ba24c8ede34d8ddb90309ebe308d5a232d9a107a71a5bb13fffa3f1154",
+          "current_sha256": "977029ba24c8ede34d8ddb90309ebe308d5a232d9a107a71a5bb13fffa3f1154"
+        },
+        {
+          "file": "dashboard/vendor/LICENSE.mqtt.md",
+          "baseline_sha256": "81b51ef8ac2a8ac8f111ed34ab1a32d63e7f4f7de586bd65f5510fb1ba3a89eb",
+          "current_sha256": "81b51ef8ac2a8ac8f111ed34ab1a32d63e7f4f7de586bd65f5510fb1ba3a89eb"
+        },
+        {
+          "file": "dashboard/vendor/mqtt.min.js",
+          "baseline_sha256": "b088a7f9045df4e478dbc378f41125066e43d9c602755ee4c5cda0f3e9380ba0",
+          "current_sha256": "b088a7f9045df4e478dbc378f41125066e43d9c602755ee4c5cda0f3e9380ba0"
+        },
+        {
+          "file": "drive_diag.h",
+          "baseline_sha256": "fd892dbcae8a460882d529feec9ffa80fe0db82c03a5f36192c2fd090fe1f59f",
+          "current_sha256": "fd892dbcae8a460882d529feec9ffa80fe0db82c03a5f36192c2fd090fe1f59f"
+        },
+        {
+          "file": "drive_diag_pico.h",
+          "baseline_sha256": "b41e19b1298bd43cdc1bdd93716bf9b0cb9a0a479af3a72bf0046faebf642760",
+          "current_sha256": "b41e19b1298bd43cdc1bdd93716bf9b0cb9a0a479af3a72bf0046faebf642760"
+        },
+        {
+          "file": "drive_diag_storage.h",
+          "baseline_sha256": "b45ef497197b85215ebb73a7f3205a9fa34201549aba38b75983d53b15137ac5",
+          "current_sha256": "b45ef497197b85215ebb73a7f3205a9fa34201549aba38b75983d53b15137ac5"
+        },
+        {
+          "file": "examples/buddy5_extension.c",
+          "baseline_sha256": "59548f6956c37f34c70239eb5bb34af513d583afd821771f4aedfe7c47e56dd6",
+          "current_sha256": "59548f6956c37f34c70239eb5bb34af513d583afd821771f4aedfe7c47e56dd6"
+        },
+        {
+          "file": "examples/buddy5_extension.h",
+          "baseline_sha256": "1dfbca9b83be9fd260d7e299f1cc5eabef0eac497445187816bea7f99a78a0d9",
+          "current_sha256": "1dfbca9b83be9fd260d7e299f1cc5eabef0eac497445187816bea7f99a78a0d9"
+        },
+        {
+          "file": "harness_adapter.h",
+          "baseline_sha256": "c596d507618d5e412c082931c99b9d0961c88a9ebdf270b924d594104d45cc3c",
+          "current_sha256": "c596d507618d5e412c082931c99b9d0961c88a9ebdf270b924d594104d45cc3c"
+        },
+        {
+          "file": "logs/arm_compile_tail.txt",
+          "baseline_sha256": "202a1b6fde0b90b0b19c245377df709b2cb805d5df06d22bd2d43af590882d30",
+          "current_sha256": "202a1b6fde0b90b0b19c245377df709b2cb805d5df06d22bd2d43af590882d30"
+        },
+        {
+          "file": "logs/arm_stack_usage.txt",
+          "baseline_sha256": "edc951d651a6530be0bbfa9ca36d9a373ce171e7d6c28d468b728c4235d4b02a",
+          "current_sha256": "edc951d651a6530be0bbfa9ca36d9a373ce171e7d6c28d468b728c4235d4b02a"
+        },
+        {
+          "file": "logs/host_tests.txt",
+          "baseline_sha256": "2526916e715e5dc0dcc8610e2d1317523021da136400503e1042c24148021861",
+          "current_sha256": "2526916e715e5dc0dcc8610e2d1317523021da136400503e1042c24148021861"
+        },
+        {
+          "file": "logs/lwip_timeouts.txt",
+          "baseline_sha256": "7c8cef89c40e42a4da09181d892d7305384a09ba7a555b57570dd3014478df9b",
+          "current_sha256": "7c8cef89c40e42a4da09181d892d7305384a09ba7a555b57570dd3014478df9b"
+        },
+        {
+          "file": "logs/stack_layout.txt",
+          "baseline_sha256": "9687da08658d3775d80e27705eb1552d2d1254df43969132dc6889d4abb53b43",
+          "current_sha256": "9687da08658d3775d80e27705eb1552d2d1254df43969132dc6889d4abb53b43"
+        },
+        {
+          "file": "lwip_test_port/arch/cc.h",
+          "baseline_sha256": "0cd0cea3e37680fc321493f50139a71ec617ab090187351ecc7fda2d2faf5b27",
+          "current_sha256": "0cd0cea3e37680fc321493f50139a71ec617ab090187351ecc7fda2d2faf5b27"
+        },
+        {
+          "file": "lwipopts.h",
+          "baseline_sha256": "7799a86c38acaec6d8d14eda34e7ff328a7e4f8f3a4a67d5f917c36b639ee469",
+          "current_sha256": "7799a86c38acaec6d8d14eda34e7ff328a7e4f8f3a4a67d5f917c36b639ee469"
+        },
+        {
+          "file": "main.c",
+          "baseline_sha256": "fd87cb26e5de87db3ed265c3d8344bc11c57194341fc4a5ab9d9c0cae9ad3d51",
+          "current_sha256": "fd87cb26e5de87db3ed265c3d8344bc11c57194341fc4a5ab9d9c0cae9ad3d51"
+        },
+        {
+          "file": "motion_api.c",
+          "baseline_sha256": "1558742b9f1bb7084fa574e19a60c1ad7475462f475e19290d652714f67d4854",
+          "current_sha256": "1558742b9f1bb7084fa574e19a60c1ad7475462f475e19290d652714f67d4854"
+        },
+        {
+          "file": "motion_api.h",
+          "baseline_sha256": "4bed1ed00116b7ed5638cc314cfb432a85b14f5ff697b3ffe97add0d091db220",
+          "current_sha256": "4bed1ed00116b7ed5638cc314cfb432a85b14f5ff697b3ffe97add0d091db220"
+        },
+        {
+          "file": "motion_executor.c",
+          "baseline_sha256": "eceffbadb80447c12cb4483e447902b85119654a1840b24fce2a7a619bf5bb70",
+          "current_sha256": "eceffbadb80447c12cb4483e447902b85119654a1840b24fce2a7a619bf5bb70"
+        },
+        {
+          "file": "motion_executor.h",
+          "baseline_sha256": "79fa528996fa22100a8465f8fc97cacb8e015e20c09097c4de451247c75763d9",
+          "current_sha256": "79fa528996fa22100a8465f8fc97cacb8e015e20c09097c4de451247c75763d9"
+        },
+        {
+          "file": "motion_port.h",
+          "baseline_sha256": "a56d84355f69df4732216a62d67cb79687d8696f86cbf1e5e1d8d26eaa848920",
+          "current_sha256": "a56d84355f69df4732216a62d67cb79687d8696f86cbf1e5e1d8d26eaa848920"
+        },
+        {
+          "file": "nav_api.h",
+          "baseline_sha256": "6efbb7380c5f58d7bcc5a800a0b1035625f3cd39093130b087ed4e98f327600b",
+          "current_sha256": "6efbb7380c5f58d7bcc5a800a0b1035625f3cd39093130b087ed4e98f327600b"
+        },
+        {
+          "file": "nav_codec.c",
+          "baseline_sha256": "a0bcd3334a453beba33ae4f5a355c0301231a7eae8d650374853dba0766663c6",
+          "current_sha256": "a0bcd3334a453beba33ae4f5a355c0301231a7eae8d650374853dba0766663c6"
+        },
+        {
+          "file": "nav_codec.h",
+          "baseline_sha256": "20a782b1d60010f108c650528e2101d8ec9f3d4835f2bb255d13b9db6d396c4f",
+          "current_sha256": "20a782b1d60010f108c650528e2101d8ec9f3d4835f2bb255d13b9db6d396c4f"
+        },
+        {
+          "file": "nav_coordinator.c",
+          "baseline_sha256": "821e677d895e92e2e1680c2109d3df7ea652b2f7b99b0ee6cb0172933064c910",
+          "current_sha256": "821e677d895e92e2e1680c2109d3df7ea652b2f7b99b0ee6cb0172933064c910"
+        },
+        {
+          "file": "nav_coordinator.h",
+          "baseline_sha256": "67078a4d6be77593df6d7c6911a8ff82ce4baf77bc12af78041595cebc8a6958",
+          "current_sha256": "67078a4d6be77593df6d7c6911a8ff82ce4baf77bc12af78041595cebc8a6958"
+        },
+        {
+          "file": "nav_log_harness.h",
+          "baseline_sha256": "76c68816a103891fcfbc0174aab1ed1c844a2ce761cfe42b46deb389458c7615",
+          "current_sha256": "76c68816a103891fcfbc0174aab1ed1c844a2ce761cfe42b46deb389458c7615"
+        },
+        {
+          "file": "nav_log_storage.h",
+          "baseline_sha256": "0f12d30f128105b096d2454cd53047db447b970444997a6d812d3b4eae09ba31",
+          "current_sha256": "0f12d30f128105b096d2454cd53047db447b970444997a6d812d3b4eae09ba31"
+        },
+        {
+          "file": "provision_wifi.py",
+          "baseline_sha256": "a13337fc67a0ed0521f32add512dced32c6f0c031101393123771fea65e67134",
+          "current_sha256": "a13337fc67a0ed0521f32add512dced32c6f0c031101393123771fea65e67134"
+        },
+        {
+          "file": "run_dashboard.py",
+          "baseline_sha256": "468f948a777ac6d17085207c67e14a1571f576a49ee88d20e2308e10b4fee488",
+          "current_sha256": "468f948a777ac6d17085207c67e14a1571f576a49ee88d20e2308e10b4fee488"
+        },
+        {
+          "file": "run_lwip_timeout_test.py",
+          "baseline_sha256": "a0ce43e958b2d7d508c6849fbc798a9adfad0a261bb7a12f5d603b3bcd20309a",
+          "current_sha256": "a0ce43e958b2d7d508c6849fbc798a9adfad0a261bb7a12f5d603b3bcd20309a"
+        },
+        {
+          "file": "test_buddy5.c",
+          "baseline_sha256": "75a29838876c662787a58e5444080181b5987c0e4826c3af97d6b34e42a3880b",
+          "current_sha256": "75a29838876c662787a58e5444080181b5987c0e4826c3af97d6b34e42a3880b"
+        },
+        {
+          "file": "test_clock.c",
+          "baseline_sha256": "bdba09e0c0b0b151606e1523e2a9029200721910e65868977f8b5e9ad311984a",
+          "current_sha256": "bdba09e0c0b0b151606e1523e2a9029200721910e65868977f8b5e9ad311984a"
+        },
+        {
+          "file": "test_continuous_drive.c",
+          "baseline_sha256": "29c68fedf0a5245a6f189f46ad80fd326d6169ebd3eff5e500552f3584910eb2",
+          "current_sha256": "29c68fedf0a5245a6f189f46ad80fd326d6169ebd3eff5e500552f3584910eb2"
+        },
+        {
+          "file": "test_continuous_follow.c",
+          "baseline_sha256": "b4cda9f98e414caa2edf19ea0f1d383ac0b50eec5206fa5aadbd0cd8d5e2b7d1",
+          "current_sha256": "b4cda9f98e414caa2edf19ea0f1d383ac0b50eec5206fa5aadbd0cd8d5e2b7d1"
+        },
+        {
+          "file": "test_continuous_integration.c",
+          "baseline_sha256": "b9bc65db9cae60dbdbcf7cf6d74ff026362abcec1d5766a1073a09a6238c2864",
+          "current_sha256": "b9bc65db9cae60dbdbcf7cf6d74ff026362abcec1d5766a1073a09a6238c2864"
+        },
+        {
+          "file": "test_continuous_steering.c",
+          "baseline_sha256": "cf3a3aea602233e4d185dd63c954d06b5f6cf3c9178b1122adf6ba7793dc6b38",
+          "current_sha256": "cf3a3aea602233e4d185dd63c954d06b5f6cf3c9178b1122adf6ba7793dc6b38"
+        },
+        {
+          "file": "test_cruise_handover.c",
+          "baseline_sha256": "2b3478778280e6abd03e6265b0c25c983e92504e2dc099f017d937796564e4e7",
+          "current_sha256": "2b3478778280e6abd03e6265b0c25c983e92504e2dc099f017d937796564e4e7"
+        },
+        {
+          "file": "test_diag_parity.c",
+          "baseline_sha256": "64224677655a653272ad5bed4d2441c9cc7e2780f643fd7a85567d1ce08c4b1d",
+          "current_sha256": "64224677655a653272ad5bed4d2441c9cc7e2780f643fd7a85567d1ce08c4b1d"
+        },
+        {
+          "file": "test_drive_diag.c",
+          "baseline_sha256": "8eae08fb085e7c529d5d4c8646ab0130e4c9ec93149a245a8bd47045f6129be9",
+          "current_sha256": "8eae08fb085e7c529d5d4c8646ab0130e4c9ec93149a245a8bd47045f6129be9"
+        },
+        {
+          "file": "test_interface.c",
+          "baseline_sha256": "5ff15713f19d06d93f6987881771c25cee60eb4927c50bbb09d16193dbe2f988",
+          "current_sha256": "5ff15713f19d06d93f6987881771c25cee60eb4927c50bbb09d16193dbe2f988"
+        },
+        {
+          "file": "test_lwip_timeouts.c",
+          "baseline_sha256": "84e09df67ce130e4e34fcffd8f9406175ec08d3209285e0d82bcb5b131e2ad89",
+          "current_sha256": "84e09df67ce130e4e34fcffd8f9406175ec08d3209285e0d82bcb5b131e2ad89"
+        },
+        {
+          "file": "test_network_diagnostics.py",
+          "baseline_sha256": "ea4b1c411453c3458072145733378a74989ba4394505f840b290bd6cd68ebb75",
+          "current_sha256": "ea4b1c411453c3458072145733378a74989ba4394505f840b290bd6cd68ebb75"
+        },
+        {
+          "file": "test_parity.c",
+          "baseline_sha256": "41cb78792ae00638cc125a70eb1701988c651198a4bb8a1aeb16387d4705f987",
+          "current_sha256": "41cb78792ae00638cc125a70eb1701988c651198a4bb8a1aeb16387d4705f987"
+        },
+        {
+          "file": "test_setup_helpers.py",
+          "baseline_sha256": "a696d0bcb47e4e054ca249870a510aa9fcbc5faa9221eb144ced61c82a52b703",
+          "current_sha256": "a696d0bcb47e4e054ca249870a510aa9fcbc5faa9221eb144ced61c82a52b703"
+        },
+        {
+          "file": "test_storage.c",
+          "baseline_sha256": "6bc6ad0276aef4b4968413ade021cfd2b2ff06181a73af3235b8ae7cf73e4c77",
+          "current_sha256": "6bc6ad0276aef4b4968413ade021cfd2b2ff06181a73af3235b8ae7cf73e4c77"
+        },
+        {
+          "file": "test_successful_calibration.c",
+          "baseline_sha256": "f1db4f2b41e3b412828a7649ed774606b5d613954bb8d0d1da031a6dfbf78ae9",
+          "current_sha256": "f1db4f2b41e3b412828a7649ed774606b5d613954bb8d0d1da031a6dfbf78ae9"
+        },
+        {
+          "file": "test_wifi_link_state.c",
+          "baseline_sha256": "4a2053effa9ed5282e109f7c6d64789f5eaf118029280d4179240c6421f13828",
+          "current_sha256": "4a2053effa9ed5282e109f7c6d64789f5eaf118029280d4179240c6421f13828"
+        },
+        {
+          "file": "test_wifi_protocol.c",
+          "baseline_sha256": "2134431aaf7cdf7f3444231731d48ca6992477edd1c8fd2a70ad3f61dc20c75d",
+          "current_sha256": "2134431aaf7cdf7f3444231731d48ca6992477edd1c8fd2a70ad3f61dc20c75d"
+        },
+        {
+          "file": "test_wifi_routes.c",
+          "baseline_sha256": "767601d3e7bc3fcfa60271bd20a01f6b2fdf8ac788b55bfc8a0eb96554ec4869",
+          "current_sha256": "767601d3e7bc3fcfa60271bd20a01f6b2fdf8ac788b55bfc8a0eb96554ec4869"
+        },
+        {
+          "file": "test_wifi_settings.c",
+          "baseline_sha256": "a584e62bf1ffab4848ba036c368bc7c61553d391dfc089c7c69c82e2d5141d3d",
+          "current_sha256": "a584e62bf1ffab4848ba036c368bc7c61553d391dfc089c7c69c82e2d5141d3d"
+        },
+        {
+          "file": "test_wifi_storage.c",
+          "baseline_sha256": "038fb431cc8675c321e3436ba3097e2e563e01ba3b0080893c8994eddef76b81",
+          "current_sha256": "038fb431cc8675c321e3436ba3097e2e563e01ba3b0080893c8994eddef76b81"
+        },
+        {
+          "file": "test_wifi_transport.c",
+          "baseline_sha256": "b432286172750ed1cf9a79d7f358e361e83183e9ac4ab1019e338eb58e19bb85",
+          "current_sha256": "b432286172750ed1cf9a79d7f358e361e83183e9ac4ab1019e338eb58e19bb85"
+        },
+        {
+          "file": "test_wifi_vectors.mjs",
+          "baseline_sha256": "f0c036384c845aa4cc5ca4385a868bfd886da6f4879833fcef561ef80d93d41d",
+          "current_sha256": "f0c036384c845aa4cc5ca4385a868bfd886da6f4879833fcef561ef80d93d41d"
+        },
+        {
+          "file": "transport_test_stubs/cyw43.h",
+          "baseline_sha256": "890c4839ce4f61496911c7a85d0c0ae142b95f04ee3bf06f0e3c72589e0472a8",
+          "current_sha256": "890c4839ce4f61496911c7a85d0c0ae142b95f04ee3bf06f0e3c72589e0472a8"
+        },
+        {
+          "file": "transport_test_stubs/hardware/sync.h",
+          "baseline_sha256": "a27c59a5de264b244f2a67f80c5607b2ca8380bab44a53edf52cfb0eead41bb8",
+          "current_sha256": "a27c59a5de264b244f2a67f80c5607b2ca8380bab44a53edf52cfb0eead41bb8"
+        },
+        {
+          "file": "transport_test_stubs/lwip/apps/mqtt.h",
+          "baseline_sha256": "a452e9741d124b916572fb1278e13f1ad478ab43ce73316a04767476afba335f",
+          "current_sha256": "a452e9741d124b916572fb1278e13f1ad478ab43ce73316a04767476afba335f"
+        },
+        {
+          "file": "transport_test_stubs/lwip/apps/mqtt_priv.h",
+          "baseline_sha256": "2c67d2e5aea997aede74806e4b2440ff77057beb8c3e3e17fb5cb4e2bc3e6feb",
+          "current_sha256": "2c67d2e5aea997aede74806e4b2440ff77057beb8c3e3e17fb5cb4e2bc3e6feb"
+        },
+        {
+          "file": "transport_test_stubs/lwip/err.h",
+          "baseline_sha256": "a2195e048a0da6184d698ed59b05523480d68f5d5343f2d4cd409771f858a8c4",
+          "current_sha256": "a2195e048a0da6184d698ed59b05523480d68f5d5343f2d4cd409771f858a8c4"
+        },
+        {
+          "file": "transport_test_stubs/lwip/ip_addr.h",
+          "baseline_sha256": "20cf2cdf1bd9088a1a00732d8920d764afde34714f8feace32c97007df755e95",
+          "current_sha256": "20cf2cdf1bd9088a1a00732d8920d764afde34714f8feace32c97007df755e95"
+        },
+        {
+          "file": "transport_test_stubs/pico/cyw43_arch.h",
+          "baseline_sha256": "e0c71d2d4d3b601ae383b5ebd8b4526d6f8c59bbbbbd7fdf4fb7b0a7b16ca815",
+          "current_sha256": "e0c71d2d4d3b601ae383b5ebd8b4526d6f8c59bbbbbd7fdf4fb7b0a7b16ca815"
+        },
+        {
+          "file": "transport_test_stubs/pico/multicore.h",
+          "baseline_sha256": "7330fb04ed85bf3fdabdd05030e3dc5116b0c67f853033f6d4ae053b2b35e8f5",
+          "current_sha256": "7330fb04ed85bf3fdabdd05030e3dc5116b0c67f853033f6d4ae053b2b35e8f5"
+        },
+        {
+          "file": "transport_test_stubs/pico/stdlib.h",
+          "baseline_sha256": "285f1a33e6c3e4feb9313c545b63e543d7c9d5858819dceb927dcdfc15d0ff56",
+          "current_sha256": "285f1a33e6c3e4feb9313c545b63e543d7c9d5858819dceb927dcdfc15d0ff56"
+        },
+        {
+          "file": "v12_2/.gitattributes",
+          "baseline_sha256": "0ef3e7537a348f8912cda68f8a47bd94044cecc685b7073ab82338c74cbcf0d4",
+          "current_sha256": "0ef3e7537a348f8912cda68f8a47bd94044cecc685b7073ab82338c74cbcf0d4"
+        },
+        {
+          "file": "v12_2/.gitignore",
+          "baseline_sha256": "020c2606e8ed484089c2083e0be438b9d0736bee1558a6b76af0d58bd23f69cf",
+          "current_sha256": "020c2606e8ed484089c2083e0be438b9d0736bee1558a6b76af0d58bd23f69cf"
+        },
+        {
+          "file": "v12_2/BASELINE.json",
+          "baseline_sha256": "5b23f3dfa4fbdcffbbcf7eb48a8cf3546ccf8f2609221fa75c748865ed761d93",
+          "current_sha256": "5b23f3dfa4fbdcffbbcf7eb48a8cf3546ccf8f2609221fa75c748865ed761d93"
+        },
+        {
+          "file": "v12_2/BASELINE_PATCHES.json",
+          "baseline_sha256": "cbd71e07dd8e95b2311c05f43153dd41caa273b172d4ce3e611ed510f7e38c73",
+          "current_sha256": "cbd71e07dd8e95b2311c05f43153dd41caa273b172d4ce3e611ed510f7e38c73"
+        },
+        {
+          "file": "v12_2/BUILD_V12_2.md",
+          "baseline_sha256": "72b51bd0509b075833eb918d502cb1a47ac9f8d7eb13432dcd6d1d5e1da2793a",
+          "current_sha256": "72b51bd0509b075833eb918d502cb1a47ac9f8d7eb13432dcd6d1d5e1da2793a"
+        },
+        {
+          "file": "v12_2/CMakeLists.txt",
+          "baseline_sha256": "71e57cc0185f51c06b697eb3d7dd55c459614affc9d5f2a8819dcfda27ef5b30",
+          "current_sha256": "71e57cc0185f51c06b697eb3d7dd55c459614affc9d5f2a8819dcfda27ef5b30"
+        },
+        {
+          "file": "v12_2/README.md",
+          "baseline_sha256": "36e0e155d8e3872b1d34e1504db9e07b4afadd27ac1bafa70fb8ff2878360893",
+          "current_sha256": "36e0e155d8e3872b1d34e1504db9e07b4afadd27ac1bafa70fb8ff2878360893"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/analog_line_follow/line_logic.h",
+          "baseline_sha256": "bf1546b47a0e9c339d650624448fd7b80b3f0e1d20043e8ac7538136ec168653",
+          "current_sha256": "bf1546b47a0e9c339d650624448fd7b80b3f0e1d20043e8ac7538136ec168653"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/analog_line_follow/symmetric_logic.h",
+          "baseline_sha256": "c63b566cb53f7c410dc786e899ab272912b55cb25e84100abbacb0357dd59771",
+          "current_sha256": "c63b566cb53f7c410dc786e899ab272912b55cb25e84100abbacb0357dd59771"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/analog_line_follow/wheel_control.h",
+          "baseline_sha256": "9a0d13c034de050c12d95a6a8a16593610ea0eaf713e14d9b65e348781ea72db",
+          "current_sha256": "9a0d13c034de050c12d95a6a8a16593610ea0eaf713e14d9b65e348781ea72db"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_left_test/circuit_capture.h",
+          "baseline_sha256": "8cbbeaa19638c6d452d533dfc937b41d4f8a5f6f2d67e91fc27407559a332b3e",
+          "current_sha256": "8cbbeaa19638c6d452d533dfc937b41d4f8a5f6f2d67e91fc27407559a332b3e"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_left_test/circuit_feedback.h",
+          "baseline_sha256": "31be40d7cc7c4a8a8b03d28bd004491ca9ab0f90366b4a1b0456a3d4392104a8",
+          "current_sha256": "31be40d7cc7c4a8a8b03d28bd004491ca9ab0f90366b4a1b0456a3d4392104a8"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_left_test/circuit_load.h",
+          "baseline_sha256": "b4a255e468698d41c6e37a9e0640aafa989c4c564bda3e151b07db64ec330673",
+          "current_sha256": "b4a255e468698d41c6e37a9e0640aafa989c4c564bda3e151b07db64ec330673"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_left_test/circuit_logic.h",
+          "baseline_sha256": "e1fb1b3d0483251a5a8c47d3792e3ef094f3be70f12d9b6a3b9d080cfb86f578",
+          "current_sha256": "e1fb1b3d0483251a5a8c47d3792e3ef094f3be70f12d9b6a3b9d080cfb86f578"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_left_test/circuit_record.h",
+          "baseline_sha256": "04c960ec0ca557d589168aaae5f7440724fdcd70c7e04b853def7e39c7a097b1",
+          "current_sha256": "04c960ec0ca557d589168aaae5f7440724fdcd70c7e04b853def7e39c7a097b1"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_left_test/circuit_recovery.h",
+          "baseline_sha256": "4b328292de939d66582897d41b61b9f4d8048d3679aab28e57e5cfb5164b0588",
+          "current_sha256": "4b328292de939d66582897d41b61b9f4d8048d3679aab28e57e5cfb5164b0588"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_left_test/circuit_wheel.h",
+          "baseline_sha256": "7cb06cc8f4c6f2cec69170962d5fc5321544c7b1335ebef01acda6fc9c7ff3fb",
+          "current_sha256": "7cb06cc8f4c6f2cec69170962d5fc5321544c7b1335ebef01acda6fc9c7ff3fb"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/barcode_capture.h",
+          "baseline_sha256": "053c2f311b0970429f16d102845be0178d02e2fdf6e15cf9af994b0d3a4728b6",
+          "current_sha256": "053c2f311b0970429f16d102845be0178d02e2fdf6e15cf9af994b0d3a4728b6"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/barcode_nav.h",
+          "baseline_sha256": "865367b4f161b5d8a1e01cfa9b3ba31356757c196ae9d82463ba40ab36689455",
+          "current_sha256": "865367b4f161b5d8a1e01cfa9b3ba31356757c196ae9d82463ba40ab36689455"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/barcode_raw.h",
+          "baseline_sha256": "2c8b432f91fc0b149eb9f4c3677090fb847873585ec2e303d0592a0ef6db2f19",
+          "current_sha256": "2c8b432f91fc0b149eb9f4c3677090fb847873585ec2e303d0592a0ef6db2f19"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/barcode_start.h",
+          "baseline_sha256": "0fb36d8ede3e39b919344460ed44140659548bf7fa4b392104d7d39f395c7132",
+          "current_sha256": "0fb36d8ede3e39b919344460ed44140659548bf7fa4b392104d7d39f395c7132"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/fixtures/captured_a.h",
+          "baseline_sha256": "5d23aa8251a248461fc1422773e2102367f1f2ef810f7abc3b6947efdf874c14",
+          "current_sha256": "5d23aa8251a248461fc1422773e2102367f1f2ef810f7abc3b6947efdf874c14"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/fixtures/captured_a_v2.h",
+          "baseline_sha256": "0885439baee79cea6ae03ecdf970e19f7e5adbd38f692a23a481c5ca92bce8c2",
+          "current_sha256": "0885439baee79cea6ae03ecdf970e19f7e5adbd38f692a23a481c5ca92bce8c2"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/fixtures/pdf_runs.h",
+          "baseline_sha256": "04884ca9c4efba1d1fdb0759742f4533a773413c3e33ff346e3393448e2877c5",
+          "current_sha256": "04884ca9c4efba1d1fdb0759742f4533a773413c3e33ff346e3393448e2877c5"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/line_search.h",
+          "baseline_sha256": "01326239989ead7094d25cb5ad3f4f5711191836c3399809fd41ac140516e6ec",
+          "current_sha256": "01326239989ead7094d25cb5ad3f4f5711191836c3399809fd41ac140516e6ec"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/maneuver_power.h",
+          "baseline_sha256": "25a9ee503b848da1b8eba1fd5bb3ecd1fbc87fd2dfdc4d054ce660f0c32e69ac",
+          "current_sha256": "25a9ee503b848da1b8eba1fd5bb3ecd1fbc87fd2dfdc4d054ce660f0c32e69ac"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/ramp_profile.h",
+          "baseline_sha256": "f6a4fb4988f895f0cec892216f1257a8a631c84ac4be724a9741f413b78ad2b5",
+          "current_sha256": "f6a4fb4988f895f0cec892216f1257a8a631c84ac4be724a9741f413b78ad2b5"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/smooth_follow.h",
+          "baseline_sha256": "ef69d84cea67cc8df16e21500baa2173757db4622fbb64905a61bbe488f428f1",
+          "current_sha256": "ef69d84cea67cc8df16e21500baa2173757db4622fbb64905a61bbe488f428f1"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/test_analog.c",
+          "baseline_sha256": "aab8b4fbb5fd3779c66d17636391f9b6f9da7788bdf4460935bed7082ff3f3b0",
+          "current_sha256": "aab8b4fbb5fd3779c66d17636391f9b6f9da7788bdf4460935bed7082ff3f3b0"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/test_barcode.c",
+          "baseline_sha256": "197e456fa794a95ad1f363ea59173d9e356f05e0ee0198a18d1ef7205140343b",
+          "current_sha256": "197e456fa794a95ad1f363ea59173d9e356f05e0ee0198a18d1ef7205140343b"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/test_barcode_raw.c",
+          "baseline_sha256": "af65ce51938cffe86149084194763e40b57bf3bc43cc0329151ea32b778d2655",
+          "current_sha256": "af65ce51938cffe86149084194763e40b57bf3bc43cc0329151ea32b778d2655"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/test_front_calibration.c",
+          "baseline_sha256": "2365216afa4eb28af966cd11f8bb490e4a9be28d8b129cbbfd044026c10948bb",
+          "current_sha256": "2365216afa4eb28af966cd11f8bb490e4a9be28d8b129cbbfd044026c10948bb"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/test_line_search.c",
+          "baseline_sha256": "5bcc2ecf8f921c92bc4e8f433042c58c0e9999466256cd21989274264ad0c635",
+          "current_sha256": "5bcc2ecf8f921c92bc4e8f433042c58c0e9999466256cd21989274264ad0c635"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/test_maneuver_power.c",
+          "baseline_sha256": "66a332c3aea34edbf2fb76216891bbe507888c08d2cae0f412df503ff7284dcd",
+          "current_sha256": "66a332c3aea34edbf2fb76216891bbe507888c08d2cae0f412df503ff7284dcd"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/test_ramp_profile.c",
+          "baseline_sha256": "3c8a8292a943f7b80c07b5922ff5d0c376fbc2cda2d785eabe624e1bd1044769",
+          "current_sha256": "3c8a8292a943f7b80c07b5922ff5d0c376fbc2cda2d785eabe624e1bd1044769"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/test_smooth_follow.c",
+          "baseline_sha256": "78a549d7da1fde2ac22fd696e2b016208efbe2dddfd2d083693ad4b3075cbd76",
+          "current_sha256": "78a549d7da1fde2ac22fd696e2b016208efbe2dddfd2d083693ad4b3075cbd76"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/test_start.c",
+          "baseline_sha256": "ecad308aabecf68d2fc4b45c1bb0e799575bf08c1a64c78f1b77b4fc69c566a3",
+          "current_sha256": "ecad308aabecf68d2fc4b45c1bb0e799575bf08c1a64c78f1b77b4fc69c566a3"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/test_uturn.c",
+          "baseline_sha256": "607978d95810aacc52d118d1e101f267b6b735085099727b3ff4f26aff897028",
+          "current_sha256": "607978d95810aacc52d118d1e101f267b6b735085099727b3ff4f26aff897028"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/uturn_logic.h",
+          "baseline_sha256": "915d0a1389dcc0378792271a2cdfa8a35389f6e44a05f49e3fc19c4019c80246",
+          "current_sha256": "915d0a1389dcc0378792271a2cdfa8a35389f6e44a05f49e3fc19c4019c80246"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/dual_wheel_bench/dual_logic.h",
+          "baseline_sha256": "070db0d10a5de9dd6ffc266c80bdf737961976436ad9089aef60e80e683b8689",
+          "current_sha256": "070db0d10a5de9dd6ffc266c80bdf737961976436ad9089aef60e80e683b8689"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/dual_wheel_bench/log_store.h",
+          "baseline_sha256": "75a744ae1b2c29f5a2221015b43b02a759f5476f54b02538957f7ffde31ed301",
+          "current_sha256": "75a744ae1b2c29f5a2221015b43b02a759f5476f54b02538957f7ffde31ed301"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/effort_scale.h",
+          "baseline_sha256": "117304f0907dacb8237bf466a365d9e80f6552d4b4a2bd91201e61dc5e306646",
+          "current_sha256": "117304f0907dacb8237bf466a365d9e80f6552d4b4a2bd91201e61dc5e306646"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/junction_left_test/boosted_wheel.h",
+          "baseline_sha256": "e9ade0804704ee4f6e39bf616422a6f9b9b1cba4ddc5b98a447c2664f889c376",
+          "current_sha256": "e9ade0804704ee4f6e39bf616422a6f9b9b1cba4ddc5b98a447c2664f889c376"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/junction_left_test/junction_logic.h",
+          "baseline_sha256": "fab752b430aeb103c827ab06cacf148bcab36a5b66d91eb3f861461f74425460",
+          "current_sha256": "fab752b430aeb103c827ab06cacf148bcab36a5b66d91eb3f861461f74425460"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/junction_left_test/signed_wheel.h",
+          "baseline_sha256": "02cef2da9a89414fc060ef3b6b3c91390da653f05a1b4fe967391685e587cd98",
+          "current_sha256": "02cef2da9a89414fc060ef3b6b3c91390da653f05a1b4fe967391685e587cd98"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/left_motor_bench/bench_logic.h",
+          "baseline_sha256": "43d2db87bae5ce6b60e8f933f18e30d018aa84e524654f2002db5bab69b25952",
+          "current_sha256": "43d2db87bae5ce6b60e8f933f18e30d018aa84e524654f2002db5bab69b25952"
+        },
+        {
+          "file": "v12_2/baseline/testing/subsystem2/line_motion_integration/logic.h",
+          "baseline_sha256": "0e864b24e55b58e87728fc4aa49280f196f63bb4b34cabe98d83edb79fa2c186",
+          "current_sha256": "0e864b24e55b58e87728fc4aa49280f196f63bb4b34cabe98d83edb79fa2c186"
+        },
+        {
+          "file": "v12_2/main.c",
+          "baseline_sha256": "ae5051aadfb571382b7d269865a306021ca9b4e185f0354c446f290902fd4be6",
+          "current_sha256": "ae5051aadfb571382b7d269865a306021ca9b4e185f0354c446f290902fd4be6"
+        },
+        {
+          "file": "v12_2/run_tests.py",
+          "baseline_sha256": "d4ca698f6475948a5a83602eb73144fa91fa24cf0f465976135ea7d3d8d3f1ae",
+          "current_sha256": "d4ca698f6475948a5a83602eb73144fa91fa24cf0f465976135ea7d3d8d3f1ae"
+        },
+        {
+          "file": "v12_2/scan_smooth.h",
+          "baseline_sha256": "83bb8f03280cad833c5f3b27efe9fc99d2f7719866dbd5cec22c05a17a2527b3",
+          "current_sha256": "83bb8f03280cad833c5f3b27efe9fc99d2f7719866dbd5cec22c05a17a2527b3"
+        },
+        {
+          "file": "v12_2/scan_smooth_reference.h",
+          "baseline_sha256": "2cb70dece832555ea602e36b2fc7267410679402c12bde380e00033200090728",
+          "current_sha256": "2cb70dece832555ea602e36b2fc7267410679402c12bde380e00033200090728"
+        },
+        {
+          "file": "v12_2/test_scan_smooth.c",
+          "baseline_sha256": "186a1236dea460c32b265bd894d6c0bcbb869eff9ae801404970cad892ea878a",
+          "current_sha256": "186a1236dea460c32b265bd894d6c0bcbb869eff9ae801404970cad892ea878a"
+        },
+        {
+          "file": "v12_2/verify_firmware.py",
+          "baseline_sha256": "b17c3bb5e942dd540b698cc6e219e2f7a3f131bf4c074f1e856aede959aaf2a0",
+          "current_sha256": "b17c3bb5e942dd540b698cc6e219e2f7a3f131bf4c074f1e856aede959aaf2a0"
+        },
+        {
+          "file": "verify_firmware.py",
+          "baseline_sha256": "fa2ee8cde1631190b9366445c60faa57cdc01c40e7e029439b0953c8f72d853e",
+          "current_sha256": "fa2ee8cde1631190b9366445c60faa57cdc01c40e7e029439b0953c8f72d853e"
+        },
+        {
+          "file": "verify_stack_layout.py",
+          "baseline_sha256": "091c2f27e964cae2ef01bb9a2a578ad92b430560854a25276270202f0255a244",
+          "current_sha256": "091c2f27e964cae2ef01bb9a2a578ad92b430560854a25276270202f0255a244"
+        },
+        {
+          "file": "wifi_config.example.h",
+          "baseline_sha256": "707d6c23ce3263f18fbb2b30750959e52a0bdfe0b24c8224d8df751c97d2add4",
+          "current_sha256": "707d6c23ce3263f18fbb2b30750959e52a0bdfe0b24c8224d8df751c97d2add4"
+        },
+        {
+          "file": "wifi_link_state.h",
+          "baseline_sha256": "b18bfcc6f1742a165d918c8da27c8b9616990440e0721316a0729b9545242e6d",
+          "current_sha256": "b18bfcc6f1742a165d918c8da27c8b9616990440e0721316a0729b9545242e6d"
+        },
+        {
+          "file": "wifi_mqtt_diag.h",
+          "baseline_sha256": "b939c3bbb18a3ffbc72b9ccba62a7d323e5d819979a9b2085338d58c07f491cf",
+          "current_sha256": "b939c3bbb18a3ffbc72b9ccba62a7d323e5d819979a9b2085338d58c07f491cf"
+        },
+        {
+          "file": "wifi_packets.h",
+          "baseline_sha256": "d3474414772ba64025a72aceb974c51b17a6ab3c081aa5a211034a0f25a61d60",
+          "current_sha256": "d3474414772ba64025a72aceb974c51b17a6ab3c081aa5a211034a0f25a61d60"
+        },
+        {
+          "file": "wifi_protocol.c",
+          "baseline_sha256": "dacd3b1981cbe0476c35cf478875476cfdb9448364eda5e73b30a9c9109af9f7",
+          "current_sha256": "dacd3b1981cbe0476c35cf478875476cfdb9448364eda5e73b30a9c9109af9f7"
+        },
+        {
+          "file": "wifi_protocol.h",
+          "baseline_sha256": "8a32732333f2ee1dfe7916a55401a66b3addeacfdf15a5732fd1e413760e9028",
+          "current_sha256": "8a32732333f2ee1dfe7916a55401a66b3addeacfdf15a5732fd1e413760e9028"
+        },
+        {
+          "file": "wifi_settings.h",
+          "baseline_sha256": "e2030da517ada1e62d8e47d07a2613e66c4ab9a636bb51ccbd5ea37ac1ae2d95",
+          "current_sha256": "e2030da517ada1e62d8e47d07a2613e66c4ab9a636bb51ccbd5ea37ac1ae2d95"
+        },
+        {
+          "file": "wifi_transport.c",
+          "baseline_sha256": "285acea73ab71d183b280e54ecebc0ff5100df522d65a18a2f335ff18c7d2a99",
+          "current_sha256": "285acea73ab71d183b280e54ecebc0ff5100df522d65a18a2f335ff18c7d2a99"
+        },
+        {
+          "file": "wifi_transport.h",
+          "baseline_sha256": "3b5bf6d469b270194da2473e541bd9359c2bd13f582c8dfee6af6ba358df6e43",
+          "current_sha256": "3b5bf6d469b270194da2473e541bd9359c2bd13f582c8dfee6af6ba358df6e43"
+        },
+        {
+          "file": "wifi_vectors.c",
+          "baseline_sha256": "37e6ad631188ae226024baa4c5c59d90bc5324dc0933cae1dd413f5e249dc0f5",
+          "current_sha256": "37e6ad631188ae226024baa4c5c59d90bc5324dc0933cae1dd413f5e249dc0f5"
+        }
+      ],
+      "missing": [
+        "BUILD_METRICS.json",
+        "SOURCE_SHA256.json",
+        "firmware/SHA256SUMS.txt"
+      ]
+    }
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "line": {
+    "time": "2026-10-30T05:21:24.836585000+0800",
+    "letter": "-",
+    "pending": "-"
+  },
+  "motion": {
+    "time": "2026-10-30T05:21:24.829484000+0800",
+    "uptime_ms": 92163,
+    "active": false,
+    "pwm": [
+      0,
+      0
+    ]
+  },
+  "summary": {
+    "time": "2026-10-30T05:20:41.886106000+0800",
+    "run": 1,
+    "reason": 49,
+    "duration_ms": 6753,
+    "distance_mm": 286
+  },
+  "diagnostic": {
+    "time": "2026-10-30T05:19:05.287031000+0800",
+    "fine_build_marker": false,
+    "flags": 5,
+    "threshold": 212,
+    "bank": 11,
+    "decoded_total": 0,
+    "bad_frames": 0,
+    "unsupported": 0,
+    "max_adc_gap_us": 4431,
+    "max_control_gap_us": 10757,
+    "invalid": [
+      0,
+      0
+    ]
+  }
+}

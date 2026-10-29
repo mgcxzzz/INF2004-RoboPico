@@ -1,0 +1,7 @@
+{
+  "phase": "not_performed_user_accepts_minor_roughness",
+  "capture": "/Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico/testing/integration/logs/2026-10-29_buddy4_drive_v1_1_codex1_capture.txt",
+  "fromLine": 154906,
+  "expected": "Carflat alignedwithplain straightline awayfromjunctions; line centred undercar/betweenfrontsensors, normalmounting. NoStart. Inspect whether sensors reportlineorbothwhite.",
+  "reason": "User clarified line following is okay despite some lack of smoothness. No extra stationary centered-line measurement or driving-tuning run requested."
+}

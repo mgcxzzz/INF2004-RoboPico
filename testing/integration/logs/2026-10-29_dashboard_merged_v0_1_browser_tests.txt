@@ -1,0 +1,84 @@
+# merged dashboard v0.1 browser checks, simulated MQTT only (2026-10-29T15:46:02Z); cloud workspace, Playwright 1.63.0, Chromium headless; tree hash identical to the repo copy (per-file sha256 compared); no screenshots
+== ui_merged.mjs
+PASS S01 first automatic publish is the read-only mapping query
+PASS S02 retained heartbeat does not make the car online
+PASS S03 fresh heartbeat shows car: online
+PASS S04 SDK packets select the SDK profile
+PASS S05 RTOS Safety shown as not provided on SDK firmware, never Normal
+PASS S06 SDK measured/target speed, PWM, ADC, levels with unavailable marker
+PASS S07 live right-minus-left height shown with sign
+PASS S08 profile notes the Buddy4 add-on
+PASS S09 accepted hump peak shown separately
+PASS S10 later live height does not replace the accepted ramp height
+PASS S11 pitch and roll shown
+PASS S12 accepted START reported as acceptance, state still from telemetry
+PASS S13 SDK fault displayed
+PASS S14 accepted Reset with lingering v2.3 per-run Fault is explained, not hidden
+PASS S15 RTOS Safety frame alongside SDK frames is flagged, not shown as Normal
+PASS S16 restart clears SDK live values
+PASS S17 restart clears Buddy2/Buddy4 live values with a reason
+PASS S18 restart keeps recorded evidence
+PASS S19 restart resets observed profile (mixed state cleared)
+PASS S20 run label sanitised and applied
+PASS S21 marker recorded with note and Pico uptime estimate
+PASS S22 64-byte SDK frame recorded whole (no 40-byte truncation)
+PASS S23 command from another client is surfaced
+PASS S24 Clear visible keeps message log, frames and events
+PASS S25 telemetry CSV keeps v2.3 columns and adds source/seq/label
+PASS S26 event JSON includes markers and capture limits
+PASS S27 all-frames CSV has laptop ISO time, Pico uptime, source/sequence, run ID and decoded data
+PASS S28 Buddy4 CSV separates live height and accepted peak
+PASS S29 evidence set: 7 files, manifest SHA-256 matches every file
+PASS S30 evidence set scoped to the run label
+PASS S31 first discard click only arms
+PASS S32 second click discards and reports what was removed
+PASS S33 stale coordinator status disables stored downloads with a reason
+PASS S34 stale SDK motion marked
+PASS S35 only GET was sent automatically; START and RESET only when clicked
+PASS S36 disconnect: car link unknown and live values cleared
+PASS R01 RTOS profile and Safety Normal from a fresh frame
+PASS R02 stored downloads explained as SDK-only; STEER test enabled on RTOS
+PASS R03 stale Safety never shown as Normal
+PASS R04 stale navigation falls back to heartbeat state
+PASS R05 last will: car offline and live values cleared
+PASS R06 RTOS Buddy4 build (shared sources only) inferred as RTOS
+PASS R07 mobile layout has no horizontal overflow
+PASS R08 no page or console errors
+
+44 passed, 0 failed (simulated MQTT; no broker, Pico or car)
+exit=0
+== compat/v23_ui_smoke.mjs (original v2.3 browser smoke test)
+{
+  "desktopPath": null,
+  "mobilePath": null,
+  "downloads": [
+    "download-0-motion_2026-10-29-15-46-21.csv",
+    "download-1-is28_diagnostics_2026-10-29-15-46-36.bin",
+    "download-2-is28_diagnostics_2026-10-29-15-46-36.csv",
+    "download-3-is28_diagnostics_2026-10-29-15-46-36.json"
+  ],
+  "motionCsvPath": "download-motion.csv",
+  "logRetries": 4,
+  "errors": []
+}
+exit=0
+== compat/rtos_check_dashboard_ui.mjs (original RTOS S1-U19 UI test)
+PASS UI01 four empty selectors with every A-Z option
+PASS UI02 missing selections rejected
+PASS UI03 subscribes then queries active map
+PASS UI04 boot readback has no hard-coded letters
+PASS UI05 duplicate letters never published
+PASS UI06 whole-map command uses five bytes and retain=false
+PASS UI07 acceptance alone does not claim confirmed mapping
+PASS UI08 matching readback confirms exactly the applied letters
+PASS UI09 mapping readback still handled after telemetry-off command
+PASS UI10 malformed readback logged without replacing active letters
+PASS UI11 mobile page has no horizontal overflow
+PASS UI12 lost readback produces unknown status, not false success
+PASS UI13 disconnect invalidates previously confirmed mapping
+PASS UI14 no page JavaScript errors
+PASS UI15 early stop is incomplete rather than PASS
+PASS UI16 silent test tail fails heartbeat in the actual UI
+
+16 passed, 0 failed (simulated MQTT; no Pico)
+exit=0

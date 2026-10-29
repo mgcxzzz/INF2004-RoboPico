@@ -1,0 +1,102 @@
+[
+  {
+    "path": "BUDDY5_HANDOFF.md",
+    "diag1_sha256": "9de62af718de73a89de22bed4da41cf3c6816422d6c591d8bee87755e9e11d01",
+    "handover_sha256": "b05f9502e0d8da0591cc473502cb6ec0fcee9b6bf7d1a8a4a80ca2cbfda80464"
+  },
+  {
+    "path": "BUILD.md",
+    "diag1_sha256": "9d3e998907771eab6e296344f08534fb3fc8af43acaff61c55316130cdea8b37",
+    "handover_sha256": "21e4da30980cfd8596b6b59b7b0a91a256b628a32c21c59a6142c7c73f993709"
+  },
+  {
+    "path": "BUILD_METRICS.json",
+    "diag1_sha256": "56d310a873c16596aa5a619d6b6eb9935af3128dac2018f66b9b766d9e7af783",
+    "handover_sha256": "934bca17532f1d5fc76536c7e81c700a5aaa87c517c722df31e413b73af17a41"
+  },
+  {
+    "path": "DATA_REPRESENTATION.md",
+    "diag1_sha256": "d8d5d78cb9fd0af2751c54ab510423ab41aa2d38f61d40038f3f63c820d13709",
+    "handover_sha256": "5852021732ce01fdad1e117e96c7e669369a70207a2f9bba1f36bedc3696344f"
+  },
+  {
+    "path": "DIAG_PATCHES.json",
+    "diag1_sha256": "71f52a1332c5c9fd0b660e0156dc497970584d453f74d5bf2c12b3c09602ff2a",
+    "handover_sha256": "4d33ec9e6e51a4231df6cf7f40d836b761f7c6dd53aebda9ad7ba403248c9e3e"
+  },
+  {
+    "path": "README.md",
+    "diag1_sha256": "a745d7c8986581306251d360fffabe00d2b88d7b64091ff26fdd7ca2ee027209",
+    "handover_sha256": "968ad6b752615d429e3857d4a15189d4eccbc123f2c316b5ca3503adf0475877"
+  },
+  {
+    "path": "V12_2_PATCHES.json",
+    "diag1_sha256": "baa2dd36b44b01bd6444fc2035b5eaf09339694390dfd15d21072579def0a18e",
+    "handover_sha256": "dee7130174a287c4354fa45fc61502566273fa07d1baf396d6bf9f81809b2a0e"
+  },
+  {
+    "path": "drive_diag.h",
+    "diag1_sha256": "9cfebd91945a38a73efb39028a1f8d0fcbfde18faa8664c7f1d7a449a71c5060",
+    "handover_sha256": "1ad454651bbacc24d65e034d2c5f9756c498b35e7328e8feb7a6d8518a240d0c"
+  },
+  {
+    "path": "drive_diag_pico.h",
+    "diag1_sha256": "166e52bdc7f75919b0ff68d62fa644518b8ce3f17175be0125ae0a1a194fa376",
+    "handover_sha256": "22e0eef58cca1ff0d2aa6920d5c33a1c785c3120a6877c4235048810304961f5"
+  },
+  {
+    "path": "drive_diag_storage.h",
+    "diag1_sha256": "90149b495528e147b8cad07d8febdd2a2f21070640c7758c017b2cae2a7b0d32",
+    "handover_sha256": "2a62e9c4e6086448aa09a859271a9c8b905c910c158e6f1e15e0782753f50012"
+  },
+  {
+    "path": "harness_adapter.h",
+    "diag1_sha256": "5769fa3ab784f6a2500fea1046c65adfa54a4053d9d6ae30881cea4ef0305b4e",
+    "handover_sha256": "6afeb3aaaa1080940cbd2f9817368fe92acd730bd825c7ab1863275790f5bde1"
+  },
+  {
+    "path": "run_tests.py",
+    "diag1_sha256": "e2f94178d1cdeb784aca5acde84714336c660d7cb9bf32f45e5ab7be301874b3",
+    "handover_sha256": "54764b7e96de7814b1655d7432d41a301cc8439cb4741bdbd5e5d96175519a02"
+  },
+  {
+    "path": "test_drive_diag.c",
+    "diag1_sha256": "f0a5f27e08698f1e1e98d05d18c0d2b96141b67829417188621c4b15eee29f38",
+    "handover_sha256": "6e18ffb0f2a001acd62e2e5a99277c6e543307a18d5ae18b1bc0e44a8176fae1"
+  },
+  {
+    "path": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/barcode_record.h",
+    "diag1_sha256": "ca1dfb65a7f8764f769808d37c581e100ed7a47385b10c25f79fe56fd6a3c271",
+    "handover_sha256": "49eaa8d261b35a093a1088b326ed992d9f391da60d26e4578c78ea4c68e3cbc2"
+  },
+  {
+    "path": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/main.c",
+    "diag1_sha256": "c990ff6e8d3d73e6b7661f2564ff3fdb0b6c1ffb5a43e31fd3b06b1db91dc29f",
+    "handover_sha256": "65051e73a873d1f536094228c07455b713b38262496a44ed8da5861e8ae28ee8"
+  },
+  {
+    "path": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/test_barcode.c",
+    "diag1_sha256": "32aba9a11b6045e75e8b6a97a94e00d40c4a2bd475962a1380056aa3cc6375b7",
+    "handover_sha256": "a65f9206c7f09e8c44b8331a371688951e5f4fdca30cdee5eb0bc4c5caffcd6c"
+  },
+  {
+    "path": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/test_uturn.c",
+    "diag1_sha256": "a4b308531ffa56739fa0bb5a07a9afb4882cbad12643e9fd588df784e4cac642",
+    "handover_sha256": "607978d95810aacc52d118d1e101f267b6b735085099727b3ff4f26aff897028"
+  },
+  {
+    "path": "verify_firmware.py",
+    "diag1_sha256": "6f4a3f211887dac948788507e4fc26edd9974d093dabac1b70ada7f48e59b624",
+    "handover_sha256": "977fe0955f85ed77a6ad1d94fd09f52a600e3ff9f2c0239db309f69e7a3c0ad2"
+  },
+  {
+    "path": "cruise_handover.h",
+    "diag1_sha256": null,
+    "handover_sha256": "736e45bc87898f01d29abfe96fb3e26693fb9fe2817848c2aca3cc949d289137"
+  },
+  {
+    "path": "test_cruise_handover.c",
+    "diag1_sha256": null,
+    "handover_sha256": "2b3478778280e6abd03e6265b0c25c983e92504e2dc099f017d937796564e4e7"
+  }
+]

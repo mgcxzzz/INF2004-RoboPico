@@ -1,0 +1,12 @@
+{
+  "start_time": "2026-10-30T04:04:01.602930+08:00",
+  "capture_path": "/Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico/testing/integration/logs/2026-10-29_buddy4_drive_v1_1_codex1_capture.txt",
+  "capture_start_offset": 94067276,
+  "claimed_firmware": "B4 estimatorv0.2 + RA detectorv0.2 active",
+  "require_markers": {
+    "detector": 2,
+    "estimator": 2
+  },
+  "setup": "lower bracket,original calibration,10mm right-wheel ramp; baseline line-following issue unresolved",
+  "motor_commands_sent": false
+}

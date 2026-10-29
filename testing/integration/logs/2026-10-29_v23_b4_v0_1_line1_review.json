@@ -1,0 +1,1299 @@
+{
+  "userObservation": "Followed line normally and stopped when commanded",
+  "fromLine": 33056,
+  "toLineExclusive": 36844,
+  "baseline": {
+    "v23motion": {
+      "time": "2026-10-29T20:46:34.252908000+0800",
+      "adcLeft": 3171,
+      "adcRight": 3349,
+      "levelLeft": 913,
+      "levelRight": 900
+    },
+    "diagnostics": {
+      "time": "2026-10-29T20:46:34.184768000+0800",
+      "uptimeMs": 513185,
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11221,
+      "txDropped": 1810,
+      "rxDropped": 0
+    },
+    "heartbeat": {
+      "time": "2026-10-29T20:46:34.172371000+0800",
+      "net": 2,
+      "netName": "Operational",
+      "state": 0,
+      "stateName": "Ready",
+      "lastCmd": 10,
+      "lastCmdName": "BARCODE_GET",
+      "lastResult": 0,
+      "lastResultName": "accepted",
+      "uptimeS": 513,
+      "published": 22215,
+      "lost": 1810,
+      "accepted": 18,
+      "rejected": 0,
+      "connects": 1,
+      "fillPct": 0
+    },
+    "motion": {
+      "time": "2026-10-29T20:46:34.017961000+0800",
+      "freshOdometry": true,
+      "sideEstimateValid": true,
+      "oneSidedMode": true,
+      "passive": false,
+      "leftSpeedMmS": 0,
+      "rightSpeedMmS": 0,
+      "centreSpeedMmS": 0,
+      "rollDeg": -0.3,
+      "rightMinusLeftHeightMm": 0,
+      "netDistanceMm": 0,
+      "invalidTransitionsLeft": 0,
+      "invalidTransitionsRight": 0,
+      "qualityReasons": 0,
+      "rampLevelReady": false,
+      "rampCandidate": false,
+      "rampRising": false,
+      "rampReturning": false,
+      "qualityBadSamples": 0,
+      "qualityTotalSamples": 26,
+      "maxSpreadMg": 16,
+      "maxAbsAccelMmS2": 0,
+      "maxAbsTurnDegS": 0,
+      "rateSamples": 26,
+      "maxMadMg": 8,
+      "minFifoSamples": 7,
+      "maxMadFwdMg": 4,
+      "maxMadLatMg": 8,
+      "maxMadUpMg": 4
+    },
+    "imu": {
+      "time": "2026-10-29T20:46:34.009226000+0800",
+      "state": 2,
+      "stateName": "Idle",
+      "motion": "stationary",
+      "event": "status",
+      "detail": 0,
+      "valid": true,
+      "odometry": true,
+      "pitchDeg": 0.1,
+      "lastFault": 0,
+      "heightMm": 0,
+      "highestMm": 0,
+      "humps": 0,
+      "rejected": 0,
+      "shockMg": 0,
+      "shockNotifyMs": 0,
+      "shocks": 0,
+      "i2cErrors": 0,
+      "framesMissed": 0,
+      "eventMs": 0
+    }
+  },
+  "lastMotion": {
+    "line": 36824,
+    "time": "2026-10-29T20:47:57.203159000+0800",
+    "topic": "is28/tlm",
+    "src": 2,
+    "srcName": "Motion (B2)",
+    "seq": 147,
+    "len": 37,
+    "data": {
+      "freshOdometry": true,
+      "sideEstimateValid": true,
+      "oneSidedMode": true,
+      "passive": false,
+      "leftSpeedMmS": 0,
+      "rightSpeedMmS": 0,
+      "centreSpeedMmS": 0,
+      "rollDeg": 0.1,
+      "rightMinusLeftHeightMm": 0,
+      "netDistanceMm": 239,
+      "invalidTransitionsLeft": 0,
+      "invalidTransitionsRight": 0,
+      "qualityReasons": 0,
+      "rampLevelReady": false,
+      "rampCandidate": false,
+      "rampRising": false,
+      "rampReturning": false,
+      "qualityBadSamples": 0,
+      "qualityTotalSamples": 26,
+      "maxSpreadMg": 104,
+      "maxAbsAccelMmS2": 0,
+      "maxAbsTurnDegS": 0,
+      "rateSamples": 26,
+      "maxMadMg": 28,
+      "minFifoSamples": 7,
+      "maxMadFwdMg": 28,
+      "maxMadLatMg": 20,
+      "maxMadUpMg": 16
+    }
+  },
+  "lastImu": {
+    "line": 36823,
+    "time": "2026-10-29T20:47:57.203079000+0800",
+    "topic": "is28/tlm",
+    "src": 4,
+    "srcName": "IMU (B4)",
+    "seq": 153,
+    "len": 16,
+    "data": {
+      "state": 2,
+      "stateName": "Idle",
+      "motion": "stationary",
+      "event": "status",
+      "detail": 0,
+      "valid": true,
+      "odometry": true,
+      "pitchDeg": 0.2,
+      "lastFault": 0,
+      "heightMm": 0,
+      "highestMm": 0,
+      "humps": 0,
+      "rejected": 0,
+      "shockMg": 0,
+      "shockNotifyMs": 0,
+      "shocks": 0,
+      "i2cErrors": 0,
+      "framesMissed": 83,
+      "eventMs": 0
+    }
+  },
+  "lastHeartbeat": {
+    "line": 36804,
+    "time": "2026-10-29T20:47:56.756166000+0800",
+    "topic": "is28/hb",
+    "src": 1,
+    "srcName": "WiFi (B1)",
+    "seq": 98,
+    "len": 12,
+    "data": {
+      "net": 2,
+      "netName": "Operational",
+      "state": 3,
+      "stateName": "Safe Stop",
+      "lastCmd": 4,
+      "lastCmdName": "STOP",
+      "lastResult": 0,
+      "lastResultName": "accepted",
+      "uptimeS": 595,
+      "published": 25964,
+      "lost": 1889,
+      "accepted": 23,
+      "rejected": 0,
+      "connects": 1,
+      "fillPct": 0
+    }
+  },
+  "lastDiagnostics": {
+    "line": 36806,
+    "time": "2026-10-29T20:47:56.765442000+0800",
+    "uptimeMs": 595758,
+    "maxAdcGapUs": 6696,
+    "maxControlGapUs": 12682,
+    "txDropped": 1889,
+    "rxDropped": 0,
+    "invalidLeft": 0,
+    "invalidRight": 0
+  },
+  "diagnostics": [
+    {
+      "line": 33099,
+      "time": "2026-10-29T20:46:35.191997000+0800",
+      "uptimeMs": 514185,
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11221,
+      "txDropped": 1810,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 33146,
+      "time": "2026-10-29T20:46:36.180230000+0800",
+      "uptimeMs": 515185,
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11221,
+      "txDropped": 1810,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 33191,
+      "time": "2026-10-29T20:46:37.197659000+0800",
+      "uptimeMs": 516185,
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11221,
+      "txDropped": 1810,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 33238,
+      "time": "2026-10-29T20:46:38.240108000+0800",
+      "uptimeMs": 517186,
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11221,
+      "txDropped": 1810,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 33285,
+      "time": "2026-10-29T20:46:39.186994000+0800",
+      "uptimeMs": 518187,
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11221,
+      "txDropped": 1810,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 33332,
+      "time": "2026-10-29T20:46:40.177736000+0800",
+      "uptimeMs": 519187,
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11221,
+      "txDropped": 1810,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 33379,
+      "time": "2026-10-29T20:46:41.193098000+0800",
+      "uptimeMs": 520187,
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11221,
+      "txDropped": 1810,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 33426,
+      "time": "2026-10-29T20:46:42.198268000+0800",
+      "uptimeMs": 521187,
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11221,
+      "txDropped": 1810,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 33473,
+      "time": "2026-10-29T20:46:43.180568000+0800",
+      "uptimeMs": 522187,
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11221,
+      "txDropped": 1810,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 33520,
+      "time": "2026-10-29T20:46:44.181791000+0800",
+      "uptimeMs": 523187,
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11221,
+      "txDropped": 1810,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 33563,
+      "time": "2026-10-29T20:46:45.179379000+0800",
+      "uptimeMs": 524188,
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11221,
+      "txDropped": 1810,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 33610,
+      "time": "2026-10-29T20:46:46.190601000+0800",
+      "uptimeMs": 525188,
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11221,
+      "txDropped": 1810,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 33657,
+      "time": "2026-10-29T20:46:47.173718000+0800",
+      "uptimeMs": 526188,
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11221,
+      "txDropped": 1810,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 33704,
+      "time": "2026-10-29T20:46:48.176914000+0800",
+      "uptimeMs": 527188,
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11221,
+      "txDropped": 1810,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 33751,
+      "time": "2026-10-29T20:46:49.182639000+0800",
+      "uptimeMs": 528188,
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11221,
+      "txDropped": 1810,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 33798,
+      "time": "2026-10-29T20:46:50.195644000+0800",
+      "uptimeMs": 529188,
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11221,
+      "txDropped": 1810,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 33845,
+      "time": "2026-10-29T20:46:51.200887000+0800",
+      "uptimeMs": 530189,
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11221,
+      "txDropped": 1810,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 33892,
+      "time": "2026-10-29T20:46:52.209566000+0800",
+      "uptimeMs": 531190,
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11221,
+      "txDropped": 1810,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 33937,
+      "time": "2026-10-29T20:46:53.270939000+0800",
+      "uptimeMs": 532190,
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11221,
+      "txDropped": 1810,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 33984,
+      "time": "2026-10-29T20:46:54.186071000+0800",
+      "uptimeMs": 533190,
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11221,
+      "txDropped": 1810,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 34031,
+      "time": "2026-10-29T20:46:55.211986000+0800",
+      "uptimeMs": 534190,
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11221,
+      "txDropped": 1810,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 34078,
+      "time": "2026-10-29T20:46:56.181930000+0800",
+      "uptimeMs": 535190,
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11221,
+      "txDropped": 1810,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 34125,
+      "time": "2026-10-29T20:46:57.214808000+0800",
+      "uptimeMs": 536190,
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11221,
+      "txDropped": 1810,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 34169,
+      "time": "2026-10-29T20:46:58.851837000+0800",
+      "uptimeMs": 537837,
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11221,
+      "txDropped": 1846,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 34216,
+      "time": "2026-10-29T20:46:59.835975000+0800",
+      "uptimeMs": 538837,
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11221,
+      "txDropped": 1846,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 34266,
+      "time": "2026-10-29T20:47:00.859110000+0800",
+      "uptimeMs": 539840,
+      "maxAdcGapUs": 2572,
+      "maxControlGapUs": 0,
+      "txDropped": 1846,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 34314,
+      "time": "2026-10-29T20:47:01.852550000+0800",
+      "uptimeMs": 540841,
+      "maxAdcGapUs": 5075,
+      "maxControlGapUs": 12954,
+      "txDropped": 1846,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 34362,
+      "time": "2026-10-29T20:47:02.843869000+0800",
+      "uptimeMs": 541844,
+      "maxAdcGapUs": 6322,
+      "maxControlGapUs": 12954,
+      "txDropped": 1846,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 34387,
+      "time": "2026-10-29T20:47:03.226160000+0800",
+      "uptimeMs": 542227,
+      "maxAdcGapUs": 6322,
+      "maxControlGapUs": 12954,
+      "txDropped": 1846,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 34435,
+      "time": "2026-10-29T20:47:04.635284000+0800",
+      "uptimeMs": 543227,
+      "maxAdcGapUs": 6322,
+      "maxControlGapUs": 12954,
+      "txDropped": 1846,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 34448,
+      "time": "2026-10-29T20:47:05.247479000+0800",
+      "uptimeMs": 544227,
+      "maxAdcGapUs": 6322,
+      "maxControlGapUs": 12954,
+      "txDropped": 1846,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 34493,
+      "time": "2026-10-29T20:47:06.267448000+0800",
+      "uptimeMs": 545229,
+      "maxAdcGapUs": 6322,
+      "maxControlGapUs": 12954,
+      "txDropped": 1846,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 34540,
+      "time": "2026-10-29T20:47:07.222182000+0800",
+      "uptimeMs": 546231,
+      "maxAdcGapUs": 6322,
+      "maxControlGapUs": 12954,
+      "txDropped": 1846,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 34588,
+      "time": "2026-10-29T20:47:09.356916000+0800",
+      "uptimeMs": 547231,
+      "maxAdcGapUs": 6322,
+      "maxControlGapUs": 12954,
+      "txDropped": 1846,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 34653,
+      "time": "2026-10-29T20:47:10.372095000+0800",
+      "uptimeMs": 549381,
+      "maxAdcGapUs": 6322,
+      "maxControlGapUs": 12954,
+      "txDropped": 1888,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 34700,
+      "time": "2026-10-29T20:47:11.380333000+0800",
+      "uptimeMs": 550381,
+      "maxAdcGapUs": 6322,
+      "maxControlGapUs": 12954,
+      "txDropped": 1888,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 34747,
+      "time": "2026-10-29T20:47:12.381393000+0800",
+      "uptimeMs": 551381,
+      "maxAdcGapUs": 6322,
+      "maxControlGapUs": 12954,
+      "txDropped": 1888,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 34794,
+      "time": "2026-10-29T20:47:13.384885000+0800",
+      "uptimeMs": 552381,
+      "maxAdcGapUs": 6322,
+      "maxControlGapUs": 12954,
+      "txDropped": 1888,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 34839,
+      "time": "2026-10-29T20:47:14.385187000+0800",
+      "uptimeMs": 553381,
+      "maxAdcGapUs": 6322,
+      "maxControlGapUs": 12954,
+      "txDropped": 1888,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 34886,
+      "time": "2026-10-29T20:47:15.380101000+0800",
+      "uptimeMs": 554381,
+      "maxAdcGapUs": 6322,
+      "maxControlGapUs": 12954,
+      "txDropped": 1888,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 34933,
+      "time": "2026-10-29T20:47:16.371642000+0800",
+      "uptimeMs": 555381,
+      "maxAdcGapUs": 6322,
+      "maxControlGapUs": 12954,
+      "txDropped": 1888,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 34980,
+      "time": "2026-10-29T20:47:17.391383000+0800",
+      "uptimeMs": 556382,
+      "maxAdcGapUs": 6322,
+      "maxControlGapUs": 12954,
+      "txDropped": 1888,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 35009,
+      "time": "2026-10-29T20:47:17.865563000+0800",
+      "uptimeMs": 556868,
+      "maxAdcGapUs": 6322,
+      "maxControlGapUs": 12954,
+      "txDropped": 1888,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 35056,
+      "time": "2026-10-29T20:47:18.865990000+0800",
+      "uptimeMs": 557868,
+      "maxAdcGapUs": 6322,
+      "maxControlGapUs": 12954,
+      "txDropped": 1888,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 35104,
+      "time": "2026-10-29T20:47:19.880011000+0800",
+      "uptimeMs": 558868,
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 0,
+      "txDropped": 1888,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 35152,
+      "time": "2026-10-29T20:47:20.872146000+0800",
+      "uptimeMs": 559868,
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12437,
+      "txDropped": 1888,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 35202,
+      "time": "2026-10-29T20:47:21.857806000+0800",
+      "uptimeMs": 560869,
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12437,
+      "txDropped": 1888,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 35252,
+      "time": "2026-10-29T20:47:22.882371000+0800",
+      "uptimeMs": 561869,
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 1888,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 35299,
+      "time": "2026-10-29T20:47:23.841567000+0800",
+      "uptimeMs": 562748,
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 1888,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 35346,
+      "time": "2026-10-29T20:47:24.738512000+0800",
+      "uptimeMs": 563748,
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 1889,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 35359,
+      "time": "2026-10-29T20:47:25.758737000+0800",
+      "uptimeMs": 564748,
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 1889,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 35406,
+      "time": "2026-10-29T20:47:26.749616000+0800",
+      "uptimeMs": 565748,
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 1889,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 35451,
+      "time": "2026-10-29T20:47:27.759546000+0800",
+      "uptimeMs": 566748,
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 1889,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 35498,
+      "time": "2026-10-29T20:47:28.747870000+0800",
+      "uptimeMs": 567749,
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 1889,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 35545,
+      "time": "2026-10-29T20:47:29.742068000+0800",
+      "uptimeMs": 568749,
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 1889,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 35592,
+      "time": "2026-10-29T20:47:30.743191000+0800",
+      "uptimeMs": 569749,
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 1889,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 35639,
+      "time": "2026-10-29T20:47:31.769784000+0800",
+      "uptimeMs": 570749,
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 1889,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 35684,
+      "time": "2026-10-29T20:47:32.741224000+0800",
+      "uptimeMs": 571749,
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 1889,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 35731,
+      "time": "2026-10-29T20:47:33.744151000+0800",
+      "uptimeMs": 572750,
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 1889,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 35778,
+      "time": "2026-10-29T20:47:34.740337000+0800",
+      "uptimeMs": 573750,
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 1889,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 35825,
+      "time": "2026-10-29T20:47:35.761808000+0800",
+      "uptimeMs": 574750,
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 1889,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 35870,
+      "time": "2026-10-29T20:47:36.739827000+0800",
+      "uptimeMs": 575750,
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 1889,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 35917,
+      "time": "2026-10-29T20:47:37.742599000+0800",
+      "uptimeMs": 576751,
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 1889,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 35964,
+      "time": "2026-10-29T20:47:38.741977000+0800",
+      "uptimeMs": 577751,
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 1889,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 36011,
+      "time": "2026-10-29T20:47:39.748142000+0800",
+      "uptimeMs": 578751,
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 1889,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 36058,
+      "time": "2026-10-29T20:47:40.784513000+0800",
+      "uptimeMs": 579752,
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 1889,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 36105,
+      "time": "2026-10-29T20:47:41.752199000+0800",
+      "uptimeMs": 580755,
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 1889,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 36152,
+      "time": "2026-10-29T20:47:42.746750000+0800",
+      "uptimeMs": 581755,
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 1889,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 36197,
+      "time": "2026-10-29T20:47:43.747788000+0800",
+      "uptimeMs": 582755,
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 1889,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 36244,
+      "time": "2026-10-29T20:47:44.759536000+0800",
+      "uptimeMs": 583755,
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 1889,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 36291,
+      "time": "2026-10-29T20:47:45.753009000+0800",
+      "uptimeMs": 584755,
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 1889,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 36338,
+      "time": "2026-10-29T20:47:46.743533000+0800",
+      "uptimeMs": 585755,
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 1889,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 36385,
+      "time": "2026-10-29T20:47:47.748063000+0800",
+      "uptimeMs": 586757,
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 1889,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 36432,
+      "time": "2026-10-29T20:47:48.768124000+0800",
+      "uptimeMs": 587757,
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 1889,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 36479,
+      "time": "2026-10-29T20:47:49.776306000+0800",
+      "uptimeMs": 588757,
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 1889,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 36526,
+      "time": "2026-10-29T20:47:50.747670000+0800",
+      "uptimeMs": 589757,
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 1889,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 36573,
+      "time": "2026-10-29T20:47:51.755422000+0800",
+      "uptimeMs": 590757,
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 1889,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 36618,
+      "time": "2026-10-29T20:47:52.753331000+0800",
+      "uptimeMs": 591757,
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 1889,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 36665,
+      "time": "2026-10-29T20:47:53.978673000+0800",
+      "uptimeMs": 592758,
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 1889,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 36712,
+      "time": "2026-10-29T20:47:54.794697000+0800",
+      "uptimeMs": 593758,
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 1889,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 36759,
+      "time": "2026-10-29T20:47:55.748004000+0800",
+      "uptimeMs": 594758,
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 1889,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "line": 36806,
+      "time": "2026-10-29T20:47:56.765442000+0800",
+      "uptimeMs": 595758,
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 1889,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    }
+  ],
+  "acks": [
+    {
+      "line": 34164,
+      "time": "2026-10-29T20:46:58.827919000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 1,
+        "codeName": "START",
+        "id": 11,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 0,
+        "stateName": "Ready"
+      }
+    },
+    {
+      "line": 34381,
+      "time": "2026-10-29T20:47:03.209908000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 4,
+        "codeName": "STOP",
+        "id": 12,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 3,
+        "stateName": "Safe Stop"
+      }
+    },
+    {
+      "line": 34595,
+      "time": "2026-10-29T20:47:09.369556000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 44,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 3,
+        "stateName": "Safe Stop"
+      }
+    },
+    {
+      "line": 35004,
+      "time": "2026-10-29T20:47:17.858521000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 1,
+        "codeName": "START",
+        "id": 13,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 0,
+        "stateName": "Ready"
+      }
+    },
+    {
+      "line": 35290,
+      "time": "2026-10-29T20:47:23.815333000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 4,
+        "codeName": "STOP",
+        "id": 14,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 3,
+        "stateName": "Safe Stop"
+      }
+    }
+  ],
+  "movingFrames": 12,
+  "encoderDelta": {
+    "left": 0,
+    "right": 0
+  },
+  "distanceDeltaMm": 239,
+  "i2cDelta": 0,
+  "missedDelta": 83,
+  "allSampledFresh": false,
+  "activeSpeedRanges": {
+    "left": [
+      0,
+      64
+    ],
+    "right": [
+      25,
+      63
+    ]
+  },
+  "result": "PASS short line-follow/commanded-stop function",
+  "actualCommandRuns": 2,
+  "interpretation": "Two accepted Start/Stop command runs in this capture range, not one. IMU missed count increased0->41 and41->83 in Idle after Stop. Source inspection shows existing v2.3 calls blocking save_log() after1s settling on Stop; this is a plausible source of these post-stop gaps, not directly timed in hardware. No new invalid encoder transitions or I2C errors. Do not label entire Buddy4 timing test PASS; original-v2.3 active timing comparison remains pending.",
+  "imuTrackingMissedSamples": [
+    {
+      "time": "2026-10-29T20:47:00.859190000+0800",
+      "missed": 0,
+      "event": "status"
+    },
+    {
+      "time": "2026-10-29T20:47:01.347283000+0800",
+      "missed": 0,
+      "event": "status"
+    },
+    {
+      "time": "2026-10-29T20:47:01.470536000+0800",
+      "missed": 0,
+      "event": "motion"
+    },
+    {
+      "time": "2026-10-29T20:47:01.873064000+0800",
+      "missed": 0,
+      "event": "status"
+    },
+    {
+      "time": "2026-10-29T20:47:02.360441000+0800",
+      "missed": 0,
+      "event": "status"
+    },
+    {
+      "time": "2026-10-29T20:47:02.892967000+0800",
+      "missed": 0,
+      "event": "status"
+    },
+    {
+      "time": "2026-10-29T20:47:19.880047000+0800",
+      "missed": 41,
+      "event": "status"
+    },
+    {
+      "time": "2026-10-29T20:47:20.397809000+0800",
+      "missed": 41,
+      "event": "status"
+    },
+    {
+      "time": "2026-10-29T20:47:20.598500000+0800",
+      "missed": 41,
+      "event": "motion"
+    },
+    {
+      "time": "2026-10-29T20:47:20.923504000+0800",
+      "missed": 41,
+      "event": "status"
+    },
+    {
+      "time": "2026-10-29T20:47:21.034888000+0800",
+      "missed": 41,
+      "event": "motion"
+    },
+    {
+      "time": "2026-10-29T20:47:21.180253000+0800",
+      "missed": 41,
+      "event": "motion"
+    },
+    {
+      "time": "2026-10-29T20:47:21.408259000+0800",
+      "missed": 41,
+      "event": "status"
+    },
+    {
+      "time": "2026-10-29T20:47:21.929863000+0800",
+      "missed": 41,
+      "event": "status"
+    },
+    {
+      "time": "2026-10-29T20:47:22.129153000+0800",
+      "missed": 41,
+      "event": "motion"
+    },
+    {
+      "time": "2026-10-29T20:47:22.256817000+0800",
+      "missed": 41,
+      "event": "motion"
+    },
+    {
+      "time": "2026-10-29T20:47:22.413895000+0800",
+      "missed": 41,
+      "event": "status"
+    },
+    {
+      "time": "2026-10-29T20:47:22.915868000+0800",
+      "missed": 41,
+      "event": "status"
+    },
+    {
+      "time": "2026-10-29T20:47:23.434688000+0800",
+      "missed": 41,
+      "event": "status"
+    }
+  ]
+}

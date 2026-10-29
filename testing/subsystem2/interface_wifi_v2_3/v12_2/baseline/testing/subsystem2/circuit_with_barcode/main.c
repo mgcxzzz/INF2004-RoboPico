@@ -464,6 +464,8 @@ static void dump(void) {
 #include "../../../../../drive_diag_pico.h"
 #include "../../../../../nav_log_harness.h"
 #include "../../../../../wifi_harness.h"
+#include "../../../../../buddy4_harness.h" /* Buddy4 add-on (observer only) */
+#include "../../../../../ramp_assist_harness.h" /* ramp-assist v0.1 */
 
 static unsigned start_block(unsigned mode) {
     if(wifi_estop)return START_GP20;
@@ -517,6 +519,8 @@ static void control_step(uint64_t now) {
     }
     restore_interrupts(irq);float dt=(float)elapsed/1e6f;
     for(unsigned w=0;w<2;++w) velocity[w]+=0.25f*(raw_to_mm(w,e[w].position)/dt-velocity[w]);
+    buddy4_odometry_note(e,now,elapsed); /* Buddy4 add-on: observe drained encoders */
+    if(!active) ramp_assist_halt(now); /* ramp-assist v0.1: Stop/ESTOP/fault/run end */
     if(!active) return;
     diag_observing=diag_capture.begun && !diag_capture.frozen;
     if(diag_observing) {
@@ -562,7 +566,7 @@ static void control_step(uint64_t now) {
     int effort_outer=search_outer>=0?search_outer:capture_outer>=0?capture_outer:load_outer;
     bool loaded[2]={turning || effort_outer==0,turning || effort_outer==1};
     for(unsigned w=0;w<2;++w) {
-        if(!continuous_active)continuous_leave(&continuous_wheel[w],&controller[w],w,demand.target[w],velocity[w],output[w]);
+        if(!continuous_active)continuous_leave(&continuous_wheel[w],&controller[w],w,demand.target[w],velocity[w],ramp_assist_unboosted(w,output[w])); /* ramp-assist v0.1: seed without added PWM */
         if(!ramp_drive)ramp_wheel_leave(&ramp_wheel[w],&controller[w],demand.target[w]);
         if(!maneuver_drive)maneuver_leave(&maneuver_power[w],&controller[w],demand.target[w]);
     }
@@ -576,6 +580,7 @@ static void control_step(uint64_t now) {
     if(diag_observing && preserve_cruise_I)diag_tick.v[D_FLAGS]|=DF_HANDOVER_KEEP;
     if(leave_fast && !continuous_active) for(unsigned w=0;w<2;++w) cruise_handover_apply(&controller[w],preserve_cruise_I);
     last_fast=circuit.fast;
+    ramp_assist_control(now,dt,continuous_active && !recovering); /* ramp-assist v0.1 */
     feedback_mask=0;
     for(unsigned w=0;w<2;++w) {
         if(continuous_active)next[w]=continuous_drive_step(&continuous_wheel[w],&controller[w],w,demand.target[w],velocity[w],dt,now,output[w]);
@@ -647,6 +652,7 @@ int main(void) {
     } else puts("CAL SAVED: restoring this V2.3 firmware's saved calibration/profile; c restores preset.");
     recorded_version=28;
     load_raw();load_drive_diag();buddy_extension_init();side_cal=(SideCalibration){0,1,3};last_control=time_us_64();wifi_harness_init();
+    buddy4_init(); /* Buddy4 add-on */
     bool old_connected=false,usb_pending=false;uint8_t raw_buttons=0,buttons=0;
     uint64_t changed=0,last_status=0,last_adc=0,usb_start_at=0;uint32_t seen_stops=0;
     BenchArm arm={0};
@@ -736,6 +742,7 @@ int main(void) {
         uint8_t before_phase=circuit.phase;
         control_step(time_us_64());now=time_us_64();
         buddy_extension_poll(now);wifi_barcode_events(now);wifi_harness_poll(now);
+        buddy4_poll(time_us_64()); /* Buddy4 add-on */
         if(connected && guard.active && circuit.phase!=before_phase)
             printf("PHASE %u: %s\n",circuit.phase,phase_name(circuit.phase));
         if(guard.stops!=seen_stops) {

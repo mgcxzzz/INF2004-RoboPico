@@ -1,0 +1,8 @@
+{
+  "start_time": "2026-10-30T04:13:47.279809+08:00",
+  "capture_path": "/Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico/testing/integration/logs/2026-10-29_buddy4_drive_v1_1_codex1_capture.txt",
+  "capture_start_offset": 97062876,
+  "firmware": "B4 estimator2/RA detector2 active",
+  "setup": "repeat manualStop when rightwheel clearly elevated near ramp crest; previous Stop preceded assist activation",
+  "motor_commands_sent": false
+}

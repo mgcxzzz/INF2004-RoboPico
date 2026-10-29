@@ -1,0 +1,8 @@
+{
+  "start_time": "2026-10-30T03:35:53.972671+08:00",
+  "capture_path": "/Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico/testing/integration/logs/2026-10-29_buddy4_drive_v1_1_codex1_capture.txt",
+  "capture_start_offset": 86114737,
+  "firmware": "B4 estimator2 / RA detector2 active, confirmed previous run",
+  "setup": "flat repeat; instructed short3second run on uninterrupted straight line",
+  "motor_commands_sent": false
+}

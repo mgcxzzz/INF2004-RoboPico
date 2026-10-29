@@ -1,0 +1,870 @@
+{
+  "classification": "Confounded by changed IR mounting/possible line sensing issue; not a clean ramp trial",
+  "userObservation": "Car stuttered; user angled IR higher and suspects line detection",
+  "fromLine": 59829,
+  "toLineExclusive": 69446,
+  "lastMotion": {
+    "line": 69439,
+    "time": "2026-10-29T21:00:06.077787000+0800",
+    "topic": "is28/tlm",
+    "src": 2,
+    "srcName": "Motion (B2)",
+    "seq": 45,
+    "len": 37,
+    "data": {
+      "freshOdometry": true,
+      "sideEstimateValid": true,
+      "oneSidedMode": true,
+      "passive": false,
+      "leftSpeedMmS": 0,
+      "rightSpeedMmS": 0,
+      "centreSpeedMmS": 0,
+      "rollDeg": -0.7,
+      "rightMinusLeftHeightMm": -1,
+      "netDistanceMm": 842,
+      "invalidTransitionsLeft": 0,
+      "invalidTransitionsRight": 1,
+      "qualityReasons": 0,
+      "rampLevelReady": false,
+      "rampCandidate": false,
+      "rampRising": false,
+      "rampReturning": false,
+      "qualityBadSamples": 0,
+      "qualityTotalSamples": 26,
+      "maxSpreadMg": 24,
+      "maxAbsAccelMmS2": 0,
+      "maxAbsTurnDegS": 0,
+      "rateSamples": 26,
+      "maxMadMg": 8,
+      "minFifoSamples": 7,
+      "maxMadFwdMg": 0,
+      "maxMadLatMg": 8,
+      "maxMadUpMg": 8
+    }
+  },
+  "lastImu": {
+    "line": 69438,
+    "time": "2026-10-29T21:00:06.077726000+0800",
+    "topic": "is28/tlm",
+    "src": 4,
+    "srcName": "IMU (B4)",
+    "seq": 59,
+    "len": 16,
+    "data": {
+      "state": 2,
+      "stateName": "Idle",
+      "motion": "stationary",
+      "event": "status",
+      "detail": 0,
+      "valid": true,
+      "odometry": true,
+      "pitchDeg": -0.3,
+      "lastFault": 0,
+      "heightMm": 0,
+      "highestMm": 0,
+      "humps": 0,
+      "rejected": 0,
+      "shockMg": 1580,
+      "shockNotifyMs": 10,
+      "shocks": 4,
+      "i2cErrors": 0,
+      "framesMissed": 168,
+      "eventMs": 0
+    }
+  },
+  "lastHeartbeat": {
+    "line": 69409,
+    "time": "2026-10-29T21:00:05.465911000+0800",
+    "topic": "is28/hb",
+    "src": 1,
+    "srcName": "WiFi (B1)",
+    "seq": 119,
+    "len": 12,
+    "data": {
+      "net": 2,
+      "netName": "Operational",
+      "state": 6,
+      "stateName": "Fault",
+      "lastCmd": 10,
+      "lastCmdName": "BARCODE_GET",
+      "lastResult": 0,
+      "lastResultName": "accepted",
+      "uptimeS": 1324,
+      "published": 58469,
+      "lost": 9384,
+      "accepted": 123,
+      "rejected": 0,
+      "connects": 1,
+      "fillPct": 0
+    }
+  },
+  "acks": [
+    {
+      "line": 60455,
+      "time": "2026-10-29T20:56:42.290517000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 5,
+        "codeName": "RESET",
+        "id": 39,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 0,
+        "stateName": "Ready"
+      }
+    },
+    {
+      "line": 60765,
+      "time": "2026-10-29T20:56:48.786071000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 1,
+        "codeName": "START",
+        "id": 40,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 0,
+        "stateName": "Ready"
+      }
+    },
+    {
+      "line": 61208,
+      "time": "2026-10-29T20:56:59.680081000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 4,
+        "codeName": "STOP",
+        "id": 41,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 6,
+        "stateName": "Fault"
+      }
+    },
+    {
+      "line": 61225,
+      "time": "2026-10-29T20:56:59.914940000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 65,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 6,
+        "stateName": "Fault"
+      }
+    },
+    {
+      "line": 61226,
+      "time": "2026-10-29T20:56:59.914949000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 42,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 6,
+        "stateName": "Fault"
+      }
+    },
+    {
+      "line": 61233,
+      "time": "2026-10-29T20:56:59.961913000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 66,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 6,
+        "stateName": "Fault"
+      }
+    },
+    {
+      "line": 61234,
+      "time": "2026-10-29T20:56:59.962465000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 77,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 6,
+        "stateName": "Fault"
+      }
+    },
+    {
+      "line": 61235,
+      "time": "2026-10-29T20:56:59.962578000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 43,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 6,
+        "stateName": "Fault"
+      }
+    },
+    {
+      "line": 61487,
+      "time": "2026-10-29T20:57:04.978692000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 44,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 6,
+        "stateName": "Fault"
+      }
+    },
+    {
+      "line": 62058,
+      "time": "2026-10-29T20:57:17.007945000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 78,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 6,
+        "stateName": "Fault"
+      }
+    },
+    {
+      "line": 64260,
+      "time": "2026-10-29T20:58:05.252100000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 67,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 6,
+        "stateName": "Fault"
+      }
+    },
+    {
+      "line": 64261,
+      "time": "2026-10-29T20:58:05.252142000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 68,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 6,
+        "stateName": "Fault"
+      }
+    },
+    {
+      "line": 64262,
+      "time": "2026-10-29T20:58:05.252160000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 79,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 6,
+        "stateName": "Fault"
+      }
+    },
+    {
+      "line": 64263,
+      "time": "2026-10-29T20:58:05.260845000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 45,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 6,
+        "stateName": "Fault"
+      }
+    },
+    {
+      "line": 64264,
+      "time": "2026-10-29T20:58:05.260980000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 46,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 6,
+        "stateName": "Fault"
+      }
+    },
+    {
+      "line": 64439,
+      "time": "2026-10-29T20:58:14.315584000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 69,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 6,
+        "stateName": "Fault"
+      }
+    },
+    {
+      "line": 64440,
+      "time": "2026-10-29T20:58:14.315604000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 70,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 6,
+        "stateName": "Fault"
+      }
+    },
+    {
+      "line": 64441,
+      "time": "2026-10-29T20:58:14.315637000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 71,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 6,
+        "stateName": "Fault"
+      }
+    },
+    {
+      "line": 64446,
+      "time": "2026-10-29T20:58:14.358648000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 80,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 6,
+        "stateName": "Fault"
+      }
+    },
+    {
+      "line": 64447,
+      "time": "2026-10-29T20:58:14.358857000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 81,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 6,
+        "stateName": "Fault"
+      }
+    },
+    {
+      "line": 64448,
+      "time": "2026-10-29T20:58:14.358915000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 47,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 6,
+        "stateName": "Fault"
+      }
+    },
+    {
+      "line": 64449,
+      "time": "2026-10-29T20:58:14.358935000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 48,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 6,
+        "stateName": "Fault"
+      }
+    },
+    {
+      "line": 64450,
+      "time": "2026-10-29T20:58:14.369931000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 49,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 6,
+        "stateName": "Fault"
+      }
+    },
+    {
+      "line": 64451,
+      "time": "2026-10-29T20:58:14.370146000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 72,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 6,
+        "stateName": "Fault"
+      }
+    },
+    {
+      "line": 64452,
+      "time": "2026-10-29T20:58:14.370172000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 82,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 6,
+        "stateName": "Fault"
+      }
+    },
+    {
+      "line": 64453,
+      "time": "2026-10-29T20:58:14.370184000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 50,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 6,
+        "stateName": "Fault"
+      }
+    },
+    {
+      "line": 64652,
+      "time": "2026-10-29T20:58:19.497518000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 73,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 6,
+        "stateName": "Fault"
+      }
+    },
+    {
+      "line": 64662,
+      "time": "2026-10-29T20:58:19.516876000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 51,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 6,
+        "stateName": "Fault"
+      }
+    },
+    {
+      "line": 64873,
+      "time": "2026-10-29T20:58:26.254486000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 52,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 6,
+        "stateName": "Fault"
+      }
+    },
+    {
+      "line": 64874,
+      "time": "2026-10-29T20:58:26.254543000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 74,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 6,
+        "stateName": "Fault"
+      }
+    },
+    {
+      "line": 64875,
+      "time": "2026-10-29T20:58:26.254596000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 75,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 6,
+        "stateName": "Fault"
+      }
+    },
+    {
+      "line": 64876,
+      "time": "2026-10-29T20:58:26.261107000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 53,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 6,
+        "stateName": "Fault"
+      }
+    },
+    {
+      "line": 64877,
+      "time": "2026-10-29T20:58:26.261233000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 83,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 6,
+        "stateName": "Fault"
+      }
+    },
+    {
+      "line": 65173,
+      "time": "2026-10-29T20:58:32.283913000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 54,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 6,
+        "stateName": "Fault"
+      }
+    },
+    {
+      "line": 65175,
+      "time": "2026-10-29T20:58:32.293561000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 76,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 6,
+        "stateName": "Fault"
+      }
+    },
+    {
+      "line": 65836,
+      "time": "2026-10-29T20:58:49.417315000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 77,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 6,
+        "stateName": "Fault"
+      }
+    },
+    {
+      "line": 65837,
+      "time": "2026-10-29T20:58:49.417377000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 84,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 6,
+        "stateName": "Fault"
+      }
+    },
+    {
+      "line": 65838,
+      "time": "2026-10-29T20:58:49.417390000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 55,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 6,
+        "stateName": "Fault"
+      }
+    },
+    {
+      "line": 66083,
+      "time": "2026-10-29T20:58:54.429302000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 56,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 6,
+        "stateName": "Fault"
+      }
+    },
+    {
+      "line": 66138,
+      "time": "2026-10-29T20:58:55.439214000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 78,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 6,
+        "stateName": "Fault"
+      }
+    }
+  ],
+  "events": [
+    {
+      "line": 61008,
+      "time": "2026-10-29T20:56:53.769658000+0800",
+      "topic": "is28/tlm",
+      "src": 4,
+      "srcName": "IMU (B4)",
+      "seq": 186,
+      "len": 16,
+      "data": {
+        "state": 5,
+        "stateName": "Impact",
+        "motion": "impact",
+        "event": "impact",
+        "detail": 0,
+        "valid": true,
+        "odometry": true,
+        "pitchDeg": 23.1,
+        "lastFault": 0,
+        "heightMm": 0,
+        "highestMm": 0,
+        "humps": 0,
+        "rejected": 0,
+        "shockMg": 1453,
+        "shockNotifyMs": 13,
+        "shocks": 1,
+        "i2cErrors": 0,
+        "framesMissed": 126,
+        "eventMs": 18674
+      }
+    },
+    {
+      "line": 61129,
+      "time": "2026-10-29T20:56:56.189414000+0800",
+      "topic": "is28/tlm",
+      "src": 4,
+      "srcName": "IMU (B4)",
+      "seq": 192,
+      "len": 16,
+      "data": {
+        "state": 3,
+        "stateName": "Tracking",
+        "motion": "steady",
+        "event": "motion",
+        "detail": 0,
+        "valid": true,
+        "odometry": true,
+        "pitchDeg": 2.3,
+        "lastFault": 0,
+        "heightMm": 0,
+        "highestMm": 0,
+        "humps": 0,
+        "rejected": 0,
+        "shockMg": 1453,
+        "shockNotifyMs": 13,
+        "shocks": 1,
+        "i2cErrors": 0,
+        "framesMissed": 126,
+        "eventMs": 21075
+      }
+    },
+    {
+      "line": 61151,
+      "time": "2026-10-29T20:56:56.637472000+0800",
+      "topic": "is28/tlm",
+      "src": 4,
+      "srcName": "IMU (B4)",
+      "seq": 194,
+      "len": 16,
+      "data": {
+        "state": 5,
+        "stateName": "Impact",
+        "motion": "impact",
+        "event": "impact",
+        "detail": 0,
+        "valid": true,
+        "odometry": true,
+        "pitchDeg": 10.3,
+        "lastFault": 0,
+        "heightMm": 0,
+        "highestMm": 0,
+        "humps": 0,
+        "rejected": 0,
+        "shockMg": 1453,
+        "shockNotifyMs": 18,
+        "shocks": 2,
+        "i2cErrors": 0,
+        "framesMissed": 126,
+        "eventMs": 21533
+      }
+    },
+    {
+      "line": 61306,
+      "time": "2026-10-29T20:57:01.284106000+0800",
+      "topic": "is28/tlm",
+      "src": 4,
+      "srcName": "IMU (B4)",
+      "seq": 204,
+      "len": 16,
+      "data": {
+        "state": 5,
+        "stateName": "Impact",
+        "motion": "impact",
+        "event": "impact",
+        "detail": 0,
+        "valid": true,
+        "odometry": true,
+        "pitchDeg": 3.6,
+        "lastFault": 0,
+        "heightMm": 0,
+        "highestMm": 0,
+        "humps": 0,
+        "rejected": 0,
+        "shockMg": 2846,
+        "shockNotifyMs": 8,
+        "shocks": 3,
+        "i2cErrors": 0,
+        "framesMissed": 168,
+        "eventMs": 26181
+      }
+    },
+    {
+      "line": 61372,
+      "time": "2026-10-29T20:57:02.678848000+0800",
+      "topic": "is28/tlm",
+      "src": 4,
+      "srcName": "IMU (B4)",
+      "seq": 209,
+      "len": 16,
+      "data": {
+        "state": 5,
+        "stateName": "Impact",
+        "motion": "impact",
+        "event": "impact",
+        "detail": 0,
+        "valid": true,
+        "odometry": true,
+        "pitchDeg": 2.8,
+        "lastFault": 0,
+        "heightMm": 0,
+        "highestMm": 0,
+        "humps": 0,
+        "rejected": 0,
+        "shockMg": 1580,
+        "shockNotifyMs": 10,
+        "shocks": 4,
+        "i2cErrors": 0,
+        "framesMissed": 168,
+        "eventMs": 27580
+      }
+    }
+  ],
+  "encoderTotals": {
+    "left": 0,
+    "right": 1
+  },
+  "result": "REVIEW sensor geometry/calibration before repeat; no firmware diagnosis established",
+  "v23RunSummaries": [
+    {
+      "time": "2026-10-29T20:56:59.984704000+0800",
+      "reason": 47,
+      "run": 4,
+      "distance": 231
+    }
+  ],
+  "v23LineEvents": [],
+  "additionalFinding": "Run summary reason47 = LS_TIMEOUT (line_search.h): line not recovered, five rolling sweeps exhausted. This establishes line-search timeout as the reported stop reason, not the physical reason line was lost. Raised sensor angle is a plausible contributor. One right invalid transition and impact events remain separately recorded."
+}

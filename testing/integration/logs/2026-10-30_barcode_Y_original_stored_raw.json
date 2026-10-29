@@ -1,0 +1,24 @@
+{
+  "requested_dataset": 2,
+  "read_only_command": "WP_CMD_GET_LOG(11)",
+  "rows": 2048,
+  "total": 2048,
+  "retries": 4,
+  "seconds": 94.36,
+  "first": [
+    {
+      "index": 0,
+      "us": 3165,
+      "distance_mm": 0.0,
+      "adc": 177
+    }
+  ],
+  "last": [
+    {
+      "index": 2047,
+      "us": 5112636,
+      "distance_mm": 211.03,
+      "adc": 177
+    }
+  ]
+}

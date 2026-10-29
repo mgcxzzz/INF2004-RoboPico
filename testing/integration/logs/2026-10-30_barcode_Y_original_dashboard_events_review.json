@@ -1,0 +1,98 @@
+{
+  "source": "/Users/skyler/Downloads/events_2026-10-29-20-33-57.csv",
+  "sha256": "b9039137c33c66be1feba6a4c54a527f2cd407bbe6b7a7b5ff55f54db5e4fed3",
+  "rows": 71,
+  "selected": [
+    {
+      "time": "2026-10-29T20:32:20.718Z",
+      "kind": "command",
+      "message": "Command sent: BARCODE_GET (id 29)"
+    },
+    {
+      "time": "2026-10-29T20:32:44.691Z",
+      "kind": "sdk-line",
+      "message": "Line/barcode status \u00b7 decoded - \u00b7 pending - none \u00b7 executing none \u00b7 map revision 0 \u00b7 calibrated L/R 382/762 \u00b7 ADC L/R/barcode 1422/2859/172"
+    },
+    {
+      "time": "2026-10-29T20:32:44.938Z",
+      "kind": "command",
+      "message": "Command sent: BARCODE_GET (id 30)"
+    },
+    {
+      "time": "2026-10-29T20:32:44.941Z",
+      "kind": "command-other",
+      "message": "Command from another client on the broker: BARCODE_GET (id 229)"
+    },
+    {
+      "time": "2026-10-29T20:32:49.383Z",
+      "kind": "command",
+      "message": "Command sent: raw 92 1f 38 40 06 (id 31)"
+    },
+    {
+      "time": "2026-10-29T20:32:51.483Z",
+      "kind": "command",
+      "message": "Command sent: BARCODE_GET (id 32)"
+    },
+    {
+      "time": "2026-10-29T20:32:59.194Z",
+      "kind": "command",
+      "message": "Command sent: RESET (id 33)"
+    },
+    {
+      "time": "2026-10-29T20:33:06.707Z",
+      "kind": "command",
+      "message": "Command sent: START (id 34)"
+    },
+    {
+      "time": "2026-10-29T20:33:15.839Z",
+      "kind": "command",
+      "message": "Command sent: BARCODE_GET (id 35)"
+    },
+    {
+      "time": "2026-10-29T20:33:15.844Z",
+      "kind": "command-other",
+      "message": "Command from another client on the broker: BARCODE_GET (id 230)"
+    },
+    {
+      "time": "2026-10-29T20:33:15.845Z",
+      "kind": "command-other",
+      "message": "Command from another client on the broker: BARCODE_GET (id 231)"
+    },
+    {
+      "time": "2026-10-29T20:33:16.174Z",
+      "kind": "command",
+      "message": "Command sent: STOP (id 36)"
+    },
+    {
+      "time": "2026-10-29T20:33:16.209Z",
+      "kind": "sdk-summary",
+      "message": "Run summary \u00b7 run 1, result 49, elapsed 7436 ms, distance 299 mm, average 40.21 mm/s, line 0, nav 26, recoveries 0"
+    },
+    {
+      "time": "2026-10-29T20:33:21.618Z",
+      "kind": "command",
+      "message": "Command sent: BARCODE_GET (id 37)"
+    },
+    {
+      "time": "2026-10-29T20:33:21.622Z",
+      "kind": "command",
+      "message": "Command sent: BARCODE_GET (id 38)"
+    },
+    {
+      "time": "2026-10-29T20:33:21.637Z",
+      "kind": "command-other",
+      "message": "Command from another client on the broker: BARCODE_GET (id 232)"
+    },
+    {
+      "time": "2026-10-29T20:33:21.637Z",
+      "kind": "command-other",
+      "message": "Command from another client on the broker: BARCODE_GET (id 233)"
+    },
+    {
+      "time": "2026-10-29T20:33:27.669Z",
+      "kind": "command-other",
+      "message": "Command from another client on the broker: BARCODE_GET (id 234)"
+    }
+  ],
+  "note": "UTC20:33 is Singapore04:33 next day; dashboard event log, not barcode artwork or full ADC/edge trace."
+}

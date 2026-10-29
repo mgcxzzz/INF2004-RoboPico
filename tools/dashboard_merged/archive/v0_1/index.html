@@ -1,0 +1,1596 @@
+<!doctype html>
+<!--
+  IS28 merged dashboard v0.1.
+  One page for both firmware families on the same broker:
+    - RTOS (micro T-Kernel) Buddy1/Buddy4 build: sources 1-8 (tools/dashboard).
+    - SDK v2.3 Buddy2/Buddy3 build (+ optional Buddy4 add-on): sources 1, 2, 4, 8, 9-14
+      (testing/subsystem2/interface_wifi_v2_3/dashboard).
+  Panels and logic are ported from those two dashboards; both originals are
+  unchanged. Serve with:  python3 -m http.server 9072 --bind 127.0.0.1 --directory tools/dashboard_merged
+  and connect to the existing Mosquitto WebSocket listener (ws://127.0.0.1:9001).
+  Nothing is sent to the car automatically except BARCODE_GET (read-only mapping
+  query), exactly as both original dashboards do.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IS28 Dashboard v0.1 (merged)</title>
+<script src="vendor/mqtt.min.js"></script>
+<script src="is28_schema.js"></script>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --ink:#1d2330; --muted:#667085; --line:#e3e6eb;
+          --ok:#0f8a4b; --warn:#b26b00; --bad:#c62828; --accent:#2457c5; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#12151b; --card:#1b2029; --ink:#e7eaf0; --muted:#98a2b3; --line:#2b3240;
+            --ok:#3ecf8e; --warn:#f0b44c; --bad:#ff6b6b; --accent:#7aa2ff; } }
+  * { box-sizing:border-box; }
+  body { margin:0; font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+         background:var(--bg); color:var(--ink); }
+  header { display:flex; flex-wrap:wrap; gap:10px; align-items:center; padding:12px 16px;
+           border-bottom:1px solid var(--line); background:var(--card); position:sticky; top:0; z-index:2; }
+  header h1 { font-size:16px; margin:0 12px 0 0; }
+  header h1 .ver { font-size:12px; font-weight:600; color:var(--muted); }
+  input, button, select { font:inherit; color:inherit; }
+  input[type=text] { padding:6px 8px; border:1px solid var(--line); border-radius:6px;
+                     background:var(--bg); min-width:220px; }
+  button { padding:7px 12px; border:1px solid var(--line); border-radius:6px; background:var(--card);
+           cursor:pointer; }
+  button:hover { border-color:var(--accent); }
+  button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+  button.danger { background:var(--bad); border-color:var(--bad); color:#fff; font-weight:600; }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  select { padding:5px 8px; border:1px solid var(--line); border-radius:6px; background:var(--bg); }
+  .pill { padding:3px 9px; border-radius:999px; font-size:12px; font-weight:600; border:1px solid var(--line); }
+  .ok { color:var(--ok); } .warn { color:var(--warn); } .bad { color:var(--bad); } .muted { color:var(--muted); }
+  main { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:12px; padding:12px 16px; }
+  section { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px 14px; min-width:0; }
+  section h2 { font-size:13px; margin:0 0 8px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }
+  section h3 { font-size:12px; margin:4px 0 6px; color:var(--muted); }
+  section.cmd { border-left:5px solid var(--bad); }
+  section.rec { border:2px dashed var(--accent); }
+  .tag { font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px; margin-left:6px;
+         letter-spacing:.03em; vertical-align:middle; }
+  .tag.car { background:var(--bad); color:#fff; } .tag.laptop { background:var(--accent); color:#fff; }
+  .big { font-size:22px; font-weight:700; }
+  .small { font-size:12px; }
+  dl { display:grid; grid-template-columns:auto minmax(0,1fr); gap:3px 12px; margin:0; }
+  select { max-width:100%; }
+  dt { color:var(--muted); } dd { margin:0; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+  .row { display:flex; flex-wrap:wrap; gap:8px; margin:6px 0; align-items:center; }
+  .wide { grid-column:1/-1; }
+  .cols { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:8px 24px; }
+  .box { border:1px solid var(--line); border-radius:8px; padding:8px 10px; min-width:0; }
+  .box.live { border-color:var(--ok); } .box.accepted { border-color:var(--accent); }
+  table { width:100%; border-collapse:collapse; font-size:13px; font-variant-numeric:tabular-nums; }
+  th, td { text-align:left; padding:4px 6px; border-bottom:1px solid var(--line); }
+  th { color:var(--muted); font-weight:600; }
+  #log { height:260px; overflow:auto; font:12px/1.4 ui-monospace,Menlo,Consolas,monospace;
+         background:var(--bg); border:1px solid var(--line); border-radius:6px; padding:6px; }
+  #log div { white-space:pre-wrap; overflow-wrap:anywhere; }
+  .metric-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(135px,1fr)); gap:8px; }
+  .metric { border:1px solid var(--line); border-radius:8px; padding:8px; min-width:0; }
+  .metric label { display:block; color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.04em; }
+  .metric strong { display:block; font:600 18px/1.35 ui-monospace,Menlo,Consolas,monospace; overflow-wrap:anywhere; }
+  .stale { opacity:.45; }
+  canvas { display:block; width:100%; height:190px; border:1px solid var(--line); border-radius:8px; background:var(--bg); margin-top:6px; }
+  .timeline { max-height:250px; overflow:auto; border:1px solid var(--line); border-radius:6px; }
+  .timeline article { padding:6px 9px; border-bottom:1px solid var(--line); font-size:12px; }
+  .timeline time { color:var(--muted); font:11px ui-monospace,Menlo,Consolas,monospace; margin-right:8px; }
+  .clock { font:600 24px/1.2 ui-monospace,Menlo,Consolas,monospace; overflow-wrap:anywhere; }
+  details summary { cursor:pointer; color:var(--accent); }
+  ol { margin:6px 0; padding-left:20px; }
+  @media (max-width:560px) { input[type=text] { min-width:0; width:100%; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>IS28 Dashboard <span class="ver">v0.1 · merged RTOS + SDK v2.3</span></h1>
+  <input id="url" type="text" aria-label="Broker WebSocket URL">
+  <button id="connect" class="primary">Connect</button>
+  <span id="broker" class="pill muted">not connected</span>
+  <span id="carlink" class="pill muted">car: no heartbeat yet</span>
+  <span id="profilePill" class="pill muted">firmware: unknown</span>
+  <span id="recPill" class="pill muted">recording: 0 frames</span>
+</header>
+
+<main>
+  <section>
+    <h2>Operating state <span class="muted small">(confirmed by car telemetry)</span></h2>
+    <div id="opstate" class="big muted">unknown</div>
+    <div id="opstateSource" class="muted small">no state telemetry yet</div>
+    <div id="opNote" class="warn small"></div>
+    <dl style="margin-top:8px">
+      <dt>Heartbeat-reported state</dt><dd id="hbState">–</dd>
+      <dt>Motion owner</dt><dd id="owner">–</dd>
+      <dt>Mode / owner / command (SDK)</dt><dd id="navDetails">waiting for coordinator telemetry</dd>
+      <dt>Coordinator fault bitmap (SDK)</dt><dd id="sdkFault">—</dd>
+      <dt>Safety (RTOS)</dt><dd id="safety">–</dd>
+      <dt>Fault mask (RTOS)</dt><dd id="faults">–</dd>
+      <dt>Last stop time (RTOS)</dt><dd id="stopms">–</dd>
+    </dl>
+  </section>
+
+  <section class="cmd">
+    <h2>Car commands <span class="tag car">SENT TO THE CAR</span></h2>
+    <div class="row">
+      <button data-cmd="START" class="primary">Start</button>
+      <button data-cmd="PAUSE">Pause</button>
+      <button data-cmd="RESUME">Resume</button>
+      <button data-cmd="STOP">Stop</button>
+      <button data-cmd="RESET">Reset</button>
+    </div>
+    <div class="row"><button data-cmd="ESTOP" class="danger">EMERGENCY STOP</button>
+      <button data-cmd="PING">Ping</button></div>
+    <div class="row">
+      <button id="tlmOn">Telemetry on</button><button id="tlmOff">Telemetry off</button>
+    </div>
+    <div class="row muted" style="font-size:12px">Rejection tests (FR-WIFI-03):</div>
+    <div class="row">
+      <button id="badlen">Bad length</button><button id="unknown">Unknown code</button>
+      <button id="steerBtn" data-rtos-only="1">Send STEER (RTOS)</button><button id="driveBtn" data-rtos-only="1">Send DRIVE (RTOS)</button>
+    </div>
+    <div id="lastack" class="muted" style="margin-top:6px">No command sent yet.</div>
+    <div id="cmdNote" class="muted small">An ACK only means the car accepted the request. The confirmed state is the Operating state panel, from telemetry.</div>
+    <div id="otherClients" class="muted small">No commands from other clients seen on the broker.</div>
+  </section>
+
+  <section class="rec">
+    <h2>Recording <span class="tag laptop">LAPTOP ONLY · SENDS NOTHING TO THE CAR</span></h2>
+    <div class="row">
+      <label for="runLabel">Run label</label>
+      <input id="runLabel" type="text" placeholder="e.g. ramp10-run1" aria-label="Run label">
+      <button id="runLabelSet">Set label</button>
+    </div>
+    <div id="runLabelStatus" class="muted small">No run label set. Rows are tagged with the label active when they arrive.</div>
+    <div class="row">
+      <input id="markNote" type="text" placeholder="marker note (optional)" aria-label="Marker note">
+      <button id="markBtn" class="primary">Mark event</button>
+      <span id="markStatus" class="muted small">No markers yet.</span>
+    </div>
+    <div class="muted small">Video sync clock (laptop time; film it at the start of a take):</div>
+    <div id="syncClock" class="clock">--:--:--.---</div>
+    <div id="recCounts" class="muted small" role="status">Nothing recorded yet.</div>
+    <div id="archiveStatus" class="muted small" role="status">This page session has received no motion samples or events.</div>
+    <div class="row">
+      <label for="exportScope">Export rows</label>
+      <select id="exportScope" aria-label="Export scope">
+        <option value="auto">Current run label (all rows if no label)</option>
+        <option value="label">Current run label only</option>
+        <option value="all">Whole page session</option>
+      </select>
+    </div>
+    <div class="row">
+      <button id="csvSave">Export telemetry CSV</button><button id="jsonSave">Export telemetry JSON</button>
+      <button id="b4CsvSave">Export Buddy4 CSV</button>
+    </div>
+    <div class="row">
+      <button id="eventCsvSave">Export event CSV</button><button id="eventJsonSave">Export event JSON</button>
+      <button id="framesCsvSave">Export all frames CSV</button><button id="framesJsonSave">Export all frames JSON</button>
+    </div>
+    <div class="row">
+      <button id="evidenceSave" class="primary">Export evidence set</button>
+      <button id="discardRec">Discard recording buffers…</button>
+    </div>
+    <div id="exportStatus" class="muted small" role="status"></div>
+    <details>
+      <summary>How to film one run and export a matching evidence set</summary>
+      <ol class="small">
+        <li>Connect, confirm <b>car: online</b>, apply and confirm the barcode mapping, switch Telemetry on.</li>
+        <li>Type a run label (e.g. <code>ramp10-run1</code>) and press <b>Set label</b>.</li>
+        <li>Start filming. Point the camera at this <b>sync clock</b> for two seconds, press <b>Mark event</b> (note "video start"), then frame the car.</li>
+        <li>Press <b>Start</b> in Car commands. Press <b>Mark event</b> at moments worth finding later (ramp, junction, fault).</li>
+        <li>End the run (Stop or physical stop). Mark "run end". Stop filming.</li>
+        <li>SDK v2.3 only: wait for coordinator <b>Off</b> for 5 s, then download the four stored datasets (Diagnostics, Motion, Navigation, Raw sensor rows).</li>
+        <li>Press <b>Export evidence set</b> (scope: current run label). Keep the downloaded files with the video; the manifest lists files, counts, drops, markers and SHA-256 hashes.</li>
+      </ol>
+    </details>
+  </section>
+
+  <section>
+    <h2>Firmware profile</h2>
+    <dl>
+      <dt>Detected</dt><dd id="profileDetected">no frames yet</dd>
+      <dt>Use profile</dt><dd><select id="profileOverride" aria-label="Firmware profile override">
+        <option value="auto">Auto (observed packets)</option>
+        <option value="rtos">RTOS (micro T-Kernel)</option>
+        <option value="sdk">SDK v2.3</option>
+      </select></dd>
+      <dt>Sources since connect/boot</dt><dd id="profileSources">none</dd>
+    </dl>
+    <p class="muted small">RTOS-only: 3 line, 5 obstacle, 6 navigation, 7 safety. SDK-only: 9–14. Shared: 1 status, 8 map, 2 motion and 4 IMU (also sent by the v2.3 Buddy4 add-on). The observed set resets on connect and car restart.</p>
+  </section>
+
+  <section>
+    <h2>WiFi and MQTT (Buddy 1)</h2>
+    <dl>
+      <dt>Link</dt><dd id="net">–</dd>
+      <dt>Heartbeat</dt><dd id="hbage">–</dd>
+      <dt>Gap (last / max)</dt><dd id="hbgap">–</dd>
+      <dt>Published / lost</dt><dd id="pub">–</dd>
+      <dt>Commands ok / rejected</dt><dd id="cmds">–</dd>
+      <dt>Reconnections</dt><dd id="connects">–</dd>
+      <dt>Queue fill</dt><dd id="fill">–</dd>
+      <dt>Uptime</dt><dd id="uptime">–</dd>
+    </dl>
+  </section>
+
+  <section class="wide">
+    <h2>Live motion telemetry (Buddy 2 / Buddy 3 · SDK v2.3 source 9)</h2>
+    <div id="sdkMotionStatus" class="muted small">No SDK motion telemetry received.</div>
+    <div id="sdkMotionGrid" class="metric-grid">
+      <div class="metric"><label>Measured speed · left / right</label><strong id="speedMeasured">—</strong></div>
+      <div class="metric"><label>Target speed · left / right</label><strong id="speedTarget">—</strong></div>
+      <div class="metric"><label>PWM · left / right</label><strong id="pwm">—</strong></div>
+      <div class="metric"><label>ADC · Left GP26 (ADC0) / Right GP28 (ADC2) / Barcode GP27 (ADC1)</label><strong id="adc">—</strong></div>
+      <div class="metric"><label>Line levels · left / right / barcode</label><strong id="levels">—</strong></div>
+      <div class="metric"><label>Encoder distance</label><strong id="distance">—</strong></div>
+      <div class="metric"><label>Run average speed</label><strong id="averageSpeed">—</strong></div>
+      <div class="metric"><label>Heading</label><strong id="heading">—</strong></div>
+      <div class="metric"><label>Run time</label><strong id="runTime">—</strong></div>
+      <div class="metric"><label>Profile / phase / state</label><strong id="profilePhase">—</strong></div>
+      <div class="metric"><label>Telemetry timestamp</label><strong id="telemetryTime">—</strong></div>
+    </div>
+    <div class="row"><span class="muted small">Chart window: latest 240 samples · laptop capture: up to 72,000 motion samples.</span><span id="chartSampleCount" class="muted small">0 / 240 chart samples</span></div>
+    <div class="row">
+      <label for="logDataset">Stored data (SDK v2.3, stopped only)</label>
+      <select id="logDataset" aria-label="Stored log dataset">
+        <option value="0">Motion rows</option><option value="1">Diagnostics</option>
+        <option value="2">Raw sensor rows</option><option value="3">Navigation rows</option>
+      </select>
+      <button id="logDownload" disabled>Download stopped-only log</button>
+      <span id="logDownloadStatus" class="muted small" role="status">Stop the car, then wait 5 s for coordinator Off status.</span>
+    </div>
+    <canvas id="speedChart" aria-label="Measured and target speed chart"></canvas>
+    <canvas id="pwmChart" aria-label="Left and right PWM chart"></canvas>
+    <canvas id="adcChart" aria-label="ADC channel chart"></canvas>
+    <canvas id="lineChart" aria-label="Calibrated left and right line sensor levels"></canvas>
+  </section>
+
+  <section>
+    <h2>Barcode diagnostics (SDK source 14)</h2>
+    <div id="diagStatus" class="muted small">No diagnostics received.</div>
+    <dl>
+      <dt>Threshold / bank</dt><dd id="diagThreshold">—</dd>
+      <dt>Scanner / pending / calibration / run</dt><dd id="diagState">—</dd>
+      <dt>Decoded / turns / L / R / U</dt><dd id="diagCounts">—</dd>
+      <dt>Bad frames / unsupported</dt><dd id="diagErrors">—</dd>
+      <dt>Max ADC / control gap</dt><dd id="diagGaps">—</dd>
+      <dt>TX / RX dropped</dt><dd id="diagDrops">—</dd>
+      <dt>Invalid encoder L / R</dt><dd id="diagInvalid">—</dd>
+      <dt>Diagnostics uptime</dt><dd id="diagUptime">—</dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Subsystems (RTOS summaries)</h2>
+    <dl>
+      <dt>Line (B3)</dt><dd id="s3">no frames</dd>
+      <dt>IMU (B4)</dt><dd id="s4">no frames</dd>
+      <dt>Obstacle (B5)</dt><dd id="s5">no frames</dd>
+      <dt>Motion (B2)</dt><dd id="s2">no frames</dd>
+    </dl>
+  </section>
+
+  <section class="wide">
+    <h2>Buddy 4 IMU and ramp (sources 2 and 4)</h2>
+    <div id="b4Source" class="muted small">Waiting for Buddy 4 frames.</div>
+    <div class="cols">
+      <div class="box">
+        <h3>IMU state</h3>
+        <dl>
+          <dt>Terrain state</dt><dd id="imuState">no frames</dd>
+          <dt>Data validity</dt><dd id="imuValid">not received</dd>
+          <dt>Motion class</dt><dd id="imuMotion">–</dd>
+          <dt>Last event</dt><dd id="imuEvent">–</dd>
+          <dt>Wheel-distance data</dt><dd id="imuOdometry">not received</dd>
+          <dt>Shock / notify time</dt><dd id="imuShock">–</dd>
+          <dt>I2C errors / missed periods</dt><dd id="imuHealth">–</dd>
+          <dt>IMU fault code</dt><dd id="imuFault">–</dd>
+          <dt>Last IMU update</dt><dd id="imuAge">no frames</dd>
+        </dl>
+      </div>
+      <div class="box live">
+        <h3>LIVE now (changes every frame)</h3>
+        <dl>
+          <dt>Live right-minus-left wheel height</dt><dd id="motionHeight">unavailable — no fresh motion data</dd>
+          <dt>Lateral axle tilt (roll)</dt><dd id="motionRoll">unavailable — no fresh motion data</dd>
+          <dt>Pitch</dt><dd id="imuPitch">–</dd>
+          <dt>Centre speed (B2)</dt><dd id="imuSpeed">unavailable — no fresh motion data</dd>
+          <dt>Left / right speed</dt><dd id="motionWheels">unavailable — no fresh motion data</dd>
+          <dt>Signed net distance</dt><dd id="motionDistance">unavailable — no fresh motion data</dd>
+        </dl>
+      </div>
+      <div class="box accepted">
+        <h3>ACCEPTED completed ramp (Buddy 4 decision)</h3>
+        <dl>
+          <dt>Last accepted peak</dt><dd id="imuHeight">no accepted hump</dd>
+          <dt>Highest this run</dt><dd id="imuHighest">no accepted hump</dd>
+          <dt>Humps / rejected</dt><dd id="imuHumps">–</dd>
+        </dl>
+      </div>
+      <div class="box">
+        <h3>Measurement quality</h3>
+        <dl>
+          <dt>Measurement quality</dt><dd id="motionQuality">waiting for Buddy 2</dd>
+          <dt>Recent ramp exclusions</dt><dd id="motionGuards">waiting for diagnostics</dd>
+          <dt>Recent maximum variation / acceleration / turn</dt><dd id="motionGuardValues">waiting for diagnostics</dd>
+          <dt>Ramp detection stage</dt><dd id="motionRampStage">waiting for diagnostics</dd>
+        </dl>
+      </div>
+    </div>
+    <p class="muted small">Live wheel height is the instantaneous right-minus-left difference reported with every source-2 frame; it is not a ramp result. The accepted peak is Buddy 4's height for a completed hump that passed its checks. Ramp height assumes the other drive wheel stays on flat ground. Measurement-quality checks never control the motors.</p>
+    <canvas id="imuChart" aria-label="Live wheel-height difference and pitch chart"></canvas>
+  </section>
+
+  <section class="wide">
+    <h2>Barcode letter mapping</h2>
+    <p class="muted">Assign the four demo letters before starting a run. The car stores this mapping in RAM; send it again after power loss.</p>
+    <table>
+      <thead><tr><th>Movement at the next cross-junction</th><th>Letter to send</th><th>Active on car</th></tr></thead>
+      <tbody id="mappingRows"></tbody>
+    </table>
+    <div class="row">
+      <button id="mapApply" class="primary">Apply mapping</button>
+      <button id="mapRead">Read mapping from car</button>
+    </div>
+    <div id="mapStatus" class="muted" role="status">Active mapping unknown. Connect to read it from the car.</div>
+    <dl style="margin-top:8px">
+      <dt>Last decoded letter (B3)</dt><dd id="barcodeLetter">no frames</dd>
+      <dt>Mapped movement for that letter</dt><dd id="barcodeMovement">unknown</dd>
+    </dl>
+    <p class="muted">A command ACK confirms request acceptance. The readback confirms the active map; coordinator events show when a letter is actually consumed or completed.</p>
+  </section>
+
+  <section class="wide">
+    <h2>Barcode and junction progress (SDK sources 10/11/12)</h2>
+    <div id="progressStatus" class="muted small">No line/coordinator telemetry received.</div>
+    <div class="metric-grid">
+      <div class="metric"><label>Latest decoded letter</label><strong id="eventLetter">—</strong></div>
+      <div class="metric"><label>Pending action</label><strong id="pendingAction">—</strong></div>
+      <div class="metric"><label>Pending map revision</label><strong id="pendingRevision">—</strong></div>
+      <div class="metric"><label>Executing action</label><strong id="executingAction">—</strong></div>
+      <div class="metric"><label>Completed action</label><strong id="completedAction">—</strong></div>
+      <div class="metric"><label>Coordinator state</label><strong id="navState">—</strong></div>
+    </div>
+    <h2 style="margin-top:10px">Event timeline (car events, Buddy 4 events, commands, markers)</h2>
+    <div id="eventTimeline" class="timeline" aria-live="polite"><article class="muted">Waiting for real events.</article></div>
+  </section>
+
+  <section class="wide">
+    <h2>Connectivity test (NFR-WIFI-01 ≥ 95 % delivered, NFR-WIFI-02 heartbeat gap ≤ 2 s)</h2>
+    <div class="row">
+      <button id="testStart" class="primary">Start 5-minute test</button>
+      <button id="testStop">Stop</button>
+      <button id="testSave">Save results</button>
+      <span id="testClock" class="big muted" style="font-size:18px">idle</span>
+    </div>
+    <table>
+      <thead><tr><th>Source</th><th>Received</th><th>Missing</th><th>Delivered</th></tr></thead>
+      <tbody id="testRows"><tr><td colspan="4" class="muted">Start the test to count frames.</td></tr></tbody>
+    </table>
+    <div id="testVerdict" style="margin-top:8px"></div>
+  </section>
+
+  <section class="wide">
+    <h2>Messages</h2>
+    <div class="row">
+      <label><input type="checkbox" id="logPause"> Pause</label>
+      <label><input type="checkbox" id="logHb"> Show heartbeats</label>
+      <label><input type="checkbox" id="logTlm"> Verbose telemetry</label>
+      <button id="logClear">Clear visible</button><button id="logSave">Save log</button>
+    </div>
+    <div id="logStatus" class="muted small">Clear visible only empties this view; Save log keeps every retained line.</div>
+    <div id="log" role="log" aria-live="off"></div>
+  </section>
+</main>
+
+<script>
+'use strict';
+const DASHBOARD_VERSION = 'v0.1';
+const $ = (id) => document.getElementById(id);
+const hasWindow = typeof window !== 'undefined';
+const SRC = IS28.SRC;
+/* Start command IDs at a random value so a second dashboard on the same
+ * broker (e.g. the 9071 RTOS page) is unlikely to share request IDs. */
+let client = null, cmdId = Math.floor(Math.random() * 256);
+const pending = {};                     /* id -> {time, code}, for ack latency */
+const ownCommands = [];                 /* recent own command bytes, to spot other clients */
+let activeMapping = null, lastBarcodeLetter = null, mapPending = null;
+let mappingQueried = false, lastUptime = null;
+/* RTOS Buddy2/Buddy4 live state (tools/dashboard logic) */
+let lastImuAt = 0, lastImuSeq = null, imuAwaitingFresh = false;
+let lastAcceptedImuPeak = null, lastImuEventKey = null;
+let lastMotionAt = 0, lastMotionSeq = null, motionAwaitingFresh = false;
+/* Per-group freshness for the other live panels */
+const GROUPS = {
+  sdkMotion: { staleMs: 2000 }, sdkLine: { staleMs: 2000 }, sdkNav: { staleMs: 3500 },
+  sdkDiag: { staleMs: 3500 }, nav6: { staleMs: 3000 }, safety: { staleMs: 3000 },
+  line3: { staleMs: 3000 }, b5: { staleMs: 3000 }
+};
+const fresh = {}; const staleShown = {};
+for (const k of Object.keys(GROUPS)) { fresh[k] = 0; staleShown[k] = false; }
+let nav6 = null, safetyData = null, sdkNav = null;
+let coordinatorMode = null, coordinatorOffSince = null;
+let lastResetAccepted = null, faultSince = null;
+const hb = { last: 0, seen: false, gaps: [], maxGap: 0, lastGap: 0, lastSeq: null, lastUptime: null, state: null };
+let lwtOffline = false;
+/* Profile detection */
+const seenSources = new Map();          /* src -> laptop ms of last frame */
+const firstSeen = new Map();            /* src -> laptop ms of first frame in this window */
+let profileOverride = 'auto';
+/* Recording buffers (bounded) */
+const CHART_WINDOW = 240, MOTION_HISTORY_LIMIT = 72000, EVENT_HISTORY_LIMIT = 20000;
+const FRAME_LIMIT = 150000, B4_LIMIT = 72000, LOG_LIMIT = 20000, MARKER_LIMIT = 5000;
+let logLines = [], logDropped = 0;
+let motionHistory = [], motionChartRows = [], motionDropped = 0;
+let eventRows = [], eventDropped = 0, lastLineStatusKey = null, lastNavStatusKey = null;
+let frames = [], framesDropped = 0, b4Rows = [], b4Dropped = 0, markers = [], markersDropped = 0;
+let imuChartHeight = [], imuChartPitch = [];
+let runLabel = '', markerNo = 0, latestSdkRunId = null, lastPico = null;
+const lastSeqBySrc = {};
+let discardArmedUntil = 0;
+const logDownload = { active:false, dataset:0, requestId:null, rowIndex:0, totalRows:null,
+  parts:null, partCount:0, retries:0, timer:null, rows:[], status:'idle' };
+const test = { running: false, start: 0, end: 0, seq: new IS28.SeqTracker(), gaps: [],
+               firstHb: 0, lastHb: 0, timer: null };
+
+/* ---------- connection ---------- */
+const host = location.hostname || 'localhost';
+let savedUrl = null;
+try { savedUrl = localStorage.getItem('is28.merged.url'); } catch (e) { /* storage blocked */ }
+$('url').value = savedUrl || `ws://${host}:9001`;
+
+function setPill(el, text, cls) { el.textContent = text; el.className = 'pill ' + cls; }
+
+function mappingUnknown(reason) {
+  activeMapping = null; mappingQueried = false; mapPending = null;
+  document.querySelectorAll('[data-map-active]').forEach((el) => { el.textContent = 'unknown'; });
+  $('mapStatus').textContent = reason; $('mapStatus').className = 'warn';
+  $('barcodeMovement').textContent = 'unknown';
+}
+
+$('connect').onclick = () => {
+  if (client) { client.end(true); client = null; setPill($('broker'), 'not connected', 'muted');
+                mappingUnknown('Disconnected. Read the mapping again after reconnecting.');
+                linkLost('broker disconnected by user');
+                $('connect').textContent = 'Connect'; return; }
+  const url = $('url').value.trim();
+  try { localStorage.setItem('is28.merged.url', url); } catch (e) { /* private mode */ }
+  setPill($('broker'), 'connecting…', 'warn');
+  client = mqtt.connect(url, { clientId: 'is28-merged-' + Math.random().toString(16).slice(2, 8),
+                               reconnectPeriod: 2000, connectTimeout: 5000 });
+  $('connect').textContent = 'Disconnect';
+  updateLogDownloadControl();
+  client.on('connect', () => { setPill($('broker'), 'broker connected', 'ok');
+    clearSeen(); updateProfile();
+    client.subscribe('is28/#', (err) => {
+      if (err) { log('broker', 'subscription failed: ' + err.message); return; }
+      requestMapping();
+    });
+    log('broker', 'connected to ' + url);
+    addEvent('Broker connected (' + url + ')', null, 'link');
+  });
+  client.on('reconnect', () => setPill($('broker'), 'reconnecting…', 'warn'));
+  client.on('close', () => {
+    if (client) setPill($('broker'), 'broker lost', 'bad');
+    mappingUnknown('Broker connection lost. Active mapping needs a fresh readback.');
+    linkLost('broker connection lost');
+  });
+  client.on('error', (e) => log('broker', 'error: ' + e.message));
+  client.on('message', onMessage);
+};
+
+/* Broker link gone: nothing shown live can be trusted any more. */
+function liveActive() {
+  return hb.seen || !!lastMotionAt || !!lastImuAt || coordinatorMode !== null ||
+         Object.keys(fresh).some((k) => fresh[k] && !staleShown[k]);
+}
+function linkLost(reason) {
+  if (liveActive()) invalidateLive(reason);
+  hb.seen = false; hb.lastSeq = null; hb.lastUptime = null;
+  lastUptime = null;
+  cancelLogDownload('Broker disconnected. No complete export was produced.');
+  updateLogDownloadControl(); updateCarLink(now());
+}
+
+/* ---------- commands ---------- */
+function ackName(a) {
+  /* SDK v2.3 reuses the result codes with different causes (wifi_protocol.h). */
+  if (currentProfile() === 'sdk') {
+    if (a.result === 4) return 'rejected: busy (car running, settling or a button held)';
+    if (a.result === 5) return 'rejected: unsupported command or setting';
+  }
+  return a.resultName;
+}
+function send(code, arg, raw) {
+  if (!client || !client.connected) { $('lastack').textContent = 'Not connected to the broker.'; return null; }
+  cmdId = (cmdId + 1) & 0xff;
+  const bytes = raw || IS28.encodeCommand(code, cmdId, arg || 0);
+  pending[cmdId] = { time: now(), code: bytes[0] >> 4 };
+  noteOwnCommand(bytes);
+  client.publish('is28/cmd', bytes, { qos: 0, retain: false });
+  const label = raw ? 'raw ' + hex(bytes) : IS28.CMD_NAME[code];
+  $('lastack').textContent = `Sent ${label} (id ${cmdId}), waiting for the car…`;
+  log('cmd', `→ ${label} id ${cmdId} [${hex(bytes)}]`);
+  addEvent(`Command sent: ${label} (id ${cmdId})`, { commandId: cmdId, event: 'command' }, 'command');
+  return cmdId;
+}
+function noteOwnCommand(bytes) {
+  ownCommands.push({ key: hex(bytes), time: now() });
+  while (ownCommands.length > 64) ownCommands.shift();
+}
+function isOwnCommand(bytes) {
+  const key = hex(bytes), i = ownCommands.findIndex((c) => c.key === key && now() - c.time < 10000);
+  if (i < 0) return false;
+  ownCommands.splice(i, 1); return true;
+}
+function startLogDownload() {
+  if (coordinatorMode !== 7 || coordinatorOffSince === null || now()-coordinatorOffSince<5000) { $('logDownloadStatus').textContent = 'Manual stop is required. Wait 5 s after coordinator reports Off before requesting stored logs.'; return; }
+  if (!client || !client.connected) { $('logDownloadStatus').textContent = 'Connect to the broker before downloading.'; return; }
+  Object.assign(logDownload, { active:true, dataset:Number($('logDataset').value), requestId:null,
+    rowIndex:0, totalRows:null, parts:null, partCount:0, retries:0, rows:[], status:'requesting' });
+  $('logDownloadStatus').textContent = `Requesting ${IS28.LOG_DATASETS[logDownload.dataset].name} rows…`;
+  addEvent(`Stored-data download started: ${IS28.LOG_DATASETS[logDownload.dataset].label}`, null, 'download');
+  updateLogDownloadControl(); requestNextLogRow();
+}
+function requestNextLogRow() {
+  if (!logDownload.active) return;
+  if (coordinatorMode !== 7) { finishLogDownload(false, 'Coordinator left Off. No complete export was produced.'); return; }
+  if (logDownload.totalRows !== null && logDownload.rowIndex >= logDownload.totalRows) { finishLogDownload(true, ''); return; }
+  cmdId = (cmdId + 1) & 255; logDownload.requestId = cmdId; logDownload.retries = 0;
+  logDownload.parts = null; logDownload.partCount = 0; publishLogRowRequest();
+}
+function publishLogRowRequest() {
+  if (!logDownload.active || !client || !client.connected) { finishLogDownload(false, 'Broker disconnected before the row completed.'); return; }
+  const arg = IS28.getLogArg(logDownload.dataset, logDownload.rowIndex);
+  const bytes = IS28.encodeCommand(IS28.CMD.GET_LOG, logDownload.requestId, arg);
+  pending[logDownload.requestId] = { time:now(), code:IS28.CMD.GET_LOG, log:true };
+  noteOwnCommand(bytes);
+  client.publish('is28/cmd', bytes, { qos:0, retain:false });
+  $('logDownloadStatus').textContent = `Dataset ${logDownload.dataset}, row ${logDownload.rowIndex+1}${logDownload.totalRows===null?'':` / ${logDownload.totalRows}`} · waiting for ACK/chunks${logDownload.retries ? ` · retry ${logDownload.retries}/3` : ''}`;
+  clearTimeout(logDownload.timer);
+  logDownload.timer = setTimeout(()=>retryLogRow('chunk timeout or missing part'), 3000);
+}
+function retryLogRow(reason) {
+  if (!logDownload.active) return;
+  if (logDownload.retries >= 3) { finishLogDownload(false, `Row ${logDownload.rowIndex} incomplete after 3 retries (${reason}). No complete export was produced.`); return; }
+  logDownload.retries++;
+  logDownload.parts = null; logDownload.partCount = 0;
+  publishLogRowRequest();
+}
+function onLogChunk(d) {
+  if (!logDownload.active) { log('is28/tlm', `unrequested log chunk dataset ${d.dataset}, row ${d.rowIndex}, id ${d.requestId}`); return; }
+  if (d.dataset !== logDownload.dataset || d.requestId !== logDownload.requestId || d.rowIndex !== logDownload.rowIndex) {
+    log('is28/tlm', `ignored unmatched log chunk dataset ${d.dataset}, row ${d.rowIndex}, id ${d.requestId}`); return;
+  }
+  if (d.status !== 0) { finishLogDownload(false, `Firmware rejected dataset ${d.dataset} row ${d.rowIndex} with status ${d.status}.`); return; }
+  if (logDownload.totalRows === null) logDownload.totalRows = d.totalRows;
+  if (d.totalRows !== logDownload.totalRows || d.rowIndex >= d.totalRows) {
+    retryLogRow('inconsistent row count or index'); return;
+  }
+  if (logDownload.partCount && logDownload.partCount !== d.partCount) { retryLogRow('part count changed'); return; }
+  if (!logDownload.parts) { logDownload.partCount=d.partCount; logDownload.parts=new Array(d.partCount); }
+  const prior=logDownload.parts[d.partIndex];
+  if (prior && prior.join(',') !== d.bytes.join(',')) { retryLogRow('conflicting duplicate part'); return; }
+  logDownload.parts[d.partIndex]=d.bytes;
+  if (logDownload.parts.filter(Array.isArray).length === logDownload.partCount) {
+    const row=Uint8Array.from(logDownload.parts.flat());
+    const expected=IS28.LOG_DATASETS[logDownload.dataset].rowBytes;
+    if (row.length !== expected) { retryLogRow(`row length ${row.length}, expected ${expected}`); return; }
+    clearTimeout(logDownload.timer); logDownload.rows.push(row); logDownload.rowIndex++;
+    $('logDownloadStatus').textContent = `Received ${logDownload.rowIndex}${logDownload.totalRows===null?'':` / ${logDownload.totalRows}`} ${IS28.LOG_DATASETS[logDownload.dataset].name} rows.`;
+    setTimeout(requestNextLogRow, 20);
+  }
+}
+function finishLogDownload(ok, message) {
+  clearTimeout(logDownload.timer); logDownload.active=false; logDownload.status=ok?'complete':'incomplete';
+  if (ok) exportLogDownload();
+  $('logDownloadStatus').textContent = ok ? `Complete: received all ${logDownload.rows.length} ${IS28.LOG_DATASETS[logDownload.dataset].name} rows; binary and CSV exports downloaded.` : message;
+  addEvent(ok ? `Stored-data download complete: ${IS28.LOG_DATASETS[logDownload.dataset].label}, ${logDownload.rows.length} rows` : `Stored-data download incomplete: ${message}`, null, 'download');
+  updateLogDownloadControl();
+}
+function joinRows(rows) {
+  const out=new Uint8Array(rows.reduce((n,r)=>n+r.length,0)); let at=0;
+  rows.forEach((r)=>{out.set(r,at);at+=r.length;}); return out;
+}
+function hexRow(row) { return Array.from(row,(b)=>b.toString(16).padStart(2,'0')).join(''); }
+function exportLogDownload() {
+  const ds=IS28.LOG_DATASETS[logDownload.dataset], filename=`is28_${labelPart()}${ds.name}_${stamp()}`;
+  const raw=joinRows(logDownload.rows);
+  download(`${filename}.bin`,raw,'application/octet-stream');
+  let header=['row_index','byte_length','bytes_hex'], rows=logDownload.rows.map((r,i)=>[i,r.length,hexRow(r)]), format='raw-row-hex';
+  if (logDownload.dataset===0) {
+    header=['row_index','uptime_basis','uptime_ms','run_id','elapsed_ms','phase','profile','recovery_state','motion_active','calibration_valid','automatic','emergency_stop','speed_left_mm_s','speed_right_mm_s','target_left_mm_s','target_right_mm_s','pwm_left','pwm_right','adc_left','adc_right','adc_barcode','level_left','level_right','barcode_level','line_mask','distance_mm','heading_cdeg'];
+    rows=logDownload.rows.map((r,i)=>{const f=IS28.decodeFrame(r); if(f.error||f.src!==SRC.SDK_MOTION) return [i,...Array(header.length-1).fill('decode_error')]; const d=f.data; return [i,d.runRelativeUptime?'run-relative':'system-uptime',d.uptimeMs,d.runId,d.elapsedMs,d.phase,d.profile,d.recoveryState,d.motionActive,d.calibrationValid,d.automatic,d.emergencyStop,d.speedL,d.speedR,d.targetL,d.targetR,d.pwmL,d.pwmR,...d.adc,formatCalLevel(d.levels[0],d.calibrationValid),formatCalLevel(d.levels[1],d.calibrationValid),formatCalLevel(d.levels[2],false),d.lineMaskAvailable?'0x'+d.lineMask.toString(16):'unavailable',d.distanceMm,d.headingCdeg];});
+    format='decoded-source-9-motion';
+  }
+  const csv=[header,...rows].map((r)=>r.map(csvCell).join(',')).join('\r\n')+'\r\n';
+  download(`${filename}.csv`,csv,'text/csv');
+  download(`${filename}.json`,JSON.stringify({dataset:logDownload.dataset,name:ds.name,rowCount:logDownload.rows.length,rowBytes:ds.rowBytes,format,uptimeBasis:logDownload.dataset===0?'per-row flags bit 7 (run-relative when set)':'not interpreted',exportedAt:new Date().toISOString(),runLabel,dashboard:DASHBOARD_VERSION,rawFile:`${filename}.bin`,csvFile:`${filename}.csv`},null,2)+'\n','application/json');
+}
+function handleLogAck(ack) {
+  if (!logDownload.active || ack.id!==logDownload.requestId || ack.code!==IS28.CMD.GET_LOG) return;
+  if (!ack.accepted) finishLogDownload(false, `GET_LOG request rejected: ${ackName(ack)}.`);
+  else $('logDownloadStatus').textContent = `GET_LOG accepted for row ${logDownload.rowIndex}; waiting for matching source-13 chunks.`;
+}
+function cancelLogDownload(reason) { if(logDownload.active) finishLogDownload(false,reason); }
+function updateLogDownloadControl() {
+  const offReady = coordinatorMode === 7 && coordinatorOffSince !== null && now() - coordinatorOffSince >= 5000;
+  const rtos = currentProfile() === 'rtos';
+  $('logDownload').disabled = rtos || !offReady || logDownload.active || !client || !client.connected;
+  if (!logDownload.active && logDownload.status === 'idle') {
+    $('logDownloadStatus').textContent = rtos ? 'Stored downloads are an SDK v2.3 feature; the RTOS firmware does not provide them.' :
+      coordinatorMode === null && staleShown.sdkNav ? 'Coordinator status is stale (telemetry off?). Switch Telemetry on and wait for coordinator Off.' :
+      coordinatorMode !== 7 ? 'Stop the car, then wait 5 s for coordinator Off status.' : !offReady ?
+      `Coordinator is Off; wait ${Math.max(0,5-Math.floor((now()-coordinatorOffSince)/1000))} s before downloading.` :
+      'Stopped state confirmed for 5 s. Select a dataset to request it.';
+  }
+}
+$('logDownload').onclick = startLogDownload;
+document.querySelectorAll('button[data-cmd]').forEach((b) => {
+  b.onclick = () => send(IS28.CMD[b.dataset.cmd]);
+});
+$('tlmOn').onclick = () => send(IS28.CMD.CONFIG, IS28.configArg(IS28.CFG_TELEMETRY, 1));
+$('tlmOff').onclick = () => send(IS28.CMD.CONFIG, IS28.configArg(IS28.CFG_TELEMETRY, 0));
+$('badlen').onclick = () => { const b = IS28.encodeCommand(IS28.CMD.START, (cmdId + 1) & 0xff);
+                              send(0, 0, b.subarray(0, 3)); };
+$('unknown').onclick = () => send(15);
+$('steerBtn').onclick = () => { if (currentProfile() === 'rtos') send(IS28.CMD.STEER); };
+$('driveBtn').onclick = () => { if (currentProfile() === 'rtos') send(IS28.CMD.DRIVE); };
+
+IS28.MAP_MOVEMENTS.forEach((movement, i) => {
+  const row = document.createElement('tr');
+  const label = document.createElement('td'); label.textContent = movement;
+  const input = document.createElement('td'), select = document.createElement('select');
+  select.id = 'mapLetter' + i; select.setAttribute('aria-label', movement + ' barcode letter');
+  select.add(new Option('Choose letter', ''));
+  for (let n = 65; n <= 90; n++) { const ch = String.fromCharCode(n); select.add(new Option(ch, ch)); }
+  input.appendChild(select);
+  const active = document.createElement('td'); active.dataset.mapActive = i; active.textContent = 'unknown';
+  row.append(label, input, active); $('mappingRows').appendChild(row);
+});
+
+function requestMapping() {
+  const id = send(IS28.CMD.BARCODE_GET);
+  if (id === null) return;
+  mappingQueried = true;
+  mapPending = { id, time: now(), wanted: null };
+  $('mapStatus').textContent = 'Waiting for active mapping from the car…';
+  $('mapStatus').className = 'warn';
+}
+$('mapRead').onclick = requestMapping;
+$('mapApply').onclick = () => {
+  try {
+    const letters = IS28.MAP_MOVEMENTS.map((_, i) => $('mapLetter' + i).value);
+    const bytes = IS28.encodeMapping((cmdId + 1) & 255, letters);
+    const id = send(IS28.CMD.BARCODE_MAP, 0, bytes);
+    if (id === null) throw new Error('Connect to the broker before applying a mapping.');
+    mappingQueried = true;
+    mapPending = { id, time: now(), wanted: letters };
+    $('mapStatus').textContent = 'Sent mapping; waiting for the car to return its active configuration…';
+    $('mapStatus').className = 'warn';
+  } catch (e) { $('mapStatus').textContent = e.message; $('mapStatus').className = 'bad'; }
+};
+
+/* ---------- firmware profile ---------- */
+function detectedProfile() { return IS28.detectProfile(seenSources.keys(), firstSeen, now()); }
+function currentProfile() { return IS28.effectiveProfile(detectedProfile(), profileOverride); }
+function profileText(p) {
+  return p === 'sdk' ? 'SDK v2.3' + (seenSources.has(SRC.IMU) || seenSources.has(SRC.MOTION) ? ' + Buddy4 add-on' : '') :
+         p === 'rtos' ? 'RTOS (micro T-Kernel)' : p === 'rtos-inferred' ? 'RTOS (inferred: Buddy 2/4 frames without SDK telemetry)' : p === 'mixed' ? 'MIXED (RTOS and SDK frames)' : 'unknown';
+}
+function noteSource(src) { const t = now(), isNew = !seenSources.has(src); seenSources.set(src, t); if (!firstSeen.has(src)) firstSeen.set(src, t); if (isNew) updateProfile(); }
+function clearSeen() { seenSources.clear(); firstSeen.clear(); }
+function updateProfile() {
+  const det = detectedProfile(), eff = currentProfile();
+  $('profileDetected').textContent = seenSources.size ? profileText(det) : 'no frames yet';
+  $('profileDetected').className = det === 'mixed' ? 'bad' : '';
+  const t = now();
+  $('profileSources').textContent = seenSources.size ? Array.from(seenSources.entries()).sort((a, b) => a[0] - b[0])
+    .map(([s, at]) => `${s} ${IS28.SRC_NAME[s] || '?'} (${((t - at) / 1000).toFixed(1)} s)`).join(', ') : 'none';
+  const overridden = profileOverride !== 'auto';
+  setPill($('profilePill'), 'firmware: ' + profileText(eff) + (overridden ? ` (manual; observed ${profileText(det)})` : ''),
+          det === 'mixed' || (overridden && det !== 'unknown' && IS28.effectiveProfile(det, 'auto') !== eff) ? 'bad' : eff === 'unknown' ? 'muted' : 'ok');
+  $('steerBtn').disabled = eff !== 'rtos'; $('driveBtn').disabled = eff !== 'rtos';
+  $('b4Source').textContent = eff === 'sdk' ? 'Source: SDK v2.3 + Buddy4 add-on (Buddy4 reads v2.3 odometry; observer only, never controls motors).' :
+    eff === 'rtos' ? 'Source: RTOS Buddy 2 odometry and Buddy 4 IMU tasks.' :
+    det === 'mixed' ? 'Frames from both firmware families since the last boot. Check that only one car is on this broker.' :
+    'Waiting for Buddy 4 frames.';
+  if (eff === 'sdk') {
+    for (const id of ['s3', 's5']) $(id).textContent = 'not provided by SDK v2.3 firmware';
+  }
+  refreshSafety(); updateLogDownloadControl();
+}
+$('profileOverride').onchange = () => {
+  profileOverride = $('profileOverride').value || 'auto';
+  addEvent(`Profile override set to ${profileOverride}`, null, 'profile');
+  updateProfile(); refreshOpState(); updateLogDownloadControl();
+};
+
+/* ---------- incoming ---------- */
+function hex(b) { return Array.from(b, (x) => x.toString(16).padStart(2, '0')).join(' '); }
+function hexCompact(b) { return Array.from(b, (x) => x.toString(16).padStart(2, '0')).join(''); }
+function now() { return performance.now(); }
+
+function onMessage(topic, payload, packet) {
+  const b = new Uint8Array(payload);
+  const retained = !!(packet && packet.retain);
+  const at = now(), iso = new Date().toISOString();
+  if (topic === 'is28/hb' || topic === 'is28/tlm') {
+    const f = IS28.decodeFrame(b);
+    recordFrame(topic, b, f, retained, iso, at);
+    if (f.error) { log(topic, `bad frame (${f.error}) [${hex(b)}]`); return; }
+    if (retained) { log(topic, `retained ${f.srcName} #${f.seq} ignored for live display (not a fresh frame)`); return; }
+    if (test.running && f.src !== SRC.BARCODE_MAP && f.src !== SRC.LOG_CHUNK) test.seq.add(f.src, f.seq);
+    show(f);
+    if (topic === 'is28/hb') heartbeat(f);
+    if ((topic === 'is28/hb' && $('logHb').checked) || (topic !== 'is28/hb' && $('logTlm').checked))
+      log(topic, `${f.srcName} #${f.seq} ${summary(f)}`);
+  } else if (topic === 'is28/ack') {
+    const a = IS28.decodeAck(b);
+    recordFrame(topic, b, a.error ? { error: a.error } : { ack: a }, retained, iso, at);
+    if (a.error) { log(topic, a.error); return; }
+    if (retained) { log(topic, 'retained acknowledgement ignored'); return; }
+    const sent = pending[a.id];
+    const own = sent && sent.code === a.code;
+    if (own) delete pending[a.id];
+    const ms = own ? ` in ${Math.round(now() - sent.time)} ms` : '';
+    const name = ackName(a);
+    if (own || !sent) {
+      $('lastack').innerHTML = '';
+      const strong = document.createElement('b'); strong.textContent = a.codeName;
+      const res = document.createElement('span'); res.className = a.accepted ? 'ok' : 'bad'; res.textContent = name;
+      const tail = document.createElement('span'); tail.textContent = `${ms}${own ? '' : ' (not sent by this page)'} · car state byte: ${a.stateName}`;
+      const idSpan = document.createElement('span'); idSpan.textContent = ` (id ${a.id}): `;
+      $('lastack').append(strong, idSpan, res, tail);
+    }
+    log(topic, `← ${a.codeName} id ${a.id}: ${name}${ms}, state ${a.stateName}${own ? '' : ' (not from this page)'}`);
+    addEvent(`ACK ${a.codeName} id ${a.id}: ${name}${own ? '' : ' (not from this page)'} · state byte ${a.stateName}`,
+             { commandId: a.id, event: 'ack', detail: a.result }, 'ack');
+    if (own && a.accepted && IS28.MOTION_CMDS.includes(a.code)) {
+      $('cmdNote').textContent = `${a.codeName} accepted at ${new Date().toLocaleTimeString()}. Acceptance is not the car's state: check the Operating state panel for confirmation.`;
+      if (a.code === IS28.CMD.RESET) lastResetAccepted = { at: now(), iso };
+      refreshOpState();
+    }
+    handleLogAck(a);
+    if (own && mapPending && mapPending.id === a.id && !a.accepted) {
+      mapPending = null; $('mapStatus').textContent = name; $('mapStatus').className = 'bad';
+    }
+  } else if (topic === 'is28/lwt') {
+    recordFrame(topic, b, { lwt: true }, retained, iso, at);
+    if (retained) { log(topic, 'retained last-will message present on broker (old event)'); return; }
+    lwtOffline = true;
+    setPill($('carlink'), 'car offline (broker last will)', 'bad');
+    mappingUnknown('Car offline. Its mapping needs a fresh readback when it returns.');
+    if (liveActive()) invalidateLive('car offline (broker last will)');
+    hb.seen = false; hb.lastSeq = null; lastUptime = null;
+    log(topic, 'broker reports the car went offline');
+  } else if (topic === 'is28/cmd') {
+    const own = isOwnCommand(b);
+    recordFrame(topic, b, { command: { own, code: b.length ? b[0] >> 4 : null, id: b.length > 1 ? b[1] : null } }, retained, iso, at);
+    if (!own && !retained) {
+      const name = b.length ? IS28.CMD_NAME[b[0] >> 4] : 'empty';
+      $('otherClients').textContent = `Another client sent ${name} (id ${b.length > 1 ? b[1] : '?'}) at ${new Date().toLocaleTimeString()}. Check which dashboards are connected.`;
+      $('otherClients').className = IS28.MOTION_CMDS.includes(b[0] >> 4) ? 'warn small' : 'muted small';
+      log(topic, `command from another client: ${name} [${hex(b)}]`);
+      addEvent(`Command from another client on the broker: ${name} (id ${b.length > 1 ? b[1] : '?'})`, null, 'command-other');
+    }
+  } else {
+    recordFrame(topic, b, null, retained, iso, at);
+    log(topic, `[${hex(b)}]`);
+  }
+}
+
+function heartbeat(f) {
+  const t = now(), d = f.data;
+  if (hb.seen && hb.lastSeq === f.seq && hb.lastUptime === d.uptimeS) return;  /* duplicate delivery */
+  if (hb.seen) { hb.lastGap = (t - hb.last) / 1000; hb.maxGap = Math.max(hb.maxGap, hb.lastGap); }
+  if (test.running) {
+    if (!test.firstHb) test.firstHb = t;
+    if (test.lastHb) test.gaps.push((t - test.lastHb) / 1000);
+    test.lastHb = t;
+  }
+  hb.last = t; hb.seen = true; hb.lastSeq = f.seq; hb.lastUptime = d.uptimeS; lwtOffline = false;
+  $('hbgap').textContent = `${hb.lastGap.toFixed(2)} s / ${hb.maxGap.toFixed(2)} s`;
+  $('hbage').textContent = '0.0 s ago'; $('hbage').className = 'ok';
+  setPill($('carlink'), 'car: online', 'ok');
+}
+
+function updateCarLink(t) {
+  if (!hb.seen) {
+    if (lwtOffline) setPill($('carlink'), 'car offline (broker last will)', 'bad');
+    else if (!client || !client.connected) setPill($('carlink'), 'car: unknown (broker not connected)', 'muted');
+    else setPill($('carlink'), 'car: no heartbeat yet', 'muted');
+    return;
+  }
+  const age = (t - hb.last) / 1000;
+  if (age > 2 && activeMapping) mappingUnknown('Heartbeat lost. Read the active mapping again when the car returns.');
+  $('hbage').textContent = `${age.toFixed(1)} s ago`; $('hbage').className = age > 2 ? 'bad' : 'ok';
+  if (age > 2) setPill($('carlink'), `car: no heartbeat for ${age.toFixed(0)} s`, 'bad');
+  else setPill($('carlink'), 'car: online', 'ok');
+}
+
+function tick() {
+  const t = now();
+  if (lastImuAt) {
+    const imuAge = (t - lastImuAt) / 1000;
+    $('imuAge').textContent = `${imuAge.toFixed(1)} s ago`;
+    if (imuAge > 2) $('imuValid').textContent = 'stale — waiting for an update';
+  }
+  if (lastMotionAt && (t - lastMotionAt) > 2000) clearMotion('stale — telemetry off or no fresh frames');
+  for (const k of Object.keys(GROUPS)) {
+    if (fresh[k] && t - fresh[k] > GROUPS[k].staleMs && !staleShown[k]) groupStale(k, t);
+  }
+  if (IS28.mappingTimedOut(mapPending, t)) {
+    mapPending = null; mappingQueried = false;
+    $('mapStatus').textContent = 'No matching readback within 5 s. Apply status is unknown; read the mapping from the car before retrying.';
+    $('mapStatus').className = 'bad';
+  }
+  for (const id of Object.keys(pending)) {
+    if (t - pending[id].time > 10000) delete pending[id];
+  }
+  updateCarLink(t);
+  updateProfile(); refreshOpState(); updateLogDownloadControl();
+}
+setInterval(tick, 250);
+setInterval(() => {
+  const d = new Date();
+  $('syncClock').textContent = `${d.toLocaleTimeString([], { hour12: false })}.${String(d.getMilliseconds()).padStart(3, '0')}`;
+  updateRecordingStatus();
+}, 100);
+
+/* A live panel group went quiet: keep the last values visible but marked. */
+function groupStale(k, t) {
+  staleShown[k] = true;
+  const age = ((t - fresh[k]) / 1000).toFixed(1);
+  const msg = `STALE: no frame for ${age} s — values shown are the last received`;
+  if (k === 'sdkMotion') { $('sdkMotionStatus').textContent = msg + ' (telemetry off or link lost).'; $('sdkMotionStatus').className = 'bad small'; $('sdkMotionGrid').className = 'metric-grid stale'; }
+  else if (k === 'sdkDiag') { $('diagStatus').textContent = msg + '.'; $('diagStatus').className = 'bad small'; }
+  else if (k === 'sdkLine') { $('progressStatus').textContent = 'Line status ' + msg + '.'; $('progressStatus').className = 'bad small'; }
+  else if (k === 'sdkNav') {
+    coordinatorMode = null; coordinatorOffSince = null;
+    cancelLogDownload('Coordinator status went stale. No complete export was produced.');
+    $('navState').textContent = 'stale — no coordinator status'; $('navDetails').textContent = 'stale — no coordinator status (telemetry off?)';
+  }
+  else if (k === 'nav6') { $('owner').textContent = 'stale'; }
+  else if (k === 'line3') { $('s3').textContent = 'stale — no Buddy 3 frame'; }
+  else if (k === 'b5') { $('s5').textContent = 'stale — no Buddy 5 frame'; }
+  refreshOpState(); refreshSafety(); updateLogDownloadControl();
+}
+function groupFresh(k) {
+  fresh[k] = now();
+  if (!staleShown[k]) return;
+  staleShown[k] = false;
+  if (k === 'sdkMotion') { $('sdkMotionStatus').textContent = 'Live.'; $('sdkMotionStatus').className = 'ok small'; $('sdkMotionGrid').className = 'metric-grid'; }
+  else if (k === 'sdkDiag') { $('diagStatus').textContent = 'Live.'; $('diagStatus').className = 'ok small'; }
+  else if (k === 'sdkLine') { $('progressStatus').textContent = 'Live.'; $('progressStatus').className = 'ok small'; }
+}
+
+/* Disconnect, last will or car restart: discard live readings (recorded
+ * evidence is kept) so nothing from before looks current. */
+function invalidateLive(reason) {
+  lastMotionAt = 0; motionAwaitingFresh = lastMotionSeq !== null;
+  clearMotion('waiting for fresh Buddy 2 telemetry after ' + reason);
+  lastImuAt = 0; imuAwaitingFresh = lastImuSeq !== null; lastAcceptedImuPeak = null;
+  clearImu('waiting for fresh Buddy 4 telemetry after ' + reason);
+  for (const k of Object.keys(GROUPS)) { fresh[k] = 0; staleShown[k] = false; }
+  nav6 = null; safetyData = null; sdkNav = null; hb.state = null; faultSince = null;
+  coordinatorMode = null; coordinatorOffSince = null;
+  cancelLogDownload('Live data invalidated (' + reason + '). No complete export was produced.');
+  const dash = '—';
+  for (const id of ['speedMeasured','speedTarget','pwm','adc','levels','distance','averageSpeed','heading','runTime','profilePhase','telemetryTime',
+                    'diagThreshold','diagState','diagCounts','diagErrors','diagGaps','diagDrops','diagInvalid','diagUptime',
+                    'eventLetter','pendingAction','pendingRevision','executingAction','completedAction','navState']) $(id).textContent = dash;
+  $('sdkMotionStatus').textContent = `Cleared: ${reason}. Waiting for fresh frames.`; $('sdkMotionStatus').className = 'warn small'; $('sdkMotionGrid').className = 'metric-grid';
+  $('diagStatus').textContent = `Cleared: ${reason}.`; $('diagStatus').className = 'warn small';
+  $('progressStatus').textContent = `Cleared: ${reason}.`; $('progressStatus').className = 'warn small';
+  $('navDetails').textContent = 'waiting for coordinator telemetry'; $('sdkFault').textContent = '—'; $('owner').textContent = '–';
+  $('hbState').textContent = '–'; $('s3').textContent = 'no frames'; $('s5').textContent = 'no frames';
+  for (const id of ['net','pub','cmds','connects','fill','uptime']) $(id).textContent = '–';
+  motionChartRows = []; imuChartHeight = []; imuChartPitch = [];
+  clearSeen();
+  addEvent(`Live readings cleared: ${reason} (recorded data kept)`, null, 'link');
+  updateProfile(); refreshOpState(); refreshSafety(); updateLogDownloadControl();
+}
+function carRestarted() {
+  mappingUnknown('Car restarted. Reading its mapping again…');
+  invalidateLive('car restart');
+}
+
+/* ---------- operating state (car-confirmed) ---------- */
+function stateClass(name) {
+  return /Emergency|Fault|E-STOP/.test(name) ? 'bad' : /Running|Driving|Turning|Settling|Auto/.test(name) ? 'ok' :
+         /Paused|Safe Stop|Stopping/.test(name) ? 'warn' : '';
+}
+function hbStateName(state) {
+  const n = IS28.NAV_STATE[state] || ('#' + state);
+  return currentProfile() === 'sdk' && state === 3 ? 'Safe Stop (stopped)' : n;
+}
+function setState(name) { $('opstate').textContent = name; $('opstate').className = 'big ' + stateClass(name); }
+function refreshOpState() {
+  const prof = currentProfile(), t = now();
+  const hbFresh = hb.seen && t - hb.last <= 2000;
+  let fault = false;
+  if (sdkNav && fresh.sdkNav && !staleShown.sdkNav && prof !== 'rtos') {
+    const name = IS28.SDK_MODE[sdkNav.mode] || `Coordinator mode ${sdkNav.mode}`;
+    setState(name); fault = sdkNav.mode === IS28.SDK_MODE_FAULT || (hbFresh && hb.state === 6);
+    $('opstateSource').textContent = `SDK coordinator (source 11), ${((t - fresh.sdkNav) / 1000).toFixed(1)} s ago`;
+  } else if (nav6 && fresh.nav6 && !staleShown.nav6 && prof !== 'sdk') {
+    setState(nav6.stateName); fault = nav6.state === 6;
+    $('opstateSource').textContent = `RTOS navigation (source 6), ${((t - fresh.nav6) / 1000).toFixed(1)} s ago`;
+  } else if (hbFresh && hb.state !== null && hb.state !== 7) {
+    setState(hbStateName(hb.state)); fault = hb.state === 6;
+    $('opstateSource').textContent = 'heartbeat state only (no fresh coordinator/navigation frame)';
+  } else {
+    $('opstate').textContent = 'unknown'; $('opstate').className = 'big muted';
+    $('opstateSource').textContent = hb.seen ? 'state telemetry stale' : 'no state telemetry yet';
+  }
+  if (fault) { if (faultSince === null) faultSince = t; } else faultSince = null;
+  if (fault && prof === 'sdk' && lastResetAccepted && faultSince !== null && lastResetAccepted.at >= faultSince) {
+    $('opNote').textContent = `Reset was accepted at ${new Date(lastResetAccepted.iso).toLocaleTimeString()}. Original v2.3 keeps showing the previous run's Fault until a new run starts; this is not a new fault.`;
+  } else $('opNote').textContent = '';
+}
+function refreshSafety() {
+  const prof = currentProfile();
+  if (prof === 'mixed') {
+    $('safety').textContent = 'not trusted: RTOS Safety frames and SDK v2.3 frames both seen since the last boot'; $('safety').className = 'bad';
+    $('faults').textContent = 'not trusted (mixed firmware frames)'; $('faults').className = 'bad';
+    $('stopms').textContent = 'not trusted (mixed firmware frames)'; $('stopms').className = 'bad';
+    return;
+  }
+  if (prof === 'sdk') {
+    $('safety').textContent = 'not provided by SDK v2.3 firmware (no Safety supervisor)'; $('safety').className = 'muted';
+    $('faults').textContent = 'not provided by SDK firmware (see coordinator fault bitmap)'; $('faults').className = 'muted';
+    $('stopms').textContent = 'not provided by SDK firmware'; $('stopms').className = 'muted';
+    return;
+  }
+  if (!safetyData) {
+    $('safety').textContent = 'no Safety frame received'; $('safety').className = 'muted';
+    $('faults').textContent = '–'; $('faults').className = ''; $('stopms').textContent = '–'; $('stopms').className = '';
+    return;
+  }
+  if (!fresh.safety || staleShown.safety) {
+    const age = fresh.safety ? ((now() - fresh.safety) / 1000).toFixed(0) + ' s' : 'a while';
+    $('safety').textContent = `stale — no Safety frame for ${age} (last state not shown)`; $('safety').className = 'bad';
+    $('faults').textContent = 'stale'; $('faults').className = 'bad'; $('stopms').textContent = 'stale'; $('stopms').className = 'bad';
+    return;
+  }
+  const d = safetyData;
+  $('safety').textContent = d.stateName + (d.inhibit ? ', motor drive inhibited' : '') + (prof === 'rtos' ? '' : ' (RTOS frame)');
+  $('safety').className = stateClass(d.stateName);
+  $('faults').textContent = d.faultMask ? d.faultNames.join(', ') : 'none'; $('faults').className = '';
+  $('stopms').textContent = `${d.lastStopMs} ms (worst ${d.maxStopMs} ms, limit 100)`; $('stopms').className = '';
+}
+
+function summary(f) {
+  const d = f.data;
+  if (!d) return '(no decoder for this source yet)';
+  switch (f.src) {
+    case 1: return `${d.netName}, ${d.stateName}, pub ${d.published}, lost ${d.lost}`;
+    case 2: return `${d.freshOdometry ? d.centreSpeedMmS + ' mm/s' : 'speed unavailable'}, ` +
+      `${d.sideEstimateValid ? d.rightMinusLeftHeightMm + ' mm height difference' : 'height unavailable'}`;
+    case 3: return `${d.stateName}, last ${d.lastChar} ${d.lastResult}, cmd ${d.lastCmd}`;
+    case 4: return `${d.stateName}, ${d.motion}, ${d.event}, pitch ${d.pitchDeg}°, peak ${d.highestMm} mm`;
+    case 5: return `${d.stateName}, range ${d.rangeMm} mm, width ${d.widthMm} mm, side ${d.side}, servo ${d.servoDeg}°`;
+    case 6: return `${d.stateName}, owner ${d.ownerName}${d.slow ? ' (slow)' : ''}`;
+    case 7: return `${d.stateName}${d.inhibit ? ', drive inhibited' : ''}, mask 0x${d.faultMask.toString(16)}`;
+    case 8: return d.configured ? `mapping rev ${d.revision}: ${d.letters.join('/')} (forward/U-turn/left/right), request ${d.requestId}` : 'mapping not configured';
+    case 9: return `run ${d.runId}, measured ${d.speedL}/${d.speedR} mm/s, target ${d.targetL}/${d.targetR}, PWM ${d.pwmL}/${d.pwmR}, phase ${d.phase}, profile ${d.profile}`;
+    case 10: return `${IS28.EVENT_NAME[d.event] || 'event '+d.event}, decoded ${d.letter}, pending ${d.pendingLetter}/${d.action}, executing ${d.executingAction}, rev ${d.revision}`;
+    case 11: return `${IS28.EVENT_NAME[d.event] || 'event '+d.event}, mode ${d.mode}, owner ${d.owner}, ${d.letter}/${d.action}, map rev ${d.revision}`;
+    case 12: return `run ${d.runId}, result ${d.result}, ${d.elapsedMs} ms, ${d.distanceMm} mm`;
+    case 13: return `log dataset ${d.dataset} row ${d.rowIndex}/${d.totalRows} part ${d.partIndex+1}/${d.partCount} status ${d.status}`;
+    case 14: return `barcode threshold ${d.thresholdAdc}, bank ${d.bank}, decoded ${d.decodedTotal}, bad frames ${d.badFrames}`;
+    default: return '';
+  }
+}
+
+function show(f) {
+  const d = f.data;
+  if (!d) { if (f.src === 2) $('s2').textContent = `frame #${f.seq} (layout not defined yet)`; noteSource(f.src); return; }
+  switch (f.src) {
+    case 1:
+      if (lastUptime !== null && d.uptimeS < lastUptime) carRestarted();
+      lastUptime = d.uptimeS;
+      if (!mappingQueried) requestMapping();
+      $('net').textContent = d.netName;
+      $('pub').textContent = `${d.published} / ${d.lost}`;
+      $('cmds').textContent = `${d.accepted} / ${d.rejected} (last: ${d.lastCmdName}, ${d.lastResultName})`;
+      $('connects').textContent = d.connects;
+      $('fill').textContent = d.fillPct + ' %';
+      $('uptime').textContent = `${Math.floor(d.uptimeS / 60)} min ${d.uptimeS % 60} s`;
+      hb.state = d.state;
+      $('hbState').textContent = `${hbStateName(d.state)} (heartbeat)`;
+      notePico(d.uptimeS * 1000);
+      break;
+    case 2:
+      if (motionAwaitingFresh && f.seq === lastMotionSeq) {
+        $('s2').textContent = 'waiting for fresh frame after car restart';
+        break;
+      }
+      if (f.seq === lastMotionSeq) break; // duplicate delivery does not refresh telemetry age
+      motionAwaitingFresh = false;
+      lastMotionSeq = f.seq;
+      lastMotionAt = now();
+      showB2Motion(d);
+      $('s2').textContent = summary(f);
+      pushImuChart(imuChartHeight, d.sideEstimateValid ? d.rightMinusLeftHeightMm : NaN);
+      break;
+    case 3:
+      groupFresh('line3');
+      $('s3').textContent = summary(f);
+      lastBarcodeLetter = d.lastChar;
+      $('barcodeLetter').textContent = d.lastChar;
+      $('barcodeMovement').textContent = IS28.mappedMovement(activeMapping, lastBarcodeLetter);
+      break;
+    case 4:
+      if (imuAwaitingFresh && f.seq === lastImuSeq) break;
+      if (f.seq === lastImuSeq && lastImuAt) break;   // duplicate delivery
+      imuAwaitingFresh = false; lastImuSeq = f.seq;
+      showImu(f, d);
+      break;
+    case 5: groupFresh('b5'); $('s5').textContent = summary(f); break;
+    case 6:
+      groupFresh('nav6'); nav6 = d;
+      $('owner').textContent = d.ownerName + (d.slow ? ' (slow)' : '');
+      break;
+    case 7: groupFresh('safety'); safetyData = d; break;
+    case 8: {
+      activeMapping = d;
+      document.querySelectorAll('[data-map-active]').forEach((el) => {
+        el.textContent = d.configured ? d.letters[Number(el.dataset.mapActive)] : 'not configured';
+      });
+      $('barcodeMovement').textContent = lastBarcodeLetter ? IS28.mappedMovement(d, lastBarcodeLetter) : 'no letter received';
+      if (mapPending && mapPending.id !== d.requestId) break;
+      const outcome = IS28.mappingReadbackStatus(d, mapPending ? mapPending.wanted : null);
+      $('mapStatus').textContent = outcome === 'confirmed' ?
+        `Confirmed by car: revision ${d.revision}, ${d.letters.join('/')} (forward/U-turn/left/right).` :
+        outcome === 'not_configured' ? 'Car has no mapping. Choose four letters and apply them.' :
+        'Car readback does not match the requested map. Review Active on car and retry after a fresh read.';
+      $('mapStatus').className = outcome === 'confirmed' ? 'ok' : outcome === 'not_configured' ? 'warn' : 'bad';
+      if (mapPending) addEvent(`Mapping readback (${outcome}): ${d.configured ? d.letters.join('/') + ' rev ' + d.revision : 'not configured'}`, null, 'mapping');
+      mapPending = null;
+      break;
+    }
+    case 9: groupFresh('sdkMotion'); latestSdkRunId = d.runId; notePico(d.uptimeMs, d.runRelativeUptime); showMotion(d, f); break;
+    case 10: groupFresh('sdkLine'); notePico(d.uptimeMs); showLineEvent(d, f); break;
+    case 11: groupFresh('sdkNav'); notePico(d.uptimeMs); showNavEvent(d, f); break;
+    case 12: notePico(d.uptimeMs); latestSdkRunId = d.runId;
+      addEvent(`Run summary · run ${d.runId}, result ${d.result}, elapsed ${d.elapsedMs} ms, distance ${d.distanceMm} mm, average ${d.elapsedMs > 0 ? (d.distanceMm*1000/d.elapsedMs).toFixed(2) : '0.00'} mm/s, line ${d.lineEvents}, nav ${d.navEvents}, recoveries ${d.recoveries}`, d, 'sdk-summary', f); break;
+    case 13: onLogChunk(d); break;
+    case 14: groupFresh('sdkDiag'); notePico(d.uptimeMs); showDiagnostics(d); break;
+  }
+  noteSource(f.src);
+  lastSeqBySrc[f.src] = f.seq;
+  refreshOpState();
+}
+function notePico(ms, runRelative) { if (!runRelative && Number.isFinite(ms)) lastPico = { ms, at: now() }; }
+
+/* ---------- Buddy 2 (source 2) and Buddy 4 (source 4): RTOS dashboard logic ---------- */
+function clearMotion(reason) {
+  $('s2').textContent = reason;
+  $('imuSpeed').textContent = reason;
+  $('motionWheels').textContent = reason;
+  $('motionDistance').textContent = reason;
+  $('motionRoll').textContent = reason;
+  $('motionHeight').textContent = reason;
+  $('motionQuality').textContent = reason;
+  $('motionGuards').textContent = reason;
+  $('motionGuardValues').textContent = reason;
+  $('motionRampStage').textContent = reason;
+}
+function clearImu(reason) {
+  for (const id of ['imuState','imuValid','imuPitch','imuMotion','imuEvent','imuOdometry','imuHeight','imuHighest','imuHumps','imuShock','imuHealth','imuFault','s4'])
+    $(id).textContent = reason;
+  $('imuAge').textContent = 'no frames since ' + reason.replace(/^waiting for fresh Buddy 4 telemetry after /, '');
+}
+function showB2Motion(d) {
+  $('motionGuardValues').textContent = d.maxSpreadMg === undefined ?
+    'not provided by this firmware' :
+    `${d.maxSpreadMg} mg raw` + (d.maxMadMg === undefined ? '; ' :
+      `; ${d.maxMadMg} mg robust deviation` + (d.maxMadFwdMg === undefined ? '' :
+        ` [fwd ≤${d.maxMadFwdMg} / lat ≤${d.maxMadLatMg} / up ≤${d.maxMadUpMg}]`) +
+      ` (min ${d.minFifoSamples} FIFO samples); `) + (d.rateSamples ?
+      `${d.maxAbsAccelMmS2} mm/s²; ${d.maxAbsTurnDegS.toFixed(1)}°/s (${d.rateSamples} rate samples)` :
+      'rates unavailable in this interval');
+  const odometry = d.freshOdometry;
+  $('imuSpeed').textContent = odometry ? `${d.centreSpeedMmS} mm/s` : 'unavailable — no fresh odometry';
+  $('motionWheels').textContent = odometry ? `${d.leftSpeedMmS} / ${d.rightSpeedMmS} mm/s` : 'unavailable — no fresh odometry';
+  $('motionDistance').textContent = odometry ? `${d.netDistanceMm} mm` : 'unavailable — no fresh odometry';
+  $('motionRoll').textContent = d.sideEstimateValid ? `${d.rollDeg.toFixed(1)}°` : 'unavailable — no valid side estimate';
+  $('motionHeight').textContent = d.sideEstimateValid ? `${d.rightMinusLeftHeightMm} mm` : 'unavailable — no valid side estimate';
+  $('motionQuality').textContent = `${odometry ? 'odometry fresh' : 'odometry unavailable'}; ` +
+    `${d.sideEstimateValid ? 'side estimate valid' : 'side estimate unavailable'}; ` +
+    `${d.passive ? 'passive sensing' : 'drive-enabled firmware'}${d.oneSidedMode ? '; one-sided mode' : ''}` +
+    `; encoder invalid L/R ${d.invalidTransitionsLeft}/${d.invalidTransitionsRight}`;
+  if (d.qualityReasons === undefined) {
+    $('motionGuards').textContent = 'not provided by this firmware';
+    $('motionRampStage').textContent = 'not provided by this firmware';
+  } else {
+    const names = ['sensor variation', 'gravity mismatch', 'acceleration', 'turn',
+                   'reverse movement', 'impact', 'late/overrun sample', 'unavailable data'];
+    const reasons = names.filter((_, bit) => d.qualityReasons & (1 << bit));
+    $('motionGuards').textContent = `${reasons.join(', ') || 'none'}; ` +
+      `${d.qualityBadSamples}/${d.qualityTotalSamples} samples since last publication`;
+    $('motionRampStage').textContent =
+      `${d.rampLevelReady ? 'level reference armed' : 'level reference not armed'}; ` +
+      (d.rampReturning ? 'returning to level' : d.rampRising ? 'ramp rising' :
+       d.rampCandidate ? 'checking rise' : 'no candidate');
+  }
+  drawImuChart();
+}
+function showImu(f, d) {
+  lastImuAt = now();
+  if (!d.humps) lastAcceptedImuPeak = null;
+  else if (d.event === 'status' || d.event === 'hump peak') lastAcceptedImuPeak = d.heightMm;
+  $('s4').textContent = summary(f);
+  $('imuState').textContent = d.stateName;
+  $('imuValid').textContent = d.valid ? 'valid (calibrated)' : 'not valid';
+  $('imuPitch').textContent = d.valid ? `${d.pitchDeg.toFixed(1)}°` : 'unavailable — data not valid';
+  $('imuMotion').textContent = d.motion;
+  $('imuEvent').textContent = `${d.event} (detail ${d.detail})`;
+  $('imuOdometry').textContent = d.odometry ? 'available' : 'unavailable';
+  $('imuHeight').textContent = lastAcceptedImuPeak === null ? 'no accepted peak received' : `${lastAcceptedImuPeak} mm`;
+  $('imuHighest').textContent = d.humps ? `${d.highestMm} mm` : 'no accepted hump';
+  $('imuHumps').textContent = `${d.humps} / ${d.rejected}`;
+  $('imuShock').textContent = `${d.shockMg} mg / ${d.shockNotifyMs} ms (${d.shocks} impacts)`;
+  $('imuHealth').textContent = `${d.i2cErrors} / ${d.framesMissed}`;
+  $('imuFault').textContent = d.lastFault ? `0x${d.lastFault.toString(16)}` : 'none';
+  const key = `${d.event}|${d.stateName}|${d.humps}|${d.rejected}|${d.shocks}|${d.lastFault}`;
+  if (key !== lastImuEventKey)
+    addEvent(`Buddy 4 ${d.event} · state ${d.stateName} · height field ${d.heightMm} mm · highest accepted ${d.highestMm} mm · humps ${d.humps} / rejected ${d.rejected} · impacts ${d.shocks} · fault ${d.lastFault}`, d, 'b4', f);
+  lastImuEventKey = key;
+  pushImuChart(imuChartPitch, d.valid ? d.pitchDeg : NaN);
+  drawImuChart();
+}
+function pushImuChart(series, value) {
+  series.push({ t: now(), v: value });
+  while (series.length > CHART_WINDOW) series.shift();
+}
+
+/* ---------- SDK v2.3 sources 9-14: v2.3 dashboard logic ---------- */
+function showMotion(d, f) {
+  $('speedMeasured').textContent = `${d.speedL} / ${d.speedR} mm/s`;
+  $('speedTarget').textContent = `${d.targetL} / ${d.targetR} mm/s`;
+  $('pwm').textContent = `${d.pwmL} / ${d.pwmR}`;
+  $('adc').textContent = `${d.adc[0]} / ${d.adc[1]} / ${d.adc[2]}`;
+  $('levels').textContent = `${formatCalLevel(d.levels[0],d.calibrationValid)} / ${formatCalLevel(d.levels[1],d.calibrationValid)} / ${formatCalLevel(d.levels[2],false)} · mask ${d.lineMaskAvailable ? '0x'+d.lineMask.toString(16) : 'unavailable'}`;
+  $('distance').textContent = `${d.distanceMm} mm`;
+  $('averageSpeed').textContent = d.elapsedMs > 0 ? `${(d.distanceMm * 1000 / d.elapsedMs).toFixed(2)} mm/s` : '—';
+  $('heading').textContent = `${(d.headingCdeg / 100).toFixed(2)}°`;
+  $('runTime').textContent = `run ${d.runId} · ${(d.elapsedMs / 1000).toFixed(2)} s`;
+  $('profilePhase').textContent = `${IS28.PROFILE_NAME[d.profile] || 'profile '+d.profile} / phase ${d.phase} / recovery ${d.recoveryState} / ${d.motionActive?'active':'inactive'} / ${d.automatic?'auto':'manual'}${d.emergencyStop?' / E-STOP':''}`;
+  $('telemetryTime').textContent = `${d.runRelativeUptime?'run-relative':'uptime'} ${d.uptimeMs} ms · received ${new Date().toLocaleTimeString()}`;
+  if (!staleShown.sdkMotion) { $('sdkMotionStatus').textContent = 'Live.'; $('sdkMotionStatus').className = 'ok small'; }
+  const sample={receivedAt:new Date().toISOString(),laptopMs:Math.round(now()),seq:f?f.seq:null,runLabel,firmwareProfile:currentProfile(),...d};
+  motionHistory.push(sample);
+  if(motionHistory.length>MOTION_HISTORY_LIMIT){motionHistory.shift();motionDropped++;}
+  if(motionChartRows.length && d.uptimeMs<motionChartRows[motionChartRows.length-1].uptimeMs) motionChartRows=[];
+  motionChartRows.push(sample);
+  if(motionChartRows.length>CHART_WINDOW)motionChartRows.shift();
+  $('chartSampleCount').textContent=`${motionChartRows.length} / ${CHART_WINDOW} chart samples`;
+  updateArchiveStatus();
+  drawCharts();
+}
+function updateArchiveStatus(){
+  const truncated=motionDropped>0||eventDropped>0;
+  $('archiveStatus').textContent=`Laptop page-session capture: ${motionHistory.length}/${MOTION_HISTORY_LIMIT} motion samples, ${eventRows.length}/${EVENT_HISTORY_LIMIT} events retained; dropped ${motionDropped} motion and ${eventDropped} event rows${truncated?' · history truncated':''}. CSV/JSON export includes all currently retained rows.`;
+  $('archiveStatus').className=truncated?'warn small':'muted small';
+}
+function showDiagnostics(d) {
+  if (!staleShown.sdkDiag) { $('diagStatus').textContent = 'Live.'; $('diagStatus').className = 'ok small'; }
+  $('diagThreshold').textContent = `${d.thresholdAdc} ADC / bank ${d.bank}`;
+  $('diagState').textContent = `${d.scanning?'scanning':'idle'} / ${d.pending?'pending':'none'} / front calibration ${d.frontCalibrationValid?'valid':'unavailable'} / ${d.runActive?'active':'inactive'}`;
+  $('diagCounts').textContent = `${d.decodedTotal} / ${d.turns} / ${d.lefts} / ${d.rights} / ${d.uturns}`;
+  $('diagErrors').textContent = `${d.badFrames} / ${d.unsupported}`;
+  $('diagGaps').textContent = `${d.maxAdcGapUs} / ${d.maxControlGapUs} µs`;
+  $('diagDrops').textContent = `${d.txDropped} / ${d.rxDropped}`;
+  $('diagInvalid').textContent = `${d.invalidLeft} / ${d.invalidRight}`;
+  $('diagUptime').textContent = `${d.uptimeMs} ms`;
+}
+function formatCalLevel(value, valid=true) { return valid && value !== 65535 ? String(value) : 'unavailable'; }
+function actionName(action) {
+  return ({ S: 'Straight', U: 'U-turn', L: 'Left', R: 'Right', '-': 'none' })[action] || action;
+}
+function showLineEvent(d, f) {
+  if (!staleShown.sdkLine) { $('progressStatus').textContent = 'Live.'; $('progressStatus').className = 'ok small'; }
+  if (d.letter !== '-') {
+    lastBarcodeLetter = d.letter;
+    $('eventLetter').textContent = d.letter;
+    $('barcodeLetter').textContent = d.letter;
+    $('barcodeMovement').textContent = IS28.mappedMovement(activeMapping, lastBarcodeLetter);
+  }
+  $('pendingAction').textContent = d.pendingLetter === '-' ? 'none' : `${d.pendingLetter} → ${actionName(d.action)}`;
+  $('pendingRevision').textContent = d.pendingLetter === '-' ? '—' : String(d.revision);
+  $('executingAction').textContent = d.executingAction === '-' ? '—' : `${actionName(d.executingAction)} · rev ${d.executingRevision}`;
+  const displayedLevels=d.levels.map((v)=>formatCalLevel(v)).join('/');
+  const statusKey=[d.letter,d.pendingLetter,d.action,d.revision,d.executingAction,d.executingRevision].join('|');
+  const statusChanged=statusKey!==lastLineStatusKey; lastLineStatusKey=statusKey;
+  if(d.event!==0||statusChanged)
+    addEvent(`Line/barcode ${IS28.EVENT_NAME[d.event] || 'event '+d.event} · decoded ${d.letter} · pending ${d.pendingLetter} ${actionName(d.action)} · executing ${actionName(d.executingAction)} · map revision ${d.revision} · calibrated L/R ${displayedLevels} · ADC L/R/barcode ${d.adc[0]}/${d.adc[1]}/${d.adc[2]}`, d, 'sdk-line', f);
+}
+function showNavEvent(d, f) {
+  const modes=IS28.SDK_MODE, owners=IS28.SDK_OWNER;
+  const previousMode=coordinatorMode;
+  sdkNav = d;
+  coordinatorMode = d.mode;
+  if (coordinatorMode === 7) { if (previousMode !== 7 || coordinatorOffSince === null) coordinatorOffSince=now(); }
+  else coordinatorOffSince=null;
+  if (logDownload.active && coordinatorMode !== 7)
+    cancelLogDownload('Coordinator left Off. No complete export was produced.');
+  $('navState').textContent = `${modes[d.mode] || 'mode '+d.mode} · owner ${owners[d.owner] || d.owner} · command ${d.commandState}`;
+  $('owner').textContent = owners[d.owner] || `owner ${d.owner}`;
+  $('navDetails').textContent = `${modes[d.mode] || 'mode '+d.mode} / ${owners[d.owner] || d.owner} / state ${d.commandState}`;
+  $('sdkFault').textContent = d.fault ? `0x${d.fault.toString(16)}` : 'none reported';
+  $('sdkFault').className = d.fault ? 'bad' : '';
+  const action = actionName(d.action), letter = d.letter;
+  if ((d.event === 2 || d.event === 15) && letter !== '-') {
+    lastBarcodeLetter=letter; $('eventLetter').textContent=letter; $('barcodeLetter').textContent=letter;
+    $('barcodeMovement').textContent=IS28.mappedMovement(activeMapping,letter);
+  }
+  if (d.event === 3) {
+    $('pendingAction').textContent = letter === '-' ? 'none' : `${letter} → ${action}`;
+    $('pendingRevision').textContent = String(d.revision);
+  } else if (d.event === 5) {
+    $('executingAction').textContent = `${action} · ${letter} · rev ${d.revision}`;
+  } else if (d.event === 6) {
+    $('completedAction').textContent = `${action} · ${letter} · rev ${d.revision}`;
+    $('executingAction').textContent = '—';
+    $('pendingAction').textContent = 'none'; $('pendingRevision').textContent = '—';
+  } else if (d.event === 10) {
+    $('executingAction').textContent = '—';
+  }
+  const idContext=d.event===12||d.event===13 ? `network request id ${d.commandId} · opcode/result ${d.detail}` :
+    d.commandId ? `motion command id ${d.commandId}` : '';
+  const statusKey=[d.owner,d.mode,d.commandState,d.fault].join('|');
+  const statusChanged=statusKey!==lastNavStatusKey; lastNavStatusKey=statusKey;
+  if(d.event!==0||statusChanged){
+    if (d.event === 15) addEvent(`Unassigned barcode letter ${letter} · revision ${d.revision}`, d, 'sdk-nav', f);
+    else addEvent(`Coordinator ${IS28.EVENT_NAME[d.event] || 'event '+d.event} · mode ${modes[d.mode] || d.mode} · owner ${owners[d.owner] || d.owner} · ${letter} ${action} · revision ${d.revision} · ${idContext} · generation ${d.generation} · fault 0x${d.fault.toString(16)} · detail ${d.detail}`, d, 'sdk-nav', f);
+  }
+  updateLogDownloadControl();
+}
+
+/* ---------- event timeline and recording ---------- */
+function addEvent(message, data, kind, f) {
+  const row = { receivedAt: new Date().toISOString(), laptopMs: Math.round(now()), kind: kind || 'event', message,
+                src: f ? f.src : null, seq: f ? f.seq : null, runLabel, latestRunId: latestSdkRunId,
+                firmwareProfile: currentProfile(), ...(data ? { data } : {}) };
+  eventRows.push(row); if (eventRows.length > EVENT_HISTORY_LIMIT) { eventRows.shift(); eventDropped++; }
+  updateArchiveStatus();
+  const el = document.createElement('article'), time = document.createElement('time'), text = document.createElement('span');
+  time.textContent = new Date(row.receivedAt).toLocaleTimeString();
+  text.textContent = message;
+  el.append(time, text);
+  const timeline = $('eventTimeline');
+  if (timeline.firstElementChild && timeline.firstElementChild.classList.contains('muted')) timeline.replaceChildren();
+  timeline.appendChild(el); while (timeline.childElementCount > 250) timeline.removeChild(timeline.firstElementChild);
+  timeline.scrollTop = timeline.scrollHeight;
+  return row;
+}
+function recordFrame(topic, bytes, f, retained, iso, at) {
+  const decoded = f && f.data !== undefined && !f.error;
+  const row = { receivedAt: iso, laptopMs: Math.round(at), topic, retained,
+    src: f && f.src !== undefined ? f.src : null, srcName: decoded ? f.srcName : null,
+    family: decoded ? (IS28.SRC_FAMILY[f.src] || 'unknown') : null, seq: decoded ? f.seq : null,
+    len: bytes.length, hex: hexCompact(bytes),
+    picoUptimeMs: decoded ? IS28.picoUptimeMs(f) : null, runId: decoded ? IS28.frameRunId(f) : null,
+    latestRunId: latestSdkRunId, runLabel, firmwareProfile: currentProfile(),
+    error: f && f.error ? f.error : null,
+    data: decoded ? f.data : f && f.ack ? f.ack : f && f.command ? f.command : f && f.lwt ? { lwt: true } : null };
+  frames.push(row); if (frames.length > FRAME_LIMIT) { frames.shift(); framesDropped++; }
+  if (decoded && !retained && (f.src === SRC.MOTION || f.src === SRC.IMU) && f.data) {
+    b4Rows.push({ receivedAt: iso, laptopMs: row.laptopMs, src: f.src, seq: f.seq, runLabel, firmwareProfile: row.firmwareProfile, ...f.data });
+    if (b4Rows.length > B4_LIMIT) { b4Rows.shift(); b4Dropped++; }
+  }
+}
+function updateRecordingStatus() {
+  const parts = [`frames ${frames.length}/${FRAME_LIMIT} (dropped ${framesDropped})`,
+    `SDK motion ${motionHistory.length}/${MOTION_HISTORY_LIMIT} (dropped ${motionDropped})`,
+    `Buddy4 rows ${b4Rows.length}/${B4_LIMIT} (dropped ${b4Dropped})`,
+    `events ${eventRows.length}/${EVENT_HISTORY_LIMIT} (dropped ${eventDropped})`,
+    `markers ${markers.length}`, `message log ${logLines.length}/${LOG_LIMIT} (dropped ${logDropped})`];
+  const dropped = framesDropped + motionDropped + b4Dropped + eventDropped + logDropped + markersDropped;
+  $('recCounts').textContent = 'Retained: ' + parts.join(' · ') + (dropped ? ' · OLDEST ROWS DROPPED (buffers full)' : '');
+  $('recCounts').className = dropped ? 'warn small' : 'muted small';
+  setPill($('recPill'), `recording: ${frames.length} frames${runLabel ? ' · ' + runLabel : ''}${dropped ? ' · truncated' : ''}`, dropped ? 'warn' : 'muted');
+  if (discardArmedUntil && now() > discardArmedUntil) { discardArmedUntil = 0; $('discardRec').textContent = 'Discard recording buffers…'; }
+}
+function sanitizeLabel(s) { return String(s || '').trim().replace(/[^A-Za-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48); }
+function labelPart() { return runLabel ? runLabel + '_' : ''; }
+$('runLabelSet').onclick = () => {
+  runLabel = sanitizeLabel($('runLabel').value); $('runLabel').value = runLabel;
+  $('runLabelStatus').textContent = runLabel ? `Run label "${runLabel}" is tagged on every row from ${new Date().toLocaleTimeString()}.` :
+    'No run label set. Rows are tagged with the label active when they arrive.';
+  addEvent(runLabel ? `Run label set: ${runLabel}` : 'Run label cleared', null, 'label');
+};
+$('markBtn').onclick = () => addMarker($('markNote').value);
+function addMarker(note) {
+  markerNo++;
+  const at = now(), iso = new Date().toISOString();
+  const estimate = lastPico ? Math.round(lastPico.ms + (at - lastPico.at)) : null;
+  const m = { markerNo, receivedAt: iso, laptopMs: Math.round(at), note: String(note || ''), runLabel,
+              picoUptimeEstimateMs: estimate, latestRunId: latestSdkRunId, lastSeqBySource: { ...lastSeqBySrc },
+              firmwareProfile: currentProfile() };
+  markers.push(m); if (markers.length > MARKER_LIMIT) { markers.shift(); markersDropped++; }
+  frames.push({ receivedAt: iso, laptopMs: m.laptopMs, topic: 'local/marker', retained: false, src: null, srcName: 'marker',
+                family: 'laptop', seq: null, len: 0, hex: '', picoUptimeMs: estimate, runId: null, latestRunId: latestSdkRunId,
+                runLabel, firmwareProfile: m.firmwareProfile, error: null, data: m });
+  if (frames.length > FRAME_LIMIT) { frames.shift(); framesDropped++; }
+  addEvent(`Marker M${markerNo}${m.note ? ' · ' + m.note : ''}${estimate === null ? '' : ` · Pico uptime ≈ ${estimate} ms`}`, { markerNo, note: m.note }, 'marker');
+  $('markStatus').textContent = `M${markerNo} at ${new Date(iso).toLocaleTimeString()}${m.note ? ' (' + m.note + ')' : ''}`;
+  $('markNote').value = '';
+  log('marker', `M${markerNo} ${m.note}`);
+  return m;
+}
+$('discardRec').onclick = () => {
+  if (!discardArmedUntil || now() > discardArmedUntil) {
+    discardArmedUntil = now() + 4000;
+    $('discardRec').textContent = `Click again within 4 s to discard ${frames.length} frames, ${eventRows.length} events, ${logLines.length} log lines`;
+    return;
+  }
+  discardArmedUntil = 0;
+  const summaryText = `${frames.length} frames, ${motionHistory.length} motion, ${b4Rows.length} Buddy4, ${eventRows.length} events, ${markers.length} markers, ${logLines.length} log lines`;
+  frames = []; framesDropped = 0; motionHistory = []; motionDropped = 0; b4Rows = []; b4Dropped = 0;
+  eventRows = []; eventDropped = 0; markers = []; markersDropped = 0; logLines = []; logDropped = 0; markerNo = 0;
+  $('discardRec').textContent = 'Discard recording buffers…';
+  $('exportStatus').textContent = `Discarded ${summaryText} at ${new Date().toLocaleTimeString()}.`;
+  addEvent(`Recording buffers discarded by user (${summaryText})`, null, 'recording');
+  updateArchiveStatus(); updateRecordingStatus();
+};
+
+/* ---------- charts (v2.3 drawOne) ---------- */
+function canDraw(id) { const c = $(id); return !!(c && typeof c.getContext === 'function' && hasWindow); }
+function drawOne(canvas, series, labels, colors) {
+  const rect = canvas.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+  const w = Math.max(320, rect.width), h = 190;
+  canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+  const ctx = canvas.getContext('2d'); ctx.scale(dpr, dpr); ctx.clearRect(0, 0, w, h);
+  ctx.font = '11px system-ui'; ctx.fillStyle = getComputedStyle(document.body).color;
+  const vals = series.flatMap((s) => s.values).filter(Number.isFinite);
+  if (!vals.length) { ctx.fillText('Waiting for live telemetry', 12, 24); return; }
+  let min = Math.min(0, ...vals), max = Math.max(1, ...vals); if (min === max) max = min + 1;
+  const left = 42, right = w - 10;
+  const legendCols=Math.max(1,Math.min(labels.length,Math.floor((right-left)/125)));
+  const top=24+(Math.ceil(labels.length/legendCols)-1)*14, bottom=h-24;
+  const finiteTimes = series.flatMap((s) => s.times || []).filter(Number.isFinite);
+  let tMin = finiteTimes.length ? Math.min(...finiteTimes) : 0;
+  let tMax = finiteTimes.length ? Math.max(...finiteTimes) : 1;
+  if (tMin === tMax) tMax = tMin + 1;
+  ctx.strokeStyle = getComputedStyle(document.body).color; ctx.globalAlpha = .18;
+  for (let i = 0; i <= 4; i++) { const y = top + (bottom-top)*i/4; ctx.beginPath(); ctx.moveTo(left,y); ctx.lineTo(right,y); ctx.stroke(); ctx.fillText((max - (max-min)*i/4).toFixed(0), 4, y+4); }
+  ctx.globalAlpha = 1;
+  ctx.fillText(`${(tMin/1000).toFixed(1)} s`, left, h-5);
+  ctx.fillText(`${(tMax/1000).toFixed(1)} s`, Math.max(left,right-38), h-5);
+  series.forEach((s, j) => { ctx.strokeStyle = colors[j]; ctx.lineWidth = 1.7; ctx.beginPath(); let penDown=false;
+    s.values.forEach((v, i) => {
+      const t=(s.times||[])[i];
+      if(!Number.isFinite(v)||!Number.isFinite(t)){penDown=false;return;}
+      const x=left+(right-left)*(t-tMin)/(tMax-tMin), y=bottom-(v-min)/(max-min)*(bottom-top);
+      if(penDown)ctx.lineTo(x,y);else ctx.moveTo(x,y); penDown=true;
+    }); ctx.stroke();
+    ctx.fillStyle = colors[j]; ctx.fillText(labels[j], left + (j%legendCols)*125, 14+Math.floor(j/legendCols)*14, 121);
+  });
+}
+function drawCharts() {
+  if (!canDraw('speedChart')) return;
+  const rows = motionChartRows, times=rows.map((r)=>r.uptimeMs);
+  const s=(values)=>({values,times});
+  drawOne($('speedChart'), [s(rows.map((r)=>r.speedL)),s(rows.map((r)=>r.speedR)),
+    s(rows.map((r)=>r.targetL)),s(rows.map((r)=>r.targetR))], ['measured L','measured R','target L','target R'], ['#2563eb','#16a34a','#93c5fd','#86efac']);
+  drawOne($('pwmChart'), [s(rows.map((r)=>r.pwmL)),s(rows.map((r)=>r.pwmR))], ['PWM L','PWM R'], ['#7c3aed','#ea580c']);
+  drawOne($('adcChart'), [s(rows.map((r)=>r.adc[0])),s(rows.map((r)=>r.adc[1])),s(rows.map((r)=>r.adc[2]))], ['Left GP26 · ADC0','Right GP28 · ADC2','Barcode GP27 · ADC1'], ['#7c3aed','#ea580c','#0891b2']);
+  drawOne($('lineChart'), [s(rows.map((r)=>r.calibrationValid && r.levels[0] !== 65535 ? r.levels[0] : NaN)),s(rows.map((r)=>r.calibrationValid && r.levels[1] !== 65535 ? r.levels[1] : NaN))], ['calibrated L','calibrated R'], ['#0891b2','#ea580c']);
+}
+function drawImuChart() {
+  if (!canDraw('imuChart')) return;
+  drawOne($('imuChart'), [{ values: imuChartHeight.map((p) => p.v), times: imuChartHeight.map((p) => p.t) },
+                          { values: imuChartPitch.map((p) => p.v), times: imuChartPitch.map((p) => p.t) }],
+          ['live R−L height mm', 'pitch °'], ['#16a34a', '#7c3aed']);
+}
+if (hasWindow) window.addEventListener('resize', () => { drawCharts(); drawImuChart(); });
+
+/* ---------- exports ---------- */
+function csvCell(v) { const s = typeof v === 'object' && v !== null ? JSON.stringify(v) : String(v ?? ''); return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
+function csvText(header, rows) { return [header, ...rows.map((r)=>r.map(csvCell).join(','))].join('\r\n') + '\r\n'; }
+function saveCsv(name, header, rows) { download(name, csvText(header, rows), 'text/csv'); }
+function scopeLabel() {
+  const scope = $('exportScope').value || 'auto';
+  if (scope === 'all') return null;
+  if (scope === 'label') return runLabel;           /* '' selects rows recorded with no label */
+  return runLabel || null;
+}
+function scoped(rows) { const l = scopeLabel(); return l === null ? rows : rows.filter((r) => (r.runLabel || '') === l); }
+function captureInfo() {
+  return { dashboard: DASHBOARD_VERSION, exportedAt: new Date().toISOString(), runLabel, scope: $('exportScope').value || 'auto',
+           scopeLabel: scopeLabel(), detectedProfile: detectedProfile(), profileOverride, effectiveProfile: currentProfile(),
+           sourcesSeen: Array.from(seenSources.keys()).sort((a, b) => a - b),
+           limits: { frames: FRAME_LIMIT, motion: MOTION_HISTORY_LIMIT, buddy4: B4_LIMIT, events: EVENT_HISTORY_LIMIT, messageLog: LOG_LIMIT, markers: MARKER_LIMIT },
+           dropped: { frames: framesDropped, motion: motionDropped, buddy4: b4Dropped, events: eventDropped, messageLog: logDropped, markers: markersDropped },
+           truncated: framesDropped + motionDropped + b4Dropped + eventDropped + logDropped + markersDropped > 0,
+           motionLimit: MOTION_HISTORY_LIMIT, eventLimit: EVENT_HISTORY_LIMIT, motionDropped, eventDropped };
+}
+const MOTION_HEADER = ['received_at','uptime_basis','uptime_ms','run_id','elapsed_ms','phase','profile','recovery_state','motion_active','calibration_valid','automatic','emergency_stop','speed_left_mm_s','speed_right_mm_s','target_left_mm_s','target_right_mm_s','pwm_left','pwm_right','adc0_left_gp26','adc2_right_gp28','adc1_barcode_gp27','level_left','level_right','barcode_level','line_mask','distance_mm','heading_cdeg',
+  'src','seq','laptop_ms','run_label','firmware_profile'];
+function motionCsv(rows) {
+  return csvText(MOTION_HEADER, rows.map((r)=>[r.receivedAt,r.runRelativeUptime?'run-relative':'system-uptime',r.uptimeMs,r.runId,r.elapsedMs,r.phase,r.profile,r.recoveryState,r.motionActive,r.calibrationValid,r.automatic,r.emergencyStop,r.speedL,r.speedR,r.targetL,r.targetR,r.pwmL,r.pwmR,...r.adc,formatCalLevel(r.levels[0],r.calibrationValid),formatCalLevel(r.levels[1],r.calibrationValid),formatCalLevel(r.levels[2],false),r.lineMaskAvailable?'0x'+r.lineMask.toString(16):'unavailable',r.distanceMm,r.headingCdeg,
+    SRC.SDK_MOTION,r.seq,r.laptopMs,r.runLabel,r.firmwareProfile]));
+}
+const EVENT_HEADER = ['received_at','message','uptime_ms','event','letter','pending_letter','pending_action','pending_revision','executing_action','executing_revision','action','map_revision','command_id','generation','mode','owner','command_state','detail',
+  'kind','src','seq','laptop_ms','run_label','latest_run_id','marker_no','note','firmware_profile'];
+function eventsCsv(rows) {
+  return csvText(EVENT_HEADER, rows.map((r)=>{ const d=r.data||{}; return [r.receivedAt,r.message,d.uptimeMs,d.event,d.letter,d.pendingLetter,d.action,d.revision,d.executingAction,d.executingRevision,d.action,d.revision,d.commandId,d.generation,d.mode,d.owner,d.commandState,d.detail,
+    r.kind,r.src,r.seq,r.laptopMs,r.runLabel,r.latestRunId,d.markerNo,d.note,r.firmwareProfile]; }));
+}
+const B4_HEADER = ['received_at','laptop_ms','src','seq','run_label','firmware_profile',
+  'fresh_odometry','side_estimate_valid','one_sided_mode','passive','left_speed_mm_s','right_speed_mm_s','centre_speed_mm_s','roll_deg',
+  'live_right_minus_left_height_mm','net_distance_mm','invalid_transitions_left','invalid_transitions_right',
+  'quality_reasons','ramp_level_ready','ramp_candidate','ramp_rising','ramp_returning','quality_bad_samples','quality_total_samples',
+  'max_spread_mg','max_abs_accel_mm_s2','max_abs_turn_deg_s','rate_samples','max_mad_mg','min_fifo_samples','max_mad_fwd_mg_le','max_mad_lat_mg_le','max_mad_up_mg_le',
+  'imu_state','imu_motion','imu_event','imu_detail','imu_valid','imu_odometry','pitch_deg','imu_last_fault',
+  'imu_height_field_mm','accepted_peak_mm','highest_accepted_mm','humps','rejected','shock_mg','shock_notify_ms','shocks','i2c_errors','missed_periods','imu_event_ms'];
+function b4Csv(rows) {
+  let accepted = null;
+  return csvText(B4_HEADER, rows.map((r) => {
+    const live = r.src === SRC.MOTION, imu = r.src === SRC.IMU;
+    if (imu) { if (!r.humps) accepted = null; else if (r.event === 'status' || r.event === 'hump peak') accepted = r.heightMm; }
+    const L = (k, ok) => (ok ? r[k] : '');
+    return [r.receivedAt, r.laptopMs, r.src, r.seq, r.runLabel, r.firmwareProfile,
+      L('freshOdometry', live), L('sideEstimateValid', live), L('oneSidedMode', live), L('passive', live),
+      live && r.freshOdometry ? r.leftSpeedMmS : '', live && r.freshOdometry ? r.rightSpeedMmS : '', live && r.freshOdometry ? r.centreSpeedMmS : '',
+      live && r.sideEstimateValid ? r.rollDeg : '', live && r.sideEstimateValid ? r.rightMinusLeftHeightMm : '',
+      live && r.freshOdometry ? r.netDistanceMm : '', L('invalidTransitionsLeft', live), L('invalidTransitionsRight', live),
+      L('qualityReasons', live), L('rampLevelReady', live), L('rampCandidate', live), L('rampRising', live), L('rampReturning', live),
+      L('qualityBadSamples', live), L('qualityTotalSamples', live), L('maxSpreadMg', live), L('maxAbsAccelMmS2', live), L('maxAbsTurnDegS', live),
+      L('rateSamples', live), L('maxMadMg', live), L('minFifoSamples', live), L('maxMadFwdMg', live), L('maxMadLatMg', live), L('maxMadUpMg', live),
+      L('stateName', imu), L('motion', imu), L('event', imu), L('detail', imu), L('valid', imu), L('odometry', imu),
+      imu && r.valid ? r.pitchDeg : '', L('lastFault', imu), L('heightMm', imu), imu && accepted !== null ? accepted : '',
+      imu && r.humps ? r.highestMm : '', L('humps', imu), L('rejected', imu), L('shockMg', imu), L('shockNotifyMs', imu), L('shocks', imu),
+      L('i2cErrors', imu), L('framesMissed', imu), L('eventMs', imu)];
+  }));
+}
+const FRAME_HEADER = ['received_at','laptop_ms','topic','retained','src','src_name','family','seq','len','pico_uptime_ms','run_id','latest_run_id','run_label','firmware_profile','error','hex','decoded_json'];
+function framesCsv(rows) {
+  return csvText(FRAME_HEADER, rows.map((r) => [r.receivedAt, r.laptopMs, r.topic, r.retained, r.src, r.srcName, r.family, r.seq, r.len,
+    r.picoUptimeMs, r.runId, r.latestRunId, r.runLabel, r.firmwareProfile, r.error, r.hex, r.data === null ? '' : JSON.stringify(r.data)]));
+}
+function telemetryJson() {
+  return JSON.stringify({ capture: captureInfo(), motion: scoped(motionHistory), events: scoped(eventRows),
+                          buddy4: scoped(b4Rows), markers: scoped(markers) }, null, 2) + '\n';
+}
+function eventsJson() { return JSON.stringify({ capture: captureInfo(), events: scoped(eventRows), markers: scoped(markers) }, null, 2) + '\n'; }
+function framesJson() {
+  const rows = scoped(frames);
+  return '{"capture":' + JSON.stringify(captureInfo()) + ',\n"frames":[\n' + rows.map((r) => JSON.stringify(r)).join(',\n') + '\n]}\n';
+}
+function messagesText() { return logLines.join('\n') + '\n'; }
+function exportNote(text) { $('exportStatus').textContent = text; }
+$('csvSave').onclick = () => { const rows = scoped(motionHistory); download(`motion_${labelPart()}${stamp()}.csv`, motionCsv(rows), 'text/csv'); exportNote(`Telemetry CSV: ${rows.length} SDK motion rows.`); };
+$('jsonSave').onclick = () => { download(`telemetry_${labelPart()}${stamp()}.json`, telemetryJson(), 'application/json'); exportNote('Telemetry JSON exported.'); };
+$('b4CsvSave').onclick = () => { const rows = scoped(b4Rows); download(`buddy4_${labelPart()}${stamp()}.csv`, b4Csv(rows), 'text/csv'); exportNote(`Buddy4 CSV: ${rows.length} rows.`); };
+$('eventCsvSave').onclick = () => { const rows = scoped(eventRows); download(`events_${labelPart()}${stamp()}.csv`, eventsCsv(rows), 'text/csv'); exportNote(`Event CSV: ${rows.length} rows.`); };
+$('eventJsonSave').onclick = () => { download(`events_${labelPart()}${stamp()}.json`, eventsJson(), 'application/json'); exportNote('Event JSON exported.'); };
+$('framesCsvSave').onclick = () => { const rows = scoped(frames); download(`frames_${labelPart()}${stamp()}.csv`, framesCsv(rows), 'text/csv'); exportNote(`All-frames CSV: ${rows.length} rows.`); };
+$('framesJsonSave').onclick = () => { download(`frames_${labelPart()}${stamp()}.json`, framesJson(), 'application/json'); exportNote('All-frames JSON exported.'); };
+
+async function sha256Hex(text) {
+  try {
+    if (!hasWindow || !window.crypto || !window.crypto.subtle) return null;
+    const buf = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+    return Array.from(new Uint8Array(buf), (b) => b.toString(16).padStart(2, '0')).join('');
+  } catch (e) { return null; }
+}
+$('evidenceSave').onclick = async () => {
+  const base = `is28_evidence_${labelPart()}${stamp()}`;
+  const scopeRows = { frames: scoped(frames), motion: scoped(motionHistory), b4: scoped(b4Rows), events: scoped(eventRows), markers: scoped(markers) };
+  const files = [
+    [`${base}_telemetry.csv`, motionCsv(scopeRows.motion), 'text/csv', 'SDK v2.3 source-9 motion rows'],
+    [`${base}_buddy4.csv`, b4Csv(scopeRows.b4), 'text/csv', 'Buddy4 source-2 (live) and source-4 (IMU/accepted ramp) rows'],
+    [`${base}_events.csv`, eventsCsv(scopeRows.events), 'text/csv', 'event timeline incl. commands, ACKs, markers'],
+    [`${base}_events.json`, eventsJson(), 'application/json', 'events and markers as JSON'],
+    [`${base}_frames.json`, framesJson(), 'application/json', 'every received MQTT message: hex, decoded data, laptop time, Pico uptime, source/sequence'],
+    [`${base}_messages.txt`, messagesText(), 'text/plain', 'dashboard message log (whole session)']
+  ];
+  const ts = scopeRows.frames.map((r) => r.receivedAt);
+  const manifest = { ...captureInfo(), kind: 'IS28 evidence set',
+    firstReceivedAt: ts[0] || null, lastReceivedAt: ts[ts.length - 1] || null,
+    rowCounts: { frames: scopeRows.frames.length, sdkMotion: scopeRows.motion.length, buddy4: scopeRows.b4.length,
+                 events: scopeRows.events.length, markers: scopeRows.markers.length, messageLogLines: logLines.length },
+    markers: scopeRows.markers,
+    storedDataNote: 'SDK v2.3 stored datasets (Diagnostics, Motion, Navigation, Raw sensor rows) are separate downloads made while the car is stopped; they are not part of this set.',
+    files: [] };
+  for (const [name, content, mime, what] of files) manifest.files.push({ name, bytes: new TextEncoder().encode(content).length, sha256: await sha256Hex(content), content: what });
+  files.push([`${base}_manifest.json`, JSON.stringify(manifest, null, 2) + '\n', 'application/json']);
+  files.forEach(([name, content, mime], i) => setTimeout(() => download(name, content, mime), i * 250));
+  exportNote(`Evidence set: ${files.length} files (${scopeRows.frames.length} frames, ${scopeRows.markers.length} markers) for ${scopeLabel() === null ? 'the whole session' : 'run label "' + (scopeLabel() || '(none)') + '"'}. Allow multiple downloads if the browser asks.`);
+  addEvent(`Evidence set exported (${files.length} files, scope ${scopeLabel() === null ? 'session' : scopeLabel() || '(no label)'})`, null, 'recording');
+};
+
+/* ---------- log ---------- */
+function log(topic, text) {
+  const line = `${new Date().toISOString()}  ${String(topic).padEnd(9)} ${text}`;
+  logLines.push(line); if (logLines.length > LOG_LIMIT) { logLines.shift(); logDropped++; }
+  if ($('logPause').checked) return;
+  const div = document.createElement('div'); div.textContent = line;
+  const el = $('log'); el.appendChild(div);
+  while (el.childNodes.length > 300 && el.firstChild) el.removeChild(el.firstChild);
+  el.scrollTop = el.scrollHeight;
+}
+$('logClear').onclick = () => {
+  $('log').innerHTML = '';
+  $('logStatus').textContent = `Visible log cleared at ${new Date().toLocaleTimeString()}. Save log still contains all ${logLines.length} retained lines; recording buffers are unchanged.`;
+};
+function download(name, content, mime = 'text/plain') {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content], { type: mime }));
+  a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+const stamp = () => new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+$('logSave').onclick = () => download(`is28_messages_${labelPart()}${stamp()}.txt`, messagesText());
+
+/* ---------- 5-minute connectivity test ---------- */
+const TEST_S = 300;
+$('testStart').onclick = () => {
+  test.seq.reset(); test.gaps = []; test.firstHb = 0; test.lastHb = 0; test.running = true;
+  test.start = now(); test.end = 0;
+  clearInterval(test.timer); test.timer = setInterval(updateTest, 500);
+  log('test', '5-minute connectivity test started');
+};
+$('testStop').onclick = () => finishTest('stopped early');
+function finishTest(why) {
+  if (!test.running) return;
+  test.running = false; test.end = now(); clearInterval(test.timer); updateTest();
+  log('test', `test ${why}: ${$('testVerdict').textContent}`);
+}
+function testStats() {
+  const s = test.seq.summary();
+  const g = test.gaps;
+  const end = test.running ? now() : test.end;
+  const durationS = test.start ? Math.max(0, end - test.start) / 1000 : 0;
+  const head = test.firstHb ? (test.firstHb - test.start) / 1000 : durationS;
+  const tail = test.lastHb ? (end - test.lastHb) / 1000 : durationS;
+  const maxGap = Math.max(head, tail, g.length ? Math.max(...g) : 0);
+  const mean = g.length ? g.reduce((a, b) => a + b, 0) / g.length : 0;
+  const beats = g.length + (test.lastHb ? 1 : 0);
+  const verdict = IS28.connectivityVerdict(test.seq.per, durationS, maxGap, beats, !test.running && test.end > 0);
+  return { s, maxGap, mean, durationS, verdict,
+    over2: g.filter((x) => x > 2).length + (head > 2 ? 1 : 0) + (test.lastHb && tail > 2 ? 1 : 0), beats };
+}
+function updateTest() {
+  const el = (test.running ? now() : test.end) - test.start;
+  const left = Math.max(0, TEST_S - el / 1000);
+  $('testClock').textContent = test.running ? `${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')} left` : 'done';
+  const rows = Object.keys(test.seq.per).sort((a, b) => a - b).map((k) => {
+    const t = test.seq.per[k], pct = (100 * t.received) / (t.received + t.missing);
+    return `<tr><td>${IS28.SRC_NAME[k]}</td><td>${t.received}</td><td>${t.missing}</td><td class="${pct >= 95 ? 'ok' : 'bad'}">${pct.toFixed(1)} %</td></tr>`;
+  });
+  $('testRows').innerHTML = rows.join('') || '<tr><td colspan="4" class="muted">No frames yet.</td></tr>';
+  const st = testStats();
+  const d = st.verdict.deliveryPass, h = st.verdict.heartbeatPass;
+  const label = (pass) => test.running ? 'IN PROGRESS' : !st.verdict.complete ? 'INCOMPLETE' : pass ? 'PASS' : 'FAIL';
+  $('testVerdict').innerHTML =
+    `Delivered <b class="${d ? 'ok' : 'bad'}">${st.s.pct.toFixed(1)} %</b> (${st.s.received} received, ${st.s.missing} missing) · ` +
+    `heartbeats ${st.beats}, mean gap ${st.mean.toFixed(2)} s, max gap <b class="${h ? 'ok' : 'bad'}">${st.maxGap.toFixed(2)} s</b>, gaps over 2 s: ${st.over2} · ` +
+    `NFR-WIFI-01 <b class="${d ? 'ok' : 'warn'}">${label(d)}</b>, NFR-WIFI-02 <b class="${h ? 'ok' : 'warn'}">${label(h)}</b>`;
+  if (test.running && left <= 0) finishTest('finished');
+}
+$('testSave').onclick = () => {
+  const st = testStats();
+  const lines = [`IS28 connectivity test (merged dashboard ${DASHBOARD_VERSION}, profile ${currentProfile()}), ${new Date().toString()}`,
+    `duration_s=${(((test.end || now()) - test.start) / 1000).toFixed(1)}`,
+    `delivered_pct=${st.s.pct.toFixed(2)} received=${st.s.received} missing=${st.s.missing}`,
+    `heartbeats=${st.beats} mean_gap_s=${st.mean.toFixed(3)} max_gap_s=${st.maxGap.toFixed(3)} gaps_over_2s=${st.over2}`,
+    `complete=${st.verdict.complete} delivery_estimate=sequence_gaps_per_observed_source`,
+    `NFR-WIFI-01=${st.verdict.complete ? (st.verdict.deliveryPass ? 'PASS' : 'FAIL') : 'INCOMPLETE'} NFR-WIFI-02=${st.verdict.complete ? (st.verdict.heartbeatPass ? 'PASS' : 'FAIL') : 'INCOMPLETE'}`,
+    'source,received,missing,duplicates'];
+  for (const k of Object.keys(test.seq.per)) {
+    const t = test.seq.per[k]; lines.push(`${IS28.SRC_NAME[k]},${t.received},${t.missing},${t.dup}`);
+  }
+  lines.push('heartbeat_gaps_s=' + test.gaps.map((x) => x.toFixed(3)).join(' '));
+  download(`is28_connectivity_${stamp()}.txt`, lines.join('\n') + '\n');
+};
+updateProfile(); updateLogDownloadControl();
+</script>
+</body>
+</html>

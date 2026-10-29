@@ -1,0 +1,36 @@
+{
+  "time": "2026-10-29T23:03:41.755909+08:00",
+  "firmware": "v2.3+Buddy4v0.1",
+  "hardware": "Raisedbracket, replacementleftsensor(middlemodule infrontview), bothfrontsensorsconnected, securedblackpaperdivider. Userconfirmedunpoweredrampclearance.",
+  "power": "MacUSBonly; no motorcommands",
+  "calibration": {
+    "white": [
+      191,
+      154
+    ],
+    "black": [
+      1940,
+      2306
+    ],
+    "span": [
+      1749,
+      2152
+    ],
+    "profile": 1,
+    "valid": true
+  },
+  "saveResponse": "CALIBRATION/PROFILE SAVED.",
+  "previousSaved": {
+    "white": [
+      142,
+      153
+    ],
+    "black": [
+      278,
+      1828
+    ]
+  },
+  "consoleLog": "/Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico-v23b4/testing/integration/logs/2026-10-29_v23_b4_secured_divider_usb_calibration_console.txt",
+  "interpretation": "Strongcaptureseparationonbothchannels. Firmwarecalibrationvalidity is not a hardwareline/ramp performance pass. Divider/geometryfixed fornexttest.",
+  "hardwareValidation": "Pending shortplainline run, then clean10mm poweredramp; no PWM or firmwarechanges."
+}

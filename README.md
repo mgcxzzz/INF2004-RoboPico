@@ -1,3 +1,5 @@
+> **Integration review branch:** start with [INTEGRATION_REVIEW.md](INTEGRATION_REVIEW.md) for the v2.3/Buddy4 source comparison, updated dashboard, test evidence and unresolved barcode issue. Barcode experiments are separate from the tested Buddy4 ramp build.
+
 # micro T-Kernel 3.0 project for Raspberry Pi Pico W
 
 A starting point for your project: micro T-Kernel 3.0 running on **both cores**

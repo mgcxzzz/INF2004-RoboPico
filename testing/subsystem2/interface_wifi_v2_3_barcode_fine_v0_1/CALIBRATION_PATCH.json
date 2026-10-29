@@ -1,0 +1,143 @@
+{
+  "description": "Only approved firmware changes from working SDK V2.2: output/banner, calibration preset/restore, save version 28. No steering or networking algorithm edits.",
+  "changes": {
+    "CMakeLists.txt": {
+      "base_sha256": "506f90ea9775700cf74b2b6eee7bbdbd5ff05557b3ac8b67b112d6009afbdb32",
+      "modified_sha256": "629e45fe2cd64416788b3685cc11cb1159d4d2ea51fce74e4b9dbd3e23d370b3",
+      "hunks": [
+        {
+          "old_start": 13,
+          "new_start": 13,
+          "old": [
+            "set_target_properties(buddy123_interface_wifi_v2 PROPERTIES OUTPUT_NAME buddy123_interface_wifi_v2_2)\n"
+          ],
+          "new": [
+            "set_target_properties(buddy123_interface_wifi_v2 PROPERTIES OUTPUT_NAME buddy123_interface_wifi_v2_3)\n"
+          ]
+        }
+      ]
+    },
+    "v12_2/baseline/testing/subsystem2/circuit_with_barcode/main.c": {
+      "base_sha256": "37d79cd4bd0f3f3dc67f12b4eb4d5ea6e008d228439413571e54daa4e1503b8c",
+      "modified_sha256": "ab81c1b429d6ec9ea1b03dff53846efd656192fd249aa38daec57d9e0a831221",
+      "hunks": [
+        {
+          "old_start": 37,
+          "new_start": 37,
+          "old": [],
+          "new": [
+            "#include \"../../../../../successful_calibration.h\"\n"
+          ]
+        },
+        {
+          "old_start": 68,
+          "new_start": 69,
+          "old": [
+            "static uint8_t recorded_version=26;\n"
+          ],
+          "new": [
+            "static uint8_t recorded_version=28;\n"
+          ]
+        },
+        {
+          "old_start": 297,
+          "new_start": 298,
+          "old": [
+            "    flash_loaded=false;recorded_key='-';recorded_version=26;\n"
+          ],
+          "new": [
+            "    flash_loaded=false;recorded_key='-';recorded_version=28;\n"
+          ]
+        },
+        {
+          "old_start": 300,
+          "new_start": 301,
+          "old": [
+            "    puts(\"\\nBUDDY123 INTERFACE WIFI v2.2 | AUTO ANALOG GP27 | A-Z MQTT MAPPING | no boot assignments | motors OFF on boot\");\n"
+          ],
+          "new": [
+            "    puts(\"\\nBUDDY123 INTERFACE WIFI v2.3 | AUTO ANALOG GP27 | A-Z MQTT MAPPING | no boot assignments | motors OFF on boot\");\n"
+          ]
+        },
+        {
+          "old_start": 310,
+          "new_start": 311,
+          "old": [
+            "    puts(\"FRONT ONLY:w=both WHITE,l=left BLACK,r=right BLACK;k=save.1/2/3=profile. Existing valid calibration imports; no centre capture.\");\n"
+          ],
+          "new": [
+            "    puts(\"FRONT ONLY:w=both WHITE,l=left BLACK,r=right BLACK;k=save;c=restore successful V2 calibration.1/2/3=profile. Manual calibration remains available.\");\n"
+          ]
+        },
+        {
+          "old_start": 313,
+          "new_start": 314,
+          "old": [
+            "    puts(\"Record26 imports calibration1..25; diagnostics format4. DRIVER3=continuous; ordinary startup flags256/512. Copied binary telemetry20Hz; no flash writes while moving.\");\n"
+          ],
+          "new": [
+            "    puts(\"Record28: V2 calibration preset unless own saved calibration exists; diagnostics format4. DRIVER3=continuous; ordinary startup flags256/512. Copied binary telemetry20Hz; no flash writes while moving.\");\n"
+          ]
+        },
+        {
+          "old_start": 476,
+          "new_start": 477,
+          "old": [
+            "        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=26;last_fast=false;\n"
+          ],
+          "new": [
+            "        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=28;last_fast=false;\n"
+          ]
+        },
+        {
+          "old_start": 640,
+          "new_start": 641,
+          "old": [
+            "    side_adc=read_adc(1);side_analog.selected=AO_DEFAULT_BANK;stdio_init_all();load_log();load_raw();load_drive_diag();buddy_extension_init();side_cal=(SideCalibration){0,1,3};last_control=time_us_64();wifi_harness_init();\n"
+          ],
+          "new": [
+            "    side_adc=read_adc(1);side_analog.selected=AO_DEFAULT_BANK;stdio_init_all();load_log();\n",
+            "    const BarcodeSaved *startup_record=(const BarcodeSaved *)(XIP_BASE+LOG_OFFSET);\n",
+            "    if(successful_calibration_boot(&calibration,startup_record->version,barcode_record_valid(startup_record))) {\n",
+            "        test_mode=1;imported_front=true;\n",
+            "        puts(\"CAL PRESET: successful Continuous V2 run; white=163,160 black=3457,3700. w/l/r/k remain available; c restores preset.\");\n",
+            "    } else puts(\"CAL SAVED: restoring this V2.3 firmware's saved calibration/profile; c restores preset.\");\n",
+            "    recorded_version=28;\n",
+            "    load_raw();load_drive_diag();buddy_extension_init();side_cal=(SideCalibration){0,1,3};last_control=time_us_64();wifi_harness_init();\n"
+          ]
+        },
+        {
+          "old_start": 678,
+          "new_start": 686,
+          "old": [],
+          "new": [
+            "        } else if(ch=='c') {\n",
+            "            usb_pending=false;wifi_start_pending=false;arm.state=ARM_IDLE;\n",
+            "            if(guard.active || trace_settling || hold || stop)\n",
+            "                puts(\"CAL RESTORE rejected: stop, wait5s, release both buttons.\");\n",
+            "            else {\n",
+            "                reset_log();calibration=successful_calibration();imported_front=true;\n",
+            "                puts(\"CAL RESTORED: white=163,160 black=3457,3700; k saves. Previous run rows cleared; profile unchanged.\");\n",
+            "            }\n"
+          ]
+        }
+      ]
+    },
+    "v12_2/baseline/testing/subsystem2/circuit_with_barcode/barcode_record.h": {
+      "base_sha256": "50080f340fa1214965de6dc0933a7c7c50e7b7b389c4f0bf86424bc1e041782a",
+      "modified_sha256": "f69f08c4c1b91a3c398989eafa8c7c4c3752d7da7fe63dde828e25b8ef20c101",
+      "hunks": [
+        {
+          "old_start": 51,
+          "new_start": 51,
+          "old": [
+            "        s->version==26\n"
+          ],
+          "new": [
+            "        (s->version>=26 && s->version<=28)\n"
+          ]
+        }
+      ]
+    }
+  }
+}

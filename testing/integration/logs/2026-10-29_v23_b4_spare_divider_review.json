@@ -1,0 +1,1055 @@
+{
+  "setup": "Bothfrontmodulesconnected; userplacedthickblackpaperdivider verticallybetweensensors; leftpositionoverblackfixedperinstructions",
+  "ageSec": 0.027,
+  "frames": 100,
+  "windowSeconds": 5,
+  "fromLine": 285905,
+  "toLineExclusive": 286140,
+  "leftADC": {
+    "min": 2487,
+    "median": 2590,
+    "max": 2605,
+    "stddev": 26.721637300135615
+  },
+  "rightADC": {
+    "min": 150,
+    "median": 154,
+    "max": 156,
+    "stddev": 1.142978564978366
+  },
+  "neighborOnNoDivider": {
+    "min": 234,
+    "median": 238,
+    "max": 241,
+    "stddev": 1.6103105290595334
+  },
+  "neighborOff": {
+    "min": 3471,
+    "median": 3474,
+    "max": 3478,
+    "stddev": 1.4071247279470276
+  },
+  "allStopped": true,
+  "heartbeat": {
+    "time": "2026-10-29T22:52:56.518461000+0800",
+    "net": 2,
+    "netName": "Operational",
+    "state": 0,
+    "stateName": "Ready",
+    "lastCmd": 10,
+    "lastCmdName": "BARCODE_GET",
+    "lastResult": 0,
+    "lastResultName": "accepted",
+    "uptimeS": 359,
+    "published": 15635,
+    "lost": 1137,
+    "accepted": 6,
+    "rejected": 0,
+    "connects": 0,
+    "fillPct": 0
+  },
+  "calibrationChanged": false,
+  "rows": [
+    {
+      "line": 285905,
+      "time": "2026-10-29T22:52:51.693834000+0800",
+      "adcL": 2601,
+      "adcR": 152,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 285907,
+      "time": "2026-10-29T22:52:51.742534000+0800",
+      "adcL": 2599,
+      "adcR": 152,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 285909,
+      "time": "2026-10-29T22:52:51.793428000+0800",
+      "adcL": 2596,
+      "adcR": 154,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 285911,
+      "time": "2026-10-29T22:52:51.842587000+0800",
+      "adcL": 2591,
+      "adcR": 153,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 285913,
+      "time": "2026-10-29T22:52:51.901605000+0800",
+      "adcL": 2591,
+      "adcR": 153,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 285915,
+      "time": "2026-10-29T22:52:51.943582000+0800",
+      "adcL": 2597,
+      "adcR": 153,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 285917,
+      "time": "2026-10-29T22:52:51.995631000+0800",
+      "adcL": 2595,
+      "adcR": 153,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 285921,
+      "time": "2026-10-29T22:52:52.075002000+0800",
+      "adcL": 2600,
+      "adcR": 153,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 285923,
+      "time": "2026-10-29T22:52:52.095717000+0800",
+      "adcL": 2598,
+      "adcR": 154,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 285925,
+      "time": "2026-10-29T22:52:52.147667000+0800",
+      "adcL": 2602,
+      "adcR": 153,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 285927,
+      "time": "2026-10-29T22:52:52.195845000+0800",
+      "adcL": 2596,
+      "adcR": 152,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 285929,
+      "time": "2026-10-29T22:52:52.245501000+0800",
+      "adcL": 2594,
+      "adcR": 153,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 285931,
+      "time": "2026-10-29T22:52:52.297645000+0800",
+      "adcL": 2602,
+      "adcR": 154,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 285933,
+      "time": "2026-10-29T22:52:52.348533000+0800",
+      "adcL": 2597,
+      "adcR": 153,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 285935,
+      "time": "2026-10-29T22:52:52.399624000+0800",
+      "adcL": 2584,
+      "adcR": 154,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 285937,
+      "time": "2026-10-29T22:52:52.446888000+0800",
+      "adcL": 2574,
+      "adcR": 153,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 285939,
+      "time": "2026-10-29T22:52:52.520713000+0800",
+      "adcL": 2569,
+      "adcR": 155,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 285946,
+      "time": "2026-10-29T22:52:52.568642000+0800",
+      "adcL": 2545,
+      "adcR": 154,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 285948,
+      "time": "2026-10-29T22:52:52.598266000+0800",
+      "adcL": 2518,
+      "adcR": 154,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 285950,
+      "time": "2026-10-29T22:52:52.656344000+0800",
+      "adcL": 2545,
+      "adcR": 153,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 285952,
+      "time": "2026-10-29T22:52:52.698847000+0800",
+      "adcL": 2556,
+      "adcR": 153,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 285954,
+      "time": "2026-10-29T22:52:52.751747000+0800",
+      "adcL": 2544,
+      "adcR": 154,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 285956,
+      "time": "2026-10-29T22:52:52.799268000+0800",
+      "adcL": 2558,
+      "adcR": 155,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 285958,
+      "time": "2026-10-29T22:52:52.851441000+0800",
+      "adcL": 2564,
+      "adcR": 154,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 285960,
+      "time": "2026-10-29T22:52:52.900437000+0800",
+      "adcL": 2550,
+      "adcR": 152,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 285962,
+      "time": "2026-10-29T22:52:52.949337000+0800",
+      "adcL": 2562,
+      "adcR": 154,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 285964,
+      "time": "2026-10-29T22:52:53.000201000+0800",
+      "adcL": 2574,
+      "adcR": 153,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 285966,
+      "time": "2026-10-29T22:52:53.051012000+0800",
+      "adcL": 2565,
+      "adcR": 154,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 285970,
+      "time": "2026-10-29T22:52:53.107332000+0800",
+      "adcL": 2567,
+      "adcR": 154,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 285972,
+      "time": "2026-10-29T22:52:53.151224000+0800",
+      "adcL": 2584,
+      "adcR": 153,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 285974,
+      "time": "2026-10-29T22:52:53.203595000+0800",
+      "adcL": 2598,
+      "adcR": 155,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 285976,
+      "time": "2026-10-29T22:52:53.252982000+0800",
+      "adcL": 2587,
+      "adcR": 153,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 285978,
+      "time": "2026-10-29T22:52:53.305876000+0800",
+      "adcL": 2588,
+      "adcR": 155,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 285980,
+      "time": "2026-10-29T22:52:53.355342000+0800",
+      "adcL": 2583,
+      "adcR": 152,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 285982,
+      "time": "2026-10-29T22:52:53.417177000+0800",
+      "adcL": 2589,
+      "adcR": 156,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 285984,
+      "time": "2026-10-29T22:52:53.457617000+0800",
+      "adcL": 2596,
+      "adcR": 154,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 285986,
+      "time": "2026-10-29T22:52:53.508811000+0800",
+      "adcL": 2595,
+      "adcR": 152,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 285991,
+      "time": "2026-10-29T22:52:53.561539000+0800",
+      "adcL": 2592,
+      "adcR": 154,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 285995,
+      "time": "2026-10-29T22:52:53.615212000+0800",
+      "adcL": 2597,
+      "adcR": 154,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 285997,
+      "time": "2026-10-29T22:52:53.666059000+0800",
+      "adcL": 2597,
+      "adcR": 154,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 285999,
+      "time": "2026-10-29T22:52:53.715354000+0800",
+      "adcL": 2596,
+      "adcR": 154,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286001,
+      "time": "2026-10-29T22:52:53.763734000+0800",
+      "adcL": 2595,
+      "adcR": 154,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286003,
+      "time": "2026-10-29T22:52:53.819918000+0800",
+      "adcL": 2596,
+      "adcR": 154,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286005,
+      "time": "2026-10-29T22:52:53.854666000+0800",
+      "adcL": 2596,
+      "adcR": 153,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286007,
+      "time": "2026-10-29T22:52:53.932951000+0800",
+      "adcL": 2597,
+      "adcR": 155,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286009,
+      "time": "2026-10-29T22:52:53.957421000+0800",
+      "adcL": 2597,
+      "adcR": 151,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286011,
+      "time": "2026-10-29T22:52:54.021504000+0800",
+      "adcL": 2600,
+      "adcR": 152,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286013,
+      "time": "2026-10-29T22:52:54.056246000+0800",
+      "adcL": 2595,
+      "adcR": 154,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286017,
+      "time": "2026-10-29T22:52:54.106482000+0800",
+      "adcL": 2597,
+      "adcR": 154,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286019,
+      "time": "2026-10-29T22:52:54.157277000+0800",
+      "adcL": 2598,
+      "adcR": 155,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286021,
+      "time": "2026-10-29T22:52:54.208096000+0800",
+      "adcL": 2600,
+      "adcR": 154,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286023,
+      "time": "2026-10-29T22:52:54.261755000+0800",
+      "adcL": 2600,
+      "adcR": 155,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286025,
+      "time": "2026-10-29T22:52:54.307154000+0800",
+      "adcL": 2602,
+      "adcR": 153,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286027,
+      "time": "2026-10-29T22:52:54.364145000+0800",
+      "adcL": 2600,
+      "adcR": 154,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286029,
+      "time": "2026-10-29T22:52:54.436210000+0800",
+      "adcL": 2605,
+      "adcR": 152,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286031,
+      "time": "2026-10-29T22:52:54.463721000+0800",
+      "adcL": 2605,
+      "adcR": 155,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286033,
+      "time": "2026-10-29T22:52:54.509819000+0800",
+      "adcL": 2604,
+      "adcR": 155,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286038,
+      "time": "2026-10-29T22:52:54.564144000+0800",
+      "adcL": 2604,
+      "adcR": 155,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286042,
+      "time": "2026-10-29T22:52:54.616830000+0800",
+      "adcL": 2602,
+      "adcR": 153,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286044,
+      "time": "2026-10-29T22:52:54.663445000+0800",
+      "adcL": 2601,
+      "adcR": 154,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286046,
+      "time": "2026-10-29T22:52:54.716059000+0800",
+      "adcL": 2602,
+      "adcR": 153,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286048,
+      "time": "2026-10-29T22:52:54.761006000+0800",
+      "adcL": 2600,
+      "adcR": 153,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286050,
+      "time": "2026-10-29T22:52:54.811923000+0800",
+      "adcL": 2596,
+      "adcR": 154,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286052,
+      "time": "2026-10-29T22:52:54.862969000+0800",
+      "adcL": 2595,
+      "adcR": 156,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286054,
+      "time": "2026-10-29T22:52:54.915734000+0800",
+      "adcL": 2588,
+      "adcR": 154,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286056,
+      "time": "2026-10-29T22:52:54.961491000+0800",
+      "adcL": 2583,
+      "adcR": 152,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286058,
+      "time": "2026-10-29T22:52:55.012513000+0800",
+      "adcL": 2590,
+      "adcR": 152,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286060,
+      "time": "2026-10-29T22:52:55.063556000+0800",
+      "adcL": 2572,
+      "adcR": 155,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286064,
+      "time": "2026-10-29T22:52:55.113627000+0800",
+      "adcL": 2586,
+      "adcR": 150,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286066,
+      "time": "2026-10-29T22:52:55.165659000+0800",
+      "adcL": 2582,
+      "adcR": 152,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286068,
+      "time": "2026-10-29T22:52:55.213381000+0800",
+      "adcL": 2557,
+      "adcR": 156,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286070,
+      "time": "2026-10-29T22:52:55.266416000+0800",
+      "adcL": 2567,
+      "adcR": 154,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286072,
+      "time": "2026-10-29T22:52:55.327669000+0800",
+      "adcL": 2573,
+      "adcR": 154,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286074,
+      "time": "2026-10-29T22:52:55.365494000+0800",
+      "adcL": 2580,
+      "adcR": 154,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286076,
+      "time": "2026-10-29T22:52:55.423240000+0800",
+      "adcL": 2573,
+      "adcR": 153,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286078,
+      "time": "2026-10-29T22:52:55.562295000+0800",
+      "adcL": 2567,
+      "adcR": 153,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286080,
+      "time": "2026-10-29T22:52:55.581161000+0800",
+      "adcL": 2569,
+      "adcR": 154,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286085,
+      "time": "2026-10-29T22:52:55.726543000+0800",
+      "adcL": 2571,
+      "adcR": 154,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286089,
+      "time": "2026-10-29T22:52:55.738404000+0800",
+      "adcL": 2583,
+      "adcR": 154,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286091,
+      "time": "2026-10-29T22:52:55.765016000+0800",
+      "adcL": 2593,
+      "adcR": 152,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286093,
+      "time": "2026-10-29T22:52:55.765438000+0800",
+      "adcL": 2585,
+      "adcR": 154,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286095,
+      "time": "2026-10-29T22:52:55.775459000+0800",
+      "adcL": 2592,
+      "adcR": 155,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286097,
+      "time": "2026-10-29T22:52:55.817721000+0800",
+      "adcL": 2591,
+      "adcR": 151,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286099,
+      "time": "2026-10-29T22:52:55.970345000+0800",
+      "adcL": 2594,
+      "adcR": 153,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286101,
+      "time": "2026-10-29T22:52:55.987013000+0800",
+      "adcL": 2591,
+      "adcR": 153,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286103,
+      "time": "2026-10-29T22:52:55.994699000+0800",
+      "adcL": 2587,
+      "adcR": 153,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286105,
+      "time": "2026-10-29T22:52:56.108540000+0800",
+      "adcL": 2581,
+      "adcR": 154,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286107,
+      "time": "2026-10-29T22:52:56.123578000+0800",
+      "adcL": 2562,
+      "adcR": 151,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286111,
+      "time": "2026-10-29T22:52:56.130768000+0800",
+      "adcL": 2553,
+      "adcR": 155,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286113,
+      "time": "2026-10-29T22:52:56.171167000+0800",
+      "adcL": 2568,
+      "adcR": 154,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286115,
+      "time": "2026-10-29T22:52:56.224409000+0800",
+      "adcL": 2541,
+      "adcR": 155,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286117,
+      "time": "2026-10-29T22:52:56.291596000+0800",
+      "adcL": 2513,
+      "adcR": 155,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286119,
+      "time": "2026-10-29T22:52:56.325186000+0800",
+      "adcL": 2518,
+      "adcR": 154,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286121,
+      "time": "2026-10-29T22:52:56.376102000+0800",
+      "adcL": 2537,
+      "adcR": 152,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286123,
+      "time": "2026-10-29T22:52:56.427745000+0800",
+      "adcL": 2496,
+      "adcR": 154,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286125,
+      "time": "2026-10-29T22:52:56.479910000+0800",
+      "adcL": 2487,
+      "adcR": 153,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286130,
+      "time": "2026-10-29T22:52:56.534456000+0800",
+      "adcL": 2516,
+      "adcR": 153,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286132,
+      "time": "2026-10-29T22:52:56.583687000+0800",
+      "adcL": 2522,
+      "adcR": 153,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286134,
+      "time": "2026-10-29T22:52:56.658653000+0800",
+      "adcL": 2519,
+      "adcR": 154,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    },
+    {
+      "line": 286138,
+      "time": "2026-10-29T22:52:56.687075000+0800",
+      "adcL": 2519,
+      "adcR": 155,
+      "speedL": 0,
+      "speedR": 0,
+      "pwmL": 0,
+      "pwmR": 0
+    }
+  ],
+  "interpretation": "Withbothfrontsensorspowered/connected, addingpaperdividerraisedleftmedian238->2590whileotherrawmedianremained154. Strongsupportforopticalcoupling/interference contribution, subjecttohandplacement/opticalfootprintchanges. Notprooforiginalleftmoduledefective. Securedividerwithoutintroducingrampcontact, thenrecalibratefinalconfiguration; no PWM/firmwarechanges."
+}

@@ -1,0 +1,165 @@
+
+2026-10-29T22:08:22.225796+08:00 command=w
+
+BUDDY123 INTERFACE WIFI v2.3 | AUTO ANALOG GP27 | A-Z MQTT MAPPING | no boot assignments | motors OFF on boot
+Ordinary profiles1/3: continuous steering + continuous per-wheel PI, physical420 cap. No repeated running kick or load-driver switching.
+Running FF provisional: L150/R180 at45mm/s; encoder PI adjusts. Wheel reference +150/-250mm/s^2, physical PWM slew1200/s; explicit STOP immediate.
+One bounded150ms starting aid per positive segment, max300, ends early once rolling. Actual output tracked for smooth aid release.
+Original optical/barcode/junction/search decisions retained. Profile2 remains legacy ramp experiment; use PROFILE1 first.
+V2 steering: brief gain70%, progressive full same-side authority by350ms; bounded encoder turn damping while returning. Motor controller/caps unchanged.
+Profile1 normal45mm/s; profile3 up to135; scan45. Pre-search gap/probe uses same motor controller; original zero/coast/search/STOP commands remain.
+Shared motion APIs retained; A-Z routing enabled: all Buddy3 targets, Buddy4 telemetry and Buddy5 avoidance route through nav coordinator to the single motor writer.
+Barcode A0 GP27/ADC1; front A0 GP26/GP28. Automatic complete Code39 frame consensus; Mapped A-Z pending until next separate cross; no boot mapping.
+Cross width11..30mm,4mm WHITE confirmation; rolling left/right and U-turn manoeuvres remain existing settings. Side ahead92mm; turn start55mm before centre.
+FRONT ONLY:w=both WHITE,l=left BLACK,r=right BLACK;k=save;c=restore successful V2 calibration.1/2/3=profile. Manual calibration remains available.
+g=USB hands-free2s;f=hold GP21;s/either button stops. BANK:wait5s,BOTH3s,release,wait1s,tap GP21,2s.
+h=help;n=network status;p=motion/events;d=saved drive diagnostics;j=barcode;a=raw ADC;z=nav coordinator;v=live(defaultOFF). Stop,WAIT5s before changing power.
+Record28: V2 calibration preset unless own saved calibration exists; diagnostics format4. DRIVER3=continuous; ordinary startup flags256/512. Copied binary telemetry20Hz; no flash writes while moving.
+MAP: configured=0 revision=0; set Straight/U-turn/Left/Right on dashboard. Motion history384 rows; raw first2048 samples.
+CAL FRONT white=158,183 black=2532,2913 valid=1 min_span=50 span=2374,2730 barcode=AUTO_A0_GP27 profile=1 restored=1 imported=1
+Saved run available: j=barcode events, p=motion, d=drive diagnostics.
+
+BUDDY123 INTERFACE WIFI v2.3 | AUTO ANALOG GP27 | A-Z MQTT MAPPING | no boot assignments | motors OFF on boot
+Ordinary profiles1/3: continuous steering + continuous per-wheel PI, physical420 cap. No repeated running kick or load-driver switching.
+Running FF provisional: L150/R180 at45mm/s; encoder PI adjusts. Wheel reference +150/-250mm/s^2, physical PWM slew1200/s; explicit STOP immediate.
+One bounded150ms starting aid per positive segment, max300, ends early once rolling. Actual output tracked for smooth aid release.
+Original optical/barcode/junction/search decisions retained. Profile2 remains legacy ramp experiment; use PROFILE1 first.
+V2 steering: brief gain70%, progressive full same-side authority by350ms; bounded encoder turn damping while returning. Motor controller/caps unchanged.
+Profile1 normal45mm/s; profile3 up to135; scan45. Pre-search gap/probe uses same motor controller; original zero/coast/search/STOP commands remain.
+Shared motion APIs retained; A-Z routing enabled: all Buddy3 targets, Buddy4 telemetry and Buddy5 avoidance route through nav coordinator to the single motor writer.
+Barcode A0 GP27/ADC1; front A0 GP26/GP28. Automatic complete Code39 frame consensus; Mapped A-Z pending until next separate cross; no boot mapping.
+Cross width11..30mm,4mm WHITE confirmation; rolling left/right and U-turn manoeuvres remain existing settings. Side ahead92mm; turn start55mm before centre.
+FRONT ONLY:w=both WHITE,l=left BLACK,r=right BLACK;k=save;c=restore successful V2 calibration.1/2/3=profile. Manual calibration remains available.
+g=USB hands-free2s;f=hold GP21;s/either button stops. BANK:wait5s,BOTH3s,release,wait1s,tap GP21,2s.
+h=help;n=network status;p=motion/events;d=saved drive diagnostics;j=barcode;a=raw ADC;z=nav coordinator;v=live(defaultOFF). Stop,WAIT5s before changing power.
+Record28: V2 calibration preset unless own saved calibration exists; diagnostics format4. DRIVER3=continuous; ordinary startup flags256/512. Copied binary telemetry20Hz; no flash writes while moving.
+MAP: configured=0 revision=0; set Straight/U-turn/Left/Right on dashboard. Motion history384 rows; raw first2048 samples.
+CAL FRONT white=142,153 black=2532,2913 valid=0 min_span=50 span=2390,2760 barcode=AUTO_A0_GP27 profile=1 restored=0 imported=1
+
+2026-10-29T22:09:30.428299+08:00 command=l
+
+BUDDY123 INTERFACE WIFI v2.3 | AUTO ANALOG GP27 | A-Z MQTT MAPPING | no boot assignments | motors OFF on boot
+Ordinary profiles1/3: continuous steering + continuous per-wheel PI, physical420 cap. No repeated running kick or load-driver switching.
+Running FF provisional: L150/R180 at45mm/s; encoder PI adjusts. Wheel reference +150/-250mm/s^2, physical PWM slew1200/s; explicit STOP immediate.
+One bounded150ms starting aid per positive segment, max300, ends early once rolling. Actual output tracked for smooth aid release.
+Original optical/barcode/junction/search decisions retained. Profile2 remains legacy ramp experiment; use PROFILE1 first.
+V2 steering: brief gain70%, progressive full same-side authority by350ms; bounded encoder turn damping while returning. Motor controller/caps unchanged.
+Profile1 normal45mm/s; profile3 up to135; scan45. Pre-search gap/probe uses same motor controller; original zero/coast/search/STOP commands remain.
+Shared motion APIs retained; A-Z routing enabled: all Buddy3 targets, Buddy4 telemetry and Buddy5 avoidance route through nav coordinator to the single motor writer.
+Barcode A0 GP27/ADC1; front A0 GP26/GP28. Automatic complete Code39 frame consensus; Mapped A-Z pending until next separate cross; no boot mapping.
+Cross width11..30mm,4mm WHITE confirmation; rolling left/right and U-turn manoeuvres remain existing settings. Side ahead92mm; turn start55mm before centre.
+FRONT ONLY:w=both WHITE,l=left BLACK,r=right BLACK;k=save;c=restore successful V2 calibration.1/2/3=profile. Manual calibration remains available.
+g=USB hands-free2s;f=hold GP21;s/either button stops. BANK:wait5s,BOTH3s,release,wait1s,tap GP21,2s.
+h=help;n=network status;p=motion/events;d=saved drive diagnostics;j=barcode;a=raw ADC;z=nav coordinator;v=live(defaultOFF). Stop,WAIT5s before changing power.
+Record28: V2 calibration preset unless own saved calibration exists; diagnostics format4. DRIVER3=continuous; ordinary startup flags256/512. Copied binary telemetry20Hz; no flash writes while moving.
+MAP: configured=0 revision=0; set Straight/U-turn/Left/Right on dashboard. Motion history384 rows; raw first2048 samples.
+CAL FRONT white=142,153 black=2532,2913 valid=0 min_span=50 span=2390,2760 barcode=AUTO_A0_GP27 profile=1 restored=0 imported=1
+
+BUDDY123 INTERFACE WIFI v2.3 | AUTO ANALOG GP27 | A-Z MQTT MAPPING | no boot assignments | motors OFF on boot
+Ordinary profiles1/3: continuous steering + continuous per-wheel PI, physical420 cap. No repeated running kick or load-driver switching.
+Running FF provisional: L150/R180 at45mm/s; encoder PI adjusts. Wheel reference +150/-250mm/s^2, physical PWM slew1200/s; explicit STOP immediate.
+One bounded150ms starting aid per positive segment, max300, ends early once rolling. Actual output tracked for smooth aid release.
+Original optical/barcode/junction/search decisions retained. Profile2 remains legacy ramp experiment; use PROFILE1 first.
+V2 steering: brief gain70%, progressive full same-side authority by350ms; bounded encoder turn damping while returning. Motor controller/caps unchanged.
+Profile1 normal45mm/s; profile3 up to135; scan45. Pre-search gap/probe uses same motor controller; original zero/coast/search/STOP commands remain.
+Shared motion APIs retained; A-Z routing enabled: all Buddy3 targets, Buddy4 telemetry and Buddy5 avoidance route through nav coordinator to the single motor writer.
+Barcode A0 GP27/ADC1; front A0 GP26/GP28. Automatic complete Code39 frame consensus; Mapped A-Z pending until next separate cross; no boot mapping.
+Cross width11..30mm,4mm WHITE confirmation; rolling left/right and U-turn manoeuvres remain existing settings. Side ahead92mm; turn start55mm before centre.
+FRONT ONLY:w=both WHITE,l=left BLACK,r=right BLACK;k=save;c=restore successful V2 calibration.1/2/3=profile. Manual calibration remains available.
+g=USB hands-free2s;f=hold GP21;s/either button stops. BANK:wait5s,BOTH3s,release,wait1s,tap GP21,2s.
+h=help;n=network status;p=motion/events;d=saved drive diagnostics;j=barcode;a=raw ADC;z=nav coordinator;v=live(defaultOFF). Stop,WAIT5s before changing power.
+Record28: V2 calibration preset unless own saved calibration exists; diagnostics format4. DRIVER3=continuous; ordinary startup flags256/512. Copied binary telemetry20Hz; no flash writes while moving.
+MAP: configured=0 revision=0; set Straight/U-turn/Left/Right on dashboard. Motion history384 rows; raw first2048 samples.
+CAL FRONT white=142,153 black=260,2913 valid=0 min_span=50 span=118,2760 barcode=AUTO_A0_GP27 profile=1 restored=0 imported=1
+
+2026-10-29T22:15:21.062392+08:00 command=r
+
+BUDDY123 INTERFACE WIFI v2.3 | AUTO ANALOG GP27 | A-Z MQTT MAPPING | no boot assignments | motors OFF on boot
+Ordinary profiles1/3: continuous steering + continuous per-wheel PI, physical420 cap. No repeated running kick or load-driver switching.
+Running FF provisional: L150/R180 at45mm/s; encoder PI adjusts. Wheel reference +150/-250mm/s^2, physical PWM slew1200/s; explicit STOP immediate.
+One bounded150ms starting aid per positive segment, max300, ends early once rolling. Actual output tracked for smooth aid release.
+Original optical/barcode/junction/search decisions retained. Profile2 remains legacy ramp experiment; use PROFILE1 first.
+V2 steering: brief gain70%, progressive full same-side authority by350ms; bounded encoder turn damping while returning. Motor controller/caps unchanged.
+Profile1 normal45mm/s; profile3 up to135; scan45. Pre-search gap/probe uses same motor controller; original zero/coast/search/STOP commands remain.
+Shared motion APIs retained; A-Z routing enabled: all Buddy3 targets, Buddy4 telemetry and Buddy5 avoidance route through nav coordinator to the single motor writer.
+Barcode A0 GP27/ADC1; front A0 GP26/GP28. Automatic complete Code39 frame consensus; Mapped A-Z pending until next separate cross; no boot mapping.
+Cross width11..30mm,4mm WHITE confirmation; rolling left/right and U-turn manoeuvres remain existing settings. Side ahead92mm; turn start55mm before centre.
+FRONT ONLY:w=both WHITE,l=left BLACK,r=right BLACK;k=save;c=restore successful V2 calibration.1/2/3=profile. Manual calibration remains available.
+g=USB hands-free2s;f=hold GP21;s/either button stops. BANK:wait5s,BOTH3s,release,wait1s,tap GP21,2s.
+h=help;n=network status;p=motion/events;d=saved drive diagnostics;j=barcode;a=raw ADC;z=nav coordinator;v=live(defaultOFF). Stop,WAIT5s before changing power.
+Record28: V2 calibration preset unless own saved calibration exists; diagnostics format4. DRIVER3=continuous; ordinary startup flags256/512. Copied binary telemetry20Hz; no flash writes while moving.
+MAP: configured=0 revision=0; set Straight/U-turn/Left/Right on dashboard. Motion history384 rows; raw first2048 samples.
+CAL FRONT white=142,153 black=260,2913 valid=0 min_span=50 span=118,2760 barcode=AUTO_A0_GP27 profile=1 restored=0 imported=1
+
+BUDDY123 INTERFACE WIFI v2.3 | AUTO ANALOG GP27 | A-Z MQTT MAPPING | no boot assignments | motors OFF on boot
+Ordinary profiles1/3: continuous steering + continuous per-wheel PI, physical420 cap. No repeated running kick or load-driver switching.
+Running FF provisional: L150/R180 at45mm/s; encoder PI adjusts. Wheel reference +150/-250mm/s^2, physical PWM slew1200/s; explicit STOP immediate.
+One bounded150ms starting aid per positive segment, max300, ends early once rolling. Actual output tracked for smooth aid release.
+Original optical/barcode/junction/search decisions retained. Profile2 remains legacy ramp experiment; use PROFILE1 first.
+V2 steering: brief gain70%, progressive full same-side authority by350ms; bounded encoder turn damping while returning. Motor controller/caps unchanged.
+Profile1 normal45mm/s; profile3 up to135; scan45. Pre-search gap/probe uses same motor controller; original zero/coast/search/STOP commands remain.
+Shared motion APIs retained; A-Z routing enabled: all Buddy3 targets, Buddy4 telemetry and Buddy5 avoidance route through nav coordinator to the single motor writer.
+Barcode A0 GP27/ADC1; front A0 GP26/GP28. Automatic complete Code39 frame consensus; Mapped A-Z pending until next separate cross; no boot mapping.
+Cross width11..30mm,4mm WHITE confirmation; rolling left/right and U-turn manoeuvres remain existing settings. Side ahead92mm; turn start55mm before centre.
+FRONT ONLY:w=both WHITE,l=left BLACK,r=right BLACK;k=save;c=restore successful V2 calibration.1/2/3=profile. Manual calibration remains available.
+g=USB hands-free2s;f=hold GP21;s/either button stops. BANK:wait5s,BOTH3s,release,wait1s,tap GP21,2s.
+h=help;n=network status;p=motion/events;d=saved drive diagnostics;j=barcode;a=raw ADC;z=nav coordinator;v=live(defaultOFF). Stop,WAIT5s before changing power.
+Record28: V2 calibration preset unless own saved calibration exists; diagnostics format4. DRIVER3=continuous; ordinary startup flags256/512. Copied binary telemetry20Hz; no flash writes while moving.
+MAP: configured=0 revision=0; set Straight/U-turn/Left/Right on dashboard. Motion history384 rows; raw first2048 samples.
+CAL FRONT white=142,153 black=260,1828 valid=1 min_span=50 span=118,1675 barcode=AUTO_A0_GP27 profile=1 restored=0 imported=1
+
+2026-10-29T22:17:10.665659+08:00 command=l
+
+BUDDY123 INTERFACE WIFI v2.3 | AUTO ANALOG GP27 | A-Z MQTT MAPPING | no boot assignments | motors OFF on boot
+Ordinary profiles1/3: continuous steering + continuous per-wheel PI, physical420 cap. No repeated running kick or load-driver switching.
+Running FF provisional: L150/R180 at45mm/s; encoder PI adjusts. Wheel reference +150/-250mm/s^2, physical PWM slew1200/s; explicit STOP immediate.
+One bounded150ms starting aid per positive segment, max300, ends early once rolling. Actual output tracked for smooth aid release.
+Original optical/barcode/junction/search decisions retained. Profile2 remains legacy ramp experiment; use PROFILE1 first.
+V2 steering: brief gain70%, progressive full same-side authority by350ms; bounded encoder turn damping while returning. Motor controller/caps unchanged.
+Profile1 normal45mm/s; profile3 up to135; scan45. Pre-search gap/probe uses same motor controller; original zero/coast/search/STOP commands remain.
+Shared motion APIs retained; A-Z routing enabled: all Buddy3 targets, Buddy4 telemetry and Buddy5 avoidance route through nav coordinator to the single motor writer.
+Barcode A0 GP27/ADC1; front A0 GP26/GP28. Automatic complete Code39 frame consensus; Mapped A-Z pending until next separate cross; no boot mapping.
+Cross width11..30mm,4mm WHITE confirmation; rolling left/right and U-turn manoeuvres remain existing settings. Side ahead92mm; turn start55mm before centre.
+FRONT ONLY:w=both WHITE,l=left BLACK,r=right BLACK;k=save;c=restore successful V2 calibration.1/2/3=profile. Manual calibration remains available.
+g=USB hands-free2s;f=hold GP21;s/either button stops. BANK:wait5s,BOTH3s,release,wait1s,tap GP21,2s.
+h=help;n=network status;p=motion/events;d=saved drive diagnostics;j=barcode;a=raw ADC;z=nav coordinator;v=live(defaultOFF). Stop,WAIT5s before changing power.
+Record28: V2 calibration preset unless own saved calibration exists; diagnostics format4. DRIVER3=continuous; ordinary startup flags256/512. Copied binary telemetry20Hz; no flash writes while moving.
+MAP: configured=0 revision=0; set Straight/U-turn/Left/Right on dashboard. Motion history384 rows; raw first2048 samples.
+CAL FRONT white=142,153 black=260,1828 valid=1 min_span=50 span=118,1675 barcode=AUTO_A0_GP27 profile=1 restored=0 imported=1
+
+BUDDY123 INTERFACE WIFI v2.3 | AUTO ANALOG GP27 | A-Z MQTT MAPPING | no boot assignments | motors OFF on boot
+Ordinary profiles1/3: continuous steering + continuous per-wheel PI, physical420 cap. No repeated running kick or load-driver switching.
+Running FF provisional: L150/R180 at45mm/s; encoder PI adjusts. Wheel reference +150/-250mm/s^2, physical PWM slew1200/s; explicit STOP immediate.
+One bounded150ms starting aid per positive segment, max300, ends early once rolling. Actual output tracked for smooth aid release.
+Original optical/barcode/junction/search decisions retained. Profile2 remains legacy ramp experiment; use PROFILE1 first.
+V2 steering: brief gain70%, progressive full same-side authority by350ms; bounded encoder turn damping while returning. Motor controller/caps unchanged.
+Profile1 normal45mm/s; profile3 up to135; scan45. Pre-search gap/probe uses same motor controller; original zero/coast/search/STOP commands remain.
+Shared motion APIs retained; A-Z routing enabled: all Buddy3 targets, Buddy4 telemetry and Buddy5 avoidance route through nav coordinator to the single motor writer.
+Barcode A0 GP27/ADC1; front A0 GP26/GP28. Automatic complete Code39 frame consensus; Mapped A-Z pending until next separate cross; no boot mapping.
+Cross width11..30mm,4mm WHITE confirmation; rolling left/right and U-turn manoeuvres remain existing settings. Side ahead92mm; turn start55mm before centre.
+FRONT ONLY:w=both WHITE,l=left BLACK,r=right BLACK;k=save;c=restore successful V2 calibration.1/2/3=profile. Manual calibration remains available.
+g=USB hands-free2s;f=hold GP21;s/either button stops. BANK:wait5s,BOTH3s,release,wait1s,tap GP21,2s.
+h=help;n=network status;p=motion/events;d=saved drive diagnostics;j=barcode;a=raw ADC;z=nav coordinator;v=live(defaultOFF). Stop,WAIT5s before changing power.
+Record28: V2 calibration preset unless own saved calibration exists; diagnostics format4. DRIVER3=continuous; ordinary startup flags256/512. Copied binary telemetry20Hz; no flash writes while moving.
+MAP: configured=0 revision=0; set Straight/U-turn/Left/Right on dashboard. Motion history384 rows; raw first2048 samples.
+CAL FRONT white=142,153 black=278,1828 valid=1 min_span=50 span=136,1675 barcode=AUTO_A0_GP27 profile=1 restored=0 imported=1
+
+2026-10-29T22:18:10.355418+08:00 command=k
+
+BUDDY123 INTERFACE WIFI v2.3 | AUTO ANALOG GP27 | A-Z MQTT MAPPING | no boot assignments | motors OFF on boot
+Ordinary profiles1/3: continuous steering + continuous per-wheel PI, physical420 cap. No repeated running kick or load-driver switching.
+Running FF provisional: L150/R180 at45mm/s; encoder PI adjusts. Wheel reference +150/-250mm/s^2, physical PWM slew1200/s; explicit STOP immediate.
+One bounded150ms starting aid per positive segment, max300, ends early once rolling. Actual output tracked for smooth aid release.
+Original optical/barcode/junction/search decisions retained. Profile2 remains legacy ramp experiment; use PROFILE1 first.
+V2 steering: brief gain70%, progressive full same-side authority by350ms; bounded encoder turn damping while returning. Motor controller/caps unchanged.
+Profile1 normal45mm/s; profile3 up to135; scan45. Pre-search gap/probe uses same motor controller; original zero/coast/search/STOP commands remain.
+Shared motion APIs retained; A-Z routing enabled: all Buddy3 targets, Buddy4 telemetry and Buddy5 avoidance route through nav coordinator to the single motor writer.
+Barcode A0 GP27/ADC1; front A0 GP26/GP28. Automatic complete Code39 frame consensus; Mapped A-Z pending until next separate cross; no boot mapping.
+Cross width11..30mm,4mm WHITE confirmation; rolling left/right and U-turn manoeuvres remain existing settings. Side ahead92mm; turn start55mm before centre.
+FRONT ONLY:w=both WHITE,l=left BLACK,r=right BLACK;k=save;c=restore successful V2 calibration.1/2/3=profile. Manual calibration remains available.
+g=USB hands-free2s;f=hold GP21;s/either button stops. BANK:wait5s,BOTH3s,release,wait1s,tap GP21,2s.
+h=help;n=network status;p=motion/events;d=saved drive diagnostics;j=barcode;a=raw ADC;z=nav coordinator;v=live(defaultOFF). Stop,WAIT5s before changing power.
+Record28: V2 calibration preset unless own saved calibration exists; diagnostics format4. DRIVER3=continuous; ordinary startup flags256/512. Copied binary telemetry20Hz; no flash writes while moving.
+MAP: configured=0 revision=0; set Straight/U-turn/Left/Right on dashboard. Motion history384 rows; raw first2048 samples.
+CAL FRONT white=142,153 black=278,1828 valid=1 min_span=50 span=136,1675 barcode=AUTO_A0_GP27 profile=1 restored=0 imported=1
+CALIBRATION/PROFILE SAVED.

@@ -1,0 +1,44 @@
+{
+  "phase": "white_reference_recorded",
+  "capture": "/Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico/testing/integration/logs/2026-10-29_buddy4_drive_v1_1_codex1_capture.txt",
+  "fromLine": 108545,
+  "baseline": {
+    "motion": {
+      "line": 108543,
+      "time": "2026-10-29T21:16:13.478229000+0800",
+      "run": 1,
+      "flags": 2,
+      "recovery": 2,
+      "speedLeft": 0,
+      "speedRight": 0,
+      "targetLeft": 0,
+      "targetRight": 0,
+      "pwmLeft": 0,
+      "pwmRight": 0,
+      "adcLeft": 3177,
+      "adcRight": 2774,
+      "levelLeft": 914,
+      "levelRight": 738
+    },
+    "heartbeat": {
+      "line": 108502,
+      "time": "2026-10-29T21:16:12.522061000+0800",
+      "net": 2,
+      "netName": "Operational",
+      "state": 3,
+      "stateName": "Safe Stop",
+      "lastCmd": 4,
+      "lastCmdName": "STOP",
+      "lastResult": 0,
+      "lastResultName": "accepted",
+      "uptimeS": 152,
+      "published": 5274,
+      "lost": 1265,
+      "accepted": 9,
+      "rejected": 0,
+      "connects": 1,
+      "fillPct": 0
+    }
+  },
+  "expected": "Motorsstopped; both frontIR sensors overplainwhite tile atnormal mountedheight, chassisflat, noStart and no calibrationchanges. InspectrawADC and normalizedlevels."
+}

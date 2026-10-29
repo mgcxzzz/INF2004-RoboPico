@@ -1,0 +1,53 @@
+{
+  "time": "2026-10-29T22:18:10.429294+08:00",
+  "firmware": "v2.3+Buddy4v0.1",
+  "mounting": "User raised bracket to nextfixedmountposition forrampclearance; nointermediateposition available",
+  "power": "MacUSBonly; motorsstopped",
+  "previousSavedCalibration": {
+    "white": [
+      158,
+      183
+    ],
+    "black": [
+      2532,
+      2913
+    ]
+  },
+  "newCalibration": {
+    "white": [
+      142,
+      153
+    ],
+    "black": [
+      278,
+      1828
+    ],
+    "span": [
+      136,
+      1675
+    ],
+    "profile": 1,
+    "firmwareValid": true
+  },
+  "stability": {
+    "leftBlack": {
+      "min": 273,
+      "median": 278,
+      "max": 281,
+      "stddev": 1.6498181717995455
+    },
+    "rightBlack": {
+      "min": 1822,
+      "median": 1828,
+      "max": 1831,
+      "stddev": 2.831589659537557
+    }
+  },
+  "saveResponse": "CALIBRATION/PROFILE SAVED.",
+  "notes": [
+    "Initialraisedleftcapture260ADC; recenteredrecapture278ADC. Bothreadings retainedinconsolelog.",
+    "Leftcontrastmuchlowerthanrightbutstationarynoiseissmallrelative136ADCspan. Passingfirmwareminimum50doesnotprove dynamictracking or margin underpowerbank/ambientchanges.",
+    "Highermountmustremainfixed. Nextoneshortcontrolledplainlinetestbeforeanyramp. No PWM, motorcode or firmwarechange."
+  ],
+  "consoleLog": "/Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico-v23b4/testing/integration/logs/2026-10-29_v23_b4_raised_ir_usb_calibration_console.txt"
+}

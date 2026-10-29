@@ -1,0 +1,10 @@
+Local static serving verification only; no browser reload, MQTT connection or car commands.
+HTTP200: True
+served_matches_local_file: True
+version_v0_2: True
+recording_controls_removed: True
+manual_profile_selector_removed: True
+small_profile_badge_retained: True
+plain_exports_retained: True
+stored_download_retained: True
+index.html sha256: d48d2cc087f59b6e1f16ab7a2b17a895cf88d6062356932eea51d84574d7e40d

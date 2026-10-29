@@ -1,0 +1,101 @@
+{
+  "phase": "descent_contact_confounded",
+  "capture": "/Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico/testing/integration/logs/2026-10-29_buddy4_drive_v1_1_codex1_capture.txt",
+  "fromLine": 170004,
+  "referenceHeightMm": 10,
+  "toleranceMm": 5,
+  "baseline": {
+    "motion": {
+      "time": "2026-10-29T21:42:57.231588000+0800",
+      "freshOdometry": true,
+      "sideEstimateValid": true,
+      "oneSidedMode": true,
+      "passive": false,
+      "leftSpeedMmS": 0,
+      "rightSpeedMmS": 0,
+      "centreSpeedMmS": 0,
+      "rollDeg": 0,
+      "rightMinusLeftHeightMm": 0,
+      "netDistanceMm": 300,
+      "invalidTransitionsLeft": 0,
+      "invalidTransitionsRight": 0,
+      "qualityReasons": 0,
+      "rampLevelReady": false,
+      "rampCandidate": false,
+      "rampRising": false,
+      "rampReturning": false,
+      "qualityBadSamples": 0,
+      "qualityTotalSamples": 25,
+      "maxSpreadMg": 24,
+      "maxAbsAccelMmS2": 0,
+      "maxAbsTurnDegS": 0,
+      "rateSamples": 25,
+      "maxMadMg": 8,
+      "minFifoSamples": 7,
+      "maxMadFwdMg": 4,
+      "maxMadLatMg": 8,
+      "maxMadUpMg": 4
+    },
+    "imu": {
+      "time": "2026-10-29T21:42:57.223345000+0800",
+      "state": 2,
+      "stateName": "Idle",
+      "motion": "stationary",
+      "event": "status",
+      "detail": 0,
+      "valid": true,
+      "odometry": true,
+      "pitchDeg": 0.4,
+      "lastFault": 0,
+      "heightMm": 0,
+      "highestMm": 0,
+      "humps": 0,
+      "rejected": 0,
+      "shockMg": 1253,
+      "shockNotifyMs": 8,
+      "shocks": 2,
+      "i2cErrors": 0,
+      "framesMissed": 42,
+      "eventMs": 0
+    },
+    "diagnostics": {
+      "time": "2026-10-29T21:42:57.030745000+0800",
+      "maxAdcGapUs": 7097,
+      "maxControlGapUs": 13799,
+      "txDropped": 1569,
+      "rxDropped": 1
+    },
+    "heartbeat": {
+      "time": "2026-10-29T21:42:57.030512000+0800",
+      "net": 2,
+      "netName": "Operational",
+      "state": 3,
+      "stateName": "Safe Stop",
+      "lastCmd": 10,
+      "lastCmdName": "BARCODE_GET",
+      "lastResult": 0,
+      "lastResultName": "accepted",
+      "uptimeS": 265,
+      "published": 10943,
+      "lost": 1570,
+      "accepted": 31,
+      "rejected": 0,
+      "connects": 0,
+      "fillPct": 0
+    }
+  },
+  "calibration": {
+    "white": [
+      158,
+      183
+    ],
+    "black": [
+      2532,
+      2913
+    ],
+    "profile": 1
+  },
+  "userSetup": "Sensor mounting unchanged after successfulrecalibrated plainlinecheck; userpositioned before10mm right-wheel ramp",
+  "expected": "Reset, still3s, Start2s countdown; poweredlinefollowing over10mm right-wheelramp, continueflat about1s thenmanualStop. Stopbeforeanydislodging; report contact/stall.",
+  "userObservation": "IR contacted surface/pushed car duringdescent, causingstall. User proposes raisingmount one bracketposition; adjustment not yet confirmed."
+}

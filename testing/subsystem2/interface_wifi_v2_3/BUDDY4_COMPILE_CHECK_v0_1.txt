@@ -1,0 +1,31 @@
+Buddy4 add-on v0.1 — compile check (NOT the release build; dummy wifi_config from wifi_config.example.h, no credentials)
+date: 2026-10-29T11:06:57Z
+host: cloud container x86_64; toolchain: arm-none-eabi-gcc (xPack GNU Arm Embedded GCC x86_64) 13.3.1 20240614
+pico-sdk: 98a542c1a62fb549ffb5d66a3e5892b06276b670 (= v2.3 pinned; submodules cyw43-driver lwip btstack mbedtls tinyusb)
+cmake: -G Ninja -DCMAKE_BUILD_TYPE=Release -DPICO_BOARD=pico_w -DPICO_NO_PICOTOOL=1
+(Ubuntu gcc-arm-none-eabi 13.2.1 package was rejected: its newlib inttypes.h does not define PRIu64 — fails on the unmodified baseline too)
+
+baseline (exact 8d7f3aa files):  build exit 0, warnings 0
+add-on v0.1:                     build exit 0, warnings 0 (-Wall -Wextra -Werror)
+
+arm-none-eabi-size (text data bss dec):
+ 500024	      0	 198640	 698664	  aa928	/tmp/v23base/build/buddy123_interface_wifi_v2_3.elf
+ 516416	      0	 199872	 716288	  aee00	/tmp/v23b4/build/buddy123_interface_wifi_v2_3_b4_v0_1.elf
+delta: text +16392 B flash, bss +1232 B RAM; __bss_end__ 0x200303c0, core0 stack 8 KB 0x2003c000..0x2003e000 (unchanged)
+
+stack frames (-fstack-usage, bytes): main 2432 base / 2368 add-on; control_step 1232 both;
+  add-on chain on core0: b4v23_tick 224 -> b4_tick 288 -> b4_side_geometry 96 / update_motion 72; handle 96 -> init_sensor 72 -> b4_drv_init 56
+buddy4/subsystem4/imu_proc.c:1383:1:b4_tick	288	static
+buddy4/buddy4_service.c:177:6:b4v23_tick	224	static
+buddy4/subsystem4/imu_proc.c:80:1:b4_side_geometry	96	static
+buddy4/buddy4_service.c:128:13:handle	96	static
+buddy4/subsystem4/imu_proc.c:804:1:update_motion	72	static
+buddy4/buddy4_service.c:110:13:init_sensor	72	static
+buddy4/subsystem4/v23b4_drv_lsm303.c:333:1:b4_drv_read_fifo	56	static
+buddy4/subsystem4/v23b4_drv_lsm303.c:293:1:b4_drv_init	56	static
+buddy4/subsystem4/v23b4_drv_lsm303.c:398:1:b4_drv_read_mag	48	static
+buddy4/subsystem4/v23b4_drv_lsm303.c:156:1:xfer.constprop	32	static
+buddy4/subsystem4/imu_proc.c:357:1:side_reject	32	static
+buddy4/subsystem4/imu_proc.c:709:1:b4_mission	24	static
+
+baseline manifest SOURCE_SHA256.json: 185 entries; 182 identical, 3 changed (CMakeLists.txt, circuit_with_barcode/main.c, wifi_harness.h), 0 missing

@@ -1,0 +1,35 @@
+{
+  "time": "2026-10-29T21:29:43.911054+08:00",
+  "firmware": "Originalv2.3 localbaseline, noBuddy4",
+  "power": "MacUSBonly, powerbank disconnected; motorsstopped",
+  "method": "Existing stationary USBcommands w,l,r,k; nofirmware changes",
+  "previous": {
+    "white": [
+      163,
+      160
+    ],
+    "black": [
+      3457,
+      3700
+    ]
+  },
+  "captured": {
+    "white": [
+      158,
+      183
+    ],
+    "black": [
+      2532,
+      2913
+    ],
+    "span": [
+      2374,
+      2730
+    ],
+    "profile": 1,
+    "valid": true
+  },
+  "saveResponse": "CALIBRATION/PROFILE SAVED.",
+  "consoleLog": "/Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico-v23b4/testing/integration/logs/2026-10-29_v23_original_usb_calibration_console.txt",
+  "validation": "Calibrationaccepted and saved; powered line-following improvement notyet tested. Black readings dependon positioning/surface/mount/power; no rootcause claim."
+}

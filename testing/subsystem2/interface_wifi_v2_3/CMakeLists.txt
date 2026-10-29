@@ -9,9 +9,25 @@ set(CMAKE_C_STANDARD 11)
 pico_sdk_init()
 option(BUDDY_WIFI_ENABLED "Build the optional Pico W core1 Wi-Fi/MQTT transport" ON)
 
-add_executable(buddy123_interface_wifi_v2 main.c motion_api.c nav_coordinator.c motion_executor.c nav_codec.c buddy_hooks.c wifi_transport.c wifi_protocol.c wifi_packets.c)
+add_executable(buddy123_interface_wifi_v2 main.c motion_api.c nav_coordinator.c motion_executor.c nav_codec.c buddy_hooks.c wifi_transport.c wifi_protocol.c wifi_packets.c
+    # Buddy4 add-on v0.2: passive v0.9 processing + powered acceptance fixes
+    buddy4/buddy4_service.c buddy4/subsystem4/v23b4_drv_lsm303.c
+    buddy4/subsystem4/imu_proc.c buddy4/subsystem4/b4_pack.c
+    buddy4/subsystem2/b2_pack.c buddy4/system/sys_tlm.c)
 # Include the complete release version in generated ELF/BIN/UF2 filenames.
-set_target_properties(buddy123_interface_wifi_v2 PROPERTIES OUTPUT_NAME buddy123_interface_wifi_v2_3)
+# ramp-assist v0.2 (v0.1 + crest-hold detector fix) on top of the Buddy4 add-on v0.1: two variants from one tree.
+#   -DRAMP_ASSIST_ACTIVE=OFF (default): shadow, logic + telemetry only, motors unchanged
+#   -DRAMP_ASSIST_ACTIVE=ON           : bounded feedforward assist applied
+option(RAMP_ASSIST_ACTIVE "Apply the ramp feedforward assist (OFF = shadow logging only)" OFF)
+if(RAMP_ASSIST_ACTIVE)
+    set(RA_VARIANT active)
+    set(RA_ACTIVE_VALUE 1)
+else()
+    set(RA_VARIANT shadow)
+    set(RA_ACTIVE_VALUE 0)
+endif()
+set_target_properties(buddy123_interface_wifi_v2 PROPERTIES OUTPUT_NAME buddy123_interface_wifi_v2_3_b4_v0_2_ra_v0_2_${RA_VARIANT})
+target_compile_definitions(buddy123_interface_wifi_v2 PRIVATE BUDDY4_ADDON=1 RAMP_ASSIST_ACTIVE=${RA_ACTIVE_VALUE})
 target_include_directories(buddy123_interface_wifi_v2 PRIVATE "${CMAKE_CURRENT_LIST_DIR}")
 target_link_libraries(buddy123_interface_wifi_v2 pico_stdlib hardware_adc hardware_pwm hardware_clocks hardware_sync hardware_flash pico_multicore m)
 if(BUDDY_WIFI_ENABLED)

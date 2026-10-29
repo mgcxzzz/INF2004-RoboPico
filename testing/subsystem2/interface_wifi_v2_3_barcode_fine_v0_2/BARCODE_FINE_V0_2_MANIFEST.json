@@ -1,0 +1,34 @@
+{
+  "release": "SDK v2.3 barcode fine v0.2; diagnostics repair; no Buddy4",
+  "built_at": "2026-10-30T05:29:45.479783+08:00",
+  "baseline_commit": "8d7f3aa4935565636bba013c74e563f5e8135bcb",
+  "source_directory": "/Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico-v23b4/testing/subsystem2/interface_wifi_v2_3_barcode_fine_v0_2",
+  "uf2": "/Users/skyler/SIT/Y2T1/Embedded/bench_tools/buddy2/buddy123_interface_wifi_v2_3_barcode_fine_v0_2.uf2",
+  "sha256": "b11ca752b2ddad4660e7733e80ecec01a389dd76c78a35c2fd1508dfee7c31db",
+  "bytes": 1002496,
+  "blocks": 1958,
+  "contains_credentials": true,
+  "local_only": true,
+  "flashed_by_agent": false,
+  "motor_commands_sent": false,
+  "build_tag": {
+    "source": 11,
+    "event": "STATUS",
+    "detail_hex": "0xbc02",
+    "detail_decimal": 48130
+  },
+  "diagnostic_bank_max": 63,
+  "diagnostic_reserved_flags": "unchanged; high nibble must be zero",
+  "storage_version": 30,
+  "unchanged_from_v0_1_sha256": {
+    "continuous_drive.h": "9eadf64b31f81f7f37d8664462bf7863c63d21a3f469a4664d1b2b014601bc18",
+    "continuous_steering.h": "c08d5e26858593344064bf0256950c3743a87a593ddb0b653f4aa5a1b145c62f",
+    "continuous_follow.h": "17f43775e4fb33ccf6913e780dcb303b9c1667a6d9acdf54233ea99a7b6a6db7",
+    "motion_api.c": "1558742b9f1bb7084fa574e19a60c1ad7475462f475e19290d652714f67d4854",
+    "nav_coordinator.c": "821e677d895e92e2e1680c2109d3df7ea652b2f7b99b0ee6cb0172933064c910",
+    "motion_executor.c": "eceffbadb80447c12cb4483e447902b85119654a1840b24fce2a7a619bf5bb70",
+    "wifi_transport.c": "285acea73ab71d183b280e54ecebc0ff5100df522d65a18a2f335ff18c7d2a99",
+    "v12_2/baseline/testing/subsystem2/circuit_with_barcode/barcode_analog.h": "684c26ffd5c5e0df7d564642971cf1d3f6db51072280ff91062c2932cec3b0da"
+  },
+  "validation": "35 C executables + SDK JS/Python suites; captured barcode ASan/UBSan; real periodic producer -> C packer -> candidate and merged decoders; merged 20/20; ARM Release build zero warnings"
+}

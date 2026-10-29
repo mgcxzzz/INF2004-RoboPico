@@ -1,0 +1,824 @@
+<!doctype html>
+<!--
+  IS28 RoboPico dashboard (WiFi firmware): live telemetry, supervisory commands
+  and the 5-minute connectivity test (NFR-WIFI-01/02).
+
+  Open this file in a browser on the computer running Mosquitto with the
+  WebSocket listener (tools/dashboard/mosquitto.conf). It decodes the WiFi
+  firmware packets with is28_schema.js.
+  Browser MQTT client for the WiFi firmware contract. No synthetic telemetry is shown.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RoboPico WiFi Dashboard</title>
+<script src="vendor/mqtt.min.js"></script>
+<script src="is28_schema.js"></script>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --ink:#1d2330; --muted:#667085; --line:#e3e6eb;
+          --ok:#0f8a4b; --warn:#b26b00; --bad:#c62828; --accent:#2457c5; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#12151b; --card:#1b2029; --ink:#e7eaf0; --muted:#98a2b3; --line:#2b3240;
+            --ok:#3ecf8e; --warn:#f0b44c; --bad:#ff6b6b; --accent:#7aa2ff; } }
+  * { box-sizing:border-box; }
+  body { margin:0; font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+         background:var(--bg); color:var(--ink); }
+  header { display:flex; flex-wrap:wrap; gap:10px; align-items:center; padding:12px 16px;
+           border-bottom:1px solid var(--line); background:var(--card); position:sticky; top:0; z-index:2; }
+  header h1 { font-size:16px; margin:0 12px 0 0; }
+  input, button, select { font:inherit; color:inherit; }
+  input[type=text] { padding:6px 8px; border:1px solid var(--line); border-radius:6px;
+                     background:var(--bg); min-width:220px; }
+  button { padding:7px 12px; border:1px solid var(--line); border-radius:6px; background:var(--card);
+           cursor:pointer; }
+  button:hover { border-color:var(--accent); }
+  button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+  button.danger { background:var(--bad); border-color:var(--bad); color:#fff; font-weight:600; }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  select { padding:5px 8px; border:1px solid var(--line); border-radius:6px; background:var(--bg); }
+  .pill { padding:3px 9px; border-radius:999px; font-size:12px; font-weight:600; border:1px solid var(--line); }
+  .ok { color:var(--ok); } .warn { color:var(--warn); } .bad { color:var(--bad); } .muted { color:var(--muted); }
+  main { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:12px; padding:12px 16px; }
+  section { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px 14px; min-width:0; }
+  section h2 { font-size:13px; margin:0 0 8px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }
+  .big { font-size:22px; font-weight:700; }
+  dl { display:grid; grid-template-columns:auto 1fr; gap:3px 12px; margin:0; }
+  dt { color:var(--muted); } dd { margin:0; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+  .row { display:flex; flex-wrap:wrap; gap:8px; margin:6px 0; }
+  .wide { grid-column:1/-1; }
+  table { width:100%; border-collapse:collapse; font-size:13px; font-variant-numeric:tabular-nums; }
+  th, td { text-align:left; padding:4px 6px; border-bottom:1px solid var(--line); }
+  th { color:var(--muted); font-weight:600; }
+  #log { height:260px; overflow:auto; font:12px/1.4 ui-monospace,Menlo,Consolas,monospace;
+         background:var(--bg); border:1px solid var(--line); border-radius:6px; padding:6px; }
+  #log div { white-space:pre-wrap; overflow-wrap:anywhere; }
+  .metric-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(135px,1fr)); gap:8px; }
+  .metric { border:1px solid var(--line); border-radius:8px; padding:8px; min-width:0; }
+  .metric label { display:block; color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.04em; }
+  .metric strong { display:block; font:600 18px/1.35 ui-monospace,Menlo,Consolas,monospace; overflow-wrap:anywhere; }
+  canvas { display:block; width:100%; height:190px; border:1px solid var(--line); border-radius:8px; background:var(--bg); }
+  .timeline { max-height:250px; overflow:auto; border:1px solid var(--line); border-radius:6px; }
+  .timeline article { padding:6px 9px; border-bottom:1px solid var(--line); font-size:12px; }
+  .timeline time { color:var(--muted); font:11px ui-monospace,Menlo,Consolas,monospace; margin-right:8px; }
+  .stamp { color:var(--muted); }
+  @media (max-width:560px) { input[type=text] { min-width:0; width:100%; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>RoboPico · WiFi</h1>
+  <input id="url" type="text" aria-label="Broker WebSocket URL">
+  <button id="connect" class="primary">Connect</button>
+  <span id="broker" class="pill muted">not connected</span>
+  <span id="carlink" class="pill muted">car: no heartbeat yet</span>
+</header>
+
+<main>
+  <section>
+    <h2>Operating state</h2>
+    <div id="opstate" class="big muted">unknown</div>
+    <dl style="margin-top:8px">
+      <dt>Motion owner</dt><dd id="owner">–</dd>
+      <dt>Fault bitmap</dt><dd id="safety">—</dd>
+      <dt>Mode / owner / command</dt><dd id="navDetails">waiting for coordinator telemetry</dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Commands</h2>
+    <div class="row">
+      <button data-cmd="START" class="primary">Start</button>
+      <button data-cmd="PAUSE">Pause</button>
+      <button data-cmd="RESUME">Resume</button>
+      <button data-cmd="STOP">Stop</button>
+      <button data-cmd="RESET">Reset</button>
+    </div>
+    <div class="row"><button data-cmd="ESTOP" class="danger">EMERGENCY STOP</button>
+      <button data-cmd="PING">Ping</button></div>
+    <div class="row">
+      <button id="tlmOn">Telemetry on</button><button id="tlmOff">Telemetry off</button>
+    </div>
+    <div class="row muted" style="font-size:12px">Rejection tests (FR-WIFI-03):</div>
+    <div class="row">
+      <button id="badlen">Bad length</button><button id="unknown">Unknown code</button>
+    </div>
+    <div id="lastack" class="muted" style="margin-top:6px">No command sent yet.</div>
+  </section>
+
+  <section class="wide">
+    <h2>Live motion telemetry</h2>
+    <div class="metric-grid">
+      <div class="metric"><label>Measured speed · left / right</label><strong id="speedMeasured">—</strong></div>
+      <div class="metric"><label>Target speed · left / right</label><strong id="speedTarget">—</strong></div>
+      <div class="metric"><label>PWM · left / right</label><strong id="pwm">—</strong></div>
+      <div class="metric"><label>ADC · Left GP26 (ADC0) / Right GP28 (ADC2) / Barcode GP27 (ADC1)</label><strong id="adc">—</strong></div>
+      <div class="metric"><label>Line levels · left / right / barcode</label><strong id="levels">—</strong></div>
+      <div class="metric"><label>Encoder distance</label><strong id="distance">—</strong></div>
+      <div class="metric"><label>Run average speed</label><strong id="averageSpeed">—</strong></div>
+      <div class="metric"><label>Heading</label><strong id="heading">—</strong></div>
+      <div class="metric"><label>Run time</label><strong id="runTime">—</strong></div>
+      <div class="metric"><label>Profile / phase / state</label><strong id="profilePhase">—</strong></div>
+      <div class="metric"><label>Telemetry timestamp</label><strong id="telemetryTime">—</strong></div>
+    </div>
+    <div class="row"><button id="csvSave">Export telemetry CSV</button><button id="jsonSave">Export telemetry JSON</button><span class="muted">Chart window: latest 240 samples · laptop capture: up to 72,000 motion samples.</span><span id="chartSampleCount" class="muted">0 / 240 chart samples</span></div>
+    <div id="archiveStatus" class="muted" role="status">This page session has received no motion samples or events.</div>
+    <div class="row">
+      <label for="logDataset">Stored data</label>
+      <select id="logDataset" aria-label="Stored log dataset">
+        <option value="0">Motion rows</option><option value="1">Diagnostics</option>
+        <option value="2">Raw sensor rows</option><option value="3">Navigation rows</option>
+      </select>
+      <button id="logDownload" disabled>Download stopped-only log</button>
+      <span id="logDownloadStatus" class="muted" role="status">Stop the car, then wait 5 s for coordinator Off status.</span>
+    </div>
+    <canvas id="speedChart" aria-label="Measured and target speed chart"></canvas>
+    <canvas id="pwmChart" aria-label="Left and right PWM chart"></canvas>
+    <canvas id="adcChart" aria-label="ADC channel chart"></canvas>
+    <canvas id="lineChart" aria-label="Calibrated left and right line sensor levels"></canvas>
+  </section>
+
+  <section>
+    <h2>WiFi and MQTT (Buddy 1)</h2>
+    <dl>
+      <dt>Link</dt><dd id="net">–</dd>
+      <dt>Heartbeat</dt><dd id="hbage">–</dd>
+      <dt>Gap (last / max)</dt><dd id="hbgap">–</dd>
+      <dt>Published / lost</dt><dd id="pub">–</dd>
+      <dt>Commands ok / rejected</dt><dd id="cmds">–</dd>
+      <dt>Reconnections</dt><dd id="connects">–</dd>
+      <dt>Queue fill</dt><dd id="fill">–</dd>
+      <dt>Uptime</dt><dd id="uptime">–</dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Barcode diagnostics</h2>
+    <dl>
+      <dt>Threshold / bank</dt><dd id="diagThreshold">—</dd>
+      <dt>Scanner / pending / calibration / run</dt><dd id="diagState">—</dd>
+      <dt>Decoded / turns / L / R / U</dt><dd id="diagCounts">—</dd>
+      <dt>Bad frames / unsupported</dt><dd id="diagErrors">—</dd>
+      <dt>Max ADC / control gap</dt><dd id="diagGaps">—</dd>
+      <dt>TX / RX dropped</dt><dd id="diagDrops">—</dd>
+      <dt>Invalid encoder L / R</dt><dd id="diagInvalid">—</dd>
+      <dt>Diagnostics uptime</dt><dd id="diagUptime">—</dd>
+    </dl>
+  </section>
+
+  <section class="wide">
+    <h2>Barcode letter mapping</h2>
+    <p class="muted">Assign the four demo letters before starting a run. The car stores this mapping in RAM; send it again after power loss.</p>
+    <table>
+      <thead><tr><th>Movement at the next cross-junction</th><th>Letter to send</th><th>Active on car</th></tr></thead>
+      <tbody id="mappingRows"></tbody>
+    </table>
+    <div class="row">
+      <button id="mapApply" class="primary">Apply mapping</button>
+      <button id="mapRead">Read mapping from car</button>
+    </div>
+    <div id="mapStatus" class="muted" role="status">Active mapping unknown. Connect to read it from the car.</div>
+    <dl style="margin-top:8px">
+      <dt>Last decoded letter (B3)</dt><dd id="barcodeLetter">no frames</dd>
+      <dt>Mapped movement for that letter</dt><dd id="barcodeMovement">unknown</dd>
+    </dl>
+    <p class="muted">A command ACK confirms request acceptance. The readback below confirms the active map; coordinator events show when a letter is actually consumed or completed.</p>
+  </section>
+
+  <section class="wide">
+    <h2>Barcode and junction progress</h2>
+    <div class="metric-grid">
+      <div class="metric"><label>Latest decoded letter</label><strong id="eventLetter">—</strong></div>
+      <div class="metric"><label>Pending action</label><strong id="pendingAction">—</strong></div>
+      <div class="metric"><label>Pending map revision</label><strong id="pendingRevision">—</strong></div>
+      <div class="metric"><label>Executing action</label><strong id="executingAction">—</strong></div>
+      <div class="metric"><label>Completed action</label><strong id="completedAction">—</strong></div>
+      <div class="metric"><label>Coordinator state</label><strong id="navState">—</strong></div>
+    </div>
+    <div class="row"><button id="eventCsvSave">Export event CSV</button></div>
+    <h2>Coordinator event timeline</h2><div id="eventTimeline" class="timeline" aria-live="polite"><article class="muted">Waiting for real coordinator events.</article></div>
+  </section>
+
+  <section class="wide">
+    <h2>Connectivity test (NFR-WIFI-01 ≥ 95 % delivered, NFR-WIFI-02 heartbeat gap ≤ 2 s)</h2>
+    <div class="row">
+      <button id="testStart" class="primary">Start 5-minute test</button>
+      <button id="testStop">Stop</button>
+      <button id="testSave">Save results</button>
+      <span id="testClock" class="big muted" style="font-size:18px">idle</span>
+    </div>
+    <table>
+      <thead><tr><th>Source</th><th>Received</th><th>Missing</th><th>Delivered</th></tr></thead>
+      <tbody id="testRows"><tr><td colspan="4" class="muted">Start the test to count frames.</td></tr></tbody>
+    </table>
+    <div id="testVerdict" style="margin-top:8px"></div>
+  </section>
+
+  <section class="wide">
+    <h2>Messages</h2>
+    <div class="row">
+      <label><input type="checkbox" id="logPause"> Pause</label>
+      <label><input type="checkbox" id="logHb"> Show heartbeats</label>
+      <label><input type="checkbox" id="logTlm"> Verbose telemetry</label>
+      <button id="logClear">Clear</button><button id="logSave">Save log</button>
+    </div>
+    <div id="log" role="log" aria-live="off"></div>
+  </section>
+</main>
+
+<script>
+'use strict';
+const $ = (id) => document.getElementById(id);
+let client = null, cmdId = 0, coordinatorMode = null, coordinatorOffSince = null;
+const pending = {};                     /* id -> {time, code}, for ack latency */
+let activeMapping = null, lastBarcodeLetter = null, mapPending = null;
+let mappingQueried = false, lastUptime = null;
+const hb = { last: 0, seen:false, gaps: [], maxGap: 0, lastGap: 0 };
+const CHART_WINDOW = 240, MOTION_HISTORY_LIMIT = 72000, EVENT_HISTORY_LIMIT = 20000;
+let logLines = [], motionHistory = [], motionChartRows = [], motionDropped = 0;
+let eventRows = [], eventDropped = 0, lastLineStatusKey = null, lastNavStatusKey = null;
+const logDownload = { active:false, dataset:0, requestId:null, rowIndex:0, totalRows:null,
+  parts:null, partCount:0, retries:0, timer:null, rows:[], status:'idle' };
+const test = { running: false, start: 0, end: 0, seq: new IS28.SeqTracker(), gaps: [],
+               firstHb: 0, lastHb: 0, timer: null };
+
+/* ---------- connection ---------- */
+const host = location.hostname || 'localhost';
+$('url').value = localStorage.getItem('is28.url') || `ws://${host}:9001`;
+
+function setPill(el, text, cls) { el.textContent = text; el.className = 'pill ' + cls; }
+
+function mappingUnknown(reason) {
+  activeMapping = null; mappingQueried = false; mapPending = null;
+  document.querySelectorAll('[data-map-active]').forEach((el) => { el.textContent = 'unknown'; });
+  $('mapStatus').textContent = reason; $('mapStatus').className = 'warn';
+  $('barcodeMovement').textContent = 'unknown';
+}
+
+function updateLogDownloadControl() {
+  const offReady = coordinatorMode === 7 && coordinatorOffSince !== null && now() - coordinatorOffSince >= 5000;
+  $('logDownload').disabled = !offReady || logDownload.active || !client || !client.connected;
+  if (!logDownload.active && logDownload.status === 'idle') {
+    $('logDownloadStatus').textContent = coordinatorMode !== 7 ?
+      'Stop the car, then wait 5 s for coordinator Off status.' : !offReady ?
+      `Coordinator is Off; wait ${Math.max(0,5-Math.floor((now()-coordinatorOffSince)/1000))} s before downloading.` :
+      'Stopped state confirmed for 5 s. Select a dataset to request it.';
+  }
+}
+
+$('connect').onclick = () => {
+  if (client) { client.end(true); client = null; setPill($('broker'), 'not connected', 'muted');
+                mappingUnknown('Disconnected. Read the mapping again after reconnecting.');
+                cancelLogDownload('Broker disconnected. No complete export was produced.');
+                coordinatorMode = null; coordinatorOffSince = null;
+                updateLogDownloadControl(); $('connect').textContent = 'Connect'; return; }
+  const url = $('url').value.trim();
+  try { localStorage.setItem('is28.url', url); } catch (e) { /* private mode */ }
+  setPill($('broker'), 'connecting…', 'warn');
+  client = mqtt.connect(url, { clientId: 'is28-dash-' + Math.random().toString(16).slice(2, 8),
+                               reconnectPeriod: 2000, connectTimeout: 5000 });
+  $('connect').textContent = 'Disconnect';
+  updateLogDownloadControl();
+  client.on('connect', () => { setPill($('broker'), 'broker connected', 'ok');
+    client.subscribe('is28/#', (err) => {
+      if (err) { log('broker', 'subscription failed: ' + err.message); return; }
+      requestMapping();
+    });
+    log('broker', 'connected to ' + url);
+  });
+  client.on('reconnect', () => setPill($('broker'), 'reconnecting…', 'warn'));
+  client.on('close', () => {
+    if (client) setPill($('broker'), 'broker lost', 'bad');
+    mappingUnknown('Broker connection lost. Active mapping needs a fresh readback.');
+    cancelLogDownload('Broker disconnected. No complete export was produced.');
+    coordinatorMode = null; coordinatorOffSince = null;
+    updateLogDownloadControl();
+  });
+  client.on('error', (e) => log('broker', 'error: ' + e.message));
+  client.on('message', onMessage);
+};
+
+/* ---------- commands ---------- */
+function send(code, arg, raw) {
+  if (!client || !client.connected) { $('lastack').textContent = 'Not connected to the broker.'; return null; }
+  cmdId = (cmdId + 1) & 0xff;
+  const bytes = raw || IS28.encodeCommand(code, cmdId, arg || 0);
+  pending[cmdId] = { time: performance.now(), code: bytes[0] >> 4 };
+  client.publish('is28/cmd', bytes, { qos: 0, retain: false });
+  const label = raw ? 'raw ' + hex(bytes) : IS28.CMD_NAME[code];
+  $('lastack').textContent = `Sent ${label} (id ${cmdId}), waiting for the car…`;
+  log('cmd', `→ ${label} id ${cmdId} [${hex(bytes)}]`);
+  return cmdId;
+}
+const LOG_DATASETS = [
+  { name:'motion', rowBytes:48 }, { name:'diagnostics', rowBytes:58 },
+  { name:'raw-sensors', rowBytes:10 }, { name:'navigation', rowBytes:31 }
+];
+function startLogDownload() {
+  if (coordinatorMode !== 7 || coordinatorOffSince === null || now()-coordinatorOffSince<5000) { $('logDownloadStatus').textContent = 'Manual stop is required. Wait 5 s after coordinator reports Off before requesting stored logs.'; return; }
+  if (!client || !client.connected) { $('logDownloadStatus').textContent = 'Connect to the broker before downloading.'; return; }
+  Object.assign(logDownload, { active:true, dataset:Number($('logDataset').value), requestId:null,
+    rowIndex:0, totalRows:null, parts:null, partCount:0, retries:0, rows:[], status:'requesting' });
+  $('logDownloadStatus').textContent = `Requesting ${LOG_DATASETS[logDownload.dataset].name} rows…`;
+  updateLogDownloadControl(); requestNextLogRow();
+}
+function requestNextLogRow() {
+  if (!logDownload.active) return;
+  if (coordinatorMode !== 7) { finishLogDownload(false, 'Coordinator left Off. No complete export was produced.'); return; }
+  if (logDownload.totalRows !== null && logDownload.rowIndex >= logDownload.totalRows) { finishLogDownload(true, ''); return; }
+  cmdId = (cmdId + 1) & 255; logDownload.requestId = cmdId; logDownload.retries = 0;
+  logDownload.parts = null; logDownload.partCount = 0; publishLogRowRequest();
+}
+function publishLogRowRequest() {
+  if (!logDownload.active || !client || !client.connected) { finishLogDownload(false, 'Broker disconnected before the row completed.'); return; }
+  const arg = (logDownload.dataset << 12) | logDownload.rowIndex;
+  const bytes = IS28.encodeCommand(IS28.CMD.GET_LOG, logDownload.requestId, arg);
+  pending[logDownload.requestId] = { time:now(), code:IS28.CMD.GET_LOG, log:true };
+  client.publish('is28/cmd', bytes, { qos:0, retain:false });
+  $('logDownloadStatus').textContent = `Dataset ${logDownload.dataset}, row ${logDownload.rowIndex+1}${logDownload.totalRows===null?'':` / ${logDownload.totalRows}`} · waiting for ACK/chunks${logDownload.retries ? ` · retry ${logDownload.retries}/3` : ''}`;
+  clearTimeout(logDownload.timer);
+  logDownload.timer = setTimeout(()=>retryLogRow('chunk timeout or missing part'), 3000);
+}
+function retryLogRow(reason) {
+  if (!logDownload.active) return;
+  if (logDownload.retries >= 3) { finishLogDownload(false, `Row ${logDownload.rowIndex} incomplete after 3 retries (${reason}). No complete export was produced.`); return; }
+  logDownload.retries++;
+  logDownload.parts = null; logDownload.partCount = 0;
+  publishLogRowRequest();
+}
+function onLogChunk(d) {
+  if (!logDownload.active) { log('is28/tlm', `unrequested log chunk dataset ${d.dataset}, row ${d.rowIndex}, id ${d.requestId}`); return; }
+  if (d.dataset !== logDownload.dataset || d.requestId !== logDownload.requestId || d.rowIndex !== logDownload.rowIndex) {
+    log('is28/tlm', `ignored unmatched log chunk dataset ${d.dataset}, row ${d.rowIndex}, id ${d.requestId}`); return;
+  }
+  if (d.status !== 0) { finishLogDownload(false, `Firmware rejected dataset ${d.dataset} row ${d.rowIndex} with status ${d.status}.`); return; }
+  if (logDownload.totalRows === null) logDownload.totalRows = d.totalRows;
+  if (d.totalRows !== logDownload.totalRows || d.rowIndex >= d.totalRows) {
+    retryLogRow('inconsistent row count or index'); return;
+  }
+  if (logDownload.partCount && logDownload.partCount !== d.partCount) { retryLogRow('part count changed'); return; }
+  if (!logDownload.parts) { logDownload.partCount=d.partCount; logDownload.parts=new Array(d.partCount); }
+  const prior=logDownload.parts[d.partIndex];
+  if (prior && prior.join(',') !== d.bytes.join(',')) { retryLogRow('conflicting duplicate part'); return; }
+  logDownload.parts[d.partIndex]=d.bytes;
+  if (logDownload.parts.filter(Array.isArray).length === logDownload.partCount) {
+    const row=Uint8Array.from(logDownload.parts.flat());
+    const expected=LOG_DATASETS[logDownload.dataset].rowBytes;
+    if (row.length !== expected) { retryLogRow(`row length ${row.length}, expected ${expected}`); return; }
+    clearTimeout(logDownload.timer); logDownload.rows.push(row); logDownload.rowIndex++;
+    $('logDownloadStatus').textContent = `Received ${logDownload.rowIndex}${logDownload.totalRows===null?'':` / ${logDownload.totalRows}`} ${LOG_DATASETS[logDownload.dataset].name} rows.`;
+    setTimeout(requestNextLogRow, 20);
+  }
+}
+function finishLogDownload(ok, message) {
+  clearTimeout(logDownload.timer); logDownload.active=false; logDownload.status=ok?'complete':'incomplete';
+  if (ok) exportLogDownload();
+  $('logDownloadStatus').textContent = ok ? `Complete: received all ${logDownload.rows.length} ${LOG_DATASETS[logDownload.dataset].name} rows; binary and CSV exports downloaded.` : message;
+  updateLogDownloadControl();
+}
+function joinRows(rows) {
+  const out=new Uint8Array(rows.reduce((n,r)=>n+r.length,0)); let at=0;
+  rows.forEach((r)=>{out.set(r,at);at+=r.length;}); return out;
+}
+function hexRow(row) { return Array.from(row,(b)=>b.toString(16).padStart(2,'0')).join(''); }
+function exportLogDownload() {
+  const ds=LOG_DATASETS[logDownload.dataset], filename=`is28_${ds.name}_${stamp()}`;
+  const raw=joinRows(logDownload.rows);
+  download(`${filename}.bin`,raw,'application/octet-stream');
+  let header=['row_index','byte_length','bytes_hex'], rows=logDownload.rows.map((r,i)=>[i,r.length,hexRow(r)]), format='raw-row-hex';
+  if (logDownload.dataset===0) {
+    header=['row_index','uptime_basis','uptime_ms','run_id','elapsed_ms','phase','profile','recovery_state','motion_active','calibration_valid','automatic','emergency_stop','speed_left_mm_s','speed_right_mm_s','target_left_mm_s','target_right_mm_s','pwm_left','pwm_right','adc_left','adc_right','adc_barcode','level_left','level_right','barcode_level','line_mask','distance_mm','heading_cdeg'];
+    rows=logDownload.rows.map((r,i)=>{const f=IS28.decodeFrame(r); if(f.error||f.src!==IS28.SRC.MOTION) return [i,...Array(header.length-1).fill('decode_error')]; const d=f.data; return [i,d.runRelativeUptime?'run-relative':'system-uptime',d.uptimeMs,d.runId,d.elapsedMs,d.phase,d.profile,d.recoveryState,d.motionActive,d.calibrationValid,d.automatic,d.emergencyStop,d.speedL,d.speedR,d.targetL,d.targetR,d.pwmL,d.pwmR,...d.adc,formatCalLevel(d.levels[0],d.calibrationValid),formatCalLevel(d.levels[1],d.calibrationValid),formatCalLevel(d.levels[2],false),d.lineMaskAvailable?'0x'+d.lineMask.toString(16):'unavailable',d.distanceMm,d.headingCdeg];});
+    format='decoded-source-9-motion';
+  }
+  const csv=[header,...rows].map((r)=>r.map(csvCell).join(',')).join('\r\n')+'\r\n';
+  download(`${filename}.csv`,csv,'text/csv');
+  download(`${filename}.json`,JSON.stringify({dataset:logDownload.dataset,name:ds.name,rowCount:logDownload.rows.length,rowBytes:ds.rowBytes,format,uptimeBasis:logDownload.dataset===0?'per-row flags bit 7 (run-relative when set)':'not interpreted',exportedAt:new Date().toISOString(),rawFile:`${filename}.bin`,csvFile:`${filename}.csv`},null,2)+'\n','application/json');
+}
+function handleLogAck(ack) {
+  if (!logDownload.active || ack.id!==logDownload.requestId || ack.code!==IS28.CMD.GET_LOG) return;
+  if (!ack.accepted) finishLogDownload(false, `GET_LOG request rejected: ${ack.resultName}.`);
+  else $('logDownloadStatus').textContent = `GET_LOG accepted for row ${logDownload.rowIndex}; waiting for matching source-13 chunks.`;
+}
+function cancelLogDownload(reason) { if(logDownload.active) finishLogDownload(false,reason); }
+$('logDownload').onclick = startLogDownload;
+document.querySelectorAll('button[data-cmd]').forEach((b) => {
+  b.onclick = () => send(IS28.CMD[b.dataset.cmd]);
+});
+$('tlmOn').onclick = () => send(IS28.CMD.CONFIG, IS28.configArg(IS28.CFG_TELEMETRY, 1));
+$('tlmOff').onclick = () => send(IS28.CMD.CONFIG, IS28.configArg(IS28.CFG_TELEMETRY, 0));
+$('badlen').onclick = () => { const b = IS28.encodeCommand(IS28.CMD.START, (cmdId + 1) & 0xff);
+                              send(0, 0, b.subarray(0, 3)); };
+$('unknown').onclick = () => send(15);
+
+IS28.MAP_MOVEMENTS.forEach((movement, i) => {
+  const row = document.createElement('tr');
+  const label = document.createElement('td'); label.textContent = movement;
+  const input = document.createElement('td'), select = document.createElement('select');
+  select.id = 'mapLetter' + i; select.setAttribute('aria-label', movement + ' barcode letter');
+  select.add(new Option('Choose letter', ''));
+  for (let n = 65; n <= 90; n++) { const ch = String.fromCharCode(n); select.add(new Option(ch, ch)); }
+  input.appendChild(select);
+  const active = document.createElement('td'); active.dataset.mapActive = i; active.textContent = 'unknown';
+  row.append(label, input, active); $('mappingRows').appendChild(row);
+});
+
+function requestMapping() {
+  const id = send(IS28.CMD.BARCODE_GET);
+  if (id === null) return;
+  mappingQueried = true;
+  mapPending = { id, time: now(), wanted: null };
+  $('mapStatus').textContent = 'Waiting for active mapping from the car…';
+  $('mapStatus').className = 'warn';
+}
+$('mapRead').onclick = requestMapping;
+$('mapApply').onclick = () => {
+  try {
+    const letters = IS28.MAP_MOVEMENTS.map((_, i) => $('mapLetter' + i).value);
+    const bytes = IS28.encodeMapping((cmdId + 1) & 255, letters);
+    const id = send(IS28.CMD.BARCODE_MAP, 0, bytes);
+    if (id === null) throw new Error('Connect to the broker before applying a mapping.');
+    mappingQueried = true;
+    mapPending = { id, time: now(), wanted: letters };
+    $('mapStatus').textContent = 'Sent mapping; waiting for the car to return its active configuration…';
+    $('mapStatus').className = 'warn';
+  } catch (e) { $('mapStatus').textContent = e.message; $('mapStatus').className = 'bad'; }
+};
+
+/* ---------- incoming ---------- */
+function hex(b) { return Array.from(b, (x) => x.toString(16).padStart(2, '0')).join(' '); }
+function now() { return performance.now(); }
+
+function onMessage(topic, payload) {
+  const b = new Uint8Array(payload);
+  if (topic === 'is28/hb' || topic === 'is28/tlm') {
+    const f = IS28.decodeFrame(b);
+    if (f.error) { log(topic, `bad frame (${f.error}) [${hex(b)}]`); return; }
+    if (test.running && f.src !== IS28.SRC.BARCODE_MAP && f.src !== IS28.SRC.LOG_CHUNK) test.seq.add(f.src, f.seq);
+    show(f);
+    if (topic === 'is28/hb') heartbeat();
+    if ((topic === 'is28/hb' && $('logHb').checked) || (topic !== 'is28/hb' && $('logTlm').checked))
+      log(topic, `${f.srcName} #${f.seq} ${summary(f)}`);
+  } else if (topic === 'is28/ack') {
+    const a = IS28.decodeAck(b);
+    if (a.error) { log(topic, a.error); return; }
+    const sent = pending[a.id];
+    const own = sent && sent.code === a.code;
+    if (own) delete pending[a.id];
+    const ms = own ? ` in ${Math.round(now() - sent.time)} ms` : '';
+    $('lastack').innerHTML = `<b>${a.codeName}</b> (id ${a.id}): <span class="${a.accepted ? 'ok' : 'bad'}">${a.resultName}</span>${ms}`;
+    log(topic, `← ${a.codeName} id ${a.id}: ${a.resultName}${ms}, state ${a.stateName}`);
+    handleLogAck(a);
+    if (own && mapPending && mapPending.id === a.id && !a.accepted) {
+      mapPending = null; $('mapStatus').textContent = a.resultName; $('mapStatus').className = 'bad';
+    }
+  } else if (topic === 'is28/lwt') {
+    setPill($('carlink'), 'car offline (broker last will)', 'bad');
+    mappingUnknown('Car offline. Its mapping needs a fresh readback when it returns.');
+    log(topic, 'broker reports the car went offline');
+  } else if (topic !== 'is28/cmd') {
+    log(topic, `[${hex(b)}]`);
+  }
+}
+
+function heartbeat() {
+  const t = now();
+  if (hb.seen) { hb.lastGap = (t - hb.last) / 1000; hb.maxGap = Math.max(hb.maxGap, hb.lastGap); }
+  if (test.running) {
+    if (!test.firstHb) test.firstHb = t;
+    if (test.lastHb) test.gaps.push((t - test.lastHb) / 1000);
+    test.lastHb = t;
+  }
+  hb.last = t;
+  hb.seen=true;
+  $('hbgap').textContent = `${hb.lastGap.toFixed(2)} s / ${hb.maxGap.toFixed(2)} s`;
+  $('hbage').textContent = '0.0 s ago'; $('hbage').className = 'ok';
+  setPill($('carlink'), 'car: online', 'ok');
+}
+
+setInterval(() => {
+  if (IS28.mappingTimedOut(mapPending, now())) {
+    mapPending = null; mappingQueried = false;
+    $('mapStatus').textContent = 'No matching readback within 5 s. Apply status is unknown; read the mapping from the car before retrying.';
+    $('mapStatus').className = 'bad';
+  }
+  for (const id of Object.keys(pending)) {
+    if (now() - pending[id].time > 10000) delete pending[id];
+  }
+  if (!hb.seen) return;
+  const age = (now() - hb.last) / 1000;
+  if (age > 2 && activeMapping) mappingUnknown('Heartbeat lost. Read the active mapping again when the car returns.');
+  $('hbage').innerHTML = `<span class="${age > 2 ? 'bad' : 'ok'}">${age.toFixed(1)} s ago</span>`;
+  if (age > 2) setPill($('carlink'), `car: no heartbeat for ${age.toFixed(0)} s`, 'bad');
+  else setPill($('carlink'), 'car: online', 'ok');
+}, 250);
+
+function summary(f) {
+  const d = f.data;
+  if (!d) return '(no decoder for this source yet)';
+  switch (f.src) {
+    case 1: return `${d.netName}, ${d.stateName}, pub ${d.published}, lost ${d.lost}`;
+    case 8: return d.configured ? `mapping rev ${d.revision}: ${d.letters.join('/')} (forward/U-turn/left/right), request ${d.requestId}` : 'mapping not configured';
+    case 9: return `run ${d.runId}, measured ${d.speedL}/${d.speedR} mm/s, target ${d.targetL}/${d.targetR}, PWM ${d.pwmL}/${d.pwmR}, phase ${d.phase}, profile ${d.profile}`;
+    case 10: return `${IS28.EVENT_NAME[d.event] || 'event '+d.event}, decoded ${d.letter}, pending ${d.pendingLetter}/${d.action}, executing ${d.executingAction}, rev ${d.revision}`;
+    case 11: return `${IS28.EVENT_NAME[d.event] || 'event '+d.event}, mode ${d.mode}, owner ${d.owner}, ${d.letter}/${d.action}, map rev ${d.revision}`;
+    case 12: return `run ${d.runId}, result ${d.result}, ${d.elapsedMs} ms, ${d.distanceMm} mm`;
+    case 13: return `log dataset ${d.dataset} row ${d.rowIndex}/${d.totalRows} part ${d.partIndex+1}/${d.partCount} status ${d.status}`;
+    case 14: return `barcode threshold ${d.thresholdAdc}, bank ${d.bank}, decoded ${d.decodedTotal}, bad frames ${d.badFrames}`;
+    default: return '';
+  }
+}
+
+function stateClass(name) {
+  return /Emergency|Fault/.test(name) ? 'bad' : /Running/.test(name) ? 'ok' : /Paused|Safe Stop/.test(name) ? 'warn' : '';
+}
+
+function showMotion(d) {
+  $('speedMeasured').textContent = `${d.speedL} / ${d.speedR} mm/s`;
+  $('speedTarget').textContent = `${d.targetL} / ${d.targetR} mm/s`;
+  $('pwm').textContent = `${d.pwmL} / ${d.pwmR}`;
+  $('adc').textContent = `${d.adc[0]} / ${d.adc[1]} / ${d.adc[2]}`;
+  $('levels').textContent = `${formatCalLevel(d.levels[0],d.calibrationValid)} / ${formatCalLevel(d.levels[1],d.calibrationValid)} / ${formatCalLevel(d.levels[2],false)} · mask ${d.lineMaskAvailable ? '0x'+d.lineMask.toString(16) : 'unavailable'}`;
+  $('distance').textContent = `${d.distanceMm} mm`;
+  $('averageSpeed').textContent = d.elapsedMs > 0 ? `${(d.distanceMm * 1000 / d.elapsedMs).toFixed(2)} mm/s` : '—';
+  $('heading').textContent = `${(d.headingCdeg / 100).toFixed(2)}°`;
+  $('runTime').textContent = `run ${d.runId} · ${(d.elapsedMs / 1000).toFixed(2)} s`;
+  $('profilePhase').textContent = `${IS28.PROFILE_NAME[d.profile] || 'profile '+d.profile} / phase ${d.phase} / recovery ${d.recoveryState} / ${d.motionActive?'active':'inactive'} / ${d.automatic?'auto':'manual'}${d.emergencyStop?' / E-STOP':''}`;
+  $('telemetryTime').textContent = `${d.runRelativeUptime?'run-relative':'uptime'} ${d.uptimeMs} ms · received ${new Date().toLocaleTimeString()}`;
+  const sample={receivedAt:new Date().toISOString(),...d};
+  motionHistory.push(sample);
+  if(motionHistory.length>MOTION_HISTORY_LIMIT){motionHistory.shift();motionDropped++;}
+  if(motionChartRows.length && d.uptimeMs<motionChartRows[motionChartRows.length-1].uptimeMs) motionChartRows=[];
+  motionChartRows.push(sample);
+  if(motionChartRows.length>CHART_WINDOW)motionChartRows.shift();
+  $('chartSampleCount').textContent=`${motionChartRows.length} / ${CHART_WINDOW} chart samples`;
+  updateArchiveStatus();
+  drawCharts();
+}
+function updateArchiveStatus(){
+  const truncated=motionDropped>0||eventDropped>0;
+  $('archiveStatus').textContent=`Laptop page-session capture: ${motionHistory.length}/${MOTION_HISTORY_LIMIT} motion samples, ${eventRows.length}/${EVENT_HISTORY_LIMIT} events retained; dropped ${motionDropped} motion and ${eventDropped} event rows${truncated?' · history truncated':''}. CSV/JSON export includes all currently retained rows.`;
+  $('archiveStatus').className=truncated?'warn':'muted';
+}
+function showDiagnostics(d) {
+  $('diagThreshold').textContent = `${d.thresholdAdc} ADC / bank ${d.bank}`;
+  $('diagState').textContent = `${d.scanning?'scanning':'idle'} / ${d.pending?'pending':'none'} / front calibration ${d.frontCalibrationValid?'valid':'unavailable'} / ${d.runActive?'active':'inactive'}`;
+  $('diagCounts').textContent = `${d.decodedTotal} / ${d.turns} / ${d.lefts} / ${d.rights} / ${d.uturns}`;
+  $('diagErrors').textContent = `${d.badFrames} / ${d.unsupported}`;
+  $('diagGaps').textContent = `${d.maxAdcGapUs} / ${d.maxControlGapUs} µs`;
+  $('diagDrops').textContent = `${d.txDropped} / ${d.rxDropped}`;
+  $('diagInvalid').textContent = `${d.invalidLeft} / ${d.invalidRight}`;
+  $('diagUptime').textContent = `${d.uptimeMs} ms`;
+}
+function formatCalLevel(value, valid=true) { return valid && value !== 65535 ? String(value) : 'unavailable'; }
+function actionName(action) {
+  return ({ S: 'Straight', U: 'U-turn', L: 'Left', R: 'Right', '-': 'none' })[action] || action;
+}
+function showLineEvent(d) {
+  if (d.letter !== '-') {
+    lastBarcodeLetter = d.letter;
+    $('eventLetter').textContent = d.letter;
+    $('barcodeLetter').textContent = d.letter;
+    $('barcodeMovement').textContent = IS28.mappedMovement(activeMapping, lastBarcodeLetter);
+  }
+  $('pendingAction').textContent = d.pendingLetter === '-' ? 'none' : `${d.pendingLetter} → ${actionName(d.action)}`;
+  $('pendingRevision').textContent = d.pendingLetter === '-' ? '—' : String(d.revision);
+  $('executingAction').textContent = d.executingAction === '-' ? '—' : `${actionName(d.executingAction)} · rev ${d.executingRevision}`;
+  const displayedLevels=d.levels.map((v)=>formatCalLevel(v)).join('/');
+  const statusKey=[d.letter,d.pendingLetter,d.action,d.revision,d.executingAction,d.executingRevision].join('|');
+  const statusChanged=statusKey!==lastLineStatusKey; lastLineStatusKey=statusKey;
+  if(d.event!==0||statusChanged)
+    addEvent(`Line/barcode ${IS28.EVENT_NAME[d.event] || 'event '+d.event} · decoded ${d.letter} · pending ${d.pendingLetter} ${actionName(d.action)} · executing ${actionName(d.executingAction)} · map revision ${d.revision} · calibrated L/R ${displayedLevels} · ADC L/R/barcode ${d.adc[0]}/${d.adc[1]}/${d.adc[2]}`, d);
+}
+function showNavEvent(d) {
+  const modes=['Auto','Stopping','Paused','Driving','Turning','Settling','Fault','Off'];
+  const owners=['none','Buddy 1','Buddy 2','Buddy 3','Buddy 4','Buddy 5'];
+  const previousMode=coordinatorMode;
+  coordinatorMode = d.mode;
+  if (coordinatorMode === 7) { if (previousMode !== 7 || coordinatorOffSince === null) coordinatorOffSince=now(); }
+  else coordinatorOffSince=null;
+  if (logDownload.active && coordinatorMode !== 7)
+    cancelLogDownload('Coordinator left Off. No complete export was produced.');
+  $('navState').textContent = `${modes[d.mode] || 'mode '+d.mode} · owner ${owners[d.owner] || d.owner} · command ${d.commandState}`;
+  $('owner').textContent = owners[d.owner] || `owner ${d.owner}`;
+  $('navDetails').textContent = `${modes[d.mode] || 'mode '+d.mode} / ${owners[d.owner] || d.owner} / state ${d.commandState}`;
+  $('opstate').textContent = modes[d.mode] || `Coordinator mode ${d.mode}`;
+  $('opstate').className = `big ${stateClass($('opstate').textContent)}`;
+  $('safety').textContent = d.fault ? `0x${d.fault.toString(16)}` : 'none reported';
+  const action = actionName(d.action), letter = d.letter;
+  if ((d.event === 2 || d.event === 15) && letter !== '-') {
+    lastBarcodeLetter=letter; $('eventLetter').textContent=letter; $('barcodeLetter').textContent=letter;
+    $('barcodeMovement').textContent=IS28.mappedMovement(activeMapping,letter);
+  }
+  if (d.event === 3) {
+    $('pendingAction').textContent = letter === '-' ? 'none' : `${letter} → ${action}`;
+    $('pendingRevision').textContent = String(d.revision);
+  } else if (d.event === 5) {
+    $('executingAction').textContent = `${action} · ${letter} · rev ${d.revision}`;
+  } else if (d.event === 6) {
+    $('completedAction').textContent = `${action} · ${letter} · rev ${d.revision}`;
+    $('executingAction').textContent = '—';
+    $('pendingAction').textContent = 'none'; $('pendingRevision').textContent = '—';
+  } else if (d.event === 10) {
+    $('executingAction').textContent = '—';
+  }
+  const idContext=d.event===12||d.event===13 ? `network request id ${d.commandId} · opcode/result ${d.detail}` :
+    d.commandId ? `motion command id ${d.commandId}` : '';
+  const statusKey=[d.owner,d.mode,d.commandState,d.fault].join('|');
+  const statusChanged=statusKey!==lastNavStatusKey; lastNavStatusKey=statusKey;
+  if(d.event!==0||statusChanged){
+    if (d.event === 15) addEvent(`Unassigned barcode letter ${letter} · revision ${d.revision}`, d);
+    else addEvent(`Coordinator ${IS28.EVENT_NAME[d.event] || 'event '+d.event} · mode ${modes[d.mode] || d.mode} · owner ${owners[d.owner] || d.owner} · ${letter} ${action} · revision ${d.revision} · ${idContext} · generation ${d.generation} · fault 0x${d.fault.toString(16)} · detail ${d.detail}`, d);
+  }
+  updateLogDownloadControl();
+}
+function addEvent(message, data) {
+  const row = { receivedAt: new Date().toISOString(), message, ...(data ? { data } : {}) };
+  eventRows.push(row); if (eventRows.length > EVENT_HISTORY_LIMIT) { eventRows.shift(); eventDropped++; }
+  updateArchiveStatus();
+  const el = document.createElement('article'), time = document.createElement('time');
+  time.textContent = new Date(row.receivedAt).toLocaleTimeString();
+  el.append(time, document.createTextNode(message));
+  const timeline = $('eventTimeline');
+  if (timeline.firstElementChild && timeline.firstElementChild.classList.contains('muted')) timeline.replaceChildren();
+  timeline.appendChild(el); while (timeline.childElementCount > 250) timeline.removeChild(timeline.firstElementChild);
+  timeline.scrollTop = timeline.scrollHeight;
+}
+function drawOne(canvas, series, labels, colors) {
+  const rect = canvas.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+  const w = Math.max(320, rect.width), h = 190;
+  canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+  const ctx = canvas.getContext('2d'); ctx.scale(dpr, dpr); ctx.clearRect(0, 0, w, h);
+  ctx.font = '11px system-ui'; ctx.fillStyle = getComputedStyle(document.body).color;
+  const vals = series.flatMap((s) => s.values).filter(Number.isFinite);
+  if (!vals.length) { ctx.fillText('Waiting for live telemetry', 12, 24); return; }
+  let min = Math.min(0, ...vals), max = Math.max(1, ...vals); if (min === max) max = min + 1;
+  const left = 42, right = w - 10;
+  const legendCols=Math.max(1,Math.min(labels.length,Math.floor((right-left)/125)));
+  const top=24+(Math.ceil(labels.length/legendCols)-1)*14, bottom=h-24;
+  const finiteTimes = series.flatMap((s) => s.times || []).filter(Number.isFinite);
+  let tMin = finiteTimes.length ? Math.min(...finiteTimes) : 0;
+  let tMax = finiteTimes.length ? Math.max(...finiteTimes) : 1;
+  if (tMin === tMax) tMax = tMin + 1;
+  ctx.strokeStyle = getComputedStyle(document.body).color; ctx.globalAlpha = .18;
+  for (let i = 0; i <= 4; i++) { const y = top + (bottom-top)*i/4; ctx.beginPath(); ctx.moveTo(left,y); ctx.lineTo(right,y); ctx.stroke(); ctx.fillText((max - (max-min)*i/4).toFixed(0), 4, y+4); }
+  ctx.globalAlpha = 1;
+  ctx.fillText(`${(tMin/1000).toFixed(1)} s`, left, h-5);
+  ctx.fillText(`${(tMax/1000).toFixed(1)} s`, Math.max(left,right-38), h-5);
+  series.forEach((s, j) => { ctx.strokeStyle = colors[j]; ctx.lineWidth = 1.7; ctx.beginPath(); let penDown=false;
+    s.values.forEach((v, i) => {
+      const t=(s.times||[])[i];
+      if(!Number.isFinite(v)||!Number.isFinite(t)){penDown=false;return;}
+      const x=left+(right-left)*(t-tMin)/(tMax-tMin), y=bottom-(v-min)/(max-min)*(bottom-top);
+      if(penDown)ctx.lineTo(x,y);else ctx.moveTo(x,y); penDown=true;
+    }); ctx.stroke();
+    ctx.fillStyle = colors[j]; ctx.fillText(labels[j], left + (j%legendCols)*125, 14+Math.floor(j/legendCols)*14, 121);
+  });
+}
+function drawCharts() {
+  const rows = motionChartRows, times=rows.map((r)=>r.uptimeMs);
+  const s=(values)=>({values,times});
+  drawOne($('speedChart'), [s(rows.map((r)=>r.speedL)),s(rows.map((r)=>r.speedR)),
+    s(rows.map((r)=>r.targetL)),s(rows.map((r)=>r.targetR))], ['measured L','measured R','target L','target R'], ['#2563eb','#16a34a','#93c5fd','#86efac']);
+  drawOne($('pwmChart'), [s(rows.map((r)=>r.pwmL)),s(rows.map((r)=>r.pwmR))], ['PWM L','PWM R'], ['#7c3aed','#ea580c']);
+  drawOne($('adcChart'), [s(rows.map((r)=>r.adc[0])),s(rows.map((r)=>r.adc[1])),s(rows.map((r)=>r.adc[2]))], ['Left GP26 · ADC0','Right GP28 · ADC2','Barcode GP27 · ADC1'], ['#7c3aed','#ea580c','#0891b2']);
+  drawOne($('lineChart'), [s(rows.map((r)=>r.calibrationValid && r.levels[0] !== 65535 ? r.levels[0] : NaN)),s(rows.map((r)=>r.calibrationValid && r.levels[1] !== 65535 ? r.levels[1] : NaN))], ['calibrated L','calibrated R'], ['#0891b2','#ea580c']);
+}
+window.addEventListener('resize', drawCharts);
+function csvCell(v) { const s = String(v ?? ''); return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
+function saveCsv(name, header, rows) { download(name, [header, ...rows.map((r)=>r.map(csvCell).join(','))].join('\r\n') + '\r\n'); }
+$('csvSave').onclick = () => saveCsv(`motion_${stamp()}.csv`,
+  ['received_at','uptime_basis','uptime_ms','run_id','elapsed_ms','phase','profile','recovery_state','motion_active','calibration_valid','automatic','emergency_stop','speed_left_mm_s','speed_right_mm_s','target_left_mm_s','target_right_mm_s','pwm_left','pwm_right','adc0_left_gp26','adc2_right_gp28','adc1_barcode_gp27','level_left','level_right','barcode_level','line_mask','distance_mm','heading_cdeg'],
+  motionHistory.map((r)=>[r.receivedAt,r.runRelativeUptime?'run-relative':'system-uptime',r.uptimeMs,r.runId,r.elapsedMs,r.phase,r.profile,r.recoveryState,r.motionActive,r.calibrationValid,r.automatic,r.emergencyStop,r.speedL,r.speedR,r.targetL,r.targetR,r.pwmL,r.pwmR,...r.adc,formatCalLevel(r.levels[0],r.calibrationValid),formatCalLevel(r.levels[1],r.calibrationValid),formatCalLevel(r.levels[2],false),r.lineMaskAvailable?'0x'+r.lineMask.toString(16):'unavailable',r.distanceMm,r.headingCdeg]));
+$('jsonSave').onclick = () => download(`telemetry_${stamp()}.json`, JSON.stringify({capture:{motionLimit:MOTION_HISTORY_LIMIT,eventLimit:EVENT_HISTORY_LIMIT,motionDropped,eventDropped,truncated:motionDropped>0||eventDropped>0},motion:motionHistory,events:eventRows}, null, 2) + '\n');
+$('eventCsvSave').onclick = () => saveCsv(`events_${stamp()}.csv`,
+  ['received_at','message','uptime_ms','event','letter','pending_letter','pending_action','pending_revision','executing_action','executing_revision','action','map_revision','command_id','generation','mode','owner','command_state','detail'],
+  eventRows.map((r)=>{ const d=r.data||{}; return [r.receivedAt,r.message,d.uptimeMs,d.event,d.letter,d.pendingLetter,d.action,d.revision,d.executingAction,d.executingRevision,d.action,d.revision,d.commandId,d.generation,d.mode,d.owner,d.commandState,d.detail]; }));
+
+function show(f) {
+  const d = f.data;
+  if (!d) return;
+  switch (f.src) {
+    case 1:
+      if (lastUptime !== null && d.uptimeS < lastUptime) {
+        mappingUnknown('Car restarted. Reading its mapping again…');
+      }
+      lastUptime = d.uptimeS;
+      if (!mappingQueried) requestMapping();
+      $('net').textContent = d.netName;
+      $('pub').textContent = `${d.published} / ${d.lost}`;
+      $('cmds').textContent = `${d.accepted} / ${d.rejected} (last: ${d.lastCmdName}, ${d.lastResultName})`;
+      $('connects').textContent = d.connects;
+      $('fill').textContent = d.fillPct + ' %';
+      $('uptime').textContent = `${Math.floor(d.uptimeS / 60)} min ${d.uptimeS % 60} s`;
+      if (d.state !== 7) setState(d.stateName);
+      break;
+    case 9: showMotion(d); break;
+    case 10: showLineEvent(d); break;
+    case 11: showNavEvent(d); break;
+    case 12: addEvent(`Run summary · run ${d.runId}, result ${d.result}, elapsed ${d.elapsedMs} ms, distance ${d.distanceMm} mm, average ${d.elapsedMs > 0 ? (d.distanceMm*1000/d.elapsedMs).toFixed(2) : '0.00'} mm/s, line ${d.lineEvents}, nav ${d.navEvents}, recoveries ${d.recoveries}`); break;
+    case 13: onLogChunk(d); break;
+    case 14: showDiagnostics(d); break;
+    case 8: {
+      activeMapping = d;
+      document.querySelectorAll('[data-map-active]').forEach((el) => {
+        el.textContent = d.configured ? d.letters[Number(el.dataset.mapActive)] : 'not configured';
+      });
+      $('barcodeMovement').textContent = lastBarcodeLetter ? IS28.mappedMovement(d, lastBarcodeLetter) : 'no letter received';
+      if (mapPending && mapPending.id !== d.requestId) break;
+      const outcome = IS28.mappingReadbackStatus(d, mapPending ? mapPending.wanted : null);
+      $('mapStatus').textContent = outcome === 'confirmed' ?
+        `Confirmed by car: revision ${d.revision}, ${d.letters.join('/')} (forward/U-turn/left/right).` :
+        outcome === 'not_configured' ? 'Car has no mapping. Choose four letters and apply them.' :
+        'Car readback does not match the requested map. Review Active on car and retry after a fresh read.';
+      $('mapStatus').className = outcome === 'confirmed' ? 'ok' : outcome === 'not_configured' ? 'warn' : 'bad';
+      mapPending = null;
+      break;
+    }
+  }
+}
+function setState(name) { $('opstate').textContent = name; $('opstate').className = 'big ' + stateClass(name); }
+
+/* ---------- log ---------- */
+function log(topic, text) {
+  const line = `${new Date().toLocaleTimeString()}  ${topic.padEnd(9)} ${text}`;
+  logLines.push(line); if (logLines.length > 5000) logLines.shift();
+  if ($('logPause').checked) return;
+  const div = document.createElement('div'); div.textContent = line;
+  const el = $('log'); el.appendChild(div);
+  while (el.childNodes.length > 300) el.removeChild(el.firstChild);
+  el.scrollTop = el.scrollHeight;
+}
+$('logClear').onclick = () => { $('log').innerHTML = ''; logLines = []; };
+function download(name, content, mime = 'text/plain') {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content], { type: mime }));
+  a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+const stamp = () => new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+$('logSave').onclick = () => download(`is28_messages_${stamp()}.txt`, logLines.join('\n') + '\n');
+
+/* ---------- 5-minute connectivity test ---------- */
+const TEST_S = 300;
+$('testStart').onclick = () => {
+  test.seq.reset(); test.gaps = []; test.firstHb = 0; test.lastHb = 0; test.running = true;
+  test.start = now(); test.end = 0;
+  clearInterval(test.timer); test.timer = setInterval(updateTest, 500);
+  log('test', '5-minute connectivity test started');
+};
+$('testStop').onclick = () => finishTest('stopped early');
+function finishTest(why) {
+  if (!test.running) return;
+  test.running = false; test.end = now(); clearInterval(test.timer); updateTest();
+  log('test', `test ${why}: ${$('testVerdict').textContent}`);
+}
+function testStats() {
+  const s = test.seq.summary();
+  const g = test.gaps;
+  const end = test.running ? now() : test.end;
+  const durationS = test.start ? Math.max(0, end - test.start) / 1000 : 0;
+  const head = test.firstHb ? (test.firstHb - test.start) / 1000 : durationS;
+  const tail = test.lastHb ? (end - test.lastHb) / 1000 : durationS;
+  const maxGap = Math.max(head, tail, g.length ? Math.max(...g) : 0);
+  const mean = g.length ? g.reduce((a, b) => a + b, 0) / g.length : 0;
+  const beats = g.length + (test.lastHb ? 1 : 0);
+  const verdict = IS28.connectivityVerdict(test.seq.per, durationS, maxGap, beats, !test.running && test.end > 0);
+  return { s, maxGap, mean, durationS, verdict,
+    over2: g.filter((x) => x > 2).length + (head > 2 ? 1 : 0) + (test.lastHb && tail > 2 ? 1 : 0), beats };
+}
+function updateTest() {
+  const el = (test.running ? now() : test.end) - test.start;
+  const left = Math.max(0, TEST_S - el / 1000);
+  $('testClock').textContent = test.running ? `${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')} left` : 'done';
+  const rows = Object.keys(test.seq.per).sort().map((k) => {
+    const t = test.seq.per[k], pct = (100 * t.received) / (t.received + t.missing);
+    return `<tr><td>${IS28.SRC_NAME[k]}</td><td>${t.received}</td><td>${t.missing}</td><td class="${pct >= 95 ? 'ok' : 'bad'}">${pct.toFixed(1)} %</td></tr>`;
+  });
+  $('testRows').innerHTML = rows.join('') || '<tr><td colspan="4" class="muted">No frames yet.</td></tr>';
+  const st = testStats();
+  const d = st.verdict.deliveryPass, h = st.verdict.heartbeatPass;
+  const label = (pass) => test.running ? 'IN PROGRESS' : !st.verdict.complete ? 'INCOMPLETE' : pass ? 'PASS' : 'FAIL';
+  $('testVerdict').innerHTML =
+    `Delivered <b class="${d ? 'ok' : 'bad'}">${st.s.pct.toFixed(1)} %</b> (${st.s.received} received, ${st.s.missing} missing) · ` +
+    `heartbeats ${st.beats}, mean gap ${st.mean.toFixed(2)} s, max gap <b class="${h ? 'ok' : 'bad'}">${st.maxGap.toFixed(2)} s</b>, gaps over 2 s: ${st.over2} · ` +
+    `NFR-WIFI-01 <b class="${d ? 'ok' : 'warn'}">${label(d)}</b>, NFR-WIFI-02 <b class="${h ? 'ok' : 'warn'}">${label(h)}</b>`;
+  if (test.running && left <= 0) finishTest('finished');
+}
+$('testSave').onclick = () => {
+  const st = testStats();
+  const lines = [`IS28 connectivity test, ${new Date().toString()}`,
+    `duration_s=${(((test.end || now()) - test.start) / 1000).toFixed(1)}`,
+    `delivered_pct=${st.s.pct.toFixed(2)} received=${st.s.received} missing=${st.s.missing}`,
+    `heartbeats=${st.beats} mean_gap_s=${st.mean.toFixed(3)} max_gap_s=${st.maxGap.toFixed(3)} gaps_over_2s=${st.over2}`,
+    `complete=${st.verdict.complete} delivery_estimate=sequence_gaps_per_observed_source`,
+    `NFR-WIFI-01=${st.verdict.complete ? (st.verdict.deliveryPass ? 'PASS' : 'FAIL') : 'INCOMPLETE'} NFR-WIFI-02=${st.verdict.complete ? (st.verdict.heartbeatPass ? 'PASS' : 'FAIL') : 'INCOMPLETE'}`,
+    'source,received,missing,duplicates'];
+  for (const k of Object.keys(test.seq.per)) {
+    const t = test.seq.per[k]; lines.push(`${IS28.SRC_NAME[k]},${t.received},${t.missing},${t.dup}`);
+  }
+  lines.push('heartbeat_gaps_s=' + test.gaps.map((x) => x.toFixed(3)).join(' '));
+  download(`is28_connectivity_${stamp()}.txt`, lines.join('\n') + '\n');
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+✔ decoder accepts exact current source payload lengths and rejects malformed frames (1.412459ms)
+✔ motion frame decodes signed speed, calibrated levels, distance, and timing (0.385583ms)
+✔ line event preserves decoded, pending, executing actions and their revisions (0.072667ms)
+✔ coordinator event distinguishes dispatch and completion identifiers (0.065209ms)
+✔ barcode map builder covers every A-Z letter in each distinct slot (0.547417ms)
+✔ map readback validates configured bits and exposes revision and letters (0.078292ms)
+✔ map status distinguishes confirmed, empty, mismatch, and rejected readback data (0.123167ms)
+✔ map confirmation times out at its explicit five-second deadline (0.051333ms)
+✔ source-13 log chunks validate identity, reserved bytes, status, and chunk lengths (0.210959ms)
+✔ source-14 diagnostics decodes counters, flags, and gaps, and rejects invalid status values (0.188958ms)
+SDK segment {"total":1801,"decoded":1762,"perSrc":{"1":54,"2":72,"4":75,"8":3,"9":719,"10":717,"11":79,"12":1,"14":42},"topics":{"is28/hb":54,"is28/tlm":1708,"is28/cmd":20,"is28/ack":19}}
+RTOS segment {"total":1500,"decoded":1498,"perSrc":{"1":305,"2":596,"4":596,"8":1}}
+✔ differential: RTOS sources 1-8 decode exactly as the RTOS dashboard decoder (16.917875ms)
+✔ differential: SDK sources 1, 8, 9-14 decode exactly as the v2.3 dashboard decoder (10.562917ms)
+✔ SDK frames reach 64 bytes and are not truncated; RTOS 40-byte frame accepted (0.25175ms)
+✔ units, signs and unavailable markers are preserved (0.174208ms)
+✔ profile detection: observed packet types, inference and manual override (0.131083ms)
+✔ existing name contracts kept for both dashboards (0.266917ms)
+✔ real capture: SDK v2.3 + Buddy4 add-on segment decodes completely and is detected as SDK (8.819334ms)
+✔ real capture: RTOS Buddy4 v0.9 segment decodes completely and is inferred as RTOS (5.984834ms)
+✔ real capture: last-will segment contains broker offline messages (0.394958ms)
+✔ fine barcode bank63 is valid, bank64 and reserved flags are rejected (0.137291ms)
+ℹ tests 20
+ℹ suites 0
+ℹ pass 20
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 85.524208

@@ -1,0 +1,10 @@
+samples=2048 span_mm=0.00..219.85 candidates=0 selections=0 last_letter=- frame_starts_all_banks=5
+threshold=202 starts=1 edges=28 sub0.35mm_edges=0 pending_elements=9
+threshold=204 starts=1 edges=28 sub0.35mm_edges=0 pending_elements=9
+threshold=206 starts=1 edges=26 sub0.35mm_edges=0 pending_elements=25
+threshold=212 starts=0 edges=14 sub0.35mm_edges=0 pending_elements=0
+threshold=512 starts=0 edges=12 sub0.35mm_edges=0 pending_elements=0
+threshold=1024 starts=0 edges=12 sub0.35mm_edges=0 pending_elements=0
+threshold=1536 starts=0 edges=12 sub0.35mm_edges=0 pending_elements=0
+threshold=204 starts=1 edges=30 sub0.35mm_edges=0 pending_elements=9
+threshold=205 starts=1 edges=30 sub0.35mm_edges=0 pending_elements=9

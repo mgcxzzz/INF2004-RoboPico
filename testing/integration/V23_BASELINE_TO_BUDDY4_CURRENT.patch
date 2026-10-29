@@ -1,0 +1,134 @@
+--- v23_original/CMakeLists.txt
++++ buddy4_current/CMakeLists.txt
+@@ -9,9 +9,25 @@
+ pico_sdk_init()
+ option(BUDDY_WIFI_ENABLED "Build the optional Pico W core1 Wi-Fi/MQTT transport" ON)
+ 
+-add_executable(buddy123_interface_wifi_v2 main.c motion_api.c nav_coordinator.c motion_executor.c nav_codec.c buddy_hooks.c wifi_transport.c wifi_protocol.c wifi_packets.c)
++add_executable(buddy123_interface_wifi_v2 main.c motion_api.c nav_coordinator.c motion_executor.c nav_codec.c buddy_hooks.c wifi_transport.c wifi_protocol.c wifi_packets.c
++    # Buddy4 add-on v0.2: passive v0.9 processing + powered acceptance fixes
++    buddy4/buddy4_service.c buddy4/subsystem4/v23b4_drv_lsm303.c
++    buddy4/subsystem4/imu_proc.c buddy4/subsystem4/b4_pack.c
++    buddy4/subsystem2/b2_pack.c buddy4/system/sys_tlm.c)
+ # Include the complete release version in generated ELF/BIN/UF2 filenames.
+-set_target_properties(buddy123_interface_wifi_v2 PROPERTIES OUTPUT_NAME buddy123_interface_wifi_v2_3)
++# ramp-assist v0.2 (v0.1 + crest-hold detector fix) on top of the Buddy4 add-on v0.1: two variants from one tree.
++#   -DRAMP_ASSIST_ACTIVE=OFF (default): shadow, logic + telemetry only, motors unchanged
++#   -DRAMP_ASSIST_ACTIVE=ON           : bounded feedforward assist applied
++option(RAMP_ASSIST_ACTIVE "Apply the ramp feedforward assist (OFF = shadow logging only)" OFF)
++if(RAMP_ASSIST_ACTIVE)
++    set(RA_VARIANT active)
++    set(RA_ACTIVE_VALUE 1)
++else()
++    set(RA_VARIANT shadow)
++    set(RA_ACTIVE_VALUE 0)
++endif()
++set_target_properties(buddy123_interface_wifi_v2 PROPERTIES OUTPUT_NAME buddy123_interface_wifi_v2_3_b4_v0_2_ra_v0_2_${RA_VARIANT})
++target_compile_definitions(buddy123_interface_wifi_v2 PRIVATE BUDDY4_ADDON=1 RAMP_ASSIST_ACTIVE=${RA_ACTIVE_VALUE})
+ target_include_directories(buddy123_interface_wifi_v2 PRIVATE "${CMAKE_CURRENT_LIST_DIR}")
+ target_link_libraries(buddy123_interface_wifi_v2 pico_stdlib hardware_adc hardware_pwm hardware_clocks hardware_sync hardware_flash pico_multicore m)
+ if(BUDDY_WIFI_ENABLED)
+--- v23_original/continuous_drive.h
++++ buddy4_current/continuous_drive.h
+@@ -27,6 +27,14 @@
+     uint8_t still_timing:1;
+     uint8_t start_used:1;
+     uint8_t start_active:1;
++    /* v2.3+Buddy4 ramp-assist v0.1 (only addition to this controller):
++     * boost_frac raises the existing feedforward by a fraction, capped at
++     * boost_cap PWM; boost_pwm reports what was applied. All three are zero
++     * after any reset, so the controller is unchanged unless a caller sets
++     * them. Gains, limits, slew and anti-windup are untouched. */
++    float boost_frac;
++    float boost_cap;
++    float boost_pwm;
+ } ContinuousDrive;
+ 
+ static inline float continuous_clampf(float x, float lo, float hi) {
+@@ -91,7 +99,8 @@
+ 
+     float error = s->reference - measured;
+     float ff = continuous_feedforward(wheel, s->reference);
+-    float base = ff + error;
++    s->boost_pwm = continuous_clampf(ff * s->boost_frac, 0.0f, s->boost_cap);
++    float base = ff + s->boost_pwm + error;
+ 
+     /* One bounded assistance window per positive-command segment. A stalled
+      * wheel cannot re-arm it; target changes alone do not clear this latch. */
+--- v23_original/v12_2/baseline/testing/subsystem2/circuit_with_barcode/main.c
++++ buddy4_current/v12_2/baseline/testing/subsystem2/circuit_with_barcode/main.c
+@@ -464,6 +464,8 @@
+ #include "../../../../../drive_diag_pico.h"
+ #include "../../../../../nav_log_harness.h"
+ #include "../../../../../wifi_harness.h"
++#include "../../../../../buddy4_harness.h" /* Buddy4 add-on (observer only) */
++#include "../../../../../ramp_assist_harness.h" /* ramp-assist v0.1 */
+ 
+ static unsigned start_block(unsigned mode) {
+     if(wifi_estop)return START_GP20;
+@@ -517,6 +519,8 @@
+     }
+     restore_interrupts(irq);float dt=(float)elapsed/1e6f;
+     for(unsigned w=0;w<2;++w) velocity[w]+=0.25f*(raw_to_mm(w,e[w].position)/dt-velocity[w]);
++    buddy4_odometry_note(e,now,elapsed); /* Buddy4 add-on: observe drained encoders */
++    if(!active) ramp_assist_halt(now); /* ramp-assist v0.1: Stop/ESTOP/fault/run end */
+     if(!active) return;
+     diag_observing=diag_capture.begun && !diag_capture.frozen;
+     if(diag_observing) {
+@@ -562,7 +566,7 @@
+     int effort_outer=search_outer>=0?search_outer:capture_outer>=0?capture_outer:load_outer;
+     bool loaded[2]={turning || effort_outer==0,turning || effort_outer==1};
+     for(unsigned w=0;w<2;++w) {
+-        if(!continuous_active)continuous_leave(&continuous_wheel[w],&controller[w],w,demand.target[w],velocity[w],output[w]);
++        if(!continuous_active)continuous_leave(&continuous_wheel[w],&controller[w],w,demand.target[w],velocity[w],ramp_assist_unboosted(w,output[w])); /* ramp-assist v0.1: seed without added PWM */
+         if(!ramp_drive)ramp_wheel_leave(&ramp_wheel[w],&controller[w],demand.target[w]);
+         if(!maneuver_drive)maneuver_leave(&maneuver_power[w],&controller[w],demand.target[w]);
+     }
+@@ -576,6 +580,7 @@
+     if(diag_observing && preserve_cruise_I)diag_tick.v[D_FLAGS]|=DF_HANDOVER_KEEP;
+     if(leave_fast && !continuous_active) for(unsigned w=0;w<2;++w) cruise_handover_apply(&controller[w],preserve_cruise_I);
+     last_fast=circuit.fast;
++    ramp_assist_control(now,dt,continuous_active && !recovering); /* ramp-assist v0.1 */
+     feedback_mask=0;
+     for(unsigned w=0;w<2;++w) {
+         if(continuous_active)next[w]=continuous_drive_step(&continuous_wheel[w],&controller[w],w,demand.target[w],velocity[w],dt,now,output[w]);
+@@ -647,6 +652,7 @@
+     } else puts("CAL SAVED: restoring this V2.3 firmware's saved calibration/profile; c restores preset.");
+     recorded_version=28;
+     load_raw();load_drive_diag();buddy_extension_init();side_cal=(SideCalibration){0,1,3};last_control=time_us_64();wifi_harness_init();
++    buddy4_init(); /* Buddy4 add-on */
+     bool old_connected=false,usb_pending=false;uint8_t raw_buttons=0,buttons=0;
+     uint64_t changed=0,last_status=0,last_adc=0,usb_start_at=0;uint32_t seen_stops=0;
+     BenchArm arm={0};
+@@ -736,6 +742,7 @@
+         uint8_t before_phase=circuit.phase;
+         control_step(time_us_64());now=time_us_64();
+         buddy_extension_poll(now);wifi_barcode_events(now);wifi_harness_poll(now);
++        buddy4_poll(time_us_64()); /* Buddy4 add-on */
+         if(connected && guard.active && circuit.phase!=before_phase)
+             printf("PHASE %u: %s\n",circuit.phase,phase_name(circuit.phase));
+         if(guard.stops!=seen_stops) {
+--- v23_original/wifi_harness.h
++++ buddy4_current/wifi_harness.h
+@@ -6,6 +6,12 @@
+ _Static_assert(WIFI_SETTINGS_OFFSET+FLASH_SECTOR_SIZE==DIAG_OFFSET,"WiFi settings overlap logs");
+ static bool start_run(unsigned mode);
+ static unsigned start_block(unsigned mode);
++#if defined(BUDDY4_ADDON) && BUDDY4_ADDON
++static void buddy4_reset_request(void); /* Buddy4 add-on (buddy4_harness.h) */
++#define BUDDY4_RESET_HOOK() buddy4_reset_request()
++#else
++#define BUDDY4_RESET_HOOK() ((void)0) /* host tests and builds without the add-on */
++#endif
+ static bool wifi_forward=true,wifi_was_active;
+ static uint32_t wifi_lease,wifi_seen_barcode,wifi_seen_runs,wifi_app_drops,wifi_summary_run,wifi_summary_connection;
+ static uint32_t wifi_line_events,wifi_nav_events,wifi_recoveries;
+@@ -185,7 +191,7 @@
+         wifi_estop|=cmd->code==WP_CMD_ESTOP;wifi_stopped=true;return 0;
+     case WP_CMD_RESET:
+         if(guard.active || trace_settling || !gpio_get(STOP) || !gpio_get(HOLD))return WP_ACK_BUSY;
+-        wifi_estop=wifi_stopped=false;wifi_start_pending=false;wifi_lease=0;return 0;
++        wifi_estop=wifi_stopped=false;wifi_start_pending=false;wifi_lease=0;BUDDY4_RESET_HOOK();return 0;
+     case WP_CMD_CONFIG:wifi_forward=(cmd->arg&4095)!=0;return 0;
+     case WP_CMD_PING:wifi_last_hb=0;return 0;
+     case WP_CMD_MAP:

@@ -1,0 +1,13 @@
+{
+  "start_time": "2026-10-30T03:00:54.733004+08:00",
+  "capture_path": "/Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico/testing/integration/logs/2026-10-29_buddy4_drive_v1_1_codex1_capture.txt",
+  "capture_start_offset": 76736302,
+  "firmware": "buddy123_interface_wifi_v2_3_b4_v0_1_ra_v0_1_active (verified legacy detector marker)",
+  "setup": "unchanged lower bracket and original preset; second10mm right-wheel ramp attempt",
+  "motor_commands_sent": false,
+  "version_correction": {
+    "actual_release": "v0.1 active",
+    "basis": "source15 raw flags bits4-6=0 (legacy detector1); v0.2 marker would be2",
+    "filename_note": "Original v0_2 filename retained for traceability; not a v0.2 hardware test"
+  }
+}

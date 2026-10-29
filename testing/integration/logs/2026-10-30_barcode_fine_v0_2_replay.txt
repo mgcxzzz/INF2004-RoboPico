@@ -1,0 +1,3 @@
+capture fixtures/barcode_Z_captured.csv: decoded=1 letter=Z selected=63 candidates=2
+capture fixtures/barcode_Y_captured.csv: decoded=0 letter=- selected=11 candidates=0
+PASS fine pair: real Z, honest Y failure, consensus/conflict/noise checks, record30

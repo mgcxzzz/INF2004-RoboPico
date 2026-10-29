@@ -27,6 +27,14 @@ typedef struct {
     uint8_t still_timing:1;
     uint8_t start_used:1;
     uint8_t start_active:1;
+    /* v2.3+Buddy4 ramp-assist v0.1 (only addition to this controller):
+     * boost_frac raises the existing feedforward by a fraction, capped at
+     * boost_cap PWM; boost_pwm reports what was applied. All three are zero
+     * after any reset, so the controller is unchanged unless a caller sets
+     * them. Gains, limits, slew and anti-windup are untouched. */
+    float boost_frac;
+    float boost_cap;
+    float boost_pwm;
 } ContinuousDrive;
 
 static inline float continuous_clampf(float x, float lo, float hi) {
@@ -91,7 +99,8 @@ static inline int32_t continuous_drive_step(ContinuousDrive *s, SignedWheel *p,
 
     float error = s->reference - measured;
     float ff = continuous_feedforward(wheel, s->reference);
-    float base = ff + error;
+    s->boost_pwm = continuous_clampf(ff * s->boost_frac, 0.0f, s->boost_cap);
+    float base = ff + s->boost_pwm + error;
 
     /* One bounded assistance window per positive-command segment. A stalled
      * wheel cannot re-arm it; target changes alone do not clear this latch. */

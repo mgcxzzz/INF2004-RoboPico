@@ -1,0 +1,28 @@
+capture fixtures/barcode_Z_captured.csv: decoded=1 letter=Z selected=63 candidates=2
+capture fixtures/barcode_Y_captured.csv: decoded=0 letter=- selected=11 candidates=0
+PASS fine pair: real Z, honest Y failure, consensus/conflict/noise checks, record30
+
+ASan/UBSan enabled; no findings. ARM build:0warnings,0errors.
+Stack regions each8192bytes, nonoverlapping, BSS below stacks.
+[
+  {
+    "function": "main",
+    "bytes": 2360
+  },
+  {
+    "function": "control_step",
+    "bytes": 1176
+  },
+  {
+    "function": "save_drive_diag",
+    "bytes": 1000
+  },
+  {
+    "function": "interface_save_nav_log",
+    "bytes": 896
+  },
+  {
+    "function": "diag_bank_valid.constprop",
+    "bytes": 720
+  }
+]

@@ -1,0 +1,12 @@
+{
+  "start_time": "2026-10-30T03:39:34.798797+08:00",
+  "capture_path": "/Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico/testing/integration/logs/2026-10-29_buddy4_drive_v1_1_codex1_capture.txt",
+  "capture_start_offset": 87084283,
+  "claimed_firmware": "buddy123_interface_wifi_v2_3_b4_v0_1_ra_v0_2_active",
+  "require_markers": {
+    "detector": 2,
+    "estimator": 1
+  },
+  "setup": "A/B flat run, unchanged hardware/mat/calibration after two new-estimator line losses",
+  "motor_commands_sent": false
+}

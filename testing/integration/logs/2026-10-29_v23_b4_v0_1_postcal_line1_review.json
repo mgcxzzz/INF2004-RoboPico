@@ -1,0 +1,788 @@
+{
+  "userObservation": "Seemsokay comparedwith recalibrated originalbaseline",
+  "fromLine": 161424,
+  "toLineExclusive": 164042,
+  "lastMotion": {
+    "line": 164022,
+    "time": "2026-10-29T21:40:46.522305000+0800",
+    "topic": "is28/tlm",
+    "src": 2,
+    "srcName": "Motion (B2)",
+    "seq": 10,
+    "len": 37,
+    "data": {
+      "freshOdometry": true,
+      "sideEstimateValid": true,
+      "oneSidedMode": true,
+      "passive": false,
+      "leftSpeedMmS": 0,
+      "rightSpeedMmS": 0,
+      "centreSpeedMmS": 0,
+      "rollDeg": 0.3,
+      "rightMinusLeftHeightMm": 0,
+      "netDistanceMm": 300,
+      "invalidTransitionsLeft": 0,
+      "invalidTransitionsRight": 0,
+      "qualityReasons": 0,
+      "rampLevelReady": false,
+      "rampCandidate": false,
+      "rampRising": false,
+      "rampReturning": false,
+      "qualityBadSamples": 0,
+      "qualityTotalSamples": 25,
+      "maxSpreadMg": 24,
+      "maxAbsAccelMmS2": 0,
+      "maxAbsTurnDegS": 0,
+      "rateSamples": 25,
+      "maxMadMg": 8,
+      "minFifoSamples": 7,
+      "maxMadFwdMg": 4,
+      "maxMadLatMg": 8,
+      "maxMadUpMg": 8
+    }
+  },
+  "lastImu": {
+    "line": 164021,
+    "time": "2026-10-29T21:40:46.522212000+0800",
+    "topic": "is28/tlm",
+    "src": 4,
+    "srcName": "IMU (B4)",
+    "seq": 15,
+    "len": 16,
+    "data": {
+      "state": 2,
+      "stateName": "Idle",
+      "motion": "stationary",
+      "event": "status",
+      "detail": 0,
+      "valid": true,
+      "odometry": true,
+      "pitchDeg": 0.5,
+      "lastFault": 0,
+      "heightMm": 0,
+      "highestMm": 0,
+      "humps": 0,
+      "rejected": 0,
+      "shockMg": 1253,
+      "shockNotifyMs": 8,
+      "shocks": 2,
+      "i2cErrors": 0,
+      "framesMissed": 42,
+      "eventMs": 0
+    }
+  },
+  "lastHeartbeat": {
+    "line": 164031,
+    "time": "2026-10-29T21:40:46.730756000+0800",
+    "topic": "is28/hb",
+    "src": 1,
+    "srcName": "WiFi (B1)",
+    "seq": 147,
+    "len": 12,
+    "data": {
+      "net": 2,
+      "netName": "Operational",
+      "state": 3,
+      "stateName": "Safe Stop",
+      "lastCmd": 4,
+      "lastCmdName": "STOP",
+      "lastResult": 0,
+      "lastResultName": "accepted",
+      "uptimeS": 135,
+      "published": 5008,
+      "lost": 1367,
+      "accepted": 22,
+      "rejected": 0,
+      "connects": 0,
+      "fillPct": 0
+    }
+  },
+  "lastDiagnostics": {
+    "time": "2026-10-29T21:40:46.731090000+0800",
+    "maxAdcGapUs": 7097,
+    "maxControlGapUs": 13799,
+    "txDropped": 1366,
+    "rxDropped": 1,
+    "badLeft": 0,
+    "badRight": 0
+  },
+  "summaries": [
+    {
+      "time": "2026-10-29T21:40:18.739976000+0800",
+      "run": 1,
+      "reason": 49,
+      "durationMs": 7143,
+      "distanceMm": 299
+    }
+  ],
+  "diagnostics": [
+    {
+      "time": "2026-10-29T21:39:48.576174000+0800",
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11044,
+      "txDropped": 1264,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:39:50.564118000+0800",
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11044,
+      "txDropped": 1270,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:39:51.566163000+0800",
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11044,
+      "txDropped": 1270,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:39:52.559705000+0800",
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11044,
+      "txDropped": 1270,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:39:53.556467000+0800",
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11044,
+      "txDropped": 1270,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:39:54.688785000+0800",
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11044,
+      "txDropped": 1270,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:39:55.561506000+0800",
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11044,
+      "txDropped": 1270,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:39:56.562933000+0800",
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11044,
+      "txDropped": 1270,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:39:57.562175000+0800",
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11044,
+      "txDropped": 1270,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:39:58.573922000+0800",
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11044,
+      "txDropped": 1270,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:39:59.560833000+0800",
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11044,
+      "txDropped": 1270,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:00.573715000+0800",
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11044,
+      "txDropped": 1270,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:01.562594000+0800",
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11044,
+      "txDropped": 1270,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:02.564318000+0800",
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11044,
+      "txDropped": 1270,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:03.558442000+0800",
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11044,
+      "txDropped": 1270,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:04.570500000+0800",
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11044,
+      "txDropped": 1270,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:05.585063000+0800",
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11044,
+      "txDropped": 1270,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:06.573219000+0800",
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11044,
+      "txDropped": 1270,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:07.559688000+0800",
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11044,
+      "txDropped": 1270,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:08.574047000+0800",
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11044,
+      "txDropped": 1270,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:09.727817000+0800",
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11044,
+      "txDropped": 1270,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:09.760292000+0800",
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11044,
+      "txDropped": 1270,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:10.584931000+0800",
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11044,
+      "txDropped": 1272,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:11.594126000+0800",
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 0,
+      "txDropped": 1272,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:12.618813000+0800",
+      "maxAdcGapUs": 5601,
+      "maxControlGapUs": 12866,
+      "txDropped": 1272,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:13.929373000+0800",
+      "maxAdcGapUs": 7097,
+      "maxControlGapUs": 12866,
+      "txDropped": 1272,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:15.484523000+0800",
+      "maxAdcGapUs": 7097,
+      "maxControlGapUs": 12866,
+      "txDropped": 1275,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:15.584227000+0800",
+      "maxAdcGapUs": 7097,
+      "maxControlGapUs": 12867,
+      "txDropped": 1312,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:16.588846000+0800",
+      "maxAdcGapUs": 7097,
+      "maxControlGapUs": 12867,
+      "txDropped": 1312,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:17.588060000+0800",
+      "maxAdcGapUs": 7097,
+      "maxControlGapUs": 12867,
+      "txDropped": 1312,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:18.592841000+0800",
+      "maxAdcGapUs": 7097,
+      "maxControlGapUs": 12867,
+      "txDropped": 1312,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:18.739954000+0800",
+      "maxAdcGapUs": 7097,
+      "maxControlGapUs": 13799,
+      "txDropped": 1312,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:19.732693000+0800",
+      "maxAdcGapUs": 7097,
+      "maxControlGapUs": 13799,
+      "txDropped": 1312,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:20.727229000+0800",
+      "maxAdcGapUs": 7097,
+      "maxControlGapUs": 13799,
+      "txDropped": 1312,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:21.729017000+0800",
+      "maxAdcGapUs": 7097,
+      "maxControlGapUs": 13799,
+      "txDropped": 1312,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:22.737981000+0800",
+      "maxAdcGapUs": 7097,
+      "maxControlGapUs": 13799,
+      "txDropped": 1312,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:23.732175000+0800",
+      "maxAdcGapUs": 7097,
+      "maxControlGapUs": 13799,
+      "txDropped": 1312,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:24.777463000+0800",
+      "maxAdcGapUs": 7097,
+      "maxControlGapUs": 13799,
+      "txDropped": 1312,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:25.724687000+0800",
+      "maxAdcGapUs": 7097,
+      "maxControlGapUs": 13799,
+      "txDropped": 1312,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:27.090460000+0800",
+      "maxAdcGapUs": 7097,
+      "maxControlGapUs": 13799,
+      "txDropped": 1312,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:27.734378000+0800",
+      "maxAdcGapUs": 7097,
+      "maxControlGapUs": 13799,
+      "txDropped": 1314,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:28.754752000+0800",
+      "maxAdcGapUs": 7097,
+      "maxControlGapUs": 13799,
+      "txDropped": 1314,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:29.728958000+0800",
+      "maxAdcGapUs": 7097,
+      "maxControlGapUs": 13799,
+      "txDropped": 1314,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:30.730183000+0800",
+      "maxAdcGapUs": 7097,
+      "maxControlGapUs": 13799,
+      "txDropped": 1314,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:31.762573000+0800",
+      "maxAdcGapUs": 7097,
+      "maxControlGapUs": 13799,
+      "txDropped": 1314,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:32.732365000+0800",
+      "maxAdcGapUs": 7097,
+      "maxControlGapUs": 13799,
+      "txDropped": 1314,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:33.733009000+0800",
+      "maxAdcGapUs": 7097,
+      "maxControlGapUs": 13799,
+      "txDropped": 1314,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:34.728597000+0800",
+      "maxAdcGapUs": 7097,
+      "maxControlGapUs": 13799,
+      "txDropped": 1314,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:35.739264000+0800",
+      "maxAdcGapUs": 7097,
+      "maxControlGapUs": 13799,
+      "txDropped": 1314,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:36.735237000+0800",
+      "maxAdcGapUs": 7097,
+      "maxControlGapUs": 13799,
+      "txDropped": 1314,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:37.728814000+0800",
+      "maxAdcGapUs": 7097,
+      "maxControlGapUs": 13799,
+      "txDropped": 1314,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:38.731856000+0800",
+      "maxAdcGapUs": 7097,
+      "maxControlGapUs": 13799,
+      "txDropped": 1314,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:40.735220000+0800",
+      "maxAdcGapUs": 7097,
+      "maxControlGapUs": 13799,
+      "txDropped": 1366,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:41.738155000+0800",
+      "maxAdcGapUs": 7097,
+      "maxControlGapUs": 13799,
+      "txDropped": 1366,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:42.733748000+0800",
+      "maxAdcGapUs": 7097,
+      "maxControlGapUs": 13799,
+      "txDropped": 1366,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:43.743651000+0800",
+      "maxAdcGapUs": 7097,
+      "maxControlGapUs": 13799,
+      "txDropped": 1366,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:44.753373000+0800",
+      "maxAdcGapUs": 7097,
+      "maxControlGapUs": 13799,
+      "txDropped": 1366,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:45.741669000+0800",
+      "maxAdcGapUs": 7097,
+      "maxControlGapUs": 13799,
+      "txDropped": 1366,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    {
+      "time": "2026-10-29T21:40:46.731090000+0800",
+      "maxAdcGapUs": 7097,
+      "maxControlGapUs": 13799,
+      "txDropped": 1366,
+      "rxDropped": 1,
+      "badLeft": 0,
+      "badRight": 0
+    }
+  ],
+  "acks": [
+    {
+      "line": 162401,
+      "time": "2026-10-29T21:40:09.728028000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 1,
+        "codeName": "START",
+        "id": 53,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 0,
+        "stateName": "Ready"
+      }
+    },
+    {
+      "line": 162806,
+      "time": "2026-10-29T21:40:18.723436000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 4,
+        "codeName": "STOP",
+        "id": 54,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 3,
+        "stateName": "Safe Stop"
+      }
+    }
+  ],
+  "encoderTotals": {
+    "left": 0,
+    "right": 0
+  },
+  "i2cDelta": 0,
+  "missedDelta": 42,
+  "imuEvents": [
+    {
+      "line": 162536,
+      "time": "2026-10-29T21:40:12.294297000+0800",
+      "topic": "is28/tlm",
+      "src": 4,
+      "srcName": "IMU (B4)",
+      "seq": 203,
+      "len": 16,
+      "data": {
+        "state": 3,
+        "stateName": "Tracking",
+        "motion": "steady",
+        "event": "motion",
+        "detail": 0,
+        "valid": true,
+        "odometry": true,
+        "pitchDeg": 3.1,
+        "lastFault": 0,
+        "heightMm": 0,
+        "highestMm": 0,
+        "humps": 0,
+        "rejected": 0,
+        "shockMg": 1253,
+        "shockNotifyMs": 8,
+        "shocks": 2,
+        "i2cErrors": 0,
+        "framesMissed": 0,
+        "eventMs": 35124
+      }
+    },
+    {
+      "line": 162671,
+      "time": "2026-10-29T21:40:15.930888000+0800",
+      "topic": "is28/tlm",
+      "src": 4,
+      "srcName": "IMU (B4)",
+      "seq": 211,
+      "len": 16,
+      "data": {
+        "state": 3,
+        "stateName": "Tracking",
+        "motion": "stationary",
+        "event": "motion",
+        "detail": 0,
+        "valid": true,
+        "odometry": true,
+        "pitchDeg": 3.2,
+        "lastFault": 0,
+        "heightMm": 0,
+        "highestMm": 0,
+        "humps": 0,
+        "rejected": 0,
+        "shockMg": 1253,
+        "shockNotifyMs": 8,
+        "shocks": 2,
+        "i2cErrors": 0,
+        "framesMissed": 0,
+        "eventMs": 38765
+      }
+    },
+    {
+      "line": 162684,
+      "time": "2026-10-29T21:40:16.224270000+0800",
+      "topic": "is28/tlm",
+      "src": 4,
+      "srcName": "IMU (B4)",
+      "seq": 212,
+      "len": 16,
+      "data": {
+        "state": 3,
+        "stateName": "Tracking",
+        "motion": "steady",
+        "event": "motion",
+        "detail": 0,
+        "valid": true,
+        "odometry": true,
+        "pitchDeg": -0.1,
+        "lastFault": 0,
+        "heightMm": 0,
+        "highestMm": 0,
+        "humps": 0,
+        "rejected": 0,
+        "shockMg": 1253,
+        "shockNotifyMs": 8,
+        "shocks": 2,
+        "i2cErrors": 0,
+        "framesMissed": 0,
+        "eventMs": 39064
+      }
+    }
+  ],
+  "trackingMissedValues": [
+    0
+  ],
+  "recoveryStates": [
+    0
+  ],
+  "result": "Functional line-follow/Stop accepted by user"
+}

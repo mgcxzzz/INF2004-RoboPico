@@ -1,0 +1,9 @@
+{
+  "start_time": "2026-10-30T04:08:10.189050+08:00",
+  "capture_path": "/Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico/testing/integration/logs/2026-10-29_buddy4_drive_v1_1_codex1_capture.txt",
+  "capture_start_offset": 95343332,
+  "firmware": "B4 estimator2/RA detector2 active; previously confirmed packet markers",
+  "readiness": "Fresh source4 Idle,valid=true,fault0,i2cErrors0;motors off. User reset while flat/still.",
+  "setup": "same10mm right-wheel ramp,lower bracket,original calibration; retry after clearing CAL_TIMEOUT",
+  "motor_commands_sent": false
+}

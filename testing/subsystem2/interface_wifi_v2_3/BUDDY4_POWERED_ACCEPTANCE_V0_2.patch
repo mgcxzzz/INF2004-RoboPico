@@ -1,0 +1,118 @@
+--- before/buddy4/subsystem4/imu_proc.c
++++ after/buddy4/subsystem4/imu_proc.c
+@@ -413,14 +413,15 @@
+     emit(p_ctx, p_out, IMU_EVT_HUMP_PEAK, 0U, peak, t_us);
+ }
+ 
+-/* Candidate acceptance is intentionally stricter than live roll display:
+- * every accepted profile needs uninterrupted quality and fresh forward odo. */
++/* Candidate acceptance needs fresh forward odo and bounded excluded samples.
++ * Invalid samples never update the peak or prove a return to level. */
+ static void
+ side_terrain (b4_ctx_t * p_ctx, b4_in_t const * p_in, bool b_quality,
+               b4_out_t * p_out)
+ {
+     bool b_odo_safe;
+     bool b_motion_safe;
++    bool b_turn_safe;
+     bool b_skip;
+     int32_t dd = 0;
+     int32_t dh = 0;
+@@ -453,31 +454,38 @@
+     {
+         p_ctx->side_have_odo = false;
+     }
+-    b_motion_safe = b_odo_safe && (dd >= 0) &&
+-                    (iabs(dh) <= (B4_TURN_DD_S *
+-                                  (int32_t)p_in->gap_us / 1000000));
++    /* Encoder edges arrive in steps. Differentiating one 20 ms heading
++     * increment falsely rejected a powered run at an averaged 2.4 deg/s.
++     * Use the existing 200 ms rate (same 20 deg/s limit) once primed; retain
++     * the instantaneous guard during warm-up, before a rate is available. */
++    b_turn_safe = p_ctx->b_rates ? (iabs(p_ctx->turn_dd_s) <= B4_TURN_DD_S) :
++                  (iabs(dh) <= (B4_TURN_DD_S *
++                                (int32_t)p_in->gap_us / 1000000));
++    b_motion_safe = b_odo_safe && (dd >= 0) && b_turn_safe;
+     if (!b_odo_safe) p_ctx->side_quality_reason |= B4_Q_UNAVAILABLE;
+     if (dd < 0) p_ctx->side_quality_reason |= B4_Q_REVERSE;
+-    if (iabs(dh) > (B4_TURN_DD_S * (int32_t)p_in->gap_us / 1000000))
++    if (!b_turn_safe)
+         p_ctx->side_quality_reason |= B4_Q_TURN;
+ 
+-    /* v0.8: excluded only for FIFO dispersion -> skip this sample. */
++    /* A short acceleration transient makes gravity-based height uncertain,
++     * just like FIFO dispersion. Reuse the existing 100 ms / 25% exclusion
++     * budget; never turn an excluded measurement into an accepted peak.
++     * Actual turns, reverse, unavailable data, timing and impacts are fatal. */
+     b_skip = (B4_SIDE_SKIP_RUN_MS > 0U) && !b_quality &&
+              (p_ctx->state != IMU_ST_IMPACT) &&
+-             ((p_ctx->side_quality_reason & B4_Q_SPREAD) != 0U) &&
++             ((p_ctx->side_quality_reason & (B4_Q_SPREAD | B4_Q_ACCEL)) != 0U) &&
+              ((p_ctx->side_quality_reason &
+                (B4_Q_GRAVITY | B4_Q_TIMING | B4_Q_UNAVAILABLE |
+-                B4_Q_IMPACT)) == 0U);
++                B4_Q_IMPACT | B4_Q_TURN | B4_Q_REVERSE)) == 0U);
+ 
+     if (p_ctx->side_candidate)
+     {
+         bool b_unsafe = (!b_quality && !b_skip) || !b_odo_safe ||
+                         (p_ctx->side_have_odo && (dd < 0)) ||
+-                        (iabs(dh) > (B4_TURN_DD_S *
+-                                     (int32_t)p_in->gap_us / 1000000));
++                        !b_turn_safe;
+         if (p_ctx->b_rates &&
+             ((p_ctx->speed_mm_s < 0) ||
+-             (iabs(p_ctx->accel_mm_s2) > B4_ACCEL_MM_S2) ||
++             ((iabs(p_ctx->accel_mm_s2) > B4_ACCEL_MM_S2) && !b_skip) ||
+              (iabs(p_ctx->turn_dd_s) > B4_TURN_DD_S)))
+         {
+             b_unsafe = true;
+--- before/buddy4/subsystem4/b4_config.h
++++ after/buddy4/subsystem4/b4_config.h
+@@ -161,11 +161,13 @@
+ #define B4_SIDE_RETURN_MS       (200U)
+ #define B4_SIDE_MIN_TRAVEL_MM   (10)
+ #define B4_SIDE_TIMEOUT_MS      (8000U)
+-/* v0.8: a tick rejected only for FIFO dispersion (MAD) is skipped, not a
++/* Buddy4 add-on v0.2: a tick rejected only for FIFO dispersion (MAD) or
++ * longitudinal acceleration is skipped, not used as a height measurement.
++ * v0.8: a tick rejected only for FIFO dispersion (MAD) is skipped, not a
+  * verdict. Measured 29 Oct (v0.7 ramp run1 and practice pass): the right
+  * wheel meeting the ramp edge gave single ticks with lateral MAD 44-48 mg,
+  * which cleared level-ready exactly as the climb began, so the hump was
+- * ignored. Gravity-norm, timing, odometry, motion and impact failures stay
++ * ignored. Gravity-norm, timing, odometry, turn/reverse and impact failures stay
+  * fatal. A skip run longer than SKIP_RUN_MS disarms (before a candidate) or
+  * rejects (during one); a candidate with more than SKIP_MAX_PCT of its time
+  * skipped is rejected. SKIP_RUN_MS 0 restores the v0.7 behaviour. */
+--- before/CMakeLists.txt
++++ after/CMakeLists.txt
+@@ -10,7 +10,7 @@
+ option(BUDDY_WIFI_ENABLED "Build the optional Pico W core1 Wi-Fi/MQTT transport" ON)
+ 
+ add_executable(buddy123_interface_wifi_v2 main.c motion_api.c nav_coordinator.c motion_executor.c nav_codec.c buddy_hooks.c wifi_transport.c wifi_protocol.c wifi_packets.c
+-    # Buddy4 add-on: validated passive v0.9 sources (unchanged) + SDK glue
++    # Buddy4 add-on v0.2: passive v0.9 processing + powered acceptance fixes
+     buddy4/buddy4_service.c buddy4/subsystem4/v23b4_drv_lsm303.c
+     buddy4/subsystem4/imu_proc.c buddy4/subsystem4/b4_pack.c
+     buddy4/subsystem2/b2_pack.c buddy4/system/sys_tlm.c)
+@@ -26,7 +26,7 @@
+     set(RA_VARIANT shadow)
+     set(RA_ACTIVE_VALUE 0)
+ endif()
+-set_target_properties(buddy123_interface_wifi_v2 PROPERTIES OUTPUT_NAME buddy123_interface_wifi_v2_3_b4_v0_1_ra_v0_2_${RA_VARIANT})
++set_target_properties(buddy123_interface_wifi_v2 PROPERTIES OUTPUT_NAME buddy123_interface_wifi_v2_3_b4_v0_2_ra_v0_2_${RA_VARIANT})
+ target_compile_definitions(buddy123_interface_wifi_v2 PRIVATE BUDDY4_ADDON=1 RAMP_ASSIST_ACTIVE=${RA_ACTIVE_VALUE})
+ target_include_directories(buddy123_interface_wifi_v2 PRIVATE "${CMAKE_CURRENT_LIST_DIR}")
+ target_link_libraries(buddy123_interface_wifi_v2 pico_stdlib hardware_adc hardware_pwm hardware_clocks hardware_sync hardware_flash pico_multicore m)
+--- before/buddy4_harness.h
++++ after/buddy4_harness.h
+@@ -46,7 +46,7 @@
+     b4v23_init(buddy4_send, stdio_usb_connected());
+     b4h_ready = true;
+     if (stdio_usb_connected())
+-        puts("BUDDY4 ADD-ON v0.1: GY-511 IMU + side-ramp estimation on I2C1 GP2/GP3; telemetry sources 2/4; no motor effect.");
++        puts("BUDDY4 ADD-ON v0.2: powered-ramp acceptance fix; GY-511 I2C1 GP2/GP3; sources 2/4; estimator never commands motors.");
+ }
+ 
+ static void buddy4_poll(uint64_t now) {

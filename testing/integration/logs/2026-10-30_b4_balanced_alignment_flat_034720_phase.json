@@ -1,0 +1,10 @@
+{
+  "start_time": "2026-10-30T03:47:20.570999+08:00",
+  "capture_path": "/Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico/testing/integration/logs/2026-10-29_buddy4_drive_v1_1_codex1_capture.txt",
+  "capture_start_offset": 89383769,
+  "firmware": "previous B4 estimator1 / RA detector2 active",
+  "setup": "stationary alignment adjusted from levels527/56 to643/518, both line tips see black; original calibration unchanged",
+  "motor_commands_sent": false,
+  "status": "invalidated before review",
+  "reason": "User accidentally adjusted car; requested redo"
+}

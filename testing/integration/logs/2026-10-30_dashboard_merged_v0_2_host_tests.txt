@@ -1,0 +1,121 @@
+# merged dashboard v0.2 host tests on the Mac VM (2026-10-29T16:14:32Z); node v22.23.4, cc (Ubuntu 11.4.0-1ubuntu1~22.04.3) 11.4.0; Playwright not installed here (browser checks run in the cloud workspace, separate log)
+== node --test tools/dashboard_merged/test/test_merged_schema.js
+TAP version 13
+# SDK segment {"total":1801,"decoded":1762,"perSrc":{"1":54,"2":72,"4":75,"8":3,"9":719,"10":717,"11":79,"12":1,"14":42},"topics":{"is28/hb":54,"is28/tlm":1708,"is28/cmd":20,"is28/ack":19}}
+# RTOS segment {"total":1500,"decoded":1498,"perSrc":{"1":305,"2":596,"4":596,"8":1}}
+# Subtest: differential: RTOS sources 1-8 decode exactly as the RTOS dashboard decoder
+ok 1 - differential: RTOS sources 1-8 decode exactly as the RTOS dashboard decoder
+  ---
+  ...
+# Subtest: differential: SDK sources 1, 8, 9-14 decode exactly as the v2.3 dashboard decoder
+ok 2 - differential: SDK sources 1, 8, 9-14 decode exactly as the v2.3 dashboard decoder
+  ---
+  ...
+# Subtest: SDK frames reach 64 bytes and are not truncated; RTOS 40-byte frame accepted
+ok 3 - SDK frames reach 64 bytes and are not truncated; RTOS 40-byte frame accepted
+  ---
+  ...
+# Subtest: units, signs and unavailable markers are preserved
+ok 4 - units, signs and unavailable markers are preserved
+  ---
+  ...
+# Subtest: profile detection: observed packet types, inference and manual override
+ok 5 - profile detection: observed packet types, inference and manual override
+  ---
+  ...
+# Subtest: existing name contracts kept for both dashboards
+ok 6 - existing name contracts kept for both dashboards
+  ---
+  ...
+# Subtest: real capture: SDK v2.3 + Buddy4 add-on segment decodes completely and is detected as SDK
+ok 7 - real capture: SDK v2.3 + Buddy4 add-on segment decodes completely and is detected as SDK
+  ---
+  ...
+# Subtest: real capture: RTOS Buddy4 v0.9 segment decodes completely and is inferred as RTOS
+ok 8 - real capture: RTOS Buddy4 v0.9 segment decodes completely and is inferred as RTOS
+  ---
+  ...
+# Subtest: real capture: last-will segment contains broker offline messages
+ok 9 - real capture: last-will segment contains broker offline messages
+  ---
+  ...
+1..9
+# tests 9
+# pass 9
+# fail 0
+== node --test tools/dashboard_merged/test/compat/v23_test_schema.js
+TAP version 13
+# Subtest: decoder accepts exact current source payload lengths and rejects malformed frames
+ok 1 - decoder accepts exact current source payload lengths and rejects malformed frames
+  ---
+  ...
+# Subtest: motion frame decodes signed speed, calibrated levels, distance, and timing
+ok 2 - motion frame decodes signed speed, calibrated levels, distance, and timing
+  ---
+  ...
+# Subtest: line event preserves decoded, pending, executing actions and their revisions
+ok 3 - line event preserves decoded, pending, executing actions and their revisions
+  ---
+  ...
+# Subtest: coordinator event distinguishes dispatch and completion identifiers
+ok 4 - coordinator event distinguishes dispatch and completion identifiers
+  ---
+  ...
+# Subtest: barcode map builder covers every A-Z letter in each distinct slot
+ok 5 - barcode map builder covers every A-Z letter in each distinct slot
+  ---
+  ...
+# Subtest: map readback validates configured bits and exposes revision and letters
+ok 6 - map readback validates configured bits and exposes revision and letters
+  ---
+  ...
+# Subtest: map status distinguishes confirmed, empty, mismatch, and rejected readback data
+ok 7 - map status distinguishes confirmed, empty, mismatch, and rejected readback data
+  ---
+  ...
+# Subtest: map confirmation times out at its explicit five-second deadline
+ok 8 - map confirmation times out at its explicit five-second deadline
+  ---
+  ...
+# Subtest: source-13 log chunks validate identity, reserved bytes, status, and chunk lengths
+ok 9 - source-13 log chunks validate identity, reserved bytes, status, and chunk lengths
+  ---
+  ...
+# Subtest: source-14 diagnostics decodes counters, flags, and gaps, and rejects invalid status values
+ok 10 - source-14 diagnostics decodes counters, flags, and gaps, and rejects invalid status values
+  ---
+  ...
+1..10
+# tests 10
+# pass 10
+# fail 0
+== node tools/dashboard_merged/test/compat/rtos_check_speed_dashboard.mjs
+INT-07 PASS: 62 protocol and production panel assertions.
+== node tools/dashboard_merged/test/compat/rtos_check_dashboard.mjs
+PASS  D01    Buddy 1 status frame
+PASS  D02    Navigation frame
+PASS  D03    Safety frame
+PASS  D04    command bytes match the C packer
+PASS  D05    short frame refused
+PASS  D06    sequence gaps counted with 8-bit wrap; a jump of 128+ is a restart, not losses
+PASS  D07    four-letter command matches C bytes, including A/Z boundaries
+PASS  D08    active mapping readback matches C
+PASS  D09    boot has no fabricated mapping
+PASS  D10    all slots and unassigned letters
+PASS  D11    invalid, missing and duplicate UI assignments refused
+PASS  D12    corrupt or short readback refused
+PASS  D13    foreign-version acknowledgements refused
+PASS  D14    GET keeps the 4-byte command layout
+PASS  D15    every A-Z letter encodes in every movement slot
+PASS  D16    complete connectivity run can pass
+PASS  D17    short and running tests cannot pass
+PASS  D18    silent tail fails heartbeat even after two good heartbeats
+PASS  D19    one bad source cannot be hidden by good aggregate delivery
+PASS  D20    configuration readbacks alone do not pass connectivity
+
+20 passed, 0 failed
+== python3 tools/dashboard_merged/test/compat/rtos_check_imu_dashboard.py
+INT-03 PASS: 36 field/malformed-frame assertions; production C packer and JS decoder.
+INT-03 PASS: 10 production panel assertions with host DOM stubs; no rendering/hardware claim.
+SKIP browser checks (Playwright not installed)
+failures: 0

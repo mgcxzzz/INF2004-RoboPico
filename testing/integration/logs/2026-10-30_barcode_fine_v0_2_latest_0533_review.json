@@ -1,0 +1,200 @@
+{
+  "capture_path": "/Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico/testing/integration/logs/2026-10-29_buddy4_drive_v1_1_codex1_capture.txt",
+  "capture_start_offset": 115972215,
+  "latest_motion": {
+    "time": "2026-10-30T05:33:50.915493000+0800",
+    "uptime_ms": 137868,
+    "run": 3,
+    "active": false,
+    "recovery": 0,
+    "speed": [
+      0.0,
+      0.0
+    ],
+    "target": [
+      0,
+      0
+    ],
+    "pwm": [
+      0,
+      0
+    ],
+    "adc": [
+      2040,
+      3069,
+      2720
+    ],
+    "levels": [
+      569,
+      821
+    ],
+    "distance_mm": 230
+  },
+  "version_tag": {
+    "time": "2026-10-30T05:33:50.456841000+0800",
+    "event": 0,
+    "letter": "-",
+    "fault": 0,
+    "detail": 48130
+  },
+  "summaries": [
+    {
+      "time": "2026-10-30T05:32:18.704532000+0800",
+      "run": 1,
+      "reason": 49,
+      "duration_ms": 5809,
+      "distance_mm": 251
+    },
+    {
+      "time": "2026-10-30T05:32:47.304415000+0800",
+      "run": 2,
+      "reason": 49,
+      "duration_ms": 4954,
+      "distance_mm": 180
+    },
+    {
+      "time": "2026-10-30T05:33:05.170359000+0800",
+      "run": 3,
+      "reason": 49,
+      "duration_ms": 5455,
+      "distance_mm": 230
+    }
+  ],
+  "latest_diagnostics": [
+    {
+      "time": "2026-10-30T05:33:49.448947000+0800",
+      "uptime_ms": 136389,
+      "bank": 11,
+      "flags": 5,
+      "threshold": 212,
+      "decoded": 0,
+      "bad": 0,
+      "unsupported": 0,
+      "adc_gap_us": 4655,
+      "control_gap_us": 10899,
+      "tx_drop": 1170,
+      "rx_drop": 0,
+      "invalid": [
+        0,
+        0
+      ]
+    },
+    {
+      "time": "2026-10-30T05:33:50.456974000+0800",
+      "uptime_ms": 137389,
+      "bank": 11,
+      "flags": 5,
+      "threshold": 212,
+      "decoded": 0,
+      "bad": 0,
+      "unsupported": 0,
+      "adc_gap_us": 4655,
+      "control_gap_us": 10899,
+      "tx_drop": 1170,
+      "rx_drop": 0,
+      "invalid": [
+        0,
+        0
+      ]
+    }
+  ],
+  "last_line": [
+    {
+      "time": "2026-10-30T05:33:50.926635000+0800",
+      "event": 0,
+      "letter": "-",
+      "pending": "-"
+    }
+  ],
+  "run_active_frames": 108,
+  "recovery_states": [
+    0
+  ],
+  "barcode_adc_range": [
+    168,
+    2724
+  ],
+  "slow_frames": 2,
+  "slow_examples": [
+    {
+      "time": "2026-10-30T05:33:00.144157000+0800",
+      "uptime_ms": 87096,
+      "run": 3,
+      "active": true,
+      "recovery": 0,
+      "speed": [
+        0.0,
+        25.0
+      ],
+      "target": [
+        34,
+        45
+      ],
+      "pwm": [
+        139,
+        264
+      ],
+      "adc": [
+        2792,
+        2059,
+        173
+      ],
+      "levels": [
+        827,
+        452
+      ],
+      "distance_mm": 0
+    },
+    {
+      "time": "2026-10-30T05:33:00.195348000+0800",
+      "uptime_ms": 87147,
+      "run": 3,
+      "active": true,
+      "recovery": 0,
+      "speed": [
+        6.2,
+        33.5
+      ],
+      "target": [
+        45,
+        45
+      ],
+      "pwm": [
+        198,
+        258
+      ],
+      "adc": [
+        2546,
+        2488,
+        174
+      ],
+      "levels": [
+        763,
+        578
+      ],
+      "distance_mm": 1
+    }
+  ],
+  "raw_replay": {
+    "rows": 2048,
+    "span_mm": [
+      0,
+      219.85
+    ],
+    "last_time_ms": 5111.699,
+    "full_run_duration_ms": 5455,
+    "actual_candidate_decodes": 0,
+    "actual_candidate_selections": 0,
+    "threshold_probe_matches": [
+      {
+        "threshold": 205,
+        "hysteresis": 2,
+        "letter": "Z",
+        "start_mm": 35.46,
+        "end_mm": 172.43,
+        "reverse": true
+      }
+    ],
+    "conclusion": "The Z pattern can be recovered offline at one isolated acquisition setting; no qualifying two-bank agreement. No motor/controller change justified by this scan."
+  }
+}

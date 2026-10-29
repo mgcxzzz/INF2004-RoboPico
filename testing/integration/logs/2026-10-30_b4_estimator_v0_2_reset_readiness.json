@@ -1,0 +1,19 @@
+{
+  "motion": {
+    "time": "2026-10-30T04:07:53.622434000+0800",
+    "active": false,
+    "pwm": [
+      0,
+      0
+    ],
+    "calibrationValid": true
+  },
+  "imu": {
+    "time": "2026-10-30T04:07:53.432338000+0800",
+    "state": "Idle",
+    "valid": true,
+    "fault": 0,
+    "i2cErrors": 0,
+    "humps": 0
+  }
+}

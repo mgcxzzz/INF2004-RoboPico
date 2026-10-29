@@ -1,0 +1,71 @@
+== Integrated v2.3/ramp-assist suites
+== clang -Wall -Wextra -Werror
+replay v0.1: end 2 after 220 ms; v0.2: end 5 after 2490 ms, alpha 2 s into assist 200
+climb: mean speed deficit off 7.65 on 4.18 mm/s; peak |I| off 40.0 on 27.0
+after release: integral excess vs no-assist 0.000; from +500 ms output on-off max -1.00 (|max| 10.00), at end 2.00 PWM; overshoot on 11.17 off 8.48 mm/s
+PASS ramp-assist v0.2 host tests: 360849 checks (boost-0 identity vs 8d7f3aa, logic, captured-climb replay, controller limits/residual, telemetry)
+== gcc -Wall -Wextra -Werror
+replay v0.1: end 2 after 220 ms; v0.2: end 5 after 2490 ms, alpha 2 s into assist 200
+climb: mean speed deficit off 7.65 on 4.18 mm/s; peak |I| off 40.0 on 27.0
+after release: integral excess vs no-assist 0.000; from +500 ms output on-off max -1.00 (|max| 10.00), at end 2.00 PWM; overshoot on 11.17 off 8.48 mm/s
+PASS ramp-assist v0.2 host tests: 360849 checks (boost-0 identity vs 8d7f3aa, logic, captured-climb replay, controller limits/residual, telemetry)
+== clang ASan/UBSan
+PASS ramp-assist v0.2 host tests: 360849 checks (boost-0 identity vs 8d7f3aa, logic, captured-climb replay, controller limits/residual, telemetry)
+== telemetry decoder round trip
+PASS source-15 frame decodes to the packed values
+== existing v2.3 suite (run_tests.py, CC=clang)
+ALL INTERFACE AND WIFI TESTS PASSED; C test executables= 35
+failures: 0
+== Buddy4 service/packet checks
+boot: state=2 fault=0 n4=7 n2=7 bad=0
+tilt view: valid=1 height=9 mm seq+1 per period
+ramp: humps=1 max_h=10 rejected=0 side_h=0
+after reset: state=2 fault=0
+max tick (host) 0 us; frames: src4 35, src2 29
+PASS buddy4 v2.3 service: calibrate, start/stop/resume/reset mapping, 10 mm ramp accepted, unclean odometry gated, fault+reset recovery, frames unpack
+{"frames":64,"src2":29,"src4":35,"errors":0,"humps":1,"maxH":10}
+last src4 keys: state,stateName,motion,event,detail,valid,odometry,pitchDeg,lastFault,heightMm,highestMm,humps,rejected,shockMg,shockNotifyMs,shocks,i2cErrors,framesMissed,eventMs
+== Buddy4 powered estimator checks
+powered acceptance: 24 checks, 0 failures
+== Barcode candidate suites (current physical failure is documented, not claimed fixed)
+ALL INTERFACE AND WIFI TESTS PASSED; C test executables= 36
+PASS actual periodic producer -> C packer -> JS decoder, bank11/bank63/version and reserved-bit guards: /Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico-v23b4/testing/subsystem2/interface_wifi_v2_3_barcode_fine_v0_3/dashboard/is28_schema.js
+PASS actual periodic producer -> C packer -> JS decoder, bank11/bank63/version and reserved-bit guards: /Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico-v23b4/tools/dashboard_merged/is28_schema.js
+capture fixtures/barcode_Z_captured.csv: decoded=1 letter=Z selected=63 candidates=2
+capture fixtures/barcode_Z_latest.csv: decoded=1 letter=Z selected=7 candidates=1
+capture fixtures/barcode_Y_captured.csv: decoded=0 letter=- selected=11 candidates=0
+PASS all26 letters both directions: actual full-reader fallback, two quiet zones, movement gate, conflict, duplicate, stale and malformed-state vetoes
+PASS real-capture mutations: cropped quiet zones, erased start/stop sentinels and missing wide bars all rejected
+PASS fine v0.3: both real Z scans, honest Y failure, consensus and quiet fallback guards, record31
+== Merged dashboard decoder checks
+✔ decoder accepts exact current source payload lengths and rejects malformed frames (1.129834ms)
+✔ motion frame decodes signed speed, calibrated levels, distance, and timing (0.396375ms)
+✔ line event preserves decoded, pending, executing actions and their revisions (0.073709ms)
+✔ coordinator event distinguishes dispatch and completion identifiers (0.069375ms)
+✔ barcode map builder covers every A-Z letter in each distinct slot (0.539ms)
+✔ map readback validates configured bits and exposes revision and letters (0.075291ms)
+✔ map status distinguishes confirmed, empty, mismatch, and rejected readback data (0.116292ms)
+✔ map confirmation times out at its explicit five-second deadline (0.048958ms)
+✔ source-13 log chunks validate identity, reserved bytes, status, and chunk lengths (0.128541ms)
+✔ source-14 diagnostics decodes counters, flags, and gaps, and rejects invalid status values (0.150334ms)
+SDK segment {"total":1801,"decoded":1762,"perSrc":{"1":54,"2":72,"4":75,"8":3,"9":719,"10":717,"11":79,"12":1,"14":42},"topics":{"is28/hb":54,"is28/tlm":1708,"is28/cmd":20,"is28/ack":19}}
+RTOS segment {"total":1500,"decoded":1498,"perSrc":{"1":305,"2":596,"4":596,"8":1}}
+✔ differential: RTOS sources 1-8 decode exactly as the RTOS dashboard decoder (23.947ms)
+✔ differential: SDK sources 1, 8, 9-14 decode exactly as the v2.3 dashboard decoder (10.057666ms)
+✔ SDK frames reach 64 bytes and are not truncated; RTOS 40-byte frame accepted (0.468416ms)
+✔ units, signs and unavailable markers are preserved (0.375667ms)
+✔ profile detection: observed packet types, inference and manual override (0.148875ms)
+✔ existing name contracts kept for both dashboards (0.253125ms)
+✔ real capture: SDK v2.3 + Buddy4 add-on segment decodes completely and is detected as SDK (7.279042ms)
+✔ real capture: RTOS Buddy4 v0.9 segment decodes completely and is inferred as RTOS (6.831084ms)
+✔ real capture: last-will segment contains broker offline messages (0.594791ms)
+✔ fine barcode bank63 is valid, bank64 and reserved flags are rejected (0.146917ms)
+ℹ tests 20
+ℹ suites 0
+ℹ pass 20
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 93.294334
+PASS review checks. Physical barcode decoding remains unresolved.

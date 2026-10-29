@@ -1,0 +1,35 @@
+Baseline regression (archived processor, expected failure):
+FAIL line 58: c.side_candidate && c.rejected==0
+FAIL line 58: !(c.side_quality_reason&B4_Q_TURN)
+FAIL line 60: c.humps==1 && c.last_height_mm==10
+FAIL line 64: c.side_candidate && c.side_skip_us==40000
+FAIL line 64: c.side_peak_mm==10
+FAIL line 66: c.humps==1 && c.last_height_mm==10
+FAIL line 68: c.side_candidate
+FAIL line 51: ctx.max_height_mm>=9 && ctx.max_height_mm<=11
+FAIL line 90: pipeline_profile(false)==1
+powered acceptance: 24 checks, 9 failures
+
+Fixed processor (ASan/UBSan):
+powered acceptance: 24 checks, 0 failures
+
+Existing side-ramp suite:45 passed/0 failed (ASan/UBSan).
+Existing service+packing:PASS;64 frames decode,10mm synthetic ramp accepted, stale/unclean motion blocked, Reset recovery.
+
+== clang -Wall -Wextra -Werror
+replay v0.1: end 2 after 220 ms; v0.2: end 5 after 2490 ms, alpha 2 s into assist 200
+climb: mean speed deficit off 7.65 on 4.18 mm/s; peak |I| off 40.0 on 27.0
+after release: integral excess vs no-assist 0.000; from +500 ms output on-off max -1.00 (|max| 10.00), at end 2.00 PWM; overshoot on 11.17 off 8.48 mm/s
+PASS ramp-assist v0.2 host tests: 360849 checks (boost-0 identity vs 8d7f3aa, logic, captured-climb replay, controller limits/residual, telemetry)
+== gcc -Wall -Wextra -Werror
+replay v0.1: end 2 after 220 ms; v0.2: end 5 after 2490 ms, alpha 2 s into assist 200
+climb: mean speed deficit off 7.65 on 4.18 mm/s; peak |I| off 40.0 on 27.0
+after release: integral excess vs no-assist 0.000; from +500 ms output on-off max -1.00 (|max| 10.00), at end 2.00 PWM; overshoot on 11.17 off 8.48 mm/s
+PASS ramp-assist v0.2 host tests: 360849 checks (boost-0 identity vs 8d7f3aa, logic, captured-climb replay, controller limits/residual, telemetry)
+== clang ASan/UBSan
+PASS ramp-assist v0.2 host tests: 360849 checks (boost-0 identity vs 8d7f3aa, logic, captured-climb replay, controller limits/residual, telemetry)
+== telemetry decoder round trip
+PASS source-15 frame decodes to the packed values
+== existing v2.3 suite (run_tests.py, CC=clang)
+ALL INTERFACE AND WIFI TESTS PASSED; C test executables= 35
+failures: 0

@@ -1,0 +1,8 @@
+{
+  "start_time": "2026-10-30T03:10:34.540183+08:00",
+  "capture_path": "/Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico/testing/integration/logs/2026-10-29_buddy4_drive_v1_1_codex1_capture.txt",
+  "capture_start_offset": 79348056,
+  "firmware": "v0.2 active; detector2 verified in preceding fresh flat run",
+  "setup": "lower bracket, unchanged original calibration preset,10mm right-wheel ramp",
+  "motor_commands_sent": false
+}

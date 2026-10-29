@@ -1,0 +1,7 @@
+{
+  "start_time": "2026-10-30T03:57:11.397802+08:00",
+  "capture_path": "/Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico/testing/integration/logs/2026-10-29_buddy4_drive_v1_1_codex1_capture.txt",
+  "capture_start_offset": 92432619,
+  "setup": "car stopped; manually slide slowly left-to-right across straight black line, orientation and height unchanged; no Start",
+  "motor_commands_sent": false
+}

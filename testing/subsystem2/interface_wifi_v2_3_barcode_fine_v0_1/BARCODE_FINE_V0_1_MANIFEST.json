@@ -1,0 +1,90 @@
+{
+  "release": "SDK v2.3 barcode fine v0.1, no Buddy4",
+  "built_at": "2026-10-30T05:17:27.150188+08:00",
+  "baseline_commit": "8d7f3aa4935565636bba013c74e563f5e8135bcb",
+  "source_directory": "/Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico-v23b4/testing/subsystem2/interface_wifi_v2_3_barcode_fine_v0_1",
+  "uf2": "/Users/skyler/SIT/Y2T1/Embedded/bench_tools/buddy2/buddy123_interface_wifi_v2_3_barcode_fine_v0_1.uf2",
+  "sha256": "b362fe91ce6d3613cfe39468b9f218e042e343f82491c80907434a289565a153",
+  "bytes": 1002496,
+  "blocks": 1958,
+  "hardware": "RP2040 Pico W",
+  "contains_credentials": true,
+  "local_only": true,
+  "flashed": false,
+  "motor_commands_sent": false,
+  "marker": "source14 flags bit7=1; USB help BARCODE FINE v0.1",
+  "storage_version": 30,
+  "legacy_banks_preserved": 63,
+  "extra_banks": [
+    {
+      "index": 63,
+      "threshold": 204,
+      "hysteresis": 1
+    },
+    {
+      "index": 64,
+      "threshold": 205,
+      "hysteresis": 1
+    }
+  ],
+  "winner_max_index": 63,
+  "ram_symbols": {
+    "__bss_end__": "0x200302f4",
+    "__end__": "0x200302f4",
+    "__HeapLimit": "0x2003c000",
+    "__StackOneBottom": "0x2003c000",
+    "__StackBottom": "0x2003e000",
+    "__StackOneTop": "0x2003e000",
+    "__StackTop": "0x20040000"
+  },
+  "largest_compiler_frames": [
+    {
+      "function": "main",
+      "bytes": 2360
+    },
+    {
+      "function": "control_step",
+      "bytes": 1176
+    },
+    {
+      "function": "save_drive_diag",
+      "bytes": 1000
+    },
+    {
+      "function": "interface_save_nav_log",
+      "bytes": 896
+    },
+    {
+      "function": "diag_bank_valid.constprop",
+      "bytes": 720
+    }
+  ],
+  "changed_baseline_files": [
+    "CMakeLists.txt",
+    "run_tests.py",
+    "successful_calibration.h",
+    "wifi_harness.h",
+    "v12_2/baseline/testing/subsystem2/circuit_with_barcode/test_barcode_sensitivity.c",
+    "v12_2/baseline/testing/subsystem2/circuit_with_barcode/barcode_analog.h",
+    "v12_2/baseline/testing/subsystem2/circuit_with_barcode/barcode_record.h",
+    "v12_2/baseline/testing/subsystem2/circuit_with_barcode/main.c"
+  ],
+  "source_sha256": {
+    "CMakeLists.txt": "2fd0cb06543d07b80c44e1ad059b751b799da307b6b8879796a9f489ca023c11",
+    "run_tests.py": "c190cf115ec1f4bfb6f4b4db18e7785de585ac7f22fe9b3f809e032173f0d367",
+    "successful_calibration.h": "829c2cf07de6bbaa21e8315e6a21212d37ad7463f2fe6b847ff58bb1e92e0f04",
+    "wifi_harness.h": "4af68eff96dbc9d01db4f22fb0f666b75b630ca8497f9526d7978bed19f73810",
+    "v12_2/baseline/testing/subsystem2/circuit_with_barcode/test_barcode_sensitivity.c": "48a35558686bdb907530100c35d808f3aff45860bd53c4d5663d4c306c7c5ee1",
+    "v12_2/baseline/testing/subsystem2/circuit_with_barcode/barcode_analog.h": "684c26ffd5c5e0df7d564642971cf1d3f6db51072280ff91062c2932cec3b0da",
+    "v12_2/baseline/testing/subsystem2/circuit_with_barcode/barcode_record.h": "50302eaa3bb85aede6f0d26a180c591a5fa33da7e94961aa5d043dc38af88108",
+    "v12_2/baseline/testing/subsystem2/circuit_with_barcode/main.c": "cf75d25bfdc15d3c0a127bf7ae390d1dcdd3a3301a2261e220cb27db86e21d79"
+  },
+  "unchanged_control_sha256": {
+    "continuous_drive.h": "9eadf64b31f81f7f37d8664462bf7863c63d21a3f469a4664d1b2b014601bc18",
+    "continuous_follow.h": "17f43775e4fb33ccf6913e780dcb303b9c1667a6d9acdf54233ea99a7b6a6db7",
+    "continuous_steering.h": "c08d5e26858593344064bf0256950c3743a87a593ddb0b653f4aa5a1b145c62f",
+    "motion_executor.c": "eceffbadb80447c12cb4483e447902b85119654a1840b24fce2a7a619bf5bb70"
+  },
+  "tests": "CapturedZ decodes once with2bank consensus; capturedY remains unresolved; single-bank/cross-family/conflict/duplicate/noise rejection; record30; ASan/UBSan; existing35C executables + JS/Python suites pass",
+  "hardware_validation": "not yet tested"
+}

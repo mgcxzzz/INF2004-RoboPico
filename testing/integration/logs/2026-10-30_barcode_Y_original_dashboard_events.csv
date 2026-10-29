@@ -1,0 +1,72 @@
+received_at,message,uptime_ms,event,letter,pending_letter,pending_action,pending_revision,executing_action,executing_revision,action,map_revision,command_id,generation,mode,owner,command_state,detail,kind,src,seq,laptop_ms,latest_run_id,firmware_profile
+2026-10-29T20:32:20.716Z,Broker connected (ws://127.0.0.1:9001),,,,,,,,,,,,,,,,,link,,,1828,,unknown
+2026-10-29T20:32:20.718Z,Command sent: BARCODE_GET (id 29),,command,,,,,,,,,29,,,,,,command,,,1830,,unknown
+2026-10-29T20:32:44.691Z,Line/barcode status · decoded - · pending - none · executing none · map revision 0 · calibrated L/R 382/762 · ADC L/R/barcode 1422/2859/172,28691,0,-,-,-,0,-,0,-,0,,,,,,,sdk-line,10,56,25801,0,sdk
+2026-10-29T20:32:44.938Z,Command sent: BARCODE_GET (id 30),,command,,,,,,,,,30,,,,,,command,,,26048,0,sdk
+2026-10-29T20:32:44.941Z,Command from another client on the broker: BARCODE_GET (id 229),,,,,,,,,,,,,,,,,command-other,,,26051,0,sdk
+2026-10-29T20:32:44.954Z,Coordinator status · mode Off · owner none · - none · revision 0 ·  · generation 0 · fault 0x0 · detail 0,28929,0,-,,-,0,,,-,0,0,0,7,0,0,0,sdk-nav,11,28,26064,0,sdk
+2026-10-29T20:32:44.961Z,ACK BARCODE_GET id 229: accepted (not from this page) · state byte Ready,,ack,,,,,,,,,229,,,,,0,ack,,,26072,0,sdk
+2026-10-29T20:32:44.962Z,Coordinator command_request · mode Off · owner none · - none · revision 0 · network request id 229 · opcode/result 10 · generation 0 · fault 0x0 · detail 10,28964,12,-,,-,0,,,-,0,229,0,7,0,0,10,sdk-nav,11,29,26072,0,sdk
+2026-10-29T20:32:44.980Z,ACK BARCODE_GET id 30: accepted · state byte Ready,,ack,,,,,,,,,30,,,,,0,ack,,,26090,0,sdk
+2026-10-29T20:32:44.980Z,Coordinator command_result · mode Off · owner none · - none · revision 0 · network request id 229 · opcode/result 2560 · generation 0 · fault 0x0 · detail 2560,28964,13,-,,-,0,,,-,0,229,0,7,0,0,2560,sdk-nav,11,30,26091,0,sdk
+2026-10-29T20:32:45.009Z,Coordinator command_request · mode Off · owner none · - none · revision 0 · network request id 30 · opcode/result 10 · generation 0 · fault 0x0 · detail 10,28970,12,-,,-,0,,,-,0,30,0,7,0,0,10,sdk-nav,11,32,26119,0,sdk
+2026-10-29T20:32:45.010Z,Mapping readback (not_configured): not configured,,,,,,,,,,,,,,,,,mapping,,,26120,0,sdk
+2026-10-29T20:32:45.039Z,Coordinator command_result · mode Off · owner none · - none · revision 0 · network request id 30 · opcode/result 2560 · generation 0 · fault 0x0 · detail 2560,28970,13,-,,-,0,,,-,0,30,0,7,0,0,2560,sdk-nav,11,33,26149,0,sdk
+2026-10-29T20:32:49.383Z,Command sent: raw 92 1f 38 40 06 (id 31),,command,,,,,,,,,31,,,,,,command,,,30493,0,sdk
+2026-10-29T20:32:49.394Z,Coordinator command_request · mode Off · owner none · - none · revision 0 · network request id 31 · opcode/result 9 · generation 0 · fault 0x0 · detail 9,33404,12,-,,-,0,,,-,0,31,0,7,0,0,9,sdk-nav,11,39,30504,0,sdk
+2026-10-29T20:32:49.408Z,ACK BARCODE_MAP id 31: accepted · state byte Ready,,ack,,,,,,,,,31,,,,,0,ack,,,30518,0,sdk
+2026-10-29T20:32:49.409Z,Mapping readback (confirmed): Y/B/Q/M rev 1,,,,,,,,,,,,,,,,,mapping,,,30519,0,sdk
+2026-10-29T20:32:49.438Z,Coordinator map_applied · mode Off · owner none · - none · revision 1 ·  · generation 0 · fault 0x0 · detail 0,33404,11,-,,-,1,,,-,1,0,0,7,0,0,0,sdk-nav,11,40,30548,0,sdk
+2026-10-29T20:32:49.440Z,Coordinator command_result · mode Off · owner none · - none · revision 0 · network request id 31 · opcode/result 2304 · generation 0 · fault 0x0 · detail 2304,33404,13,-,,-,0,,,-,0,31,0,7,0,0,2304,sdk-nav,11,41,30550,0,sdk
+2026-10-29T20:32:51.483Z,Command sent: BARCODE_GET (id 32),,command,,,,,,,,,32,,,,,,command,,,32593,0,sdk
+2026-10-29T20:32:51.502Z,ACK BARCODE_GET id 32: accepted · state byte Ready,,ack,,,,,,,,,32,,,,,0,ack,,,32612,0,sdk
+2026-10-29T20:32:51.503Z,Coordinator command_request · mode Off · owner none · - none · revision 0 · network request id 32 · opcode/result 10 · generation 0 · fault 0x0 · detail 10,35507,12,-,,-,0,,,-,0,32,0,7,0,0,10,sdk-nav,11,45,32613,0,sdk
+2026-10-29T20:32:51.503Z,Mapping readback (confirmed): Y/B/Q/M rev 1,,,,,,,,,,,,,,,,,mapping,,,32613,0,sdk
+2026-10-29T20:32:51.510Z,Coordinator command_result · mode Off · owner none · - none · revision 0 · network request id 32 · opcode/result 2560 · generation 0 · fault 0x0 · detail 2560,35507,13,-,,-,0,,,-,0,32,0,7,0,0,2560,sdk-nav,11,46,32620,0,sdk
+2026-10-29T20:32:59.194Z,Command sent: RESET (id 33),,command,,,,,,,,,33,,,,,,command,,,40304,0,sdk
+2026-10-29T20:32:59.209Z,ACK RESET id 33: accepted · state byte Ready,,ack,,,,,,,,,33,,,,,0,ack,,,40319,0,sdk
+2026-10-29T20:32:59.227Z,Coordinator command_request · mode Off · owner none · - none · revision 0 · network request id 33 · opcode/result 5 · generation 0 · fault 0x0 · detail 5,43218,12,-,,-,0,,,-,0,33,0,7,0,0,5,sdk-nav,11,55,40337,0,sdk
+2026-10-29T20:32:59.228Z,Coordinator command_result · mode Off · owner none · - none · revision 0 · network request id 33 · opcode/result 1280 · generation 0 · fault 0x0 · detail 1280,43218,13,-,,-,0,,,-,0,33,0,7,0,0,1280,sdk-nav,11,56,40338,0,sdk
+2026-10-29T20:33:06.707Z,Command sent: START (id 34),,command,,,,,,,,,34,,,,,,command,,,47817,0,sdk
+2026-10-29T20:33:06.759Z,ACK START id 34: accepted · state byte Ready,,ack,,,,,,,,,34,,,,,0,ack,,,47869,0,sdk
+2026-10-29T20:33:06.763Z,Coordinator command_request · mode Off · owner none · - none · revision 0 · network request id 34 · opcode/result 1 · generation 0 · fault 0x0 · detail 1,50760,12,-,,-,0,,,-,0,34,0,7,0,0,1,sdk-nav,11,65,47873,0,sdk
+2026-10-29T20:33:06.764Z,Coordinator command_result · mode Off · owner none · - none · revision 0 · network request id 34 · opcode/result 256 · generation 0 · fault 0x0 · detail 256,50760,13,-,,-,0,,,-,0,34,0,7,0,0,256,sdk-nav,11,66,47874,0,sdk
+2026-10-29T20:33:08.772Z,Coordinator status · mode Auto · owner Buddy 3 · - none · revision 0 ·  · generation 1 · fault 0x0 · detail 3072,52762,0,-,,-,0,,,-,0,0,1,0,3,0,3072,sdk-nav,11,69,49882,0,sdk
+2026-10-29T20:33:08.774Z,Coordinator run_begin · mode Auto · owner Buddy 3 · - none · revision 0 ·  · generation 1 · fault 0x0 · detail 0,52761,1,-,,-,0,,,-,0,0,1,0,3,0,0,sdk-nav,11,71,49883,0,sdk
+2026-10-29T20:33:15.836Z,Live readings cleared: car restart (export history kept),,,,,,,,,,,,,,,,,link,,,56945,1,unknown
+2026-10-29T20:33:15.839Z,Command sent: BARCODE_GET (id 35),,command,,,,,,,,,35,,,,,,command,,,56949,1,unknown
+2026-10-29T20:33:15.844Z,Command from another client on the broker: BARCODE_GET (id 230),,,,,,,,,,,,,,,,,command-other,,,56954,1,sdk
+2026-10-29T20:33:15.845Z,Command from another client on the broker: BARCODE_GET (id 231),,,,,,,,,,,,,,,,,command-other,,,56954,1,sdk
+2026-10-29T20:33:15.869Z,ACK BARCODE_GET id 230: accepted (not from this page) · state byte Running,,ack,,,,,,,,,230,,,,,0,ack,,,56979,1,sdk
+2026-10-29T20:33:15.869Z,ACK BARCODE_GET id 231: accepted (not from this page) · state byte Running,,ack,,,,,,,,,231,,,,,0,ack,,,56979,1,sdk
+2026-10-29T20:33:15.878Z,ACK BARCODE_GET id 35: accepted · state byte Running,,ack,,,,,,,,,35,,,,,0,ack,,,56988,1,sdk
+2026-10-29T20:33:15.878Z,Coordinator command_result · mode Auto · owner Buddy 3 · - none · revision 0 · network request id 230 · opcode/result 2560 · generation 1 · fault 0x0 · detail 2560,59872,13,-,,-,0,,,-,0,230,1,0,3,0,2560,sdk-nav,11,88,56988,1,sdk
+2026-10-29T20:33:15.885Z,Coordinator command_request · mode Auto · owner Buddy 3 · - none · revision 0 · network request id 231 · opcode/result 10 · generation 1 · fault 0x0 · detail 10,59872,12,-,,-,0,,,-,0,231,1,0,3,0,10,sdk-nav,11,89,56995,1,sdk
+2026-10-29T20:33:15.886Z,Coordinator command_result · mode Auto · owner Buddy 3 · - none · revision 0 · network request id 231 · opcode/result 2560 · generation 1 · fault 0x0 · detail 2560,59872,13,-,,-,0,,,-,0,231,1,0,3,0,2560,sdk-nav,11,90,56995,1,sdk
+2026-10-29T20:33:15.894Z,Coordinator command_request · mode Auto · owner Buddy 3 · - none · revision 0 · network request id 35 · opcode/result 10 · generation 1 · fault 0x0 · detail 10,59875,12,-,,-,0,,,-,0,35,1,0,3,0,10,sdk-nav,11,92,57004,1,sdk
+2026-10-29T20:33:15.900Z,Mapping readback (confirmed): Y/B/Q/M rev 1,,,,,,,,,,,,,,,,,mapping,,,57010,1,sdk
+2026-10-29T20:33:16.174Z,Command sent: STOP (id 36),,command,,,,,,,,,36,,,,,,command,,,57284,1,sdk
+2026-10-29T20:33:16.188Z,Coordinator command_request · mode Auto · owner Buddy 3 · - none · revision 0 · network request id 36 · opcode/result 4 · generation 1 · fault 0x0 · detail 4,60198,12,-,,-,0,,,-,0,36,1,0,3,0,4,sdk-nav,11,95,57298,1,sdk
+2026-10-29T20:33:16.197Z,ACK STOP id 36: accepted · state byte Safe Stop,,ack,,,,,,,,,36,,,,,0,ack,,,57306,1,sdk
+2026-10-29T20:33:16.198Z,Coordinator command_result · mode Off · owner Buddy 1 · - none · revision 0 · network request id 36 · opcode/result 1024 · generation 3 · fault 0x0 · detail 1024,60198,13,-,,-,0,,,-,0,36,3,7,1,0,1024,sdk-nav,11,96,57308,1,sdk
+2026-10-29T20:33:16.207Z,Coordinator stop · mode Off · owner Buddy 1 · - none · revision 0 ·  · generation 3 · fault 0x0 · detail 49,60198,10,-,,-,0,,,-,0,0,3,7,1,0,49,sdk-nav,11,97,57317,1,sdk
+2026-10-29T20:33:16.209Z,"Run summary · run 1, result 49, elapsed 7436 ms, distance 299 mm, average 40.21 mm/s, line 0, nav 26, recoveries 0",60198,,,,,,,,,,,,,,,,sdk-summary,12,0,57318,1,sdk
+2026-10-29T20:33:21.618Z,Command sent: BARCODE_GET (id 37),,command,,,,,,,,,37,,,,,,command,,,62727,1,sdk
+2026-10-29T20:33:21.619Z,Live readings cleared: car restart (export history kept),,,,,,,,,,,,,,,,,link,,,62729,1,unknown
+2026-10-29T20:33:21.622Z,Command sent: BARCODE_GET (id 38),,command,,,,,,,,,38,,,,,,command,,,62732,1,unknown
+2026-10-29T20:33:21.637Z,Command from another client on the broker: BARCODE_GET (id 232),,,,,,,,,,,,,,,,,command-other,,,62746,1,sdk
+2026-10-29T20:33:21.637Z,Command from another client on the broker: BARCODE_GET (id 233),,,,,,,,,,,,,,,,,command-other,,,62747,1,sdk
+2026-10-29T20:33:21.643Z,ACK BARCODE_GET id 37: accepted · state byte Safe Stop,,ack,,,,,,,,,37,,,,,0,ack,,,62752,1,sdk
+2026-10-29T20:33:21.667Z,Coordinator command_request · mode Off · owner Buddy 1 · - none · revision 0 · network request id 37 · opcode/result 10 · generation 3 · fault 0x0 · detail 10,65647,12,-,,-,0,,,-,0,37,3,7,1,0,10,sdk-nav,11,104,62777,1,sdk
+2026-10-29T20:33:21.668Z,ACK BARCODE_GET id 38: accepted · state byte Safe Stop,,ack,,,,,,,,,38,,,,,0,ack,,,62778,1,sdk
+2026-10-29T20:33:21.697Z,ACK BARCODE_GET id 232: accepted (not from this page) · state byte Safe Stop,,ack,,,,,,,,,232,,,,,0,ack,,,62806,1,sdk
+2026-10-29T20:33:21.698Z,ACK BARCODE_GET id 233: accepted (not from this page) · state byte Safe Stop,,ack,,,,,,,,,233,,,,,0,ack,,,62807,1,sdk
+2026-10-29T20:33:21.705Z,Coordinator command_request · mode Off · owner Buddy 1 · - none · revision 0 · network request id 38 · opcode/result 10 · generation 3 · fault 0x0 · detail 10,65650,12,-,,-,0,,,-,0,38,3,7,1,0,10,sdk-nav,11,107,62814,1,sdk
+2026-10-29T20:33:21.705Z,Mapping readback (confirmed): Y/B/Q/M rev 1,,,,,,,,,,,,,,,,,mapping,,,62815,1,sdk
+2026-10-29T20:33:21.706Z,Coordinator command_result · mode Off · owner Buddy 1 · - none · revision 0 · network request id 38 · opcode/result 2560 · generation 3 · fault 0x0 · detail 2560,65650,13,-,,-,0,,,-,0,38,3,7,1,0,2560,sdk-nav,11,108,62815,1,sdk
+2026-10-29T20:33:21.710Z,Coordinator command_request · mode Off · owner Buddy 1 · - none · revision 0 · network request id 232 · opcode/result 10 · generation 3 · fault 0x0 · detail 10,65670,12,-,,-,0,,,-,0,232,3,7,1,0,10,sdk-nav,11,110,62820,1,sdk
+2026-10-29T20:33:21.715Z,Coordinator command_result · mode Off · owner Buddy 1 · - none · revision 0 · network request id 232 · opcode/result 2560 · generation 3 · fault 0x0 · detail 2560,65670,13,-,,-,0,,,-,0,232,3,7,1,0,2560,sdk-nav,11,111,62825,1,sdk
+2026-10-29T20:33:27.669Z,Command from another client on the broker: BARCODE_GET (id 234),,,,,,,,,,,,,,,,,command-other,,,68779,1,sdk
+2026-10-29T20:33:27.688Z,ACK BARCODE_GET id 234: accepted (not from this page) · state byte Safe Stop,,ack,,,,,,,,,234,,,,,0,ack,,,68798,1,sdk
+2026-10-29T20:33:27.689Z,Coordinator command_request · mode Off · owner Buddy 1 · - none · revision 0 · network request id 234 · opcode/result 10 · generation 3 · fault 0x0 · detail 10,71683,12,-,,-,0,,,-,0,234,3,7,1,0,10,sdk-nav,11,121,68799,1,sdk
+2026-10-29T20:33:27.706Z,Coordinator command_result · mode Off · owner Buddy 1 · - none · revision 0 · network request id 234 · opcode/result 2560 · generation 3 · fault 0x0 · detail 2560,71683,13,-,,-,0,,,-,0,234,3,7,1,0,2560,sdk-nav,11,122,68815,1,sdk

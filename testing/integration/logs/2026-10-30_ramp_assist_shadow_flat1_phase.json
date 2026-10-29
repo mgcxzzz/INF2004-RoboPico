@@ -1,0 +1,8 @@
+{
+  "start_time": "2026-10-30T02:24:28.585362+08:00",
+  "capture_path": "/Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico/testing/integration/logs/2026-10-29_buddy4_drive_v1_1_codex1_capture.txt",
+  "capture_start_offset": 65733532,
+  "firmware": "buddy123_interface_wifi_v2_3_b4_v0_1_ra_v0_1_shadow",
+  "setup": "lower bracket, original sensor reported; original preset retained; flat line, no ramp",
+  "motor_commands_sent": false
+}

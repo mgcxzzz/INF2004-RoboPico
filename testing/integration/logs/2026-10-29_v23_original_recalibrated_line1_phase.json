@@ -1,0 +1,63 @@
+{
+  "phase": "recalibrated_run_reviewing_wobble",
+  "capture": "/Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico/testing/integration/logs/2026-10-29_buddy4_drive_v1_1_codex1_capture.txt",
+  "fromLine": 143137,
+  "baseline": {
+    "motion": {
+      "time": "2026-10-29T21:31:06.772055000+0800",
+      "run": 0,
+      "profile": 1,
+      "flags": 2,
+      "recovery": 0,
+      "speedLeft": 0,
+      "speedRight": 0,
+      "pwmLeft": 0,
+      "pwmRight": 0,
+      "adcLeft": 2954,
+      "adcRight": 2638,
+      "levelLeft": 1000,
+      "levelRight": 899
+    },
+    "diagnostics": {
+      "time": "2026-10-29T21:31:06.702865000+0800",
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 11513,
+      "txDropped": 451,
+      "rxDropped": 0,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    "heartbeat": {
+      "time": "2026-10-29T21:31:06.696487000+0800",
+      "net": 2,
+      "netName": "Operational",
+      "state": 0,
+      "stateName": "Ready",
+      "lastCmd": 10,
+      "lastCmdName": "BARCODE_GET",
+      "lastResult": 0,
+      "lastResultName": "accepted",
+      "uptimeS": 35,
+      "published": 1036,
+      "lost": 451,
+      "accepted": 4,
+      "rejected": 0,
+      "connects": 0,
+      "fillPct": 0
+    }
+  },
+  "calibration": {
+    "white": [
+      158,
+      183
+    ],
+    "black": [
+      2532,
+      2913
+    ],
+    "profile": 1,
+    "savedViaUSB": true,
+    "powerbankValuesNotIndependentlyRechecked": true
+  },
+  "expected": "Onebrief plainline Start with2s countdown, about1s travel thenmanualStop; no Buddy4, firmware unchanged; userreports stutter or smooth."
+}

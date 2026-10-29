@@ -1,0 +1,63 @@
+{
+  "release": "SDK v2.3 barcode fine v0.3; quiet-zone fallback; no Buddy4",
+  "baseline_commit": "8d7f3aa4935565636bba013c74e563f5e8135bcb",
+  "built_at": "2026-10-30T05:46:52.426365+08:00",
+  "source_directory": "/Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico-v23b4/testing/subsystem2/interface_wifi_v2_3_barcode_fine_v0_3",
+  "uf2": "/Users/skyler/SIT/Y2T1/Embedded/bench_tools/buddy2/buddy123_interface_wifi_v2_3_barcode_fine_v0_3.uf2",
+  "sha256": "57fdb5ceb7538bd530eca48122407dc0cb734a821d1cfbcf113709190f2b6643",
+  "bytes": 1008640,
+  "blocks": 1970,
+  "contains_credentials": true,
+  "local_only": true,
+  "flashed_by_agent": false,
+  "motor_commands_sent": false,
+  "build_tag": {
+    "source": 11,
+    "event": "STATUS",
+    "detail_hex": "0xbc03",
+    "detail_decimal": 48131
+  },
+  "storage_version": 31,
+  "imports_record_versions": [
+    26,
+    27,
+    28,
+    30,
+    31
+  ],
+  "text_bytes": 514352,
+  "bss_bytes": 200644,
+  "stack_bytes_per_core": 8192,
+  "static_stack_frames": {
+    "main": 2360,
+    "control_step": 1184
+  },
+  "remaining_heap_region_bytes": 47340,
+  "unchanged_from_v0_2_sha256": {
+    "main.c": "fd87cb26e5de87db3ed265c3d8344bc11c57194341fc4a5ab9d9c0cae9ad3d51",
+    "v12_2/main.c": "ae5051aadfb571382b7d269865a306021ca9b4e185f0354c446f290902fd4be6",
+    "continuous_drive.h": "9eadf64b31f81f7f37d8664462bf7863c63d21a3f469a4664d1b2b014601bc18",
+    "continuous_steering.h": "c08d5e26858593344064bf0256950c3743a87a593ddb0b653f4aa5a1b145c62f",
+    "continuous_follow.h": "17f43775e4fb33ccf6913e780dcb303b9c1667a6d9acdf54233ea99a7b6a6db7",
+    "motion_api.c": "1558742b9f1bb7084fa574e19a60c1ad7475462f475e19290d652714f67d4854",
+    "nav_coordinator.c": "821e677d895e92e2e1680c2109d3df7ea652b2f7b99b0ee6cb0172933064c910",
+    "motion_executor.c": "eceffbadb80447c12cb4483e447902b85119654a1840b24fce2a7a619bf5bb70",
+    "wifi_transport.c": "285acea73ab71d183b280e54ecebc0ff5100df522d65a18a2f335ff18c7d2a99",
+    "wifi_protocol.c": "dacd3b1981cbe0476c35cf478875476cfdb9448364eda5e73b30a9c9109af9f7",
+    "wifi_packets.c": "a2af9fbc95555cfcf904152fa87e3620017eaf829aeeccff78f65490ecdb53fa",
+    "wifi_settings.h": "e2030da517ada1e62d8e47d07a2613e66c4ab9a636bb51ccbd5ea37ac1ae2d95"
+  },
+  "hardware_validation": "pending; captured replay only",
+  "test_results": {
+    "c_executables": 36,
+    "sdk_js_schema": "10/10",
+    "captured_Z_old": "one decode",
+    "captured_Z_latest": "one decode via quiet fallback",
+    "captured_Y": "no decode; unresolved",
+    "directed_fallback": "all26 A-Z both directions",
+    "negative_tests": "quiet-zone crops, erased start/stop sentinel, missing bars, noise, conflict, duplicate, stale/state guards",
+    "sanitizers": "ASan/UBSan pass",
+    "actual_report_packer_and_decoders": "pass",
+    "arm_release": "zero warnings"
+  }
+}

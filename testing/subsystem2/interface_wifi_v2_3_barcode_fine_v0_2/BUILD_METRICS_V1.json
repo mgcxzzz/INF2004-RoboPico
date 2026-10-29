@@ -1,0 +1,19 @@
+{
+  "artifact": "firmware/buddy23_interface_v1.uf2",
+  "sha256": "abef641045462f2e452265e352e32de996fd2b3d63c70551f0c3e0186b1b52dc",
+  "bytes": 292864,
+  "blocks": 572,
+  "padded_flash_end": "0x10023c00",
+  "coordinator_log_offset": "0x1af000",
+  "raw_log_offset": "0x1b0000",
+  "motion_log_offset": "0x1d0000",
+  "source_baseline_commit": "9df1b95",
+  "text": 150424,
+  "bss": 222064,
+  "unpacked_text": 149224,
+  "unpacked_bss": 227024,
+  "bss_saved": 4960,
+  "v12_2_text": 127128,
+  "v12_2_bss": 215408,
+  "host_executables_passed": 17
+}

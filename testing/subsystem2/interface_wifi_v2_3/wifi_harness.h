@@ -6,6 +6,12 @@
 _Static_assert(WIFI_SETTINGS_OFFSET+FLASH_SECTOR_SIZE==DIAG_OFFSET,"WiFi settings overlap logs");
 static bool start_run(unsigned mode);
 static unsigned start_block(unsigned mode);
+#if defined(BUDDY4_ADDON) && BUDDY4_ADDON
+static void buddy4_reset_request(void); /* Buddy4 add-on (buddy4_harness.h) */
+#define BUDDY4_RESET_HOOK() buddy4_reset_request()
+#else
+#define BUDDY4_RESET_HOOK() ((void)0) /* host tests and builds without the add-on */
+#endif
 static bool wifi_forward=true,wifi_was_active;
 static uint32_t wifi_lease,wifi_seen_barcode,wifi_seen_runs,wifi_app_drops,wifi_summary_run,wifi_summary_connection;
 static uint32_t wifi_line_events,wifi_nav_events,wifi_recoveries;
@@ -185,7 +191,7 @@ static unsigned wifi_dispatch(const WifiCommand *cmd,uint64_t now) {
         wifi_estop|=cmd->code==WP_CMD_ESTOP;wifi_stopped=true;return 0;
     case WP_CMD_RESET:
         if(guard.active || trace_settling || !gpio_get(STOP) || !gpio_get(HOLD))return WP_ACK_BUSY;
-        wifi_estop=wifi_stopped=false;wifi_start_pending=false;wifi_lease=0;return 0;
+        wifi_estop=wifi_stopped=false;wifi_start_pending=false;wifi_lease=0;BUDDY4_RESET_HOOK();return 0;
     case WP_CMD_CONFIG:wifi_forward=(cmd->arg&4095)!=0;return 0;
     case WP_CMD_PING:wifi_last_hb=0;return 0;
     case WP_CMD_MAP:

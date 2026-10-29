@@ -1,0 +1,2 @@
+MATCH threshold=205 hyst=2 letter=Z from=35.46 to=172.43 reverse=1
+samples=2048 threshold_hysteresis_matches=1

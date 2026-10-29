@@ -1,0 +1,50 @@
+{
+  "source": "/Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico/testing/integration/logs/2026-10-29_buddy4_drive_v1_1_codex1_capture.txt",
+  "source_size_at_start": 138232925,
+  "read_through_source_byte": 138232925,
+  "sha256_read_source": "2e695ec9cec9df9b634b371261894ac2cd23dcc724e8fff52b9a1cfa943e3ae4",
+  "windows": [
+    {
+      "name": "buddy4_accepted_ramps",
+      "start_inclusive": "2026-10-30T04:08:15+08:00",
+      "end_inclusive": "2026-10-30T04:11:00+08:00",
+      "lines": 7303,
+      "file": "2026-10-30_buddy4_accepted_ramps_native_excerpt.txt"
+    },
+    {
+      "name": "buddy4_stop_during_assist",
+      "start_inclusive": "2026-10-30T04:14:00+08:00",
+      "end_inclusive": "2026-10-30T04:15:00+08:00",
+      "lines": 2776,
+      "file": "2026-10-30_buddy4_stop_during_assist_native_excerpt.txt"
+    },
+    {
+      "name": "original_v23_first_comparison",
+      "start_inclusive": "2026-10-30T05:03:50+08:00",
+      "end_inclusive": "2026-10-30T05:05:40+08:00",
+      "lines": 3906,
+      "file": "2026-10-30_original_v23_first_comparison_native_excerpt.txt"
+    },
+    {
+      "name": "barcode_fine_v0_2_failed_run3",
+      "start_inclusive": "2026-10-30T05:32:50+08:00",
+      "end_inclusive": "2026-10-30T05:33:20+08:00",
+      "lines": 1259,
+      "file": "2026-10-30_barcode_fine_v0_2_failed_run3_native_excerpt.txt"
+    },
+    {
+      "name": "barcode_fine_v0_3_failed_run1",
+      "start_inclusive": "2026-10-30T05:54:25+08:00",
+      "end_inclusive": "2026-10-30T05:55:00+08:00",
+      "lines": 1404,
+      "file": "2026-10-30_barcode_fine_v0_3_failed_run1_native_excerpt.txt"
+    },
+    {
+      "name": "original_v23_retry",
+      "start_inclusive": "2026-10-30T06:17:20+08:00",
+      "end_inclusive": "2026-10-30T06:18:00+08:00",
+      "lines": 1496,
+      "file": "2026-10-30_original_v23_retry_native_excerpt.txt"
+    }
+  ]
+}

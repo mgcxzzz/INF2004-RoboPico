@@ -1,0 +1,5368 @@
+{
+  "summary": {
+    "physical_report": "stuttered, no Y read",
+    "sdk_summary": {
+      "time": "2026-10-30T04:27:14.166824000+0800",
+      "run": 8,
+      "reason": 49,
+      "duration_ms": 6577,
+      "distance_mm": 245
+    },
+    "recovery_states": [
+      0,
+      1
+    ],
+    "recovery_transitions": [
+      {
+        "time": "2026-10-30T04:27:07.618130000+0800",
+        "up": 1464094,
+        "recovery": 0,
+        "speed": [
+          0.0,
+          0.0
+        ],
+        "target": [
+          0,
+          2
+        ],
+        "adc_barcode": 175,
+        "distance": 0
+      },
+      {
+        "time": "2026-10-30T04:27:13.202987000+0800",
+        "up": 1469716,
+        "recovery": 1,
+        "speed": [
+          21.4,
+          3.7
+        ],
+        "target": [
+          35,
+          21
+        ],
+        "adc_barcode": 178,
+        "distance": 211
+      },
+      {
+        "time": "2026-10-30T04:27:13.352204000+0800",
+        "up": 1469867,
+        "recovery": 0,
+        "speed": [
+          14.7,
+          31.6
+        ],
+        "target": [
+          23,
+          27
+        ],
+        "adc_barcode": 174,
+        "distance": 214
+      }
+    ],
+    "barcode_adc_range": [
+      168,
+      2697
+    ],
+    "last_diag": [
+      {
+        "time": "2026-10-30T04:27:14.166754000+0800",
+        "up": 1470653,
+        "threshold": 212,
+        "bank": 11,
+        "decoded": 0,
+        "bad_frames": 0,
+        "unsupported": 0,
+        "max_adc_gap_us": 6685,
+        "max_control_gap_us": 13183,
+        "tx_drops": 5318,
+        "rx_drops": 0,
+        "invalid": [
+          0,
+          0
+        ]
+      }
+    ],
+    "barcode_events": [
+      {
+        "time": "2026-10-30T04:27:07.491457000+0800",
+        "event": 0,
+        "adc_barcode": 177,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:07.539469000+0800",
+        "event": 0,
+        "adc_barcode": 181,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:07.618178000+0800",
+        "event": 0,
+        "adc_barcode": 175,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:07.637852000+0800",
+        "event": 0,
+        "adc_barcode": 176,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:07.709518000+0800",
+        "event": 0,
+        "adc_barcode": 177,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:07.739987000+0800",
+        "event": 0,
+        "adc_barcode": 175,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:07.806896000+0800",
+        "event": 0,
+        "adc_barcode": 175,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:07.840967000+0800",
+        "event": 0,
+        "adc_barcode": 174,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:07.912405000+0800",
+        "event": 0,
+        "adc_barcode": 175,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:07.945777000+0800",
+        "event": 0,
+        "adc_barcode": 176,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:07.991468000+0800",
+        "event": 0,
+        "adc_barcode": 181,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:08.040363000+0800",
+        "event": 0,
+        "adc_barcode": 176,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:08.088265000+0800",
+        "event": 0,
+        "adc_barcode": 177,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:08.146007000+0800",
+        "event": 0,
+        "adc_barcode": 180,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:08.206324000+0800",
+        "event": 0,
+        "adc_barcode": 180,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:08.245877000+0800",
+        "event": 0,
+        "adc_barcode": 178,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:08.308617000+0800",
+        "event": 0,
+        "adc_barcode": 180,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:08.346846000+0800",
+        "event": 0,
+        "adc_barcode": 176,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:08.416416000+0800",
+        "event": 0,
+        "adc_barcode": 179,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:08.448202000+0800",
+        "event": 0,
+        "adc_barcode": 173,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:08.528458000+0800",
+        "event": 0,
+        "adc_barcode": 172,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:08.550502000+0800",
+        "event": 0,
+        "adc_barcode": 169,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:08.606043000+0800",
+        "event": 0,
+        "adc_barcode": 173,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:08.655306000+0800",
+        "event": 0,
+        "adc_barcode": 168,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:08.733149000+0800",
+        "event": 0,
+        "adc_barcode": 170,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:08.755519000+0800",
+        "event": 0,
+        "adc_barcode": 170,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:08.809256000+0800",
+        "event": 0,
+        "adc_barcode": 173,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:08.853912000+0800",
+        "event": 0,
+        "adc_barcode": 184,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:08.907207000+0800",
+        "event": 0,
+        "adc_barcode": 200,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:08.958113000+0800",
+        "event": 0,
+        "adc_barcode": 201,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:09.009523000+0800",
+        "event": 0,
+        "adc_barcode": 212,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:09.056428000+0800",
+        "event": 0,
+        "adc_barcode": 500,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:09.101552000+0800",
+        "event": 0,
+        "adc_barcode": 1812,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:09.150884000+0800",
+        "event": 0,
+        "adc_barcode": 1597,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:09.205456000+0800",
+        "event": 0,
+        "adc_barcode": 283,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:09.259286000+0800",
+        "event": 0,
+        "adc_barcode": 209,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:09.308501000+0800",
+        "event": 0,
+        "adc_barcode": 214,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:09.361918000+0800",
+        "event": 0,
+        "adc_barcode": 366,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:09.409198000+0800",
+        "event": 0,
+        "adc_barcode": 1643,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:09.459323000+0800",
+        "event": 0,
+        "adc_barcode": 1776,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:09.546674000+0800",
+        "event": 0,
+        "adc_barcode": 278,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:09.562913000+0800",
+        "event": 0,
+        "adc_barcode": 203,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:09.614860000+0800",
+        "event": 0,
+        "adc_barcode": 204,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:09.662580000+0800",
+        "event": 0,
+        "adc_barcode": 206,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:09.717525000+0800",
+        "event": 0,
+        "adc_barcode": 185,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:09.764619000+0800",
+        "event": 0,
+        "adc_barcode": 174,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:09.820670000+0800",
+        "event": 0,
+        "adc_barcode": 174,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:09.866893000+0800",
+        "event": 0,
+        "adc_barcode": 183,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:09.922459000+0800",
+        "event": 0,
+        "adc_barcode": 199,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:09.970194000+0800",
+        "event": 0,
+        "adc_barcode": 209,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:10.024118000+0800",
+        "event": 0,
+        "adc_barcode": 198,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:10.082011000+0800",
+        "event": 0,
+        "adc_barcode": 218,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:10.119057000+0800",
+        "event": 0,
+        "adc_barcode": 204,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:10.193882000+0800",
+        "event": 0,
+        "adc_barcode": 201,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:10.235538000+0800",
+        "event": 0,
+        "adc_barcode": 218,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:10.269902000+0800",
+        "event": 0,
+        "adc_barcode": 202,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:10.331150000+0800",
+        "event": 0,
+        "adc_barcode": 206,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:10.370065000+0800",
+        "event": 0,
+        "adc_barcode": 257,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:10.433949000+0800",
+        "event": 0,
+        "adc_barcode": 1476,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:10.474993000+0800",
+        "event": 0,
+        "adc_barcode": 1697,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:10.524034000+0800",
+        "event": 0,
+        "adc_barcode": 1409,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:10.588676000+0800",
+        "event": 0,
+        "adc_barcode": 590,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:10.692836000+0800",
+        "event": 0,
+        "adc_barcode": 232,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:10.700615000+0800",
+        "event": 0,
+        "adc_barcode": 205,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:10.732578000+0800",
+        "event": 0,
+        "adc_barcode": 200,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:10.781850000+0800",
+        "event": 0,
+        "adc_barcode": 211,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:10.843958000+0800",
+        "event": 0,
+        "adc_barcode": 214,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:10.886623000+0800",
+        "event": 0,
+        "adc_barcode": 208,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:10.932206000+0800",
+        "event": 0,
+        "adc_barcode": 182,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:10.991106000+0800",
+        "event": 0,
+        "adc_barcode": 174,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:11.029849000+0800",
+        "event": 0,
+        "adc_barcode": 171,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:11.090986000+0800",
+        "event": 0,
+        "adc_barcode": 177,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:11.129264000+0800",
+        "event": 0,
+        "adc_barcode": 245,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:11.199877000+0800",
+        "event": 0,
+        "adc_barcode": 1924,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:11.238130000+0800",
+        "event": 0,
+        "adc_barcode": 285,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:11.292831000+0800",
+        "event": 0,
+        "adc_barcode": 196,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:11.340410000+0800",
+        "event": 0,
+        "adc_barcode": 219,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:11.401028000+0800",
+        "event": 0,
+        "adc_barcode": 198,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:11.438011000+0800",
+        "event": 0,
+        "adc_barcode": 224,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:11.497878000+0800",
+        "event": 0,
+        "adc_barcode": 1149,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:11.537625000+0800",
+        "event": 0,
+        "adc_barcode": 2114,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:11.600397000+0800",
+        "event": 0,
+        "adc_barcode": 1467,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:11.636453000+0800",
+        "event": 0,
+        "adc_barcode": 413,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:11.706645000+0800",
+        "event": 0,
+        "adc_barcode": 226,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:11.740937000+0800",
+        "event": 0,
+        "adc_barcode": 194,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:11.816852000+0800",
+        "event": 0,
+        "adc_barcode": 249,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:11.843029000+0800",
+        "event": 0,
+        "adc_barcode": 1793,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:11.908687000+0800",
+        "event": 0,
+        "adc_barcode": 1742,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:11.945690000+0800",
+        "event": 0,
+        "adc_barcode": 289,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:12.006839000+0800",
+        "event": 0,
+        "adc_barcode": 212,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:12.078220000+0800",
+        "event": 0,
+        "adc_barcode": 198,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:12.111963000+0800",
+        "event": 0,
+        "adc_barcode": 218,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:12.146540000+0800",
+        "event": 0,
+        "adc_barcode": 186,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:12.205287000+0800",
+        "event": 0,
+        "adc_barcode": 174,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:12.247120000+0800",
+        "event": 0,
+        "adc_barcode": 173,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:12.312467000+0800",
+        "event": 0,
+        "adc_barcode": 184,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:12.351403000+0800",
+        "event": 0,
+        "adc_barcode": 210,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:12.414979000+0800",
+        "event": 0,
+        "adc_barcode": 187,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:12.453840000+0800",
+        "event": 0,
+        "adc_barcode": 173,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:12.522547000+0800",
+        "event": 0,
+        "adc_barcode": 173,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:12.553122000+0800",
+        "event": 0,
+        "adc_barcode": 174,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:12.609860000+0800",
+        "event": 0,
+        "adc_barcode": 173,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:12.647511000+0800",
+        "event": 0,
+        "adc_barcode": 177,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:12.719369000+0800",
+        "event": 0,
+        "adc_barcode": 174,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:12.749469000+0800",
+        "event": 0,
+        "adc_barcode": 178,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:12.827834000+0800",
+        "event": 0,
+        "adc_barcode": 173,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:12.858860000+0800",
+        "event": 0,
+        "adc_barcode": 175,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:12.916878000+0800",
+        "event": 0,
+        "adc_barcode": 173,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:12.956270000+0800",
+        "event": 0,
+        "adc_barcode": 175,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:13.042606000+0800",
+        "event": 0,
+        "adc_barcode": 178,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:13.055003000+0800",
+        "event": 0,
+        "adc_barcode": 176,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:13.131040000+0800",
+        "event": 0,
+        "adc_barcode": 178,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:13.161710000+0800",
+        "event": 0,
+        "adc_barcode": 177,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:13.203016000+0800",
+        "event": 0,
+        "adc_barcode": 178,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:13.265468000+0800",
+        "event": 0,
+        "adc_barcode": 175,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:13.307280000+0800",
+        "event": 0,
+        "adc_barcode": 176,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:13.360436000+0800",
+        "event": 0,
+        "adc_barcode": 174,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:13.413965000+0800",
+        "event": 0,
+        "adc_barcode": 176,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:13.460680000+0800",
+        "event": 0,
+        "adc_barcode": 174,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:13.515198000+0800",
+        "event": 0,
+        "adc_barcode": 176,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:13.564944000+0800",
+        "event": 0,
+        "adc_barcode": 175,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:13.618784000+0800",
+        "event": 0,
+        "adc_barcode": 173,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:13.661967000+0800",
+        "event": 0,
+        "adc_barcode": 176,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:13.712580000+0800",
+        "event": 0,
+        "adc_barcode": 177,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:13.772355000+0800",
+        "event": 0,
+        "adc_barcode": 173,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:13.811731000+0800",
+        "event": 0,
+        "adc_barcode": 177,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:13.866379000+0800",
+        "event": 0,
+        "adc_barcode": 189,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:13.924977000+0800",
+        "event": 0,
+        "adc_barcode": 259,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:13.970916000+0800",
+        "event": 0,
+        "adc_barcode": 1760,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:14.020251000+0800",
+        "event": 0,
+        "adc_barcode": 2335,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:14.073664000+0800",
+        "event": 0,
+        "adc_barcode": 2554,
+        "last_letter": "-",
+        "pending": "-"
+      },
+      {
+        "time": "2026-10-30T04:27:14.130636000+0800",
+        "event": 0,
+        "adc_barcode": 2697,
+        "last_letter": "-",
+        "pending": "-"
+      }
+    ]
+  },
+  "motion": [
+    {
+      "time": "2026-10-30T04:27:07.618130000+0800",
+      "up": 1464094,
+      "recovery": 0,
+      "speed": [
+        0.0,
+        0.0
+      ],
+      "target": [
+        0,
+        2
+      ],
+      "adc_barcode": 175,
+      "distance": 0
+    },
+    {
+      "time": "2026-10-30T04:27:07.628625000+0800",
+      "up": 1464144,
+      "recovery": 0,
+      "speed": [
+        0.0,
+        0.0
+      ],
+      "target": [
+        0,
+        12
+      ],
+      "adc_barcode": 176,
+      "distance": 0
+    },
+    {
+      "time": "2026-10-30T04:27:07.680073000+0800",
+      "up": 1464194,
+      "recovery": 0,
+      "speed": [
+        0.0,
+        0.0
+      ],
+      "target": [
+        4,
+        19
+      ],
+      "adc_barcode": 177,
+      "distance": 0
+    },
+    {
+      "time": "2026-10-30T04:27:07.728936000+0800",
+      "up": 1464245,
+      "recovery": 0,
+      "speed": [
+        0.0,
+        0.0
+      ],
+      "target": [
+        8,
+        24
+      ],
+      "adc_barcode": 175,
+      "distance": 0
+    },
+    {
+      "time": "2026-10-30T04:27:07.781935000+0800",
+      "up": 1464295,
+      "recovery": 0,
+      "speed": [
+        4.1,
+        0.0
+      ],
+      "target": [
+        13,
+        30
+      ],
+      "adc_barcode": 175,
+      "distance": 0
+    },
+    {
+      "time": "2026-10-30T04:27:07.828734000+0800",
+      "up": 1464346,
+      "recovery": 0,
+      "speed": [
+        3.0,
+        0.0
+      ],
+      "target": [
+        17,
+        35
+      ],
+      "adc_barcode": 174,
+      "distance": 0
+    },
+    {
+      "time": "2026-10-30T04:27:07.886036000+0800",
+      "up": 1464396,
+      "recovery": 0,
+      "speed": [
+        0.7,
+        0.0
+      ],
+      "target": [
+        22,
+        41
+      ],
+      "adc_barcode": 175,
+      "distance": 0
+    },
+    {
+      "time": "2026-10-30T04:27:07.932210000+0800",
+      "up": 1464447,
+      "recovery": 0,
+      "speed": [
+        5.6,
+        15.7
+      ],
+      "target": [
+        28,
+        45
+      ],
+      "adc_barcode": 176,
+      "distance": 0
+    },
+    {
+      "time": "2026-10-30T04:27:07.985563000+0800",
+      "up": 1464498,
+      "recovery": 0,
+      "speed": [
+        30.0,
+        45.2
+      ],
+      "target": [
+        42,
+        42
+      ],
+      "adc_barcode": 181,
+      "distance": 2
+    },
+    {
+      "time": "2026-10-30T04:27:08.032969000+0800",
+      "up": 1464549,
+      "recovery": 0,
+      "speed": [
+        42.2,
+        49.5
+      ],
+      "target": [
+        47,
+        35
+      ],
+      "adc_barcode": 176,
+      "distance": 5
+    },
+    {
+      "time": "2026-10-30T04:27:08.088174000+0800",
+      "up": 1464600,
+      "recovery": 0,
+      "speed": [
+        54.0,
+        61.4
+      ],
+      "target": [
+        46,
+        27
+      ],
+      "adc_barcode": 177,
+      "distance": 8
+    },
+    {
+      "time": "2026-10-30T04:27:08.138201000+0800",
+      "up": 1464653,
+      "recovery": 0,
+      "speed": [
+        54.1,
+        60.5
+      ],
+      "target": [
+        47,
+        25
+      ],
+      "adc_barcode": 180,
+      "distance": 11
+    },
+    {
+      "time": "2026-10-30T04:27:08.191617000+0800",
+      "up": 1464704,
+      "recovery": 0,
+      "speed": [
+        57.8,
+        56.2
+      ],
+      "target": [
+        47,
+        23
+      ],
+      "adc_barcode": 180,
+      "distance": 14
+    },
+    {
+      "time": "2026-10-30T04:27:08.238607000+0800",
+      "up": 1464755,
+      "recovery": 0,
+      "speed": [
+        54.1,
+        47.6
+      ],
+      "target": [
+        48,
+        22
+      ],
+      "adc_barcode": 178,
+      "distance": 16
+    },
+    {
+      "time": "2026-10-30T04:27:08.290905000+0800",
+      "up": 1464806,
+      "recovery": 0,
+      "speed": [
+        52.1,
+        43.4
+      ],
+      "target": [
+        48,
+        23
+      ],
+      "adc_barcode": 180,
+      "distance": 19
+    },
+    {
+      "time": "2026-10-30T04:27:08.341413000+0800",
+      "up": 1464857,
+      "recovery": 0,
+      "speed": [
+        48.4,
+        43.0
+      ],
+      "target": [
+        49,
+        24
+      ],
+      "adc_barcode": 176,
+      "distance": 21
+    },
+    {
+      "time": "2026-10-30T04:27:08.397782000+0800",
+      "up": 1464908,
+      "recovery": 0,
+      "speed": [
+        49.6,
+        42.2
+      ],
+      "target": [
+        49,
+        24
+      ],
+      "adc_barcode": 179,
+      "distance": 24
+    },
+    {
+      "time": "2026-10-30T04:27:08.442489000+0800",
+      "up": 1464958,
+      "recovery": 0,
+      "speed": [
+        48.9,
+        42.3
+      ],
+      "target": [
+        50,
+        27
+      ],
+      "adc_barcode": 173,
+      "distance": 26
+    },
+    {
+      "time": "2026-10-30T04:27:08.498625000+0800",
+      "up": 1465009,
+      "recovery": 0,
+      "speed": [
+        51.5,
+        43.2
+      ],
+      "target": [
+        50,
+        26
+      ],
+      "adc_barcode": 172,
+      "distance": 28
+    },
+    {
+      "time": "2026-10-30T04:27:08.544225000+0800",
+      "up": 1465059,
+      "recovery": 0,
+      "speed": [
+        52.8,
+        44.3
+      ],
+      "target": [
+        50,
+        25
+      ],
+      "adc_barcode": 169,
+      "distance": 31
+    },
+    {
+      "time": "2026-10-30T04:27:08.605981000+0800",
+      "up": 1465110,
+      "recovery": 0,
+      "speed": [
+        51.7,
+        38.3
+      ],
+      "target": [
+        50,
+        25
+      ],
+      "adc_barcode": 173,
+      "distance": 33
+    },
+    {
+      "time": "2026-10-30T04:27:08.643804000+0800",
+      "up": 1465160,
+      "recovery": 0,
+      "speed": [
+        49.7,
+        37.4
+      ],
+      "target": [
+        50,
+        26
+      ],
+      "adc_barcode": 168,
+      "distance": 35
+    },
+    {
+      "time": "2026-10-30T04:27:08.702593000+0800",
+      "up": 1465212,
+      "recovery": 0,
+      "speed": [
+        47.7,
+        39.3
+      ],
+      "target": [
+        49,
+        24
+      ],
+      "adc_barcode": 170,
+      "distance": 37
+    },
+    {
+      "time": "2026-10-30T04:27:08.747349000+0800",
+      "up": 1465262,
+      "recovery": 0,
+      "speed": [
+        49.3,
+        37.7
+      ],
+      "target": [
+        49,
+        24
+      ],
+      "adc_barcode": 170,
+      "distance": 40
+    },
+    {
+      "time": "2026-10-30T04:27:08.797373000+0800",
+      "up": 1465313,
+      "recovery": 0,
+      "speed": [
+        47.0,
+        34.3
+      ],
+      "target": [
+        50,
+        26
+      ],
+      "adc_barcode": 173,
+      "distance": 42
+    },
+    {
+      "time": "2026-10-30T04:27:08.846268000+0800",
+      "up": 1465363,
+      "recovery": 0,
+      "speed": [
+        44.6,
+        36.2
+      ],
+      "target": [
+        49,
+        32
+      ],
+      "adc_barcode": 184,
+      "distance": 44
+    },
+    {
+      "time": "2026-10-30T04:27:08.897331000+0800",
+      "up": 1465414,
+      "recovery": 0,
+      "speed": [
+        45.0,
+        39.2
+      ],
+      "target": [
+        45,
+        38
+      ],
+      "adc_barcode": 200,
+      "distance": 46
+    },
+    {
+      "time": "2026-10-30T04:27:08.950036000+0800",
+      "up": 1465464,
+      "recovery": 0,
+      "speed": [
+        43.7,
+        46.5
+      ],
+      "target": [
+        45,
+        39
+      ],
+      "adc_barcode": 201,
+      "distance": 48
+    },
+    {
+      "time": "2026-10-30T04:27:08.997336000+0800",
+      "up": 1465514,
+      "recovery": 0,
+      "speed": [
+        46.4,
+        53.9
+      ],
+      "target": [
+        45,
+        28
+      ],
+      "adc_barcode": 212,
+      "distance": 51
+    },
+    {
+      "time": "2026-10-30T04:27:09.048775000+0800",
+      "up": 1465564,
+      "recovery": 0,
+      "speed": [
+        47.0,
+        43.8
+      ],
+      "target": [
+        45,
+        20
+      ],
+      "adc_barcode": 500,
+      "distance": 53
+    },
+    {
+      "time": "2026-10-30T04:27:09.101406000+0800",
+      "up": 1465614,
+      "recovery": 0,
+      "speed": [
+        45.2,
+        33.3
+      ],
+      "target": [
+        43,
+        30
+      ],
+      "adc_barcode": 1812,
+      "distance": 55
+    },
+    {
+      "time": "2026-10-30T04:27:09.150774000+0800",
+      "up": 1465664,
+      "recovery": 0,
+      "speed": [
+        36.3,
+        32.8
+      ],
+      "target": [
+        44,
+        39
+      ],
+      "adc_barcode": 1597,
+      "distance": 57
+    },
+    {
+      "time": "2026-10-30T04:27:09.200206000+0800",
+      "up": 1465715,
+      "recovery": 0,
+      "speed": [
+        36.4,
+        42.5
+      ],
+      "target": [
+        45,
+        33
+      ],
+      "adc_barcode": 283,
+      "distance": 59
+    },
+    {
+      "time": "2026-10-30T04:27:09.249463000+0800",
+      "up": 1465765,
+      "recovery": 0,
+      "speed": [
+        40.2,
+        45.2
+      ],
+      "target": [
+        45,
+        19
+      ],
+      "adc_barcode": 209,
+      "distance": 61
+    },
+    {
+      "time": "2026-10-30T04:27:09.300857000+0800",
+      "up": 1465816,
+      "recovery": 0,
+      "speed": [
+        44.8,
+        34.7
+      ],
+      "target": [
+        44,
+        24
+      ],
+      "adc_barcode": 214,
+      "distance": 63
+    },
+    {
+      "time": "2026-10-30T04:27:09.350018000+0800",
+      "up": 1465866,
+      "recovery": 0,
+      "speed": [
+        38.5,
+        34.0
+      ],
+      "target": [
+        42,
+        35
+      ],
+      "adc_barcode": 366,
+      "distance": 65
+    },
+    {
+      "time": "2026-10-30T04:27:09.401099000+0800",
+      "up": 1465917,
+      "recovery": 0,
+      "speed": [
+        36.6,
+        38.6
+      ],
+      "target": [
+        45,
+        37
+      ],
+      "adc_barcode": 1643,
+      "distance": 66
+    },
+    {
+      "time": "2026-10-30T04:27:09.450697000+0800",
+      "up": 1465967,
+      "recovery": 0,
+      "speed": [
+        40.7,
+        45.1
+      ],
+      "target": [
+        45,
+        24
+      ],
+      "adc_barcode": 1776,
+      "distance": 69
+    },
+    {
+      "time": "2026-10-30T04:27:09.501530000+0800",
+      "up": 1466018,
+      "recovery": 0,
+      "speed": [
+        45.4,
+        44.5
+      ],
+      "target": [
+        45,
+        17
+      ],
+      "adc_barcode": 278,
+      "distance": 71
+    },
+    {
+      "time": "2026-10-30T04:27:09.554967000+0800",
+      "up": 1466069,
+      "recovery": 0,
+      "speed": [
+        42.9,
+        30.1
+      ],
+      "target": [
+        42,
+        28
+      ],
+      "adc_barcode": 203,
+      "distance": 73
+    },
+    {
+      "time": "2026-10-30T04:27:09.604408000+0800",
+      "up": 1466120,
+      "recovery": 0,
+      "speed": [
+        38.2,
+        34.6
+      ],
+      "target": [
+        44,
+        36
+      ],
+      "adc_barcode": 204,
+      "distance": 75
+    },
+    {
+      "time": "2026-10-30T04:27:09.654858000+0800",
+      "up": 1466170,
+      "recovery": 0,
+      "speed": [
+        39.1,
+        40.2
+      ],
+      "target": [
+        45,
+        35
+      ],
+      "adc_barcode": 206,
+      "distance": 77
+    },
+    {
+      "time": "2026-10-30T04:27:09.703901000+0800",
+      "up": 1466221,
+      "recovery": 0,
+      "speed": [
+        45.2,
+        50.5
+      ],
+      "target": [
+        45,
+        24
+      ],
+      "adc_barcode": 185,
+      "distance": 79
+    },
+    {
+      "time": "2026-10-30T04:27:09.756864000+0800",
+      "up": 1466273,
+      "recovery": 0,
+      "speed": [
+        48.9,
+        45.4
+      ],
+      "target": [
+        45,
+        17
+      ],
+      "adc_barcode": 174,
+      "distance": 82
+    },
+    {
+      "time": "2026-10-30T04:27:09.814039000+0800",
+      "up": 1466324,
+      "recovery": 0,
+      "speed": [
+        47.9,
+        35.5
+      ],
+      "target": [
+        42,
+        30
+      ],
+      "adc_barcode": 174,
+      "distance": 84
+    },
+    {
+      "time": "2026-10-30T04:27:09.859228000+0800",
+      "up": 1466374,
+      "recovery": 0,
+      "speed": [
+        39.5,
+        33.0
+      ],
+      "target": [
+        41,
+        39
+      ],
+      "adc_barcode": 183,
+      "distance": 85
+    },
+    {
+      "time": "2026-10-30T04:27:09.908092000+0800",
+      "up": 1466424,
+      "recovery": 0,
+      "speed": [
+        37.0,
+        39.3
+      ],
+      "target": [
+        45,
+        43
+      ],
+      "adc_barcode": 199,
+      "distance": 87
+    },
+    {
+      "time": "2026-10-30T04:27:09.960161000+0800",
+      "up": 1466475,
+      "recovery": 0,
+      "speed": [
+        41.4,
+        50.2
+      ],
+      "target": [
+        45,
+        33
+      ],
+      "adc_barcode": 209,
+      "distance": 89
+    },
+    {
+      "time": "2026-10-30T04:27:10.012240000+0800",
+      "up": 1466526,
+      "recovery": 0,
+      "speed": [
+        49.3,
+        54.2
+      ],
+      "target": [
+        45,
+        24
+      ],
+      "adc_barcode": 198,
+      "distance": 92
+    },
+    {
+      "time": "2026-10-30T04:27:10.070383000+0800",
+      "up": 1466576,
+      "recovery": 0,
+      "speed": [
+        51.1,
+        48.6
+      ],
+      "target": [
+        45,
+        25
+      ],
+      "adc_barcode": 218,
+      "distance": 94
+    },
+    {
+      "time": "2026-10-30T04:27:10.118929000+0800",
+      "up": 1466626,
+      "recovery": 0,
+      "speed": [
+        47.3,
+        41.9
+      ],
+      "target": [
+        45,
+        25
+      ],
+      "adc_barcode": 204,
+      "distance": 97
+    },
+    {
+      "time": "2026-10-30T04:27:10.193826000+0800",
+      "up": 1466677,
+      "recovery": 0,
+      "speed": [
+        43.4,
+        39.4
+      ],
+      "target": [
+        45,
+        23
+      ],
+      "adc_barcode": 201,
+      "distance": 99
+    },
+    {
+      "time": "2026-10-30T04:27:10.211951000+0800",
+      "up": 1466727,
+      "recovery": 0,
+      "speed": [
+        39.2,
+        37.0
+      ],
+      "target": [
+        45,
+        23
+      ],
+      "adc_barcode": 218,
+      "distance": 101
+    },
+    {
+      "time": "2026-10-30T04:27:10.264426000+0800",
+      "up": 1466777,
+      "recovery": 0,
+      "speed": [
+        40.4,
+        32.8
+      ],
+      "target": [
+        45,
+        27
+      ],
+      "adc_barcode": 202,
+      "distance": 102
+    },
+    {
+      "time": "2026-10-30T04:27:10.311222000+0800",
+      "up": 1466828,
+      "recovery": 0,
+      "speed": [
+        38.9,
+        38.6
+      ],
+      "target": [
+        45,
+        31
+      ],
+      "adc_barcode": 206,
+      "distance": 104
+    },
+    {
+      "time": "2026-10-30T04:27:10.362869000+0800",
+      "up": 1466878,
+      "recovery": 0,
+      "speed": [
+        40.1,
+        40.0
+      ],
+      "target": [
+        44,
+        15
+      ],
+      "adc_barcode": 257,
+      "distance": 107
+    },
+    {
+      "time": "2026-10-30T04:27:10.413765000+0800",
+      "up": 1466929,
+      "recovery": 0,
+      "speed": [
+        40.6,
+        31.7
+      ],
+      "target": [
+        35,
+        13
+      ],
+      "adc_barcode": 1476,
+      "distance": 109
+    },
+    {
+      "time": "2026-10-30T04:27:10.467546000+0800",
+      "up": 1466979,
+      "recovery": 0,
+      "speed": [
+        33.6,
+        23.5
+      ],
+      "target": [
+        32,
+        26
+      ],
+      "adc_barcode": 1697,
+      "distance": 110
+    },
+    {
+      "time": "2026-10-30T04:27:10.516555000+0800",
+      "up": 1467033,
+      "recovery": 0,
+      "speed": [
+        18.9,
+        25.4
+      ],
+      "target": [
+        36,
+        33
+      ],
+      "adc_barcode": 1409,
+      "distance": 111
+    },
+    {
+      "time": "2026-10-30T04:27:10.581032000+0800",
+      "up": 1467084,
+      "recovery": 0,
+      "speed": [
+        19.9,
+        30.0
+      ],
+      "target": [
+        37,
+        17
+      ],
+      "adc_barcode": 590,
+      "distance": 112
+    },
+    {
+      "time": "2026-10-30T04:27:10.623058000+0800",
+      "up": 1467137,
+      "recovery": 0,
+      "speed": [
+        27.7,
+        26.8
+      ],
+      "target": [
+        38,
+        23
+      ],
+      "adc_barcode": 232,
+      "distance": 114
+    },
+    {
+      "time": "2026-10-30T04:27:10.700602000+0800",
+      "up": 1467187,
+      "recovery": 0,
+      "speed": [
+        30.7,
+        27.6
+      ],
+      "target": [
+        38,
+        14
+      ],
+      "adc_barcode": 205,
+      "distance": 115
+    },
+    {
+      "time": "2026-10-30T04:27:10.723048000+0800",
+      "up": 1467238,
+      "recovery": 0,
+      "speed": [
+        29.2,
+        22.7
+      ],
+      "target": [
+        33,
+        14
+      ],
+      "adc_barcode": 200,
+      "distance": 117
+    },
+    {
+      "time": "2026-10-30T04:27:10.774515000+0800",
+      "up": 1467288,
+      "recovery": 0,
+      "speed": [
+        20.4,
+        20.8
+      ],
+      "target": [
+        33,
+        24
+      ],
+      "adc_barcode": 211,
+      "distance": 118
+    },
+    {
+      "time": "2026-10-30T04:27:10.823494000+0800",
+      "up": 1467339,
+      "recovery": 0,
+      "speed": [
+        19.4,
+        23.6
+      ],
+      "target": [
+        41,
+        26
+      ],
+      "adc_barcode": 214,
+      "distance": 119
+    },
+    {
+      "time": "2026-10-30T04:27:10.879002000+0800",
+      "up": 1467389,
+      "recovery": 0,
+      "speed": [
+        28.0,
+        28.1
+      ],
+      "target": [
+        45,
+        23
+      ],
+      "adc_barcode": 208,
+      "distance": 120
+    },
+    {
+      "time": "2026-10-30T04:27:10.923815000+0800",
+      "up": 1467440,
+      "recovery": 0,
+      "speed": [
+        32.6,
+        29.5
+      ],
+      "target": [
+        45,
+        24
+      ],
+      "adc_barcode": 182,
+      "distance": 122
+    },
+    {
+      "time": "2026-10-30T04:27:10.980500000+0800",
+      "up": 1467490,
+      "recovery": 0,
+      "speed": [
+        36.6,
+        30.4
+      ],
+      "target": [
+        44,
+        35
+      ],
+      "adc_barcode": 174,
+      "distance": 123
+    },
+    {
+      "time": "2026-10-30T04:27:11.024404000+0800",
+      "up": 1467540,
+      "recovery": 0,
+      "speed": [
+        37.3,
+        38.7
+      ],
+      "target": [
+        45,
+        37
+      ],
+      "adc_barcode": 171,
+      "distance": 125
+    },
+    {
+      "time": "2026-10-30T04:27:11.082853000+0800",
+      "up": 1467592,
+      "recovery": 0,
+      "speed": [
+        44.6,
+        50.4
+      ],
+      "target": [
+        45,
+        26
+      ],
+      "adc_barcode": 177,
+      "distance": 128
+    },
+    {
+      "time": "2026-10-30T04:27:11.129184000+0800",
+      "up": 1467642,
+      "recovery": 0,
+      "speed": [
+        56.7,
+        49.5
+      ],
+      "target": [
+        44,
+        33
+      ],
+      "adc_barcode": 245,
+      "distance": 130
+    },
+    {
+      "time": "2026-10-30T04:27:11.199842000+0800",
+      "up": 1467693,
+      "recovery": 0,
+      "speed": [
+        56.7,
+        50.7
+      ],
+      "target": [
+        43,
+        44
+      ],
+      "adc_barcode": 1924,
+      "distance": 133
+    },
+    {
+      "time": "2026-10-30T04:27:11.228464000+0800",
+      "up": 1467743,
+      "recovery": 0,
+      "speed": [
+        58.9,
+        59.8
+      ],
+      "target": [
+        45,
+        45
+      ],
+      "adc_barcode": 285,
+      "distance": 136
+    },
+    {
+      "time": "2026-10-30T04:27:11.292721000+0800",
+      "up": 1467795,
+      "recovery": 0,
+      "speed": [
+        57.0,
+        68.8
+      ],
+      "target": [
+        45,
+        33
+      ],
+      "adc_barcode": 196,
+      "distance": 139
+    },
+    {
+      "time": "2026-10-30T04:27:11.330351000+0800",
+      "up": 1467845,
+      "recovery": 0,
+      "speed": [
+        57.1,
+        65.3
+      ],
+      "target": [
+        45,
+        28
+      ],
+      "adc_barcode": 219,
+      "distance": 143
+    },
+    {
+      "time": "2026-10-30T04:27:11.392434000+0800",
+      "up": 1467896,
+      "recovery": 0,
+      "speed": [
+        55.6,
+        55.2
+      ],
+      "target": [
+        45,
+        28
+      ],
+      "adc_barcode": 198,
+      "distance": 145
+    },
+    {
+      "time": "2026-10-30T04:27:11.430174000+0800",
+      "up": 1467946,
+      "recovery": 0,
+      "speed": [
+        51.0,
+        45.5
+      ],
+      "target": [
+        45,
+        28
+      ],
+      "adc_barcode": 224,
+      "distance": 148
+    },
+    {
+      "time": "2026-10-30T04:27:11.489249000+0800",
+      "up": 1467997,
+      "recovery": 0,
+      "speed": [
+        47.6,
+        44.0
+      ],
+      "target": [
+        45,
+        22
+      ],
+      "adc_barcode": 1149,
+      "distance": 150
+    },
+    {
+      "time": "2026-10-30T04:27:11.531208000+0800",
+      "up": 1468047,
+      "recovery": 0,
+      "speed": [
+        45.4,
+        37.9
+      ],
+      "target": [
+        34,
+        16
+      ],
+      "adc_barcode": 2114,
+      "distance": 152
+    },
+    {
+      "time": "2026-10-30T04:27:11.600307000+0800",
+      "up": 1468098,
+      "recovery": 0,
+      "speed": [
+        33.5,
+        27.8
+      ],
+      "target": [
+        31,
+        29
+      ],
+      "adc_barcode": 1467,
+      "distance": 153
+    },
+    {
+      "time": "2026-10-30T04:27:11.636343000+0800",
+      "up": 1468148,
+      "recovery": 0,
+      "speed": [
+        22.2,
+        27.7
+      ],
+      "target": [
+        37,
+        34
+      ],
+      "adc_barcode": 413,
+      "distance": 155
+    },
+    {
+      "time": "2026-10-30T04:27:11.699581000+0800",
+      "up": 1468198,
+      "recovery": 0,
+      "speed": [
+        23.6,
+        34.4
+      ],
+      "target": [
+        45,
+        34
+      ],
+      "adc_barcode": 226,
+      "distance": 156
+    },
+    {
+      "time": "2026-10-30T04:27:11.734542000+0800",
+      "up": 1468249,
+      "recovery": 0,
+      "speed": [
+        34.2,
+        43.6
+      ],
+      "target": [
+        45,
+        29
+      ],
+      "adc_barcode": 194,
+      "distance": 158
+    },
+    {
+      "time": "2026-10-30T04:27:11.804564000+0800",
+      "up": 1468300,
+      "recovery": 0,
+      "speed": [
+        45.1,
+        44.4
+      ],
+      "target": [
+        45,
+        28
+      ],
+      "adc_barcode": 249,
+      "distance": 161
+    },
+    {
+      "time": "2026-10-30T04:27:11.836043000+0800",
+      "up": 1468351,
+      "recovery": 0,
+      "speed": [
+        49.8,
+        42.2
+      ],
+      "target": [
+        43,
+        19
+      ],
+      "adc_barcode": 1793,
+      "distance": 163
+    },
+    {
+      "time": "2026-10-30T04:27:11.902017000+0800",
+      "up": 1468401,
+      "recovery": 0,
+      "speed": [
+        44.1,
+        36.9
+      ],
+      "target": [
+        33,
+        27
+      ],
+      "adc_barcode": 1742,
+      "distance": 165
+    },
+    {
+      "time": "2026-10-30T04:27:11.938061000+0800",
+      "up": 1468452,
+      "recovery": 0,
+      "speed": [
+        34.0,
+        34.4
+      ],
+      "target": [
+        37,
+        33
+      ],
+      "adc_barcode": 289,
+      "distance": 167
+    },
+    {
+      "time": "2026-10-30T04:27:11.995434000+0800",
+      "up": 1468502,
+      "recovery": 0,
+      "speed": [
+        34.6,
+        39.5
+      ],
+      "target": [
+        45,
+        32
+      ],
+      "adc_barcode": 212,
+      "distance": 168
+    },
+    {
+      "time": "2026-10-30T04:27:12.039797000+0800",
+      "up": 1468552,
+      "recovery": 0,
+      "speed": [
+        41.9,
+        41.5
+      ],
+      "target": [
+        45,
+        25
+      ],
+      "adc_barcode": 198,
+      "distance": 171
+    },
+    {
+      "time": "2026-10-30T04:27:12.097857000+0800",
+      "up": 1468602,
+      "recovery": 0,
+      "speed": [
+        47.2,
+        38.5
+      ],
+      "target": [
+        43,
+        37
+      ],
+      "adc_barcode": 218,
+      "distance": 173
+    },
+    {
+      "time": "2026-10-30T04:27:12.146429000+0800",
+      "up": 1468653,
+      "recovery": 0,
+      "speed": [
+        49.2,
+        48.6
+      ],
+      "target": [
+        45,
+        43
+      ],
+      "adc_barcode": 186,
+      "distance": 175
+    },
+    {
+      "time": "2026-10-30T04:27:12.187802000+0800",
+      "up": 1468704,
+      "recovery": 0,
+      "speed": [
+        48.5,
+        57.4
+      ],
+      "target": [
+        45,
+        29
+      ],
+      "adc_barcode": 174,
+      "distance": 178
+    },
+    {
+      "time": "2026-10-30T04:27:12.238992000+0800",
+      "up": 1468755,
+      "recovery": 0,
+      "speed": [
+        52.9,
+        54.4
+      ],
+      "target": [
+        45,
+        21
+      ],
+      "adc_barcode": 173,
+      "distance": 181
+    },
+    {
+      "time": "2026-10-30T04:27:12.288881000+0800",
+      "up": 1468805,
+      "recovery": 0,
+      "speed": [
+        51.8,
+        43.1
+      ],
+      "target": [
+        45,
+        22
+      ],
+      "adc_barcode": 184,
+      "distance": 183
+    },
+    {
+      "time": "2026-10-30T04:27:12.343448000+0800",
+      "up": 1468856,
+      "recovery": 0,
+      "speed": [
+        47.3,
+        39.3
+      ],
+      "target": [
+        43,
+        33
+      ],
+      "adc_barcode": 210,
+      "distance": 185
+    },
+    {
+      "time": "2026-10-30T04:27:12.390909000+0800",
+      "up": 1468906,
+      "recovery": 0,
+      "speed": [
+        45.8,
+        45.2
+      ],
+      "target": [
+        45,
+        35
+      ],
+      "adc_barcode": 187,
+      "distance": 188
+    },
+    {
+      "time": "2026-10-30T04:27:12.440931000+0800",
+      "up": 1468957,
+      "recovery": 0,
+      "speed": [
+        46.7,
+        46.4
+      ],
+      "target": [
+        45,
+        26
+      ],
+      "adc_barcode": 173,
+      "distance": 190
+    },
+    {
+      "time": "2026-10-30T04:27:12.494445000+0800",
+      "up": 1469007,
+      "recovery": 0,
+      "speed": [
+        48.5,
+        42.4
+      ],
+      "target": [
+        45,
+        26
+      ],
+      "adc_barcode": 173,
+      "distance": 192
+    },
+    {
+      "time": "2026-10-30T04:27:12.543171000+0800",
+      "up": 1469058,
+      "recovery": 0,
+      "speed": [
+        47.5,
+        41.1
+      ],
+      "target": [
+        43,
+        39
+      ],
+      "adc_barcode": 174,
+      "distance": 194
+    },
+    {
+      "time": "2026-10-30T04:27:12.609816000+0800",
+      "up": 1469108,
+      "recovery": 0,
+      "speed": [
+        45.2,
+        44.4
+      ],
+      "target": [
+        45,
+        45
+      ],
+      "adc_barcode": 173,
+      "distance": 197
+    },
+    {
+      "time": "2026-10-30T04:27:12.647456000+0800",
+      "up": 1469158,
+      "recovery": 0,
+      "speed": [
+        48.5,
+        55.6
+      ],
+      "target": [
+        45,
+        38
+      ],
+      "adc_barcode": 177,
+      "distance": 199
+    },
+    {
+      "time": "2026-10-30T04:27:12.692727000+0800",
+      "up": 1469209,
+      "recovery": 0,
+      "speed": [
+        51.4,
+        55.1
+      ],
+      "target": [
+        42,
+        21
+      ],
+      "adc_barcode": 174,
+      "distance": 202
+    },
+    {
+      "time": "2026-10-30T04:27:12.744195000+0800",
+      "up": 1469259,
+      "recovery": 0,
+      "speed": [
+        46.2,
+        42.9
+      ],
+      "target": [
+        37,
+        23
+      ],
+      "adc_barcode": 178,
+      "distance": 204
+    },
+    {
+      "time": "2026-10-30T04:27:12.802877000+0800",
+      "up": 1469312,
+      "recovery": 0,
+      "speed": [
+        38.1,
+        33.0
+      ],
+      "target": [
+        40,
+        17
+      ],
+      "adc_barcode": 173,
+      "distance": 206
+    },
+    {
+      "time": "2026-10-30T04:27:12.847534000+0800",
+      "up": 1469363,
+      "recovery": 0,
+      "speed": [
+        29.0,
+        21.4
+      ],
+      "target": [
+        33,
+        12
+      ],
+      "adc_barcode": 175,
+      "distance": 207
+    },
+    {
+      "time": "2026-10-30T04:27:12.901202000+0800",
+      "up": 1469413,
+      "recovery": 0,
+      "speed": [
+        16.4,
+        15.4
+      ],
+      "target": [
+        31,
+        24
+      ],
+      "adc_barcode": 173,
+      "distance": 208
+    },
+    {
+      "time": "2026-10-30T04:27:12.948575000+0800",
+      "up": 1469464,
+      "recovery": 0,
+      "speed": [
+        8.0,
+        8.9
+      ],
+      "target": [
+        34,
+        32
+      ],
+      "adc_barcode": 175,
+      "distance": 208
+    },
+    {
+      "time": "2026-10-30T04:27:13.036263000+0800",
+      "up": 1469515,
+      "recovery": 0,
+      "speed": [
+        1.9,
+        19.0
+      ],
+      "target": [
+        34,
+        17
+      ],
+      "adc_barcode": 178,
+      "distance": 209
+    },
+    {
+      "time": "2026-10-30T04:27:13.054900000+0800",
+      "up": 1469565,
+      "recovery": 0,
+      "speed": [
+        8.9,
+        12.1
+      ],
+      "target": [
+        38,
+        18
+      ],
+      "adc_barcode": 176,
+      "distance": 209
+    },
+    {
+      "time": "2026-10-30T04:27:13.108196000+0800",
+      "up": 1469615,
+      "recovery": 0,
+      "speed": [
+        19.6,
+        4.3
+      ],
+      "target": [
+        41,
+        18
+      ],
+      "adc_barcode": 178,
+      "distance": 210
+    },
+    {
+      "time": "2026-10-30T04:27:13.161636000+0800",
+      "up": 1469666,
+      "recovery": 0,
+      "speed": [
+        24.1,
+        1.0
+      ],
+      "target": [
+        34,
+        18
+      ],
+      "adc_barcode": 177,
+      "distance": 210
+    },
+    {
+      "time": "2026-10-30T04:27:13.202987000+0800",
+      "up": 1469716,
+      "recovery": 1,
+      "speed": [
+        21.4,
+        3.7
+      ],
+      "target": [
+        35,
+        21
+      ],
+      "adc_barcode": 178,
+      "distance": 211
+    },
+    {
+      "time": "2026-10-30T04:27:13.255893000+0800",
+      "up": 1469766,
+      "recovery": 1,
+      "speed": [
+        16.0,
+        18.4
+      ],
+      "target": [
+        35,
+        21
+      ],
+      "adc_barcode": 175,
+      "distance": 212
+    },
+    {
+      "time": "2026-10-30T04:27:13.299720000+0800",
+      "up": 1469816,
+      "recovery": 1,
+      "speed": [
+        21.0,
+        30.3
+      ],
+      "target": [
+        8,
+        35
+      ],
+      "adc_barcode": 176,
+      "distance": 213
+    },
+    {
+      "time": "2026-10-30T04:27:13.352204000+0800",
+      "up": 1469867,
+      "recovery": 0,
+      "speed": [
+        14.7,
+        31.6
+      ],
+      "target": [
+        23,
+        27
+      ],
+      "adc_barcode": 174,
+      "distance": 214
+    },
+    {
+      "time": "2026-10-30T04:27:13.401474000+0800",
+      "up": 1469917,
+      "recovery": 0,
+      "speed": [
+        21.5,
+        32.1
+      ],
+      "target": [
+        32,
+        28
+      ],
+      "adc_barcode": 176,
+      "distance": 216
+    },
+    {
+      "time": "2026-10-30T04:27:13.452918000+0800",
+      "up": 1469968,
+      "recovery": 0,
+      "speed": [
+        26.1,
+        29.6
+      ],
+      "target": [
+        32,
+        12
+      ],
+      "adc_barcode": 174,
+      "distance": 217
+    },
+    {
+      "time": "2026-10-30T04:27:13.502071000+0800",
+      "up": 1470018,
+      "recovery": 0,
+      "speed": [
+        27.7,
+        21.6
+      ],
+      "target": [
+        29,
+        23
+      ],
+      "adc_barcode": 176,
+      "distance": 219
+    },
+    {
+      "time": "2026-10-30T04:27:13.558293000+0800",
+      "up": 1470069,
+      "recovery": 0,
+      "speed": [
+        27.8,
+        24.3
+      ],
+      "target": [
+        31,
+        32
+      ],
+      "adc_barcode": 175,
+      "distance": 220
+    },
+    {
+      "time": "2026-10-30T04:27:13.618726000+0800",
+      "up": 1470120,
+      "recovery": 0,
+      "speed": [
+        28.2,
+        33.1
+      ],
+      "target": [
+        37,
+        35
+      ],
+      "adc_barcode": 173,
+      "distance": 221
+    },
+    {
+      "time": "2026-10-30T04:27:13.656192000+0800",
+      "up": 1470171,
+      "recovery": 0,
+      "speed": [
+        35.2,
+        41.6
+      ],
+      "target": [
+        40,
+        41
+      ],
+      "adc_barcode": 176,
+      "distance": 223
+    },
+    {
+      "time": "2026-10-30T04:27:13.704862000+0800",
+      "up": 1470221,
+      "recovery": 0,
+      "speed": [
+        47.5,
+        58.2
+      ],
+      "target": [
+        42,
+        45
+      ],
+      "adc_barcode": 177,
+      "distance": 226
+    },
+    {
+      "time": "2026-10-30T04:27:13.760425000+0800",
+      "up": 1470275,
+      "recovery": 0,
+      "speed": [
+        60.8,
+        74.1
+      ],
+      "target": [
+        44,
+        45
+      ],
+      "adc_barcode": 173,
+      "distance": 230
+    },
+    {
+      "time": "2026-10-30T04:27:13.811539000+0800",
+      "up": 1470325,
+      "recovery": 0,
+      "speed": [
+        64.9,
+        78.2
+      ],
+      "target": [
+        45,
+        38
+      ],
+      "adc_barcode": 177,
+      "distance": 234
+    },
+    {
+      "time": "2026-10-30T04:27:13.858985000+0800",
+      "up": 1470376,
+      "recovery": 0,
+      "speed": [
+        66.9,
+        73.5
+      ],
+      "target": [
+        43,
+        19
+      ],
+      "adc_barcode": 189,
+      "distance": 238
+    },
+    {
+      "time": "2026-10-30T04:27:13.909697000+0800",
+      "up": 1470426,
+      "recovery": 0,
+      "speed": [
+        64.0,
+        54.7
+      ],
+      "target": [
+        35,
+        7
+      ],
+      "adc_barcode": 259,
+      "distance": 240
+    },
+    {
+      "time": "2026-10-30T04:27:13.960857000+0800",
+      "up": 1470476,
+      "recovery": 0,
+      "speed": [
+        47.5,
+        30.7
+      ],
+      "target": [
+        32,
+        3
+      ],
+      "adc_barcode": 1760,
+      "distance": 242
+    },
+    {
+      "time": "2026-10-30T04:27:14.010344000+0800",
+      "up": 1470526,
+      "recovery": 0,
+      "speed": [
+        29.9,
+        12.8
+      ],
+      "target": [
+        31,
+        14
+      ],
+      "adc_barcode": 2335,
+      "distance": 243
+    },
+    {
+      "time": "2026-10-30T04:27:14.062243000+0800",
+      "up": 1470577,
+      "recovery": 0,
+      "speed": [
+        19.1,
+        7.0
+      ],
+      "target": [
+        36,
+        19
+      ],
+      "adc_barcode": 2554,
+      "distance": 244
+    },
+    {
+      "time": "2026-10-30T04:27:14.111290000+0800",
+      "up": 1470627,
+      "recovery": 0,
+      "speed": [
+        19.6,
+        16.8
+      ],
+      "target": [
+        37,
+        10
+      ],
+      "adc_barcode": 2697,
+      "distance": 245
+    }
+  ],
+  "diagnostics": [
+    {
+      "time": "2026-10-30T04:27:07.601369000+0800",
+      "up": 1464080,
+      "threshold": 212,
+      "bank": 11,
+      "decoded": 0,
+      "bad_frames": 0,
+      "unsupported": 0,
+      "max_adc_gap_us": 4348,
+      "max_control_gap_us": 0,
+      "tx_drops": 5318,
+      "rx_drops": 0,
+      "invalid": [
+        0,
+        0
+      ]
+    },
+    {
+      "time": "2026-10-30T04:27:08.573227000+0800",
+      "up": 1465080,
+      "threshold": 212,
+      "bank": 11,
+      "decoded": 0,
+      "bad_frames": 0,
+      "unsupported": 0,
+      "max_adc_gap_us": 6009,
+      "max_control_gap_us": 12865,
+      "tx_drops": 5318,
+      "rx_drops": 0,
+      "invalid": [
+        0,
+        0
+      ]
+    },
+    {
+      "time": "2026-10-30T04:27:09.577383000+0800",
+      "up": 1466081,
+      "threshold": 212,
+      "bank": 11,
+      "decoded": 0,
+      "bad_frames": 0,
+      "unsupported": 0,
+      "max_adc_gap_us": 6685,
+      "max_control_gap_us": 12865,
+      "tx_drops": 5318,
+      "rx_drops": 0,
+      "invalid": [
+        0,
+        0
+      ]
+    },
+    {
+      "time": "2026-10-30T04:27:10.580959000+0800",
+      "up": 1467081,
+      "threshold": 212,
+      "bank": 11,
+      "decoded": 0,
+      "bad_frames": 0,
+      "unsupported": 0,
+      "max_adc_gap_us": 6685,
+      "max_control_gap_us": 12865,
+      "tx_drops": 5318,
+      "rx_drops": 0,
+      "invalid": [
+        0,
+        0
+      ]
+    },
+    {
+      "time": "2026-10-30T04:27:11.586463000+0800",
+      "up": 1468081,
+      "threshold": 212,
+      "bank": 11,
+      "decoded": 0,
+      "bad_frames": 0,
+      "unsupported": 0,
+      "max_adc_gap_us": 6685,
+      "max_control_gap_us": 13061,
+      "tx_drops": 5318,
+      "rx_drops": 0,
+      "invalid": [
+        0,
+        0
+      ]
+    },
+    {
+      "time": "2026-10-30T04:27:12.589711000+0800",
+      "up": 1469081,
+      "threshold": 212,
+      "bank": 11,
+      "decoded": 0,
+      "bad_frames": 0,
+      "unsupported": 0,
+      "max_adc_gap_us": 6685,
+      "max_control_gap_us": 13061,
+      "tx_drops": 5318,
+      "rx_drops": 0,
+      "invalid": [
+        0,
+        0
+      ]
+    },
+    {
+      "time": "2026-10-30T04:27:13.570853000+0800",
+      "up": 1470081,
+      "threshold": 212,
+      "bank": 11,
+      "decoded": 0,
+      "bad_frames": 0,
+      "unsupported": 0,
+      "max_adc_gap_us": 6685,
+      "max_control_gap_us": 13061,
+      "tx_drops": 5318,
+      "rx_drops": 0,
+      "invalid": [
+        0,
+        0
+      ]
+    },
+    {
+      "time": "2026-10-30T04:27:14.166754000+0800",
+      "up": 1470653,
+      "threshold": 212,
+      "bank": 11,
+      "decoded": 0,
+      "bad_frames": 0,
+      "unsupported": 0,
+      "max_adc_gap_us": 6685,
+      "max_control_gap_us": 13183,
+      "tx_drops": 5318,
+      "rx_drops": 0,
+      "invalid": [
+        0,
+        0
+      ]
+    }
+  ],
+  "events": [
+    {
+      "time": "2026-10-30T04:27:07.491457000+0800",
+      "event": 0,
+      "adc_barcode": 177,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:07.539469000+0800",
+      "event": 0,
+      "adc_barcode": 181,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:07.618178000+0800",
+      "event": 0,
+      "adc_barcode": 175,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:07.637852000+0800",
+      "event": 0,
+      "adc_barcode": 176,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:07.709518000+0800",
+      "event": 0,
+      "adc_barcode": 177,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:07.739987000+0800",
+      "event": 0,
+      "adc_barcode": 175,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:07.806896000+0800",
+      "event": 0,
+      "adc_barcode": 175,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:07.840967000+0800",
+      "event": 0,
+      "adc_barcode": 174,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:07.912405000+0800",
+      "event": 0,
+      "adc_barcode": 175,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:07.945777000+0800",
+      "event": 0,
+      "adc_barcode": 176,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:07.991468000+0800",
+      "event": 0,
+      "adc_barcode": 181,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:08.040363000+0800",
+      "event": 0,
+      "adc_barcode": 176,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:08.088265000+0800",
+      "event": 0,
+      "adc_barcode": 177,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:08.146007000+0800",
+      "event": 0,
+      "adc_barcode": 180,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:08.206324000+0800",
+      "event": 0,
+      "adc_barcode": 180,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:08.245877000+0800",
+      "event": 0,
+      "adc_barcode": 178,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:08.308617000+0800",
+      "event": 0,
+      "adc_barcode": 180,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:08.346846000+0800",
+      "event": 0,
+      "adc_barcode": 176,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:08.416416000+0800",
+      "event": 0,
+      "adc_barcode": 179,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:08.448202000+0800",
+      "event": 0,
+      "adc_barcode": 173,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:08.528458000+0800",
+      "event": 0,
+      "adc_barcode": 172,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:08.550502000+0800",
+      "event": 0,
+      "adc_barcode": 169,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:08.606043000+0800",
+      "event": 0,
+      "adc_barcode": 173,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:08.655306000+0800",
+      "event": 0,
+      "adc_barcode": 168,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:08.733149000+0800",
+      "event": 0,
+      "adc_barcode": 170,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:08.755519000+0800",
+      "event": 0,
+      "adc_barcode": 170,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:08.809256000+0800",
+      "event": 0,
+      "adc_barcode": 173,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:08.853912000+0800",
+      "event": 0,
+      "adc_barcode": 184,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:08.907207000+0800",
+      "event": 0,
+      "adc_barcode": 200,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:08.958113000+0800",
+      "event": 0,
+      "adc_barcode": 201,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:09.009523000+0800",
+      "event": 0,
+      "adc_barcode": 212,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:09.056428000+0800",
+      "event": 0,
+      "adc_barcode": 500,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:09.101552000+0800",
+      "event": 0,
+      "adc_barcode": 1812,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:09.150884000+0800",
+      "event": 0,
+      "adc_barcode": 1597,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:09.205456000+0800",
+      "event": 0,
+      "adc_barcode": 283,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:09.259286000+0800",
+      "event": 0,
+      "adc_barcode": 209,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:09.308501000+0800",
+      "event": 0,
+      "adc_barcode": 214,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:09.361918000+0800",
+      "event": 0,
+      "adc_barcode": 366,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:09.409198000+0800",
+      "event": 0,
+      "adc_barcode": 1643,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:09.459323000+0800",
+      "event": 0,
+      "adc_barcode": 1776,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:09.546674000+0800",
+      "event": 0,
+      "adc_barcode": 278,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:09.562913000+0800",
+      "event": 0,
+      "adc_barcode": 203,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:09.614860000+0800",
+      "event": 0,
+      "adc_barcode": 204,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:09.662580000+0800",
+      "event": 0,
+      "adc_barcode": 206,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:09.717525000+0800",
+      "event": 0,
+      "adc_barcode": 185,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:09.764619000+0800",
+      "event": 0,
+      "adc_barcode": 174,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:09.820670000+0800",
+      "event": 0,
+      "adc_barcode": 174,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:09.866893000+0800",
+      "event": 0,
+      "adc_barcode": 183,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:09.922459000+0800",
+      "event": 0,
+      "adc_barcode": 199,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:09.970194000+0800",
+      "event": 0,
+      "adc_barcode": 209,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:10.024118000+0800",
+      "event": 0,
+      "adc_barcode": 198,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:10.082011000+0800",
+      "event": 0,
+      "adc_barcode": 218,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:10.119057000+0800",
+      "event": 0,
+      "adc_barcode": 204,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:10.193882000+0800",
+      "event": 0,
+      "adc_barcode": 201,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:10.235538000+0800",
+      "event": 0,
+      "adc_barcode": 218,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:10.269902000+0800",
+      "event": 0,
+      "adc_barcode": 202,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:10.331150000+0800",
+      "event": 0,
+      "adc_barcode": 206,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:10.370065000+0800",
+      "event": 0,
+      "adc_barcode": 257,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:10.433949000+0800",
+      "event": 0,
+      "adc_barcode": 1476,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:10.474993000+0800",
+      "event": 0,
+      "adc_barcode": 1697,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:10.524034000+0800",
+      "event": 0,
+      "adc_barcode": 1409,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:10.588676000+0800",
+      "event": 0,
+      "adc_barcode": 590,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:10.692836000+0800",
+      "event": 0,
+      "adc_barcode": 232,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:10.700615000+0800",
+      "event": 0,
+      "adc_barcode": 205,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:10.732578000+0800",
+      "event": 0,
+      "adc_barcode": 200,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:10.781850000+0800",
+      "event": 0,
+      "adc_barcode": 211,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:10.843958000+0800",
+      "event": 0,
+      "adc_barcode": 214,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:10.886623000+0800",
+      "event": 0,
+      "adc_barcode": 208,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:10.932206000+0800",
+      "event": 0,
+      "adc_barcode": 182,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:10.991106000+0800",
+      "event": 0,
+      "adc_barcode": 174,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:11.029849000+0800",
+      "event": 0,
+      "adc_barcode": 171,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:11.090986000+0800",
+      "event": 0,
+      "adc_barcode": 177,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:11.129264000+0800",
+      "event": 0,
+      "adc_barcode": 245,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:11.199877000+0800",
+      "event": 0,
+      "adc_barcode": 1924,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:11.238130000+0800",
+      "event": 0,
+      "adc_barcode": 285,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:11.292831000+0800",
+      "event": 0,
+      "adc_barcode": 196,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:11.340410000+0800",
+      "event": 0,
+      "adc_barcode": 219,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:11.401028000+0800",
+      "event": 0,
+      "adc_barcode": 198,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:11.438011000+0800",
+      "event": 0,
+      "adc_barcode": 224,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:11.497878000+0800",
+      "event": 0,
+      "adc_barcode": 1149,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:11.537625000+0800",
+      "event": 0,
+      "adc_barcode": 2114,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:11.600397000+0800",
+      "event": 0,
+      "adc_barcode": 1467,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:11.636453000+0800",
+      "event": 0,
+      "adc_barcode": 413,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:11.706645000+0800",
+      "event": 0,
+      "adc_barcode": 226,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:11.740937000+0800",
+      "event": 0,
+      "adc_barcode": 194,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:11.816852000+0800",
+      "event": 0,
+      "adc_barcode": 249,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:11.843029000+0800",
+      "event": 0,
+      "adc_barcode": 1793,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:11.908687000+0800",
+      "event": 0,
+      "adc_barcode": 1742,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:11.945690000+0800",
+      "event": 0,
+      "adc_barcode": 289,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:12.006839000+0800",
+      "event": 0,
+      "adc_barcode": 212,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:12.078220000+0800",
+      "event": 0,
+      "adc_barcode": 198,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:12.111963000+0800",
+      "event": 0,
+      "adc_barcode": 218,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:12.146540000+0800",
+      "event": 0,
+      "adc_barcode": 186,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:12.205287000+0800",
+      "event": 0,
+      "adc_barcode": 174,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:12.247120000+0800",
+      "event": 0,
+      "adc_barcode": 173,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:12.312467000+0800",
+      "event": 0,
+      "adc_barcode": 184,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:12.351403000+0800",
+      "event": 0,
+      "adc_barcode": 210,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:12.414979000+0800",
+      "event": 0,
+      "adc_barcode": 187,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:12.453840000+0800",
+      "event": 0,
+      "adc_barcode": 173,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:12.522547000+0800",
+      "event": 0,
+      "adc_barcode": 173,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:12.553122000+0800",
+      "event": 0,
+      "adc_barcode": 174,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:12.609860000+0800",
+      "event": 0,
+      "adc_barcode": 173,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:12.647511000+0800",
+      "event": 0,
+      "adc_barcode": 177,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:12.719369000+0800",
+      "event": 0,
+      "adc_barcode": 174,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:12.749469000+0800",
+      "event": 0,
+      "adc_barcode": 178,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:12.827834000+0800",
+      "event": 0,
+      "adc_barcode": 173,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:12.858860000+0800",
+      "event": 0,
+      "adc_barcode": 175,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:12.916878000+0800",
+      "event": 0,
+      "adc_barcode": 173,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:12.956270000+0800",
+      "event": 0,
+      "adc_barcode": 175,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:13.042606000+0800",
+      "event": 0,
+      "adc_barcode": 178,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:13.055003000+0800",
+      "event": 0,
+      "adc_barcode": 176,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:13.131040000+0800",
+      "event": 0,
+      "adc_barcode": 178,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:13.161710000+0800",
+      "event": 0,
+      "adc_barcode": 177,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:13.203016000+0800",
+      "event": 0,
+      "adc_barcode": 178,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:13.265468000+0800",
+      "event": 0,
+      "adc_barcode": 175,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:13.307280000+0800",
+      "event": 0,
+      "adc_barcode": 176,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:13.360436000+0800",
+      "event": 0,
+      "adc_barcode": 174,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:13.413965000+0800",
+      "event": 0,
+      "adc_barcode": 176,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:13.460680000+0800",
+      "event": 0,
+      "adc_barcode": 174,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:13.515198000+0800",
+      "event": 0,
+      "adc_barcode": 176,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:13.564944000+0800",
+      "event": 0,
+      "adc_barcode": 175,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:13.618784000+0800",
+      "event": 0,
+      "adc_barcode": 173,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:13.661967000+0800",
+      "event": 0,
+      "adc_barcode": 176,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:13.712580000+0800",
+      "event": 0,
+      "adc_barcode": 177,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:13.772355000+0800",
+      "event": 0,
+      "adc_barcode": 173,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:13.811731000+0800",
+      "event": 0,
+      "adc_barcode": 177,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:13.866379000+0800",
+      "event": 0,
+      "adc_barcode": 189,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:13.924977000+0800",
+      "event": 0,
+      "adc_barcode": 259,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:13.970916000+0800",
+      "event": 0,
+      "adc_barcode": 1760,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:14.020251000+0800",
+      "event": 0,
+      "adc_barcode": 2335,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:14.073664000+0800",
+      "event": 0,
+      "adc_barcode": 2554,
+      "last_letter": "-",
+      "pending": "-"
+    },
+    {
+      "time": "2026-10-30T04:27:14.130636000+0800",
+      "event": 0,
+      "adc_barcode": 2697,
+      "last_letter": "-",
+      "pending": "-"
+    }
+  ],
+  "raw_frames": [
+    {
+      "time": "2026-10-30T04:27:07.476560000+0800",
+      "hex": "922d36b95616000d21000007000a01020000000000000000000000000067097604b100a9021501ffff013f0100002001"
+    },
+    {
+      "time": "2026-10-30T04:27:07.491457000+0800",
+      "hex": "a21536b95616000067097604b100a9021501000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:07.525973000+0800",
+      "hex": "922d37eb5616000d21000007000a0102000000000000000000000000006a097d04b500aa021701ffff013f0100002001"
+    },
+    {
+      "time": "2026-10-30T04:27:07.539469000+0800",
+      "hex": "a21537eb561600006a097d04b500aa021701000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:07.560236000+0800",
+      "hex": "b2173d0d5716000000000000000000150000000000030000000c"
+    },
+    {
+      "time": "2026-10-30T04:27:07.568268000+0800",
+      "hex": "b2173e0d5716000000000000000000150000000000030000000d"
+    },
+    {
+      "time": "2026-10-30T04:27:07.568370000+0800",
+      "hex": "b2173f0c57160001000000000000001500000000000300000000"
+    },
+    {
+      "time": "2026-10-30T04:27:07.601261000+0800",
+      "hex": "b217401057160000000000000000001500000000000300000000"
+    },
+    {
+      "time": "2026-10-30T04:27:07.601369000+0800",
+      "hex": "e23c0310571600d4000b0c00000000000000000000000000000000000000000000000000000000fc10000000000000c6140000000000000000000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:07.618130000+0800",
+      "hex": "922d381e5716001200000008000a01070000000000000002000000000069097804af00a9021601ffff01000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:07.618178000+0800",
+      "hex": "a215381e5716000069097804af00a9021601000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:07.628625000+0800",
+      "hex": "922d39505716004400000008000a0107000000000000000c000000260066097904b000aa021701ffff01000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:07.637852000+0800",
+      "hex": "a21539505716000066097904b000aa021701000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:07.680073000+0800",
+      "hex": "922d3a825716007600000008000a010700000000000400130011004e0069097d04b100aa021701ffff01000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:07.709518000+0800",
+      "hex": "a2153a825716000069097d04b100aa021701000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:07.728936000+0800",
+      "hex": "922d3bb5571600a900000008000a0107000000000008001800240076006f097a04af00a8021701ffff01000000000400"
+    },
+    {
+      "time": "2026-10-30T04:27:07.739987000+0800",
+      "hex": "a2153bb5571600006f097a04af00a8021701000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:07.781935000+0800",
+      "hex": "922d3ce7571600db00000008000a010700290000000d001e0036009c006b097704af00a8021401ffff01000000001100"
+    },
+    {
+      "time": "2026-10-30T04:27:07.806896000+0800",
+      "hex": "a2153ce7571600006b097704af00a8021401000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:07.828734000+0800",
+      "hex": "922d3d1a5816000e01000008000a0107001e000000110023004a00be0062096904ae00a8021201ffff01000000001900"
+    },
+    {
+      "time": "2026-10-30T04:27:07.840967000+0800",
+      "hex": "a2153d1a5816000062096904ae00a8021201000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:07.886036000+0800",
+      "hex": "922d3e4c5816004001000008000a01070007000000160029006500fd0060096f04af00a8021301ffff01000000001900"
+    },
+    {
+      "time": "2026-10-30T04:27:07.912405000+0800",
+      "hex": "a2153e4c5816000060096f04af00a8021301000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:07.932210000+0800",
+      "hex": "922d3f7f5816007301000008000a01070038009d001c002d007e002b0118083005b00089021301ffff0100000000f4ff"
+    },
+    {
+      "time": "2026-10-30T04:27:07.945777000+0800",
+      "hex": "a2153f7f5816000018083005b00089021301000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:07.985563000+0800",
+      "hex": "922d40b2581600a601000008000a0107002c01c4012a002a008a000001b9009c03b50001015001ffff0002000000cfff"
+    },
+    {
+      "time": "2026-10-30T04:27:07.991468000+0800",
+      "hex": "a21540b258160000b9009c03b50001015001000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:08.032969000+0800",
+      "hex": "922d41e5581600d901000008000a010700a601ef012f0023009f00e400ce008308b0002d003001ffff0005000000bfff"
+    },
+    {
+      "time": "2026-10-30T04:27:08.040363000+0800",
+      "hex": "a21541e558160000ce008308b0002d003001000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:08.079394000+0800",
+      "hex": "f21c701359160000a10000000000000000800001001308000c640100000000"
+    },
+    {
+      "time": "2026-10-30T04:27:08.088174000+0800",
+      "hex": "922d42185916000c02000008000a0107001c0266022e001b009e00ae00c6007e07b10011001902ffff0208000000aaff"
+    },
+    {
+      "time": "2026-10-30T04:27:08.088265000+0800",
+      "hex": "a215421859160000c6007e07b10011001902000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:08.138201000+0800",
+      "hex": "922d434d5916004102000008000a0107001d025d022f001900a1009f00cb007908b4000d001702ffff020b00000092ff"
+    },
+    {
+      "time": "2026-10-30T04:27:08.146007000+0800",
+      "hex": "a215434d59160000cb007908b4000d001702000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:08.191617000+0800",
+      "hex": "922d44805916007402000008000a010700420232022f0017009c009400cf009208b4000c004502ffff020e0000009eff"
+    },
+    {
+      "time": "2026-10-30T04:27:08.206324000+0800",
+      "hex": "a215448059160000cf009208b4000c004502000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:08.238607000+0800",
+      "hex": "922d45b3591600a702000008000a0107001d02dc0130001600a3009300cb00bc08b2000c004502ffff0210000000bbff"
+    },
+    {
+      "time": "2026-10-30T04:27:08.245877000+0800",
+      "hex": "a21545b359160000cb00bc08b2000c004502000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:08.290905000+0800",
+      "hex": "922d46e6591600da02000008000a0107000902b20130001700a4009900ce00f707b4000c003002ffff0213000000d0ff"
+    },
+    {
+      "time": "2026-10-30T04:27:08.308617000+0800",
+      "hex": "a21546e659160000ce00f707b4000c003002000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:08.341413000+0800",
+      "hex": "922d47195a16000d03000008000a010700e401ae0131001800ab009b00ce00b907b0000d001002ffff0215000000e1ff"
+    },
+    {
+      "time": "2026-10-30T04:27:08.346846000+0800",
+      "hex": "a21547195a160000ce00b907b0000d001002000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:08.397782000+0800",
+      "hex": "922d484c5a16004003000008000a010700f001a60131001800aa009900ce007707b3000d000502ffff0218000000f6ff"
+    },
+    {
+      "time": "2026-10-30T04:27:08.416416000+0800",
+      "hex": "a215484c5a160000ce007707b3000d000502000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:08.442489000+0800",
+      "hex": "922d497e5a16007203000008000a010700e901a70132001b00af00a600cc00e507ad000c00e801ffff021a0000000f00"
+    },
+    {
+      "time": "2026-10-30T04:27:08.448202000+0800",
+      "hex": "a215497e5a160000cc00e507ad000c00e801000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:08.498625000+0800",
+      "hex": "922d4ab15a1600a503000008000a0107000302b00132001a00ad009d00cc009907ac000b00f301ffff021c0000002800"
+    },
+    {
+      "time": "2026-10-30T04:27:08.528458000+0800",
+      "hex": "a2154ab15a160000cc009907ac000b00f301000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:08.544225000+0800",
+      "hex": "922d4be35a1600d703000008000a0107001002bb0132001900ab009400c2000108a9000a00fe01ffff021f0000003c00"
+    },
+    {
+      "time": "2026-10-30T04:27:08.550502000+0800",
+      "hex": "a2154be35a160000c2000108a9000a00fe01000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:08.573164000+0800",
+      "hex": "b21741f85a160000000000000000001500000000000300000000"
+    },
+    {
+      "time": "2026-10-30T04:27:08.573227000+0800",
+      "hex": "e23c04f85a1600d4000b0c000000000000000000000000000000000000000000000000000000007917000041320000c6140000000000000000000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:08.573255000+0800",
+      "hex": "b21742fe5a16000000000000000000150000000000030000000c"
+    },
+    {
+      "time": "2026-10-30T04:27:08.599812000+0800",
+      "hex": "f21c71075b160000a90000000000000000020005fe1801010c620000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:08.605981000+0800",
+      "hex": "922d4c165b16000a04000008000a01070005027f0132001900ab009800c3005907ad000800fc01ffff02210000005e00"
+    },
+    {
+      "time": "2026-10-30T04:27:08.606043000+0800",
+      "hex": "a2154c165b160000c3005907ad000800fc01000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:08.643804000+0800",
+      "hex": "922d4d485b16003c04000008000a010700f101760132001a00ad009c00c6008d07a8000a00f001ffff02230000007700"
+    },
+    {
+      "time": "2026-10-30T04:27:08.655306000+0800",
+      "hex": "a2154d485b160000c6008d07a8000a00f001000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:08.702593000+0800",
+      "hex": "922d4e7c5b16007004000008000a010700dd01890131001800ab008e00af00ca07aa000500fa01ffff02250000008b00"
+    },
+    {
+      "time": "2026-10-30T04:27:08.733149000+0800",
+      "hex": "a2154e7c5b160000af00ca07aa000500fa01000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:08.747349000+0800",
+      "hex": "922d4fae5b1600a204000008000a010700ed01790131001800aa008d00b3009807aa0003000402ffff0228000000ad00"
+    },
+    {
+      "time": "2026-10-30T04:27:08.755519000+0800",
+      "hex": "a2154fae5b160000b3009807aa0003000402000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:08.797373000+0800",
+      "hex": "922d50e15b1600d504000008000a010700d601570132001a00b1009900e2006707ad000d00f701ffff022a000000ca00"
+    },
+    {
+      "time": "2026-10-30T04:27:08.809256000+0800",
+      "hex": "a21550e15b160000e2006707ad000d00f701000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:08.846268000+0800",
+      "hex": "922d51135c16000705000008000a010700be016a0131002000af00ac001902db06b8004000d901ffff022c000000de00"
+    },
+    {
+      "time": "2026-10-30T04:27:08.853912000+0800",
+      "hex": "a21551135c1600001902db06b8004000d901000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:08.897331000+0800",
+      "hex": "922d52465c16003905000008000a010700c20188012d0026009e00cc00a304f106c800fe00c601ffff022e000000ef00"
+    },
+    {
+      "time": "2026-10-30T04:27:08.907207000+0800",
+      "hex": "a21552465c160000a304f106c800fe00c601000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:08.950036000+0800",
+      "hex": "922d53785c16006c05000008000a010700b501d1012d002700a000cc0004040707c9002601c801ffff0230000000df00"
+    },
+    {
+      "time": "2026-10-30T04:27:08.958113000+0800",
+      "hex": "a21553785c16000004040707c9002601c801000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:08.997336000+0800",
+      "hex": "922d54aa5c16009e05000008000a010700d0011b022d001c009d0095000b017507d4006600e101ffff0233000000c600"
+    },
+    {
+      "time": "2026-10-30T04:27:09.009523000+0800",
+      "hex": "a21554aa5c1600000b017507d4006600e101000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:09.048775000+0800",
+      "hex": "922d55dc5c1600d005000008000a010700d601b6012d0014009c0074000a015408f40123001902ffff0635000000d700"
+    },
+    {
+      "time": "2026-10-30T04:27:09.056428000+0800",
+      "hex": "a21555dc5c1600000a015408f40123001902000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:09.087421000+0800",
+      "hex": "f21c72025d160000a90000000000000000000002fe19000008400000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:09.101406000+0800",
+      "hex": "922d560e5d16000206000008000a010700c4014d012b001e0095009a0048040c081407bb001702ffff0637000000fc00"
+    },
+    {
+      "time": "2026-10-30T04:27:09.101552000+0800",
+      "hex": "a215560e5d16000048040c081407bb001702000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:09.150774000+0800",
+      "hex": "922d57405d16003406000008000a0107006b0148012c002700a200c000b105c1073d0665010102ffff0639000000fc00"
+    },
+    {
+      "time": "2026-10-30T04:27:09.150884000+0800",
+      "hex": "a21557405d160000b105c1073d0665010102000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:09.200206000+0800",
+      "hex": "922d58735d16006706000008000a0107006c01a9012d002100a800b9000f0293071b01e500fd01ffff063b000000e800"
+    },
+    {
+      "time": "2026-10-30T04:27:09.205456000+0800",
+      "hex": "a21558735d1600000f0293071b01e500fd01000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:09.249463000+0800",
+      "hex": "922d59a55d16009906000008000a0107009201c4012d001300a5007d00fc00d508d10034003f02ffff023d000000e000"
+    },
+    {
+      "time": "2026-10-30T04:27:09.259286000+0800",
+      "hex": "a21559a55d160000fc00d508d10034003f02000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:09.300857000+0800",
+      "hex": "922d5ad85d1600cc06000008000a010700c0015b012c0018009d008900c5039e08d6008d004902ffff023f000000fd00"
+    },
+    {
+      "time": "2026-10-30T04:27:09.308501000+0800",
+      "hex": "a2155ad85d160000c5039e08d6008d004902000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:09.350018000+0800",
+      "hex": "922d5b0a5e1600fe06000008000a010700810154012a0023009a00ae00360694086e0180013f02ffff06410000000901"
+    },
+    {
+      "time": "2026-10-30T04:27:09.361918000+0800",
+      "hex": "a2155b0a5e160000360694086e0180013f02000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:09.401099000+0800",
+      "hex": "922d5c3d5e16003107000008000a0107006e0182012d002500aa00cf0037055c086b0685013e02ffff06420000000101"
+    },
+    {
+      "time": "2026-10-30T04:27:09.409198000+0800",
+      "hex": "a2155c3d5e16000037055c086b0685013e02000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:09.450697000+0800",
+      "hex": "922d5d6f5e16006307000008000a0107009701c3012d001800a700a00030014d09f00695005202ffff0645000000f100"
+    },
+    {
+      "time": "2026-10-30T04:27:09.459323000+0800",
+      "hex": "a2155d6f5e16000030014d09f00695005202000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:09.501530000+0800",
+      "hex": "922d5ea25e16009607000008000a010700c601bd012d001100a3006d002e012f09160133007602ffff0647000000fa00"
+    },
+    {
+      "time": "2026-10-30T04:27:09.546674000+0800",
+      "hex": "a2155ea25e1600002e012f09160133007602000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:09.554967000+0800",
+      "hex": "922d5fd55e1600c907000008000a010700ad012d012a001c009800970018055309cb0008017702ffff02490000002301"
+    },
+    {
+      "time": "2026-10-30T04:27:09.562913000+0800",
+      "hex": "a2155fd55e16000018055309cb0008017702000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:09.577358000+0800",
+      "hex": "b21743e15e160000000000000000001500000000000300000000"
+    },
+    {
+      "time": "2026-10-30T04:27:09.577383000+0800",
+      "hex": "e23c05e15e1600d4000b0d000000000000000000000000000000000000000000000000000000001d1a000041320000c6140000000000000000000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:09.577402000+0800",
+      "hex": "b21744e85e16000000000000000000150000000000030000000c"
+    },
+    {
+      "time": "2026-10-30T04:27:09.591833000+0800",
+      "hex": "f21c73fc5e160000a90000000000000000010002fe1801000d440000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:09.604408000+0800",
+      "hex": "922d60085f1600fc07000008000a0107007e015a012c002400a600b800cd05b508cc007e015402ffff024b0000002f01"
+    },
+    {
+      "time": "2026-10-30T04:27:09.614860000+0800",
+      "hex": "a21560085f160000cd05b508cc007e015402000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:09.654858000+0800",
+      "hex": "922d613a5f16002e08000008000a010700870192012d002300aa00c7007b051509ce007b015602ffff024d0000002301"
+    },
+    {
+      "time": "2026-10-30T04:27:09.662580000+0800",
+      "hex": "a215613a5f1600007b051509ce007b015602000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:09.703901000+0800",
+      "hex": "922d626d5f16006008000008000a010700c401f9012d001800a4009c0052014d09b900a4006502ffff024f0000000f01"
+    },
+    {
+      "time": "2026-10-30T04:27:09.717525000+0800",
+      "hex": "a215626d5f16000052014d09b900a4006502000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:09.756864000+0800",
+      "hex": "922d63a15f16009508000008000a010700e901c6012d001100a1006d006a018109ae003f008302ffff02520000002401"
+    },
+    {
+      "time": "2026-10-30T04:27:09.764619000+0800",
+      "hex": "a21563a15f1600006a018109ae003f008302000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:09.814039000+0800",
+      "hex": "922d64d45f1600c808000008000a010700df0163012a001e0094009700fa05fb08ae0040017b02ffff02540000004501"
+    },
+    {
+      "time": "2026-10-30T04:27:09.820670000+0800",
+      "hex": "a21564d45f160000fa05fb08ae0040017b02000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:09.859228000+0800",
+      "hex": "922d6506601600fa08000008000a0107008b014a01290027009800b800b906fb07b700b0012802ffff03550000005601"
+    },
+    {
+      "time": "2026-10-30T04:27:09.866893000+0800",
+      "hex": "a215650660160000b906fb07b700b0012802000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:09.908092000+0800",
+      "hex": "922d66386016002c09000008000a010700720189012d002b00ac00d80013058207c7009301fc01ffff03570000003d01"
+    },
+    {
+      "time": "2026-10-30T04:27:09.922459000+0800",
+      "hex": "a21566386016000013058207c7009301fc01000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:09.960161000+0800",
+      "hex": "922d676b6016005f09000008000a0107009e01f6012d002100a900c200f1005308d1009200ed01ffff02590000002001"
+    },
+    {
+      "time": "2026-10-30T04:27:09.970194000+0800",
+      "hex": "a215676b60160000f1005308d1009200ed01000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:10.012240000+0800",
+      "hex": "922d689e6016009209000008000a010700ed011e022d001800a1009000a9001c08c60018003302ffff025c0000001401"
+    },
+    {
+      "time": "2026-10-30T04:27:10.024118000+0800",
+      "hex": "a215689e60160000a9001c08c60018003302000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:10.070383000+0800",
+      "hex": "922d69d0601600c409000008000a010700ff01e6012d0019009f009700b800e506da000600f201ffff065e0000002501"
+    },
+    {
+      "time": "2026-10-30T04:27:10.082011000+0800",
+      "hex": "a21569d060160000b800e506da000600f201000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:10.102557000+0800",
+      "hex": "f21c74f960160000a90000000000000000010004fe1a00010f4e0000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:10.118929000+0800",
+      "hex": "922d6a02611600f609000008000a010700d901a3012d001900a2009a00cb00f207cc000900ec01ffff02610000002d01"
+    },
+    {
+      "time": "2026-10-30T04:27:10.119057000+0800",
+      "hex": "a2156a0261160000cb00f207cc000900ec01000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:10.193826000+0800",
+      "hex": "922d6b35611600290a000008000a010700b2018a012d001700a6009000de009107c9000d00fe01ffff02630000003601"
+    },
+    {
+      "time": "2026-10-30T04:27:10.193882000+0800",
+      "hex": "a2156b3561160000de009107c9000d00fe01000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:10.211951000+0800",
+      "hex": "922d6c676116005b0a000008000a010700880172012d001700aa0090001001e106da001700ed01ffff06650000004201"
+    },
+    {
+      "time": "2026-10-30T04:27:10.235538000+0800",
+      "hex": "a2156c67611600001001e106da001700ed01000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:10.264426000+0800",
+      "hex": "922d6d996116008d0a000008000a010700940148012d001b00aa00a70081019706ca002a00bd01ffff02660000005301"
+    },
+    {
+      "time": "2026-10-30T04:27:10.269902000+0800",
+      "hex": "a2156d996116000081019706ca002a00bd01000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:10.311222000+0800",
+      "hex": "922d6ecc611600c00a000008000a010700850182012d001f00ac00b400a7010606ce0055009901ffff02680000004f01"
+    },
+    {
+      "time": "2026-10-30T04:27:10.331150000+0800",
+      "hex": "a2156ecc61160000a7010606ce0055009901000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:10.362869000+0800",
+      "hex": "922d6ffe611600f20a000008000a010700910190012c000f00a7008500f8004a06010129008801ffff046b0000005301"
+    },
+    {
+      "time": "2026-10-30T04:27:10.370065000+0800",
+      "hex": "a2156ffe61160000f8004a06010129008801000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:10.413765000+0800",
+      "hex": "922d7031621600250b000008000a01070096013d0123000d00840065000d034f05c40555007a01ffff046d0000007001"
+    },
+    {
+      "time": "2026-10-30T04:27:10.433949000+0800",
+      "hex": "a2157031621600000d034f05c40555007a01000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:10.467546000+0800",
+      "hex": "922d7163621600570b000008000a0107005001eb0020001a0079009100ad043805a10609015c01ffff046e0000008501"
+    },
+    {
+      "time": "2026-10-30T04:27:10.474993000+0800",
+      "hex": "a215716362160000ad043805a10609015c01000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:10.516555000+0800",
+      "hex": "922d72996216008c0b000008000a010700bd00fe00240021009600b50000026005810501015a01ffff046f0000006401"
+    },
+    {
+      "time": "2026-10-30T04:27:10.524034000+0800",
+      "hex": "a21572996216000000026005810501015a01000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:10.580877000+0800",
+      "hex": "b21745c962160000000000000000001500000000000300000000"
+    },
+    {
+      "time": "2026-10-30T04:27:10.580959000+0800",
+      "hex": "e23c06c9621600d4000b0d000000000000000000000000000000000000000000000000000000001d1a000041320000c6140000000000000000000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:10.581032000+0800",
+      "hex": "922d73cc621600c00b000008000a010700c7002c0125001100a0009300d90077064e023a008101ffff04700000004701"
+    },
+    {
+      "time": "2026-10-30T04:27:10.588676000+0800",
+      "hex": "a21573cc62160000d90077064e023a008101000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:10.588857000+0800",
+      "hex": "b21746d76216000000000000000000150000000000030000000c"
+    },
+    {
+      "time": "2026-10-30T04:27:10.609735000+0800",
+      "hex": "f21c75f562160000a90000000000000000fd0006fd18010115460000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:10.623058000+0800",
+      "hex": "922d7401631600f50b000008000a01070015010c01260017009f009b00e5005a06e8001400ae01ffff06720000005001"
+    },
+    {
+      "time": "2026-10-30T04:27:10.692836000+0800",
+      "hex": "a215740163160000e5005a06e8001400ae01000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:10.700602000+0800",
+      "hex": "922d7533631600270c000008000a0107003301140126000e009d0085002001a905cd001f007201ffff00730000006001"
+    },
+    {
+      "time": "2026-10-30T04:27:10.700615000+0800",
+      "hex": "a2157533631600002001a905cd001f007201000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:10.723048000+0800",
+      "hex": "922d76666316005a0c000008000a0107002401e30021000e008a0075004d025706c80055008901ffff00750000006d01"
+    },
+    {
+      "time": "2026-10-30T04:27:10.732578000+0800",
+      "hex": "a2157666631600004d025706c80055008901000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:10.774515000+0800",
+      "hex": "922d77986316008c0c000008000a010700cc00d0002100180094009c0023037e06d300be00a001ffff02760000006d01"
+    },
+    {
+      "time": "2026-10-30T04:27:10.781850000+0800",
+      "hex": "a21577986316000023037e06d300be00a001000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:10.823494000+0800",
+      "hex": "922d78cb631600bf0c000008000a010700c200ec0029001a00b300b40037013007d6006800c801ffff02770000006101"
+    },
+    {
+      "time": "2026-10-30T04:27:10.843958000+0800",
+      "hex": "a21578cb6316000037013007d6006800c801000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:10.879002000+0800",
+      "hex": "922d79fd631600f10c000008000a010700180119012d001700c600a1000901f407d0002500f401ffff02780000006101"
+    },
+    {
+      "time": "2026-10-30T04:27:10.886623000+0800",
+      "hex": "a21579fd631600000901f407d0002500f401000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:10.923815000+0800",
+      "hex": "922d7a30641600240d000008000a010700460127012d001800c3009f000d043e09b600a2005702ffff027a0000006901"
+    },
+    {
+      "time": "2026-10-30T04:27:10.932206000+0800",
+      "hex": "a2157a30641600000d043e09b600a2005702000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:10.980500000+0800",
+      "hex": "922d7b62641600560d000008000a0107006e0130012c002300bc00c30016051d08ae0040013a02ffff027b0000008a01"
+    },
+    {
+      "time": "2026-10-30T04:27:10.991106000+0800",
+      "hex": "a2157b626416000016051d08ae0040013a02000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:11.024404000+0800",
+      "hex": "922d7c94641600880d000008000a010700750183012d002500c100db000f049107ab0052011e02ffff027d0000007201"
+    },
+    {
+      "time": "2026-10-30T04:27:11.029849000+0800",
+      "hex": "a2157c94641600000f049107ab0052011e02000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:11.082853000+0800",
+      "hex": "922d7dc8641600bc0d000008000a010700be01f8012d001a00ba00a80042029808b10077000b02ffff02800000006a01"
+    },
+    {
+      "time": "2026-10-30T04:27:11.090986000+0800",
+      "hex": "a2157dc86416000042029808b10077000b02000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:11.120909000+0800",
+      "hex": "f21c76f164160000a90000000000000000000004fb17030223510000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:11.129184000+0800",
+      "hex": "922d7efa641600ee0d000008000a0107003702ef012c002100a900b6005b05cc07f5000f013802ffff06820000008701"
+    },
+    {
+      "time": "2026-10-30T04:27:11.129264000+0800",
+      "hex": "a2157efa641600005b05cc07f5000f013802000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:11.199842000+0800",
+      "hex": "922d7f2d651600210e000008000a0107003702fb012b002c00a300d8006b0773078407c7010002ffff07850000008f01"
+    },
+    {
+      "time": "2026-10-30T04:27:11.199877000+0800",
+      "hex": "a2157f2d651600006b0773078407c7010002000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:11.228464000+0800",
+      "hex": "922d805f651600530e000008000a0107004d0256022d002d00a700ef003a0483061d01ac01cb01ffff07880000008301"
+    },
+    {
+      "time": "2026-10-30T04:27:11.238130000+0800",
+      "hex": "a215805f651600003a0483061d01ac01cb01000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:11.292721000+0800",
+      "hex": "922d8193651600860e000008000a0107003a02b0022d002100a700b300d9004207c4008100cb01ffff028b0000005a01"
+    },
+    {
+      "time": "2026-10-30T04:27:11.292831000+0800",
+      "hex": "a215819365160000d9004207c4008100cb01000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:11.330351000+0800",
+      "hex": "922d82c5651600b90e000008000a0107003b028d022d001c00a5009900bc002b07db001900d001ffff068f0000005201"
+    },
+    {
+      "time": "2026-10-30T04:27:11.340410000+0800",
+      "hex": "a21582c565160000bc002b07db001900d001000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:11.392434000+0800",
+      "hex": "922d83f8651600ec0e000008000a0107002c0228022d001c00a5009e00c600ad06c6000b00ca01ffff02910000005301"
+    },
+    {
+      "time": "2026-10-30T04:27:11.401028000+0800",
+      "hex": "a21583f865160000c600ad06c6000b00ca01000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:11.430174000+0800",
+      "hex": "922d842a6616001e0f000008000a010700fe01c7012d001c00a800a400f0006206e0000f00ba01ffff06940000006301"
+    },
+    {
+      "time": "2026-10-30T04:27:11.438011000+0800",
+      "hex": "a215842a66160000f0006206e0000f00ba01000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:11.489249000+0800",
+      "hex": "922d855d661600510f000008000a010700dc01b8012d001600ab009600090181057d041c008301ffff04960000007001"
+    },
+    {
+      "time": "2026-10-30T04:27:11.497878000+0800",
+      "hex": "a215855d66160000090181057d041c008301000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:11.531208000+0800",
+      "hex": "922d868f661600830f000008000a010700c6017b012200100085007200de036406420873008601ffff04980000008901"
+    },
+    {
+      "time": "2026-10-30T04:27:11.537625000+0800",
+      "hex": "a215868f66160000de036406420873008601000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:11.585722000+0800",
+      "hex": "b21747b166160000000000000000001500000000000300000000"
+    },
+    {
+      "time": "2026-10-30T04:27:11.586463000+0800",
+      "hex": "e23c07b1661600d4000b0d000000000000000000000000000000000000000000000000000000001d1a000005330000c6140000000000000000000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:11.600307000+0800",
+      "hex": "922d87c2661600b50f000008000a0107004f0116011f001d007b00a00023050e06bb053c019d01ffff06990000009101"
+    },
+    {
+      "time": "2026-10-30T04:27:11.600397000+0800",
+      "hex": "a21587c26616000023050e06bb053c019d01000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:11.600430000+0800",
+      "hex": "b21748c36616000000000000000000150000000000030000000c"
+    },
+    {
+      "time": "2026-10-30T04:27:11.626330000+0800",
+      "hex": "f21c77ed66160000a90000000000000000ff0005fe19000122520000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:11.636343000+0800",
+      "hex": "922d88f4661600e80f000008000a010700de001501250022009e00c80022034b069d0141019f01ffff069b0000007d01"
+    },
+    {
+      "time": "2026-10-30T04:27:11.636453000+0800",
+      "hex": "a21588f46616000022034b069d0141019f01000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:11.699581000+0800",
+      "hex": "922d89266716001a10000008000a010700ec0058012d002200c000ce00e0005506e20055009801ffff069c0000006401"
+    },
+    {
+      "time": "2026-10-30T04:27:11.706645000+0800",
+      "hex": "a215892667160000e0005506e20055009801000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:11.734542000+0800",
+      "hex": "922d8a596716004d10000008000a0107005601b4012d001d00bc00ab00bc001c07c2001400b501ffff029e0000004701"
+    },
+    {
+      "time": "2026-10-30T04:27:11.740937000+0800",
+      "hex": "a2158a5967160000bc001c07c2001400b501000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:11.804564000+0800",
+      "hex": "922d8b8c6716007f10000008000a010700c301bc012d001c00b200a300cc00a006f9000c00be01ffff06a10000005c01"
+    },
+    {
+      "time": "2026-10-30T04:27:11.816852000+0800",
+      "hex": "a2158b8c67160000cc00a006f9000c00be01000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:11.836043000+0800",
+      "hex": "922d8cbf671600b310000008000a010700f201a6012b001300a40084004301e905010722008001ffff04a30000007501"
+    },
+    {
+      "time": "2026-10-30T04:27:11.843029000+0800",
+      "hex": "a2158cbf671600004301e905010722008001000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:11.902017000+0800",
+      "hex": "922d8df1671600e510000008000a010700b901710121001b007e008d0022056a07ce06f100c001ffff06a50000008e01"
+    },
+    {
+      "time": "2026-10-30T04:27:11.908687000+0800",
+      "hex": "a2158df16716000022056a07ce06f100c001000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:11.938061000+0800",
+      "hex": "922d8e246816001811000008000a01070054015801250021009900b5002505b10721016101f001ffff06a70000008601"
+    },
+    {
+      "time": "2026-10-30T04:27:11.945690000+0800",
+      "hex": "a2158e24681600002505b10721016101f001000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:11.995434000+0800",
+      "hex": "922d8f566816004a11000008000a0107005a018b012d002000ba00b8000a025e07d400b100e801ffff06a80000007601"
+    },
+    {
+      "time": "2026-10-30T04:27:12.006839000+0800",
+      "hex": "a2158f56681600000a025e07d400b100e801000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:12.039797000+0800",
+      "hex": "922d90886816007c11000008000a010700a3019f012d001900b600960078017307c6004000ed01ffff02ab0000007e01"
+    },
+    {
+      "time": "2026-10-30T04:27:12.078220000+0800",
+      "hex": "a21590886816000078017307c6004000ed01000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:12.097857000+0800",
+      "hex": "922d91ba681600ae11000008000a010700d80181012b002500a800ba0092046b06da00f100b901ffff06ad0000009701"
+    },
+    {
+      "time": "2026-10-30T04:27:12.111963000+0800",
+      "hex": "a21591ba6816000092046b06da00f100b901000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:12.138905000+0800",
+      "hex": "f21c78eb68160000a90000000000000000010003fe1a00001d460000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:12.146429000+0800",
+      "hex": "922d92ed681600e011000008000a010700ec01e6012d002b00ae00d7000605d506ba004d01b501ffff02af0000009301"
+    },
+    {
+      "time": "2026-10-30T04:27:12.146540000+0800",
+      "hex": "a21592ed681600000605d506ba004d01b501000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:12.187802000+0800",
+      "hex": "922d93206916001412000008000a010700e5013e022d001d00ae00ab00ee001107ae005d00c001ffff02b20000007f01"
+    },
+    {
+      "time": "2026-10-30T04:27:12.205287000+0800",
+      "hex": "a215932069160000ee001107ae005d00c001000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:12.238992000+0800",
+      "hex": "922d94536916004712000008000a010700110220022d001500a9007900ba000108ad001300fe01ffff02b50000007701"
+    },
+    {
+      "time": "2026-10-30T04:27:12.247120000+0800",
+      "hex": "a215945369160000ba000108ad001300fe01000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:12.288881000+0800",
+      "hex": "922d95856916007912000008000a0107000602af012d001600a90085000f018407b8001700f301ffff02b70000009401"
+    },
+    {
+      "time": "2026-10-30T04:27:12.312467000+0800",
+      "hex": "a2159585691600000f018407b8001700f301000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:12.343448000+0800",
+      "hex": "922d96b8691600ac12000008000a010700d90189012b002100a400ac00e603d406d200ad00cf01ffff02b9000000ad01"
+    },
+    {
+      "time": "2026-10-30T04:27:12.351403000+0800",
+      "hex": "a21596b869160000e603d406d200ad00cf01000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:12.390909000+0800",
+      "hex": "922d97ea691600de12000008000a010700ca01c4012d002300ad00c0000603f506bb00d300c801ffff02bc000000ad01"
+    },
+    {
+      "time": "2026-10-30T04:27:12.414979000+0800",
+      "hex": "a21597ea691600000603f506bb00d300c801000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:12.440931000+0800",
+      "hex": "922d981d6a16001113000008000a010700d301d0012d001a00ac00920006017b07ad003e00d801ffff02be000000ad01"
+    },
+    {
+      "time": "2026-10-30T04:27:12.453840000+0800",
+      "hex": "a215981d6a16000006017b07ad003e00d801000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:12.494445000+0800",
+      "hex": "922d994f6a16004313000008000a010700e501a8012d001a00aa009300ac029f07ad006700f901ffff02c0000000ba01"
+    },
+    {
+      "time": "2026-10-30T04:27:12.522547000+0800",
+      "hex": "a215994f6a160000ac029f07ad006700f901000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:12.543171000+0800",
+      "hex": "922d9a826a16007513000008000a010700db019b012b002700a200b8007205f906ae002801d201ffff02c2000000d301"
+    },
+    {
+      "time": "2026-10-30T04:27:12.553122000+0800",
+      "hex": "a2159a826a1600007205f906ae002801d201000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:12.589654000+0800",
+      "hex": "b21749996a160000000000000000001500000000000300000000"
+    },
+    {
+      "time": "2026-10-30T04:27:12.589711000+0800",
+      "hex": "e23c08996a1600d4000b0d000000000000000000000000000000000000000000000000000000001d1a000005330000c6140000000000000000000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:12.609717000+0800",
+      "hex": "b2174ab36a16000000000000000000150000000000030000000c"
+    },
+    {
+      "time": "2026-10-30T04:27:12.609816000+0800",
+      "hex": "922d9bb46a1600a813000008000a010700c401bc012d002d00ad00da0000051b05ad0079017d01ffff00c5000000cf01"
+    },
+    {
+      "time": "2026-10-30T04:27:12.609860000+0800",
+      "hex": "a2159bb46a16000000051b05ad0079017d01000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:12.642208000+0800",
+      "hex": "f21c79e56a160000a90000000000000000030004fe1900011b490000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:12.647456000+0800",
+      "hex": "922d9ce66a1600da13000008000a010700e5012c022d002600a900c90033027f06b100db008d01ffff00c7000000ba01"
+    },
+    {
+      "time": "2026-10-30T04:27:12.647511000+0800",
+      "hex": "a2159ce66a16000033027f06b100db008d01000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:12.692727000+0800",
+      "hex": "922d9d196b16000d14000008000a010700020227022a00150098008f00e0002e06ae002b008001ffff00ca000000b601"
+    },
+    {
+      "time": "2026-10-30T04:27:12.719369000+0800",
+      "hex": "a2159d196b160000e0002e06ae002b008001000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:12.744195000+0800",
+      "hex": "922d9e4b6b16003f14000008000a010700ce01ad012500170086008000f8001c06b20018009201ffff02cc000000bb01"
+    },
+    {
+      "time": "2026-10-30T04:27:12.749469000+0800",
+      "hex": "a2159e4b6b160000f8001c06b20018009201000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:12.802877000+0800",
+      "hex": "922d9f806b16007414000008000a0107007d014a01280011009b007f000c018b05ad001e008001ffff00ce000000cf01"
+    },
+    {
+      "time": "2026-10-30T04:27:12.827834000+0800",
+      "hex": "a2159f806b1600000c018b05ad001e008001000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:12.847534000+0800",
+      "hex": "922da0b36b1600a714000008000a0107002201d60021000c0086005f00c3018105af003d006b01ffff00cf000000e401"
+    },
+    {
+      "time": "2026-10-30T04:27:12.858860000+0800",
+      "hex": "a215a0b36b160000c3018105af003d006b01000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:12.901202000+0800",
+      "hex": "922da1e56b1600d914000008000a010700a4009a001f0018008b008b0089020a04ad0093001701ffff00d0000000e801"
+    },
+    {
+      "time": "2026-10-30T04:27:12.916878000+0800",
+      "hex": "a215a1e56b16000089020a04ad0093001701000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:12.948575000+0800",
+      "hex": "922da2186c16000c15000008000a0107005000590022002000a300b9001c033b04af00b7002001ffff00d0000000e401"
+    },
+    {
+      "time": "2026-10-30T04:27:12.956270000+0800",
+      "hex": "a215a2186c1600001c033b04af00b7002001000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:13.036263000+0800",
+      "hex": "922da34b6c16003f15000008000a0107001300be0022001100ae009a00e9001306b20037006a01ffff00d1000000af01"
+    },
+    {
+      "time": "2026-10-30T04:27:13.042606000+0800",
+      "hex": "a215a34b6c160000e9001306b20037006a01000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:13.054900000+0800",
+      "hex": "922da47d6c16007115000008000a0107005900790026001200bb009000af00a106b0000b00b801ffff02d1000000ab01"
+    },
+    {
+      "time": "2026-10-30T04:27:13.055003000+0800",
+      "hex": "a215a47d6c160000af00a106b0000b00b801000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:13.108196000+0800",
+      "hex": "922da5af6c1600a315000008000a010700c4002b0029001200c300a1000501aa05b20010008a01ffff00d2000000e401"
+    },
+    {
+      "time": "2026-10-30T04:27:13.131040000+0800",
+      "hex": "a215a5af6c1600000501aa05b20010008a01000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:13.149567000+0800",
+      "hex": "f21c7ae06c160000a90000000000000000000004fd14050128450000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:13.161636000+0800",
+      "hex": "922da6e26c1600d615000008000a010700f1000a0022001200a4009a00ce024c01b1007a00a400ffff00d20000002602"
+    },
+    {
+      "time": "2026-10-30T04:27:13.161710000+0800",
+      "hex": "a215a6e26c160000ce024c01b1007a00a400000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:13.171219000+0800",
+      "hex": "b2174bec6c160007002d01000000001500000000000300000000"
+    },
+    {
+      "time": "2026-10-30T04:27:13.202987000+0800",
+      "hex": "922da7146d16000816000008000a010701d600250023001500ad00ae00c802e000b200a8002600ffff00d30000005402"
+    },
+    {
+      "time": "2026-10-30T04:27:13.203016000+0800",
+      "hex": "a215a7146d160000c802e000b200a8002600000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:13.255893000+0800",
+      "hex": "922da8466d16003a16000008000a010701a000b80023001500b500a100a5052d01af00e6001900ffff00d40000003f02"
+    },
+    {
+      "time": "2026-10-30T04:27:13.265468000+0800",
+      "hex": "a215a8466d160000a5052d01af00e6001900000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:13.299720000+0800",
+      "hex": "922da9786d16006c16000008000a010701d2002f01080023009400ab002f054301b0007a013000ffff00d50000001e02"
+    },
+    {
+      "time": "2026-10-30T04:27:13.307280000+0800",
+      "hex": "a215a9786d1600002f054301b0007a013000000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:13.340395000+0800",
+      "hex": "b2174ca16d160009002d01000000001500000000000300000000"
+    },
+    {
+      "time": "2026-10-30T04:27:13.352204000+0800",
+      "hex": "922daaab6d16009f16000008000a01070093003c0117001b008700b400a705f404ae007a01e200ffff00d6000000f101"
+    },
+    {
+      "time": "2026-10-30T04:27:13.360436000+0800",
+      "hex": "a215aaab6d160000a705f404ae007a01e200000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:13.401474000+0800",
+      "hex": "922dabdd6d1600d116000008000a010700d700410120001c00a300b800ea013d05b000ab003701ffff00d8000000d901"
+    },
+    {
+      "time": "2026-10-30T04:27:13.413965000+0800",
+      "hex": "a215abdd6d160000ea013d05b000ab003701000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:13.452918000+0800",
+      "hex": "922dac106e16000417000008000a0107000501280120000c00a6007d001a017f05ae0033005001ffff00d9000000cc01"
+    },
+    {
+      "time": "2026-10-30T04:27:13.460680000+0800",
+      "hex": "a215ac106e1600001a017f05ae0033005001000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:13.502071000+0800",
+      "hex": "922dad426e16003617000008000a0107001501d8001d001700980095002d055c05b000ff005b01ffff00db000000e901"
+    },
+    {
+      "time": "2026-10-30T04:27:13.515198000+0800",
+      "hex": "a215ad426e1600002d055c05b000ff005b01000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:13.558293000+0800",
+      "hex": "922dae756e16006917000008000a0107001601f3001f0020009e00b9009105fb04af0069014201ffff00dc000000ee01"
+    },
+    {
+      "time": "2026-10-30T04:27:13.564944000+0800",
+      "hex": "a215ae756e1600009105fb04af0069014201000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:13.570795000+0800",
+      "hex": "b2174d816e160000000000000000001500000000000300000000"
+    },
+    {
+      "time": "2026-10-30T04:27:13.570853000+0800",
+      "hex": "e23c09816e1600d4000b0d000000000000000000000000000000000000000000000000000000001d1a000005330000c6140000000000000000000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:13.594207000+0800",
+      "hex": "b2174e9d6e16000000000000000000150000000000030000000c"
+    },
+    {
+      "time": "2026-10-30T04:27:13.618726000+0800",
+      "hex": "922dafa86e16009c17000008000a0107001a014b0125002300bb00d6002a065605ad00a8015901ffff01dd000000d901"
+    },
+    {
+      "time": "2026-10-30T04:27:13.618784000+0800",
+      "hex": "a215afa86e1600002a065605ad00a8015901000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:13.656192000+0800",
+      "hex": "922db0db6e1600cf17000008000a0107006001a00128002900c200ee009f067605b000c8016001ffff01df000000c101"
+    },
+    {
+      "time": "2026-10-30T04:27:13.661967000+0800",
+      "hex": "a215b0db6e1600009f067605b000c8016001000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:13.662103000+0800",
+      "hex": "f21c7bdc6e160000a90000000000000000000007f9170303384e0000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:13.704862000+0800",
+      "hex": "922db10d6f16000118000008000a010700db0146022a002d00bf00f200d606be05b100c4014e01ffff01e20000009c01"
+    },
+    {
+      "time": "2026-10-30T04:27:13.712580000+0800",
+      "hex": "a215b10d6f160000d606be05b100c4014e01000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:13.760425000+0800",
+      "hex": "922db2436f16003718000008000a0107006002e5022c002d00b800df0042068a05ad00cc016b01ffff01e60000007301"
+    },
+    {
+      "time": "2026-10-30T04:27:13.772355000+0800",
+      "hex": "a215b2436f16000042068a05ad00cc016b01000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:13.811539000+0800",
+      "hex": "922db3756f16006918000008000a01070089020e032d002600b600bf00e2006505b100ba006901ffff00ea0000005201"
+    },
+    {
+      "time": "2026-10-30T04:27:13.811731000+0800",
+      "hex": "a215b3756f160000e2006505b100ba006901000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:13.858985000+0800",
+      "hex": "922db4a86f16009b18000008000a0107009d02df022b001300a80084008f00cd04bd0012003701ffff00ee0000004201"
+    },
+    {
+      "time": "2026-10-30T04:27:13.866379000+0800",
+      "hex": "a215b4a86f1600008f00cd04bd0012003701000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:13.909697000+0800",
+      "hex": "922db5da6f1600ce18000008000a0107008002230223000700840052008c003305030100003c01ffff04f00000005b01"
+    },
+    {
+      "time": "2026-10-30T04:27:13.924977000+0800",
+      "hex": "a215b5da6f1600008c003305030100003c01000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:13.960857000+0800",
+      "hex": "922db60c7016000019000008000a010700db0133012000030084002d008d004e06e00600008301ffff04f20000008d01"
+    },
+    {
+      "time": "2026-10-30T04:27:13.970916000+0800",
+      "hex": "a215b60c701600008d004e06e00600008301000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:14.010344000+0800",
+      "hex": "922db73e7016003219000008000a0107002b0180001f000e00900062008f00cf061f090000a401ffff06f3000000b601"
+    },
+    {
+      "time": "2026-10-30T04:27:14.020251000+0800",
+      "hex": "a215b73e701600008f00cf061f090000a401000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:14.062243000+0800",
+      "hex": "922db8717016006519000008000a010700bf00460024001300b2008e008f002406fa0900009f01ffff06f4000000cf01"
+    },
+    {
+      "time": "2026-10-30T04:27:14.073664000+0800",
+      "hex": "a215b871701600008f002406fa0900009f01000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:14.111290000+0800",
+      "hex": "922db9a37016009719000008000a010700c400a80025000a00b900620090001507890a0000a501ffff06f5000000d301"
+    },
+    {
+      "time": "2026-10-30T04:27:14.130636000+0800",
+      "hex": "a215b9a37016000090001507890a0000a501000000000000"
+    },
+    {
+      "time": "2026-10-30T04:27:14.161756000+0800",
+      "hex": "b2174fbd7016000c000000610000001500000000000300000400"
+    },
+    {
+      "time": "2026-10-30T04:27:14.161879000+0800",
+      "hex": "b21750bd7016000d000000610000001700000000000107000004"
+    },
+    {
+      "time": "2026-10-30T04:27:14.166579000+0800",
+      "hex": "b21751bd7016000a000000000000001700000000000107003100"
+    },
+    {
+      "time": "2026-10-30T04:27:14.166704000+0800",
+      "hex": "b21752bd70160000000000000000001700000000000107000000"
+    },
+    {
+      "time": "2026-10-30T04:27:14.166754000+0800",
+      "hex": "e23c0abd701600d4000b05000000000000000000000000000000000000000000000000000000001d1a00007f330000c6140000000000000000000000000000"
+    }
+  ],
+  "barcode_sample_bands": [
+    {
+      "high": false,
+      "from_mm": 0,
+      "to_mm": 51,
+      "first_time": "2026-10-30T04:27:07.618130000+0800",
+      "last_time": "2026-10-30T04:27:08.997336000+0800",
+      "frames": 29
+    },
+    {
+      "high": true,
+      "from_mm": 53,
+      "to_mm": 57,
+      "first_time": "2026-10-30T04:27:09.048775000+0800",
+      "last_time": "2026-10-30T04:27:09.150774000+0800",
+      "frames": 3
+    },
+    {
+      "high": false,
+      "from_mm": 59,
+      "to_mm": 65,
+      "first_time": "2026-10-30T04:27:09.200206000+0800",
+      "last_time": "2026-10-30T04:27:09.350018000+0800",
+      "frames": 4
+    },
+    {
+      "high": true,
+      "from_mm": 66,
+      "to_mm": 69,
+      "first_time": "2026-10-30T04:27:09.401099000+0800",
+      "last_time": "2026-10-30T04:27:09.450697000+0800",
+      "frames": 2
+    },
+    {
+      "high": false,
+      "from_mm": 71,
+      "to_mm": 107,
+      "first_time": "2026-10-30T04:27:09.501530000+0800",
+      "last_time": "2026-10-30T04:27:10.362869000+0800",
+      "frames": 18
+    },
+    {
+      "high": true,
+      "from_mm": 109,
+      "to_mm": 112,
+      "first_time": "2026-10-30T04:27:10.413765000+0800",
+      "last_time": "2026-10-30T04:27:10.581032000+0800",
+      "frames": 4
+    },
+    {
+      "high": false,
+      "from_mm": 114,
+      "to_mm": 130,
+      "first_time": "2026-10-30T04:27:10.623058000+0800",
+      "last_time": "2026-10-30T04:27:11.129184000+0800",
+      "frames": 11
+    },
+    {
+      "high": true,
+      "from_mm": 133,
+      "to_mm": 133,
+      "first_time": "2026-10-30T04:27:11.199842000+0800",
+      "last_time": "2026-10-30T04:27:11.199842000+0800",
+      "frames": 1
+    },
+    {
+      "high": false,
+      "from_mm": 136,
+      "to_mm": 148,
+      "first_time": "2026-10-30T04:27:11.228464000+0800",
+      "last_time": "2026-10-30T04:27:11.430174000+0800",
+      "frames": 5
+    },
+    {
+      "high": true,
+      "from_mm": 150,
+      "to_mm": 153,
+      "first_time": "2026-10-30T04:27:11.489249000+0800",
+      "last_time": "2026-10-30T04:27:11.600307000+0800",
+      "frames": 3
+    },
+    {
+      "high": false,
+      "from_mm": 155,
+      "to_mm": 161,
+      "first_time": "2026-10-30T04:27:11.636343000+0800",
+      "last_time": "2026-10-30T04:27:11.804564000+0800",
+      "frames": 4
+    },
+    {
+      "high": true,
+      "from_mm": 163,
+      "to_mm": 165,
+      "first_time": "2026-10-30T04:27:11.836043000+0800",
+      "last_time": "2026-10-30T04:27:11.902017000+0800",
+      "frames": 2
+    },
+    {
+      "high": false,
+      "from_mm": 167,
+      "to_mm": 240,
+      "first_time": "2026-10-30T04:27:11.938061000+0800",
+      "last_time": "2026-10-30T04:27:13.909697000+0800",
+      "frames": 40
+    },
+    {
+      "high": true,
+      "from_mm": 242,
+      "to_mm": 245,
+      "first_time": "2026-10-30T04:27:13.960857000+0800",
+      "last_time": "2026-10-30T04:27:14.111290000+0800",
+      "frames": 4
+    }
+  ]
+}

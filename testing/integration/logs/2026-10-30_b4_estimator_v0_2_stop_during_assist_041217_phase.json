@@ -1,0 +1,24 @@
+{
+  "start_time": "2026-10-29T20:12:17.213Z",
+  "capture_path": "/Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico/testing/integration/logs/2026-10-29_buddy4_drive_v1_1_codex1_capture.txt",
+  "capture_start_offset": 96607815,
+  "firmware": "B4 estimator2 / RA detector2 active",
+  "setup": "manual dashboard Stop while right-wheel ramp tilt and assistance active; intended aborted profile, not a height accuracy run",
+  "readiness": {
+    "motion": {
+      "time": "2026-10-30T04:12:17.206726000+0800",
+      "active": false,
+      "pwm": [
+        0,
+        0
+      ]
+    },
+    "imu": {
+      "time": "2026-10-30T04:12:16.727883000+0800",
+      "state": "Idle",
+      "valid": true,
+      "fault": 0
+    }
+  },
+  "motor_commands_sent": false
+}

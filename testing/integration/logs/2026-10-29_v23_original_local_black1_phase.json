@@ -1,0 +1,7 @@
+{
+  "phase": "black_reference_recorded",
+  "capture": "/Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico/testing/integration/logs/2026-10-29_buddy4_drive_v1_1_codex1_capture.txt",
+  "fromLine": 110981,
+  "whiteReference": "/Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico-v23b4/testing/integration/logs/2026-10-29_v23_original_local_white1_review.json",
+  "expected": "BothfrontIR overexistingflatblack tape atnormalheight; stationary/noStart, no sensoranglechanges. A widecrossbar can coverboth; ifcannotcoverboth, measureonesensoratatime withuserlabel."
+}

@@ -1,0 +1,53 @@
+{
+  "phase": "baseline_stutter_reproduced",
+  "userReportedFirmware": "buddy123_interface_wifi_v2_3_baseline_local_v0_1.uf2",
+  "capture": "/Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico/testing/integration/logs/2026-10-29_buddy4_drive_v1_1_codex1_capture.txt",
+  "fromLine": 104250,
+  "baseline": {
+    "motion": {
+      "time": "2026-10-29T21:14:30.515902000+0800",
+      "run": 0,
+      "flags": 2,
+      "recovery": 0,
+      "speedLeft": 0,
+      "speedRight": 0,
+      "targetLeft": 0,
+      "targetRight": 0,
+      "pwmLeft": 0,
+      "pwmRight": 0,
+      "adcLeft": 142,
+      "adcRight": 1914,
+      "levelLeft": 0,
+      "levelRight": 495
+    },
+    "diagnostics": {
+      "time": "2026-10-29T21:14:30.177441000+0800",
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 12818,
+      "txDropped": 1161,
+      "rxDropped": 0,
+      "badLeft": 0,
+      "badRight": 0
+    },
+    "heartbeat": {
+      "time": "2026-10-29T21:14:30.156373000+0800",
+      "net": 2,
+      "netName": "Operational",
+      "state": 0,
+      "stateName": "Ready",
+      "lastCmd": 10,
+      "lastCmdName": "BARCODE_GET",
+      "lastResult": 0,
+      "lastResultName": "accepted",
+      "uptimeS": 50,
+      "published": 1006,
+      "lost": 1161,
+      "accepted": 7,
+      "rejected": 0,
+      "connects": 1,
+      "fillPct": 16
+    }
+  },
+  "expected": "Exact originalv2.3, noBuddy4; same sensor/mat/power. One short plainline Start2s countdown, about1s driving, Stop. Record physical stutter vs normal and recovery/timing diagnostics; no staleBuddy4 panels used.",
+  "result": "Stuttering reproduced with noBuddy4, so add-on is not necessary for symptom. Does not prove add-on timing has no effects. Investigate current IR geometry/calibration/surface/power or originalbaseline behavior; no speculative motor tuning."
+}

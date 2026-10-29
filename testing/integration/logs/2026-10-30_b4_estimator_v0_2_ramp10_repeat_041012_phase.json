@@ -1,0 +1,24 @@
+{
+  "start_time": "2026-10-29T20:10:12.360Z",
+  "capture_path": "/Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico/testing/integration/logs/2026-10-29_buddy4_drive_v1_1_codex1_capture.txt",
+  "capture_start_offset": 95958794,
+  "firmware": "B4 estimator2 / RA detector2 active",
+  "setup": "unchanged10mm right-wheel ramp repeat after accepted10mm peak",
+  "readiness": {
+    "motion": {
+      "time": "2026-10-30T04:10:12.347958000+0800",
+      "active": false,
+      "pwm": [
+        0,
+        0
+      ]
+    },
+    "imu": {
+      "time": "2026-10-30T04:10:12.233556000+0800",
+      "state": "Idle",
+      "valid": true,
+      "fault": 0
+    }
+  },
+  "motor_commands_sent": false
+}

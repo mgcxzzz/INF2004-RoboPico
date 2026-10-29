@@ -1,0 +1,7 @@
+* text eol=lf
+v12_2/** -text
+firmware/*.uf2 -text
+
+firmware/*.zip -text
+dashboard/vendor/** -text
+logs/** -text

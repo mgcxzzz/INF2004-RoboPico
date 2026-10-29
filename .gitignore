@@ -24,3 +24,11 @@ config/wifi_secrets.h
 
 # macOS
 .DS_Store
+
+# Integration review: never add local build credentials or generated images
+**/wifi_config.local.h
+**/wifi_settings.local.json
+**/__pycache__/
+**/build-*/
+
+/build/

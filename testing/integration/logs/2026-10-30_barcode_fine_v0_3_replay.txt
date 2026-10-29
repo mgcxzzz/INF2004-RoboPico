@@ -1,0 +1,6 @@
+capture fixtures/barcode_Z_captured.csv: decoded=1 letter=Z selected=63 candidates=2
+capture fixtures/barcode_Z_latest.csv: decoded=1 letter=Z selected=7 candidates=1
+capture fixtures/barcode_Y_captured.csv: decoded=0 letter=- selected=11 candidates=0
+PASS all26 letters both directions: actual full-reader fallback, two quiet zones, movement gate, conflict, duplicate, stale and malformed-state vetoes
+PASS real-capture mutations: cropped quiet zones, erased start/stop sentinels and missing wide bars all rejected
+PASS fine v0.3: both real Z scans, honest Y failure, consensus and quiet fallback guards, record31

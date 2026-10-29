@@ -1,0 +1,1881 @@
+{
+  "classification": "Mechanically confounded; not a clean powered-ramp accuracy/clearance trial",
+  "userObservation": "Front-left IR sensor caught on combotiles halfway; user dislodged car",
+  "referenceHeightMm": 10,
+  "toleranceMm": 5,
+  "fromLine": 47702,
+  "toLineExclusive": 54499,
+  "resetAck": {
+    "line": 49524,
+    "time": "2026-10-29T20:52:37.124481000+0800",
+    "topic": "is28/ack",
+    "ack": {
+      "code": 5,
+      "codeName": "RESET",
+      "id": 26,
+      "result": 0,
+      "resultName": "accepted",
+      "accepted": true,
+      "state": 0,
+      "stateName": "Ready"
+    }
+  },
+  "startAck": {
+    "line": 50012,
+    "time": "2026-10-29T20:52:48.184666000+0800",
+    "topic": "is28/ack",
+    "ack": {
+      "code": 1,
+      "codeName": "START",
+      "id": 27,
+      "result": 0,
+      "resultName": "accepted",
+      "accepted": true,
+      "state": 0,
+      "stateName": "Ready"
+    }
+  },
+  "baselineImuAfterReset": {
+    "state": 2,
+    "stateName": "Idle",
+    "motion": "stationary",
+    "event": "status",
+    "detail": 0,
+    "valid": true,
+    "odometry": true,
+    "pitchDeg": 0,
+    "lastFault": 0,
+    "heightMm": 0,
+    "highestMm": 0,
+    "humps": 0,
+    "rejected": 0,
+    "shockMg": 0,
+    "shockNotifyMs": 0,
+    "shocks": 0,
+    "i2cErrors": 0,
+    "framesMissed": 83,
+    "eventMs": 0
+  },
+  "lastMotion": {
+    "line": 54482,
+    "time": "2026-10-29T20:54:28.649406000+0800",
+    "topic": "is28/tlm",
+    "src": 2,
+    "srcName": "Motion (B2)",
+    "seq": 147,
+    "len": 37,
+    "data": {
+      "freshOdometry": true,
+      "sideEstimateValid": true,
+      "oneSidedMode": true,
+      "passive": false,
+      "leftSpeedMmS": 0,
+      "rightSpeedMmS": 0,
+      "centreSpeedMmS": 0,
+      "rollDeg": -0.3,
+      "rightMinusLeftHeightMm": 0,
+      "netDistanceMm": 613,
+      "invalidTransitionsLeft": 0,
+      "invalidTransitionsRight": 0,
+      "qualityReasons": 0,
+      "rampLevelReady": false,
+      "rampCandidate": false,
+      "rampRising": false,
+      "rampReturning": false,
+      "qualityBadSamples": 0,
+      "qualityTotalSamples": 25,
+      "maxSpreadMg": 16,
+      "maxAbsAccelMmS2": 0,
+      "maxAbsTurnDegS": 0,
+      "rateSamples": 25,
+      "maxMadMg": 8,
+      "minFifoSamples": 7,
+      "maxMadFwdMg": 8,
+      "maxMadLatMg": 8,
+      "maxMadUpMg": 4
+    }
+  },
+  "lastImu": {
+    "line": 54481,
+    "time": "2026-10-29T20:54:28.649171000+0800",
+    "topic": "is28/tlm",
+    "src": 4,
+    "srcName": "IMU (B4)",
+    "seq": 156,
+    "len": 16,
+    "data": {
+      "state": 2,
+      "stateName": "Idle",
+      "motion": "stationary",
+      "event": "status",
+      "detail": 0,
+      "valid": true,
+      "odometry": true,
+      "pitchDeg": 0.3,
+      "lastFault": 0,
+      "heightMm": 0,
+      "highestMm": 0,
+      "humps": 0,
+      "rejected": 0,
+      "shockMg": 0,
+      "shockNotifyMs": 0,
+      "shocks": 0,
+      "i2cErrors": 0,
+      "framesMissed": 126,
+      "eventMs": 0
+    }
+  },
+  "lastHeartbeat": {
+    "line": 54474,
+    "time": "2026-10-29T20:54:28.531482000+0800",
+    "topic": "is28/hb",
+    "src": 1,
+    "srcName": "WiFi (B1)",
+    "seq": 9,
+    "len": 12,
+    "data": {
+      "net": 2,
+      "netName": "Operational",
+      "state": 3,
+      "stateName": "Safe Stop",
+      "lastCmd": 10,
+      "lastCmdName": "BARCODE_GET",
+      "lastResult": 0,
+      "lastResultName": "accepted",
+      "uptimeS": 987,
+      "published": 43584,
+      "lost": 2840,
+      "accepted": 73,
+      "rejected": 0,
+      "connects": 1,
+      "fillPct": 0
+    }
+  },
+  "acks": [
+    {
+      "line": 49524,
+      "time": "2026-10-29T20:52:37.124481000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 5,
+        "codeName": "RESET",
+        "id": 26,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 0,
+        "stateName": "Ready"
+      }
+    },
+    {
+      "line": 50012,
+      "time": "2026-10-29T20:52:48.184666000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 1,
+        "codeName": "START",
+        "id": 27,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 0,
+        "stateName": "Ready"
+      }
+    },
+    {
+      "line": 50453,
+      "time": "2026-10-29T20:53:01.321052000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 28,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 1,
+        "stateName": "Running"
+      }
+    },
+    {
+      "line": 50454,
+      "time": "2026-10-29T20:53:01.321113000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 55,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 1,
+        "stateName": "Running"
+      }
+    },
+    {
+      "line": 50457,
+      "time": "2026-10-29T20:53:01.339762000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 56,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 1,
+        "stateName": "Running"
+      }
+    },
+    {
+      "line": 50458,
+      "time": "2026-10-29T20:53:01.339811000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 57,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 1,
+        "stateName": "Running"
+      }
+    },
+    {
+      "line": 50459,
+      "time": "2026-10-29T20:53:01.339851000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 70,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 1,
+        "stateName": "Running"
+      }
+    },
+    {
+      "line": 50460,
+      "time": "2026-10-29T20:53:01.347671000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 71,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 1,
+        "stateName": "Running"
+      }
+    },
+    {
+      "line": 50461,
+      "time": "2026-10-29T20:53:01.347774000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 29,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 1,
+        "stateName": "Running"
+      }
+    },
+    {
+      "line": 50462,
+      "time": "2026-10-29T20:53:01.347841000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 30,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 1,
+        "stateName": "Running"
+      }
+    },
+    {
+      "line": 50463,
+      "time": "2026-10-29T20:53:01.347858000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 58,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 1,
+        "stateName": "Running"
+      }
+    },
+    {
+      "line": 50464,
+      "time": "2026-10-29T20:53:01.354443000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 72,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 1,
+        "stateName": "Running"
+      }
+    },
+    {
+      "line": 50465,
+      "time": "2026-10-29T20:53:01.354499000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 59,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 1,
+        "stateName": "Running"
+      }
+    },
+    {
+      "line": 50466,
+      "time": "2026-10-29T20:53:01.354541000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 31,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 1,
+        "stateName": "Running"
+      }
+    },
+    {
+      "line": 50467,
+      "time": "2026-10-29T20:53:01.354597000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 32,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 1,
+        "stateName": "Running"
+      }
+    },
+    {
+      "line": 50761,
+      "time": "2026-10-29T20:53:07.358919000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 33,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 1,
+        "stateName": "Running"
+      }
+    },
+    {
+      "line": 50765,
+      "time": "2026-10-29T20:53:07.366700000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 60,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 1,
+        "stateName": "Running"
+      }
+    },
+    {
+      "line": 51071,
+      "time": "2026-10-29T20:53:13.502487000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 4,
+        "codeName": "STOP",
+        "id": 34,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 3,
+        "stateName": "Safe Stop"
+      }
+    },
+    {
+      "line": 51185,
+      "time": "2026-10-29T20:53:16.514360000+0800",
+      "topic": "is28/ack",
+      "ack": {
+        "code": 10,
+        "codeName": "BARCODE_GET",
+        "id": 74,
+        "result": 0,
+        "resultName": "accepted",
+        "accepted": true,
+        "state": 3,
+        "stateName": "Safe Stop"
+      }
+    }
+  ],
+  "events": [
+    {
+      "line": 50135,
+      "time": "2026-10-29T20:52:50.635865000+0800",
+      "topic": "is28/tlm",
+      "src": 4,
+      "srcName": "IMU (B4)",
+      "seq": 218,
+      "len": 16,
+      "data": {
+        "state": 3,
+        "stateName": "Tracking",
+        "motion": "steady",
+        "event": "motion",
+        "detail": 0,
+        "valid": true,
+        "odometry": true,
+        "pitchDeg": 0.3,
+        "lastFault": 0,
+        "heightMm": 0,
+        "highestMm": 0,
+        "humps": 0,
+        "rejected": 0,
+        "shockMg": 0,
+        "shockNotifyMs": 0,
+        "shocks": 0,
+        "i2cErrors": 0,
+        "framesMissed": 83,
+        "eventMs": 37683
+      }
+    },
+    {
+      "line": 50424,
+      "time": "2026-10-29T20:53:01.288206000+0800",
+      "topic": "is28/tlm",
+      "src": 4,
+      "srcName": "IMU (B4)",
+      "seq": 231,
+      "len": 16,
+      "data": {
+        "state": 3,
+        "stateName": "Tracking",
+        "motion": "stationary",
+        "event": "motion",
+        "detail": 0,
+        "valid": true,
+        "odometry": true,
+        "pitchDeg": 3.5,
+        "lastFault": 0,
+        "heightMm": 0,
+        "highestMm": 0,
+        "humps": 0,
+        "rejected": 0,
+        "shockMg": 0,
+        "shockNotifyMs": 0,
+        "shocks": 0,
+        "i2cErrors": 0,
+        "framesMissed": 83,
+        "eventMs": 43783
+      }
+    },
+    {
+      "line": 50949,
+      "time": "2026-10-29T20:53:11.034822000+0800",
+      "topic": "is28/tlm",
+      "src": 4,
+      "srcName": "IMU (B4)",
+      "seq": 4,
+      "len": 16,
+      "data": {
+        "state": 3,
+        "stateName": "Tracking",
+        "motion": "steady",
+        "event": "motion",
+        "detail": 0,
+        "valid": true,
+        "odometry": true,
+        "pitchDeg": -2.3,
+        "lastFault": 0,
+        "heightMm": 0,
+        "highestMm": 0,
+        "humps": 0,
+        "rejected": 0,
+        "shockMg": 0,
+        "shockNotifyMs": 0,
+        "shocks": 0,
+        "i2cErrors": 0,
+        "framesMissed": 83,
+        "eventMs": 58083
+      }
+    }
+  ],
+  "diagnostics": [
+    {
+      "time": "2026-10-29T20:51:57.502418000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2372,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:51:57.514082000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2414,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:51:59.511296000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2464,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:00.512953000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2464,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:01.512768000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2464,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:02.509719000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2464,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:03.543300000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2464,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:04.512133000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2464,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:05.509066000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2464,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:06.511994000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2464,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:07.539223000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2464,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:08.512658000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2464,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:09.526220000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2464,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:10.524768000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2464,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:11.648506000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2464,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:12.530163000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2464,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:13.520517000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2464,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:14.513381000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2464,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:15.523156000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2464,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:16.538256000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2464,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:17.520768000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2464,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:18.507867000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2464,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:19.508472000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2464,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:20.532275000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2464,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:21.515509000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2464,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:22.512454000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2464,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:23.511365000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2464,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:24.529005000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2464,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:25.513661000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2464,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:26.524834000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2464,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:27.518761000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2464,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:28.515967000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2464,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:29.514164000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2464,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:30.568797000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2464,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:31.536837000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2464,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:32.516920000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2464,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:33.528857000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2464,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:34.528605000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2464,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:35.532503000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2464,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:36.521786000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2464,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:37.134233000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2464,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:38.172236000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2464,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:39.166167000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2464,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:40.141655000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2464,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:41.129053000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2464,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:43.126690000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2498,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:44.191192000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2498,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:45.130400000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2498,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:46.126162000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2498,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:47.156620000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2498,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:48.136727000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2498,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:48.202024000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2498,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:49.208464000+0800",
+      "maxAdcGapUs": 6696,
+      "maxControlGapUs": 12682,
+      "txDropped": 2498,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:50.213549000+0800",
+      "maxAdcGapUs": 0,
+      "maxControlGapUs": 0,
+      "txDropped": 2498,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:51.205594000+0800",
+      "maxAdcGapUs": 5771,
+      "maxControlGapUs": 12706,
+      "txDropped": 2498,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:52.194196000+0800",
+      "maxAdcGapUs": 6432,
+      "maxControlGapUs": 12949,
+      "txDropped": 2498,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:53.210542000+0800",
+      "maxAdcGapUs": 6432,
+      "maxControlGapUs": 12949,
+      "txDropped": 2498,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:54.193728000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 12949,
+      "txDropped": 2498,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:55.201646000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 12949,
+      "txDropped": 2498,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:52:56.194726000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 12949,
+      "txDropped": 2498,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:02.335668000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 12949,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:03.338208000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 12949,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:04.347540000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 12949,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:05.356891000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 12949,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:06.339192000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 12949,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:07.344524000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 12949,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:07.383274000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 12949,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:07.389876000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 12949,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:08.370037000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 12949,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:09.383725000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 12949,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:10.373586000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 12949,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:11.380379000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 12949,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:12.367300000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 12949,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:13.374642000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:13.526236000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:14.802150000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:15.544033000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:16.508121000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:16.544359000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:17.532920000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:18.521289000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:19.528331000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:20.534865000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:21.527174000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:22.534736000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:23.524313000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:24.533395000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:25.546318000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:26.532772000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:27.563310000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:28.530467000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:29.537619000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:30.567255000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:31.531498000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:32.519560000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:33.545487000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:34.519363000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:35.519635000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:36.526777000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:37.538379000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:38.523024000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:39.532707000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:40.525319000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:41.525166000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:42.525656000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:43.530768000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:44.526628000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:45.535741000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:46.542992000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:47.533206000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:48.524594000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:49.528536000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:50.546165000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:51.530245000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:52.521328000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:53.529525000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:54.534437000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:55.525699000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:56.536571000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2763,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:53:59.675843000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2801,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:54:00.538237000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2840,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:54:01.531262000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2840,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:54:02.549174000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2840,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:54:03.558611000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2840,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:54:04.528935000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2840,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:54:05.527554000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2840,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:54:06.532062000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2840,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:54:07.537899000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2840,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:54:08.526052000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2840,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:54:09.536321000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2840,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:54:10.523592000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2840,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:54:11.548623000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2840,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:54:12.619438000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2840,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:54:13.539505000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2840,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:54:14.533100000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2840,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:54:15.533651000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2840,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:54:16.546281000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2840,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:54:17.530899000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2840,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:54:18.529584000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2840,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:54:19.536582000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2840,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:54:20.551188000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2840,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:54:21.534095000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2840,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:54:22.548556000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2840,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:54:23.534077000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2840,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:54:24.540890000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2840,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:54:25.566316000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2840,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:54:26.545119000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2840,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:54:27.636120000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2840,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    },
+    {
+      "time": "2026-10-29T20:54:28.540089000+0800",
+      "maxAdcGapUs": 6530,
+      "maxControlGapUs": 13031,
+      "txDropped": 2840,
+      "rxDropped": 0,
+      "invalidLeft": 0,
+      "invalidRight": 0
+    }
+  ],
+  "encoderTotals": {
+    "left": 0,
+    "right": 0
+  },
+  "result": "Retain observations; no clean ramp PASS claim"
+}
