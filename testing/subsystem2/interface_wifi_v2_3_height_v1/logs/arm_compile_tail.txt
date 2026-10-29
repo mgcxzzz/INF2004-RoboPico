@@ -1,0 +1,12 @@
+[214/217] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/91ef53098f06b32e65b72194de259ee0/pico_cyw43_driver/cyw43_driver.c.obj
+[215/217] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/c92f5fffe610eaf584cf2d5c0accb073/lib/cyw43-driver/src/cyw43_ll.c.obj
+[216/217] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/c92f5fffe610eaf584cf2d5c0accb073/lib/lwip/src/apps/mqtt/mqtt.c.obj
+[217/217] Linking CXX executable buddy123_interface_wifi_v2_3_height_v1.elf
+[1/5] Performing build step for 'pioasmBuild'
+ninja: no work to do.
+[2/5] Performing install step for 'pioasmBuild'
+[0/1] Install the project...
+-- Install configuration: "Release"
+[3/5] Completed 'pioasmBuild'
+[4/5] Building C object CMakeFiles/buddy123_interface_wifi_v2.dir/main.c.obj
+[5/5] Linking CXX executable buddy123_interface_wifi_v2_3_height_v1.elf

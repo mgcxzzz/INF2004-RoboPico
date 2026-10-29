@@ -1,0 +1,72 @@
+{
+  "firmware_version": "v2.3_height_v1",
+  "architecture": "standalone Pico SDK; core0 controller, core1 network owner; no micro T-Kernel",
+  "date": "2026-10-30",
+  "base_commit": "8d7f3aa4935565636bba013c74e563f5e8135bcb",
+  "base_folder": "testing/subsystem2/interface_wifi_v2_3",
+  "pico_sdk_commit": "98a542c1a62fb549ffb5d66a3e5892b06276b670",
+  "arm_compiler": "arm-none-eabi-gcc (Arm GNU Toolchain 14.2.Rel1 (Build arm-14.52)) 14.2.1 20241119",
+  "artifact": "firmware/buddy123_interface_wifi_v2_3_height_v1.uf2",
+  "bundle": "firmware/buddy123_interface_wifi_v2_3_height_v1_bundle.zip",
+  "sha256": "c7d604730df994857a720502392f25910fec14669ebba3baf553473950329ef8",
+  "bytes": 1009152,
+  "blocks": 1971,
+  "arm_builds": {
+    "network_on": {
+      "text": 514640,
+      "data": 0,
+      "bss": 198636
+    }
+  },
+  "symbols": {
+    "__bss_end__": "0x2002ff5c",
+    "__flash_binary_end": "0x1007b254",
+    "__HeapLimit": "0x2003c000",
+    "__StackBottom": "0x2003e000",
+    "__StackLimit": "0x2003c000",
+    "__StackOneBottom": "0x2003c000",
+    "__StackOneTop": "0x2003e000",
+    "__StackTop": "0x20040000",
+    "core1_stack": "0x2003c000"
+  },
+  "calibration": {
+    "white": [
+      191,
+      154
+    ],
+    "black": [
+      1940,
+      2306
+    ],
+    "record_version": 29
+  },
+  "host_c_executables": 37,
+  "javascript_schema_tests": 10,
+  "python_helper_tests": 20,
+  "diagnostic_capture_version": 5,
+  "embedded_credentials": false,
+  "default_buddy_extension": null,
+  "timeout_pool": {
+    "core_slots": 7,
+    "total_slots": 11,
+    "additional_bss_bytes": 64,
+    "real_allocator_regression": "core-only pool exhausts; fixed 100 callback reschedules and 1000 add/remove cycles pass"
+  },
+  "stack_layout": {
+    "core0_bytes": 8192,
+    "core1_bytes": 8192,
+    "known_driving_chain_frame_bytes": 4424,
+    "complete_worst_case_bound": false
+  },
+  "recorded_replay": {
+    "rows": 256,
+    "old_target_total_variation": 883,
+    "height_target_total_variation": 780,
+    "old_mean_target": 31.04,
+    "height_mean_target": 35.14,
+    "old_minimum_wheel_target": 6,
+    "height_minimum_wheel_target": 15,
+    "closed_loop_prediction": false
+  },
+  "physical_height_validated": false
+}

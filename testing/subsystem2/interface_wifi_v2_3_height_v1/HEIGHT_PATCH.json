@@ -1,0 +1,434 @@
+{
+  "base_commit": "8d7f3aa4935565636bba013c74e563f5e8135bcb",
+  "changes": {
+    "CMakeLists.txt": {
+      "base_sha256": "629e45fe2cd64416788b3685cc11cb1159d4d2ea51fce74e4b9dbd3e23d370b3",
+      "modified_sha256": "c2b707caad8c9c55ccac52507ca2d5d1229a026076f3fd92e987880d4b099096",
+      "hunks": [
+        {
+          "old_start": 13,
+          "new_start": 13,
+          "old": [
+            "set_target_properties(buddy123_interface_wifi_v2 PROPERTIES OUTPUT_NAME buddy123_interface_wifi_v2_3)\n"
+          ],
+          "new": [
+            "set_target_properties(buddy123_interface_wifi_v2 PROPERTIES OUTPUT_NAME buddy123_interface_wifi_v2_3_height_v1)\n"
+          ]
+        }
+      ]
+    },
+    "continuous_steering.h": {
+      "base_sha256": "c08d5e26858593344064bf0256950c3743a87a593ddb0b653f4aa5a1b145c62f",
+      "modified_sha256": "36d07273f6c31f48cf8a814dcf0b62d00cf321d3309f8c0a264b2838df892a14",
+      "hunks": [
+        {
+          "old_start": 6,
+          "new_start": 6,
+          "old": [
+            "/* Output-only steering adaptation. The optical tracker and barcode reader\n",
+            " * continue to see the original ADC samples and make the original decisions. */\n"
+          ],
+          "new": [
+            "/* Raised-height V1: output-only adaptation. Optical decisions, white/loss\n",
+            " * detection, barcode decoding and explicit manoeuvres remain upstream.\n",
+            " * Short alternating requests use 45% authority, a bounded half-speed and\n",
+            " * steadier mean; sustained one-sided requests regain the original bend. */\n",
+            "enum { HEIGHT_BEND_DWELL_MS=450 };\n",
+            "#define HEIGHT_INITIAL_GAIN 0.45f\n",
+            "#define HEIGHT_BRIEF_HALF_MAX 12.0f\n",
+            "#define HEIGHT_BRIEF_MEAN_MIN 35.0f\n",
+            "#define HEIGHT_YAW_DAMPING 0.65f\n",
+            "#define HEIGHT_YAW_DAMP_MAX 8.0f\n"
+          ]
+        },
+        {
+          "old_start": 11,
+          "new_start": 19,
+          "old": [
+            "    float previous_error, return_confidence, same_side_duration;\n"
+          ],
+          "new": [
+            "    float same_side_duration;\n"
+          ]
+        },
+        {
+          "old_start": 41,
+          "new_start": 49,
+          "old": [
+            "    float desired_mean = (desired_left + desired_right) * 0.5f;\n"
+          ],
+          "new": [
+            "    float core_mean = (desired_left + desired_right) * 0.5f;\n"
+          ]
+        },
+        {
+          "old_start": 51,
+          "new_start": 59,
+          "old": [
+            "    desired_mean = clampf(desired_mean, 0.0f, ceiling);\n",
+            "    original_half = clampf(original_half, -desired_mean, desired_mean);\n"
+          ],
+          "new": [
+            "    core_mean = clampf(core_mean, 0.0f, ceiling);\n",
+            "    original_half = clampf(original_half, -core_mean, core_mean);\n",
+            "    if (core_mean <= 0.0f) {\n",
+            "        continuous_steering_reset(s);\n",
+            "        return d;\n",
+            "    }\n"
+          ]
+        },
+        {
+          "old_start": 61,
+          "new_start": 73,
+          "old": [
+            "        s->previous_error = error; /* no derivative kick on entry */\n",
+            "        s->return_confidence = 0.0f;\n"
+          ],
+          "new": []
+        },
+        {
+          "old_start": 65,
+          "new_start": 75,
+          "old": [
+            "        s->gain = 0.70f;\n"
+          ],
+          "new": [
+            "        s->gain = HEIGHT_INITIAL_GAIN;\n"
+          ]
+        },
+        {
+          "old_start": 75,
+          "new_start": 85,
+          "old": [
+            "        s->same_side_duration = fminf(0.35f, s->same_side_duration + dt);\n"
+          ],
+          "new": [
+            "        s->same_side_duration = fminf(HEIGHT_BEND_DWELL_MS/1000.0f,\n",
+            "                                     s->same_side_duration + dt);\n"
+          ]
+        },
+        {
+          "old_start": 80,
+          "new_start": 91,
+          "old": [
+            "    s->gain = 0.70f + 0.30f * clampf(s->same_side_duration / 0.35f, 0.0f, 1.0f);\n"
+          ],
+          "new": [
+            "    float persistence = clampf(s->same_side_duration /\n",
+            "                               (HEIGHT_BEND_DWELL_MS/1000.0f), 0.0f, 1.0f);\n",
+            "    s->gain = HEIGHT_INITIAL_GAIN + (1.0f-HEIGHT_INITIAL_GAIN)*persistence;\n"
+          ]
+        },
+        {
+          "old_start": 83,
+          "new_start": 96,
+          "old": [
+            "    /* Scale return confidence by the normalized calibrated-error fall rate.\n",
+            "     * The 40ms EMA smooths it; the half slew already bounds output changes. */\n",
+            "    float abs_error = fabsf(error);\n",
+            "    float fall_rate = dt > 0.0f ?\n",
+            "        fmaxf(0.0f, (fabsf(s->previous_error) - abs_error) / dt) : 0.0f;\n",
+            "    float confidence_target = clampf(fall_rate / 4.0f, 0.0f, 1.0f);\n",
+            "    if (original_half == 0.0f) confidence_target = 1.0f;\n",
+            "    s->return_confidence += (confidence_target - s->return_confidence) *\n",
+            "        dt / (0.040f + dt);\n",
+            "    s->return_confidence = clampf(s->return_confidence, 0.0f, 1.0f);\n",
+            "    s->damp_weight = s->return_confidence;\n",
+            "    float damping = clampf(0.35f * measured_half * s->damp_weight, -7.0f, 7.0f);\n"
+          ],
+          "new": [
+            "    /* Oppose actual rotation exceeding the requested rotation, including\n",
+            "     * rotation in the old direction after an optical reversal. A steady\n",
+            "     * bend at/below its requested rate is not continuously weakened.\n",
+            "     * Existing velocity estimation is used; no added ADC/steering filter. */\n",
+            "    float excess_half = measured_half > 0.0f ?\n",
+            "        fmaxf(0.0f, measured_half-fmaxf(0.0f,desired_half)) :\n",
+            "        fminf(0.0f, measured_half-fminf(0.0f,desired_half));\n",
+            "    float damping = clampf(HEIGHT_YAW_DAMPING*excess_half,\n",
+            "                           -HEIGHT_YAW_DAMP_MAX, HEIGHT_YAW_DAMP_MAX);\n",
+            "    s->damp_weight = fabsf(damping)/HEIGHT_YAW_DAMP_MAX;\n"
+          ]
+        },
+        {
+          "old_start": 96,
+          "new_start": 107,
+          "old": [
+            "    s->previous_error = error;\n"
+          ],
+          "new": []
+        },
+        {
+          "old_start": 98,
+          "new_start": 108,
+          "old": [
+            "    /* The original bend request regains all authority after 350ms on the same\n",
+            "     * side. Damping fades as the optical error stops shrinking. */\n"
+          ],
+          "new": [
+            "    /* A brief visible-line correction should not halve the forward target.\n",
+            "     * Persistent bends recover the original mean AND full inner-wheel range.\n",
+            "     * This floor never applies to lost-line/coast/STOP/manoeuvre demands. */\n",
+            "    float brief_mean = fminf(ceiling,fmaxf(core_mean,HEIGHT_BRIEF_MEAN_MIN));\n",
+            "    float desired_mean = brief_mean+(core_mean-brief_mean)*persistence;\n",
+            "    float half_limit = HEIGHT_BRIEF_HALF_MAX +\n",
+            "        fmaxf(0.0f,desired_mean-HEIGHT_BRIEF_HALF_MAX)*persistence;\n",
+            "    desired_half = clampf(desired_half,-half_limit,half_limit);\n"
+          ]
+        },
+        {
+          "old_start": 106,
+          "new_start": 122,
+          "old": [],
+          "new": [
+            "    /* Release an old correction promptly as the request shrinks/reverses.\n",
+            "     * Use the existing 300mm/s^2 maximum, not an extra smoothing delay. */\n",
+            "    if (fabsf(desired_half)<fabsf(s->half) || desired_half*s->half<0.0f)\n",
+            "        steer_rate=300.0f;\n"
+          ]
+        },
+        {
+          "old_start": 117,
+          "new_start": 137,
+          "old": [
+            "        target = clampf(target, 0.0f, 135.0f);\n"
+          ],
+          "new": [
+            "        target = clampf(target, 0.0f, ceiling);\n"
+          ]
+        }
+      ]
+    },
+    "successful_calibration.h": {
+      "base_sha256": "20a7369fc609cd54d676b66ef9a26960b2f8226bf1ccea89fb39d66d072210e4",
+      "modified_sha256": "7247ae5a5dcb0a9cebff80d6b0048c024c90ed04df3f0e35ff0d6b9c8cc189e1",
+      "hunks": [
+        {
+          "old_start": 3,
+          "new_start": 3,
+          "old": [
+            "/* idk_v2.txt: successful Continuous V2 run, profile 1. These are ADC\n",
+            " * references, not required live centre readings. User captures remain valid. */\n",
+            "enum { CALIBRATION_RECORD_VERSION=28 };\n"
+          ],
+          "new": [
+            "/* Raised front sensors (~10 mm): measured 2026-10-29 w/l/r/k endpoints.\n",
+            " * These reproduce all 256 recorded ADC/level pairs, not a validated new\n",
+            " * smooth-running sweet spot. Manual captures remain supported. */\n",
+            "enum { CALIBRATION_RECORD_VERSION=29 };\n"
+          ]
+        },
+        {
+          "old_start": 7,
+          "new_start": 8,
+          "old": [
+            "    return (LineCalibration){.white={163,160},.black={3457,3700},.mask=7};\n"
+          ],
+          "new": [
+            "    return (LineCalibration){.white={191,154},.black={1940,2306},.mask=7};\n"
+          ]
+        }
+      ]
+    },
+    "drive_diag.h": {
+      "base_sha256": "fd892dbcae8a460882d529feec9ffa80fe0db82c03a5f36192c2fd090fe1f59f",
+      "modified_sha256": "d13a5a445c03bed854e4e4ed0b688e8cf6bf8304135b9fd423353f3aa3fed269",
+      "hunks": [
+        {
+          "old_start": 34,
+          "new_start": 34,
+          "old": [
+            "enum { DIAG_ROWS=256,DIAG_ROW_BYTES=58,DIAG_POST=128,DIAG_HEADER=256,DIAG_BANK=16384,\n"
+          ],
+          "new": [
+            "enum { DIAG_CAPTURE_VERSION=5,DIAG_ROWS=256,DIAG_ROW_BYTES=58,DIAG_POST=128,DIAG_HEADER=256,DIAG_BANK=16384,\n"
+          ]
+        }
+      ]
+    },
+    "drive_diag_storage.h": {
+      "base_sha256": "b45ef497197b85215ebb73a7f3205a9fa34201549aba38b75983d53b15137ac5",
+      "modified_sha256": "4d05da73f04adef1990e0dcb4d1cf1df0471fbc9094c3603487a97531085cd4d",
+      "hunks": [
+        {
+          "old_start": 5,
+          "new_start": 5,
+          "old": [
+            " memset(h,0,DIAG_HEADER);memcpy(h,\"DGD1\",4);h[4]=4;h[5]=DIAG_ROW_BYTES;\n"
+          ],
+          "new": [
+            " memset(h,0,DIAG_HEADER);memcpy(h,\"DGD1\",4);h[4]=DIAG_CAPTURE_VERSION;h[5]=DIAG_ROW_BYTES;\n"
+          ]
+        },
+        {
+          "old_start": 18,
+          "new_start": 18,
+          "old": [
+            " if(memcmp(bank,\"DGD1\",4)||bank[4]!=4||bank[5]!=DIAG_ROW_BYTES)return false;\n"
+          ],
+          "new": [
+            " if(memcmp(bank,\"DGD1\",4)||bank[4]!=DIAG_CAPTURE_VERSION||bank[5]!=DIAG_ROW_BYTES)return false;\n"
+          ]
+        }
+      ]
+    },
+    "drive_diag_pico.h": {
+      "base_sha256": "b41e19b1298bd43cdc1bdd93716bf9b0cb9a0a479af3a72bf0046faebf642760",
+      "modified_sha256": "ae8ec35b72de9083942982e34cc79841e53ef02c2303fd33e4985e65b46d394f",
+      "hunks": [
+        {
+          "old_start": 39,
+          "new_start": 39,
+          "old": [
+            " printf(\"DRIVE_DIAG_BEGIN: base=interface1.1 control=continuous2 capture=4 rows=%u row_bytes=%u stored=%u restored=%u save_failed=%u matches_motion=%u frozen=%u trigger=%u trigger_us=%lu first_us=%\" PRIi64 \" last_us=%\" PRIi64 \" post_remaining=%u\\n\",\n"
+          ],
+          "new": [
+            " printf(\"DRIVE_DIAG_BEGIN: base=interface1.1 control=continuous2_height1 capture=5 rows=%u row_bytes=%u stored=%u restored=%u save_failed=%u matches_motion=%u frozen=%u trigger=%u trigger_us=%lu first_us=%\" PRIi64 \" last_us=%\" PRIi64 \" post_remaining=%u\\n\",\n"
+          ]
+        },
+        {
+          "old_start": 48,
+          "new_start": 48,
+          "old": [
+            " puts(\"DIAG_STEERING: when filter_active, GAIN0..7 maps70..100percent; DAMP0..3 maps0..1 return damping weight. Coarse observational quantisation only.\");\n"
+          ],
+          "new": [
+            " puts(\"DIAG_STEERING: when filter_active, GAIN0..7 maps0..100percent; DAMP0..3 maps0..8mm/s absolute half-speed damping. Coarse observational quantisation only.\");\n"
+          ]
+        },
+        {
+          "old_start": 97,
+          "new_start": 97,
+          "old": [
+            "   diag_tick.v[D_GAIN]=(int64_t)lroundf(clampf((continuous_steering.gain-.70f)/.30f,0,1)*7);\n"
+          ],
+          "new": [
+            "   diag_tick.v[D_GAIN]=(int64_t)lroundf(clampf(continuous_steering.gain,0,1)*7);\n"
+          ]
+        }
+      ]
+    },
+    "v12_2/baseline/testing/subsystem2/circuit_with_barcode/main.c": {
+      "base_sha256": "ab81c1b429d6ec9ea1b03dff53846efd656192fd249aa38daec57d9e0a831221",
+      "modified_sha256": "1f03fe4c74e5ea2fecf422c511bfa91187a56daa708c14f0ca4140797b36953e",
+      "hunks": [
+        {
+          "old_start": 69,
+          "new_start": 69,
+          "old": [
+            "static uint8_t recorded_version=28;\n"
+          ],
+          "new": [
+            "static uint8_t recorded_version=29;\n"
+          ]
+        },
+        {
+          "old_start": 298,
+          "new_start": 298,
+          "old": [
+            "    flash_loaded=false;recorded_key='-';recorded_version=28;\n"
+          ],
+          "new": [
+            "    flash_loaded=false;recorded_key='-';recorded_version=29;\n"
+          ]
+        },
+        {
+          "old_start": 301,
+          "new_start": 301,
+          "old": [
+            "    puts(\"\\nBUDDY123 INTERFACE WIFI v2.3 | AUTO ANALOG GP27 | A-Z MQTT MAPPING | no boot assignments | motors OFF on boot\");\n"
+          ],
+          "new": [
+            "    puts(\"\\nBUDDY123 INTERFACE WIFI v2.3_height_v1 | AUTO ANALOG GP27 | A-Z MQTT MAPPING | no boot assignments | motors OFF on boot\");\n"
+          ]
+        },
+        {
+          "old_start": 306,
+          "new_start": 306,
+          "old": [
+            "    puts(\"V2 steering: brief gain70%, progressive full same-side authority by350ms; bounded encoder turn damping while returning. Motor controller/caps unchanged.\");\n"
+          ],
+          "new": [
+            "    puts(\"HEIGHT V1 steering: brief gain45%, full same-side authority by450ms; bounded excess-yaw damping; brief visible-line mean floor35mm/s. Motor PI/caps unchanged.\");\n"
+          ]
+        },
+        {
+          "old_start": 311,
+          "new_start": 311,
+          "old": [
+            "    puts(\"FRONT ONLY:w=both WHITE,l=left BLACK,r=right BLACK;k=save;c=restore successful V2 calibration.1/2/3=profile. Manual calibration remains available.\");\n"
+          ],
+          "new": [
+            "    puts(\"FRONT ONLY:w=both WHITE,l=left BLACK,r=right BLACK;k=save;c=restore raised-height calibration.1/2/3=profile. Manual calibration remains available.\");\n"
+          ]
+        },
+        {
+          "old_start": 314,
+          "new_start": 314,
+          "old": [
+            "    puts(\"Record28: V2 calibration preset unless own saved calibration exists; diagnostics format4. DRIVER3=continuous; ordinary startup flags256/512. Copied binary telemetry20Hz; no flash writes while moving.\");\n"
+          ],
+          "new": [
+            "    puts(\"Record29: measured raised-height preset unless own saved calibration exists; diagnostics format5. DRIVER3=continuous; ordinary startup flags256/512. Copied binary telemetry20Hz; no flash writes while moving.\");\n"
+          ]
+        },
+        {
+          "old_start": 477,
+          "new_start": 477,
+          "old": [
+            "        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=28;last_fast=false;\n"
+          ],
+          "new": [
+            "        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=29;last_fast=false;\n"
+          ]
+        },
+        {
+          "old_start": 644,
+          "new_start": 644,
+          "old": [
+            "        test_mode=1;imported_front=true;\n",
+            "        puts(\"CAL PRESET: successful Continuous V2 run; white=163,160 black=3457,3700. w/l/r/k remain available; c restores preset.\");\n",
+            "    } else puts(\"CAL SAVED: restoring this V2.3 firmware's saved calibration/profile; c restores preset.\");\n",
+            "    recorded_version=28;\n",
+            "    load_raw();load_drive_diag();buddy_extension_init();side_cal=(SideCalibration){0,1,3};last_control=time_us_64();wifi_harness_init();\n"
+          ],
+          "new": [
+            "        reset_log();test_mode=1;imported_front=true;\n",
+            "        puts(\"CAL PRESET: raised-height measured endpoints; white=191,154 black=1940,2306. w/l/r/k remain available; c restores preset.\");\n",
+            "    } else {\n",
+            "        puts(\"CAL SAVED: restoring this height build's record29 calibration/profile; c restores raised preset.\");\n",
+            "        load_raw();load_drive_diag();\n",
+            "    }\n",
+            "    recorded_version=29;\n",
+            "    buddy_extension_init();side_cal=(SideCalibration){0,1,3};last_control=time_us_64();wifi_harness_init();\n"
+          ]
+        },
+        {
+          "old_start": 692,
+          "new_start": 695,
+          "old": [
+            "                puts(\"CAL RESTORED: white=163,160 black=3457,3700; k saves. Previous run rows cleared; profile unchanged.\");\n"
+          ],
+          "new": [
+            "                puts(\"CAL RESTORED: raised-height white=191,154 black=1940,2306; k saves. Previous run rows cleared; profile unchanged.\");\n"
+          ]
+        }
+      ]
+    },
+    "v12_2/baseline/testing/subsystem2/circuit_with_barcode/barcode_record.h": {
+      "base_sha256": "f69f08c4c1b91a3c398989eafa8c7c4c3752d7da7fe63dde828e25b8ef20c101",
+      "modified_sha256": "e03c69d061c284caef1e4e0d696dc2a22358f418acace8afe7f81d5234878889",
+      "hunks": [
+        {
+          "old_start": 51,
+          "new_start": 51,
+          "old": [
+            "        (s->version>=26 && s->version<=28)\n"
+          ],
+          "new": [
+            "        (s->version>=26 && s->version<=29)\n"
+          ]
+        }
+      ]
+    }
+  }
+}

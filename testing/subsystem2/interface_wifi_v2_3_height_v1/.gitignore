@@ -1,0 +1,15 @@
+/build*/
+wifi_config.local.h
+*.log
+*.exe
+*.pdb
+*.obj
+!/firmware/*.uf2
+
+__pycache__/
+*.pyc
+wifi_settings.local.json
+/dashboard_session/
+
+!/firmware/*.zip
+!/firmware/SHA256SUMS.txt

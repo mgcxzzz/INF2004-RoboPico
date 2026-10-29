@@ -1,0 +1,316 @@
+--- v2.3/CMakeLists.txt
++++ height_v1/CMakeLists.txt
+@@ -11,7 +11,7 @@
+ 
+ add_executable(buddy123_interface_wifi_v2 main.c motion_api.c nav_coordinator.c motion_executor.c nav_codec.c buddy_hooks.c wifi_transport.c wifi_protocol.c wifi_packets.c)
+ # Include the complete release version in generated ELF/BIN/UF2 filenames.
+-set_target_properties(buddy123_interface_wifi_v2 PROPERTIES OUTPUT_NAME buddy123_interface_wifi_v2_3)
++set_target_properties(buddy123_interface_wifi_v2 PROPERTIES OUTPUT_NAME buddy123_interface_wifi_v2_3_height_v1)
+ target_include_directories(buddy123_interface_wifi_v2 PRIVATE "${CMAKE_CURRENT_LIST_DIR}")
+ target_link_libraries(buddy123_interface_wifi_v2 pico_stdlib hardware_adc hardware_pwm hardware_clocks hardware_sync hardware_flash pico_multicore m)
+ if(BUDDY_WIFI_ENABLED)
+--- v2.3/continuous_steering.h
++++ height_v1/continuous_steering.h
+@@ -4,12 +4,20 @@
+ #include <math.h>
+ #include "v12_2/baseline/testing/subsystem2/circuit_with_barcode/barcode_nav.h"
+ 
+-/* Output-only steering adaptation. The optical tracker and barcode reader
+- * continue to see the original ADC samples and make the original decisions. */
++/* Raised-height V1: output-only adaptation. Optical decisions, white/loss
++ * detection, barcode decoding and explicit manoeuvres remain upstream.
++ * Short alternating requests use 45% authority, a bounded half-speed and
++ * steadier mean; sustained one-sided requests regain the original bend. */
++enum { HEIGHT_BEND_DWELL_MS=450 };
++#define HEIGHT_INITIAL_GAIN 0.45f
++#define HEIGHT_BRIEF_HALF_MAX 12.0f
++#define HEIGHT_BRIEF_MEAN_MIN 35.0f
++#define HEIGHT_YAW_DAMPING 0.65f
++#define HEIGHT_YAW_DAMP_MAX 8.0f
+ typedef struct {
+     float mean, half;
+     int16_t emitted[2];
+-    float previous_error, return_confidence, same_side_duration;
++    float same_side_duration;
+     float gain, damp_weight;
+     uint8_t side : 2;
+     uint8_t active : 1;
+@@ -39,7 +47,7 @@
+     dt = clampf(dt, 0.0f, 0.05f);
+     float desired_left = (float)d.target[0];
+     float desired_right = (float)d.target[1];
+-    float desired_mean = (desired_left + desired_right) * 0.5f;
++    float core_mean = (desired_left + desired_right) * 0.5f;
+     float original_half = (desired_right - desired_left) * 0.5f;
+     float error = ((float)d.level[0] - (float)d.level[1]) / 1000.0f;
+     float measured_left = continuous_steering_finite(i->speed[0], 0.0f);
+@@ -49,8 +57,12 @@
+     /* Retain the established profile speeds; a lower requested ceiling is
+      * reached through the mean slew below. */
+     float ceiling = scanning ? 45.0f : profile == 3 ? 135.0f : 55.0f;
+-    desired_mean = clampf(desired_mean, 0.0f, ceiling);
+-    original_half = clampf(original_half, -desired_mean, desired_mean);
++    core_mean = clampf(core_mean, 0.0f, ceiling);
++    original_half = clampf(original_half, -core_mean, core_mean);
++    if (core_mean <= 0.0f) {
++        continuous_steering_reset(s);
++        return d;
++    }
+ 
+     bool entering = !s->active;
+     if (entering) {
+@@ -59,11 +71,9 @@
+         s->mean = fminf(measured_mean, ceiling);
+         s->half = 0.0f;
+         s->emitted[0] = s->emitted[1] = (int16_t)lroundf(s->mean);
+-        s->previous_error = error; /* no derivative kick on entry */
+-        s->return_confidence = 0.0f;
+         s->same_side_duration = 0.0f;
+         s->side = original_half > 0.0f ? 1u : original_half < 0.0f ? 2u : 0u;
+-        s->gain = 0.70f;
++        s->gain = HEIGHT_INITIAL_GAIN;
+         s->damp_weight = 0.0f;
+         s->active = true;
+     }
+@@ -73,37 +83,47 @@
+      * authority and must not earn full gain. */
+     uint8_t side = original_half > 0.0f ? 1u : original_half < 0.0f ? 2u : 0u;
+     if (!entering && side != 0u && side == s->side) {
+-        s->same_side_duration = fminf(0.35f, s->same_side_duration + dt);
++        s->same_side_duration = fminf(HEIGHT_BEND_DWELL_MS/1000.0f,
++                                     s->same_side_duration + dt);
+     } else if (side != s->side || side == 0u) {
+         s->same_side_duration = 0.0f;
+     }
+     s->side = side;
+-    s->gain = 0.70f + 0.30f * clampf(s->same_side_duration / 0.35f, 0.0f, 1.0f);
++    float persistence = clampf(s->same_side_duration /
++                               (HEIGHT_BEND_DWELL_MS/1000.0f), 0.0f, 1.0f);
++    s->gain = HEIGHT_INITIAL_GAIN + (1.0f-HEIGHT_INITIAL_GAIN)*persistence;
+     float desired_half = original_half * s->gain;
+ 
+-    /* Scale return confidence by the normalized calibrated-error fall rate.
+-     * The 40ms EMA smooths it; the half slew already bounds output changes. */
+-    float abs_error = fabsf(error);
+-    float fall_rate = dt > 0.0f ?
+-        fmaxf(0.0f, (fabsf(s->previous_error) - abs_error) / dt) : 0.0f;
+-    float confidence_target = clampf(fall_rate / 4.0f, 0.0f, 1.0f);
+-    if (original_half == 0.0f) confidence_target = 1.0f;
+-    s->return_confidence += (confidence_target - s->return_confidence) *
+-        dt / (0.040f + dt);
+-    s->return_confidence = clampf(s->return_confidence, 0.0f, 1.0f);
+-    s->damp_weight = s->return_confidence;
+-    float damping = clampf(0.35f * measured_half * s->damp_weight, -7.0f, 7.0f);
++    /* Oppose actual rotation exceeding the requested rotation, including
++     * rotation in the old direction after an optical reversal. A steady
++     * bend at/below its requested rate is not continuously weakened.
++     * Existing velocity estimation is used; no added ADC/steering filter. */
++    float excess_half = measured_half > 0.0f ?
++        fmaxf(0.0f, measured_half-fmaxf(0.0f,desired_half)) :
++        fminf(0.0f, measured_half-fminf(0.0f,desired_half));
++    float damping = clampf(HEIGHT_YAW_DAMPING*excess_half,
++                           -HEIGHT_YAW_DAMP_MAX, HEIGHT_YAW_DAMP_MAX);
++    s->damp_weight = fabsf(damping)/HEIGHT_YAW_DAMP_MAX;
+     desired_half -= damping;
+-    s->previous_error = error;
+ 
+-    /* The original bend request regains all authority after 350ms on the same
+-     * side. Damping fades as the optical error stops shrinking. */
++    /* A brief visible-line correction should not halve the forward target.
++     * Persistent bends recover the original mean AND full inner-wheel range.
++     * This floor never applies to lost-line/coast/STOP/manoeuvre demands. */
++    float brief_mean = fminf(ceiling,fmaxf(core_mean,HEIGHT_BRIEF_MEAN_MIN));
++    float desired_mean = brief_mean+(core_mean-brief_mean)*persistence;
++    float half_limit = HEIGHT_BRIEF_HALF_MAX +
++        fmaxf(0.0f,desired_mean-HEIGHT_BRIEF_HALF_MAX)*persistence;
++    desired_half = clampf(desired_half,-half_limit,half_limit);
+     desired_half = clampf(desired_half, -desired_mean, desired_mean);
+     float outer = desired_mean + fabsf(desired_half);
+     if (outer > ceiling) desired_mean = fmaxf(0.0f, ceiling - fabsf(desired_half));
+ 
+     float evidence = clampf(fabsf(error) / 0.70f, 0.0f, 1.0f);
+     float steer_rate = 120.0f + 180.0f * evidence;
++    /* Release an old correction promptly as the request shrinks/reverses.
++     * Use the existing 300mm/s^2 maximum, not an extra smoothing delay. */
++    if (fabsf(desired_half)<fabsf(s->half) || desired_half*s->half<0.0f)
++        steer_rate=300.0f;
+     float half_change = desired_half - s->half;
+     s->half += clampf(half_change, -steer_rate * dt, steer_rate * dt);
+ 
+@@ -115,7 +135,7 @@
+ 
+     for (unsigned w=0; w<2; ++w) {
+         float target = s->mean + (w ? s->half : -s->half);
+-        target = clampf(target, 0.0f, 135.0f);
++        target = clampf(target, 0.0f, ceiling);
+         s->emitted[w] = (int16_t)lroundf(target);
+         d.target[w] = s->emitted[w];
+     }
+--- v2.3/successful_calibration.h
++++ height_v1/successful_calibration.h
+@@ -1,11 +1,12 @@
+ #ifndef SUCCESSFUL_CONTINUOUS_V2_CALIBRATION_H
+ #define SUCCESSFUL_CONTINUOUS_V2_CALIBRATION_H
+ #include "v12_2/baseline/testing/subsystem2/analog_line_follow/line_logic.h"
+-/* idk_v2.txt: successful Continuous V2 run, profile 1. These are ADC
+- * references, not required live centre readings. User captures remain valid. */
+-enum { CALIBRATION_RECORD_VERSION=28 };
++/* Raised front sensors (~10 mm): measured 2026-10-29 w/l/r/k endpoints.
++ * These reproduce all 256 recorded ADC/level pairs, not a validated new
++ * smooth-running sweet spot. Manual captures remain supported. */
++enum { CALIBRATION_RECORD_VERSION=29 };
+ static inline LineCalibration successful_calibration(void) {
+-    return (LineCalibration){.white={163,160},.black={3457,3700},.mask=7};
++    return (LineCalibration){.white={191,154},.black={1940,2306},.mask=7};
+ }
+ /* Previous-firmware records may contain the unwanted recalibration. Only
+  * this build's CRC-validated saved record can supersede its starting preset. */
+--- v2.3/drive_diag.h
++++ height_v1/drive_diag.h
+@@ -32,7 +32,7 @@
+  DIAG_FIELDS(DIAG_SIGN)
+ #undef DIAG_SIGN
+ };
+-enum { DIAG_ROWS=256,DIAG_ROW_BYTES=58,DIAG_POST=128,DIAG_HEADER=256,DIAG_BANK=16384,
++enum { DIAG_CAPTURE_VERSION=5,DIAG_ROWS=256,DIAG_ROW_BYTES=58,DIAG_POST=128,DIAG_HEADER=256,DIAG_BANK=16384,
+  DF_FILTER=1,DF_URGENT=2,DF_SCAN=4,DF_ACTIVE_BEFORE=8,DF_ACTIVE=16,DF_WHITE=32,
+  DF_PREPARE=64,DF_LEAVE_FAST=128,DF_KICK_L=256,DF_KICK_R=512,DF_PEAK_L=1024,DF_PEAK_R=2048,
+  DF_LOADED_L=4096,DF_LOADED_R=8192,DF_COMMIT=16384,DF_CLIPPED=32768,DF_OPTICAL=65536,DF_RUN_ACTIVE=131072,DF_HANDOVER_KEEP=262144 };
+--- v2.3/drive_diag_storage.h
++++ height_v1/drive_diag_storage.h
+@@ -3,7 +3,7 @@
+ #include "drive_diag.h"
+ #include "nav_log_storage.h"
+ static inline void diag_header(uint8_t h[DIAG_HEADER],const DriveDiag *d) {
+- memset(h,0,DIAG_HEADER);memcpy(h,"DGD1",4);h[4]=4;h[5]=DIAG_ROW_BYTES;
++ memset(h,0,DIAG_HEADER);memcpy(h,"DGD1",4);h[4]=DIAG_CAPTURE_VERSION;h[5]=DIAG_ROW_BYTES;
+  uint32_t flags=d->count|((uint32_t)d->head<<9)|((uint32_t)d->reason<<17)|((uint32_t)d->profile<<23)|
+   ((uint32_t)d->trigger<<25)|((uint32_t)d->frozen<<28)|((uint32_t)d->triggered<<29)|((uint32_t)d->begun<<30);
+  nav_le32(h+8,flags);nav_le32(h+12,nav_crc((const uint8_t *)d->rows,sizeof(d->rows)));
+@@ -16,7 +16,7 @@
+  nav_le32(h+16,nav_crc(h,DIAG_HEADER));
+ }
+ static inline bool diag_bank_valid(const uint8_t *bank) {
+- if(memcmp(bank,"DGD1",4)||bank[4]!=4||bank[5]!=DIAG_ROW_BYTES)return false;
++ if(memcmp(bank,"DGD1",4)||bank[4]!=DIAG_CAPTURE_VERSION||bank[5]!=DIAG_ROW_BYTES)return false;
+  uint8_t h[DIAG_HEADER];memcpy(h,bank,sizeof(h));uint32_t crc=nav_rd32(h+16);memset(h+16,0,4);
+  if(nav_crc(h,sizeof(h))!=crc)return false;
+  uint32_t bits=nav_rd32(h+8);unsigned count=bits&511,head=(bits>>9)&255,profile=(bits>>23)&3;
+--- v2.3/drive_diag_pico.h
++++ height_v1/drive_diag_pico.h
+@@ -37,7 +37,7 @@
+  DiagValues first,last;
+  diag_unpack(&diag_capture.rows[(diag_capture.head+DIAG_ROWS-diag_capture.count)%DIAG_ROWS],&first);
+  diag_unpack(&diag_capture.rows[(diag_capture.head+DIAG_ROWS-1)%DIAG_ROWS],&last);
+- printf("DRIVE_DIAG_BEGIN: base=interface1.1 control=continuous2 capture=4 rows=%u row_bytes=%u stored=%u restored=%u save_failed=%u matches_motion=%u frozen=%u trigger=%u trigger_us=%lu first_us=%" PRIi64 " last_us=%" PRIi64 " post_remaining=%u\n",
++ printf("DRIVE_DIAG_BEGIN: base=interface1.1 control=continuous2_height1 capture=5 rows=%u row_bytes=%u stored=%u restored=%u save_failed=%u matches_motion=%u frozen=%u trigger=%u trigger_us=%lu first_us=%" PRIi64 " last_us=%" PRIi64 " post_remaining=%u\n",
+   diag_capture.count,DIAG_ROW_BYTES,diag_saved,diag_restored,diag_failed,matches,diag_capture.frozen,diag_capture.trigger,
+   (unsigned long)diag_capture.trigger_us,first.v[D_US],last.v[D_US],diag_capture.post);
+  printf("DIAG_TIMING: ticks=%lu max_interval_us=%lu intervals_ge20ms=%lu max_control_observed_us=%lu max_pack_us=%lu\n",
+@@ -46,7 +46,7 @@
+  printf("DIAG_CAL: white=%u,%u black=%u,%u profile=%u duration_us=%" PRIu64 " stop=%u\n",
+   diag_capture.white[0],diag_capture.white[1],diag_capture.black[0],diag_capture.black[1],diag_capture.profile,diag_capture.duration_us,diag_capture.reason);
+  puts("DIAG_FLAGS: 1=filtered,2=urgent_bypass,4=scan,8=filter_was_active,16=filter_active,32=white,64=load_prepare,128=leave_fast,256/512=legacy_kick_or_continuous_start_L/R,1024/2048=peak_L/R,4096/8192=loaded_L/R,16384=commit,32768=clipped,65536=optical_valid,131072=run_active_at_observation,262144=cruise_I_preserved");
+- puts("DIAG_STEERING: when filter_active, GAIN0..7 maps70..100percent; DAMP0..3 maps0..1 return damping weight. Coarse observational quantisation only.");
++ puts("DIAG_STEERING: when filter_active, GAIN0..7 maps0..100percent; DAMP0..3 maps0..8mm/s absolute half-speed damping. Coarse observational quantisation only.");
+  puts("DIAG_UNITS: US/DT/COST=microseconds; SPEED/REF/MEAN/HALF=mm/s; I/FF=native_PI_units(raw_before1.2_when_DRIVER0or3,physical_PWM_when_DRIVER1or2); FF=derived_base_at_REF_not_applied_output; DRIVER0=legacy_ordinary_or_loaded,1=maneuver,2=ramp,3=continuous; REQUEST/PWM=physical_permille; TICKS=raw_signed_encoder_delta");
+  static const char *names[D_FIELDS]={
+ #define DIAG_NAME(n,w,s) #n,
+@@ -95,7 +95,7 @@
+   if(guard.active)diag_tick.v[D_FLAGS]|=DF_RUN_ACTIVE;
+   diag_tick.v[D_MEAN]=diag_half(gentle.mean);diag_tick.v[D_HALF]=diag_half(gentle.half);
+   if(continuous_steering.active) {
+-   diag_tick.v[D_GAIN]=(int64_t)lroundf(clampf((continuous_steering.gain-.70f)/.30f,0,1)*7);
++   diag_tick.v[D_GAIN]=(int64_t)lroundf(clampf(continuous_steering.gain,0,1)*7);
+    diag_tick.v[D_DAMP]=(int64_t)lroundf(clampf(continuous_steering.damp_weight,0,1)*3);
+   }
+  }
+--- v2.3/v12_2/baseline/testing/subsystem2/circuit_with_barcode/main.c
++++ height_v1/v12_2/baseline/testing/subsystem2/circuit_with_barcode/main.c
+@@ -67,7 +67,7 @@
+ static uint16_t side_adc;static uint64_t last_side_sample;static bool status_enabled;
+ static uint32_t last_nav_event;
+ static uint8_t test_mode=1,recorded_mode=1;
+-static uint8_t recorded_version=28;
++static uint8_t recorded_version=29;
+ static bool last_fast;
+ static CircuitCapture capture;
+ static CircuitLoad load;
+@@ -296,23 +296,23 @@
+     guard.duration_us=0;guard.reason=0;circuit=(Circuit){0};nav=(BarcodeNav){0};gentle=(ScanSmooth){0};
+     for(unsigned w=0;w<2;++w) {cut_ticks[w]=0;cut_invalid[w]=0;travelled_ticks[w]=0;}
+     restored_distance=0;
+-    flash_loaded=false;recorded_key='-';recorded_version=28;
++    flash_loaded=false;recorded_key='-';recorded_version=29;
+ }
+ static void help(void) {
+-    puts("\nBUDDY123 INTERFACE WIFI v2.3 | AUTO ANALOG GP27 | A-Z MQTT MAPPING | no boot assignments | motors OFF on boot");
++    puts("\nBUDDY123 INTERFACE WIFI v2.3_height_v1 | AUTO ANALOG GP27 | A-Z MQTT MAPPING | no boot assignments | motors OFF on boot");
+     puts("Ordinary profiles1/3: continuous steering + continuous per-wheel PI, physical420 cap. No repeated running kick or load-driver switching.");
+     puts("Running FF provisional: L150/R180 at45mm/s; encoder PI adjusts. Wheel reference +150/-250mm/s^2, physical PWM slew1200/s; explicit STOP immediate.");
+     puts("One bounded150ms starting aid per positive segment, max300, ends early once rolling. Actual output tracked for smooth aid release.");
+     puts("Original optical/barcode/junction/search decisions retained. Profile2 remains legacy ramp experiment; use PROFILE1 first.");
+-    puts("V2 steering: brief gain70%, progressive full same-side authority by350ms; bounded encoder turn damping while returning. Motor controller/caps unchanged.");
++    puts("HEIGHT V1 steering: brief gain45%, full same-side authority by450ms; bounded excess-yaw damping; brief visible-line mean floor35mm/s. Motor PI/caps unchanged.");
+     puts("Profile1 normal45mm/s; profile3 up to135; scan45. Pre-search gap/probe uses same motor controller; original zero/coast/search/STOP commands remain.");
+     puts("Shared motion APIs retained; A-Z routing enabled: all Buddy3 targets, Buddy4 telemetry and Buddy5 avoidance route through nav coordinator to the single motor writer.");
+     puts("Barcode A0 GP27/ADC1; front A0 GP26/GP28. Automatic complete Code39 frame consensus; Mapped A-Z pending until next separate cross; no boot mapping.");
+     puts("Cross width11..30mm,4mm WHITE confirmation; rolling left/right and U-turn manoeuvres remain existing settings. Side ahead92mm; turn start55mm before centre.");
+-    puts("FRONT ONLY:w=both WHITE,l=left BLACK,r=right BLACK;k=save;c=restore successful V2 calibration.1/2/3=profile. Manual calibration remains available.");
++    puts("FRONT ONLY:w=both WHITE,l=left BLACK,r=right BLACK;k=save;c=restore raised-height calibration.1/2/3=profile. Manual calibration remains available.");
+     puts("g=USB hands-free2s;f=hold GP21;s/either button stops. BANK:wait5s,BOTH3s,release,wait1s,tap GP21,2s.");
+     puts("h=help;n=network status;p=motion/events;d=saved drive diagnostics;j=barcode;a=raw ADC;z=nav coordinator;v=live(defaultOFF). Stop,WAIT5s before changing power.");
+-    puts("Record28: V2 calibration preset unless own saved calibration exists; diagnostics format4. DRIVER3=continuous; ordinary startup flags256/512. Copied binary telemetry20Hz; no flash writes while moving.");
++    puts("Record29: measured raised-height preset unless own saved calibration exists; diagnostics format5. DRIVER3=continuous; ordinary startup flags256/512. Copied binary telemetry20Hz; no flash writes while moving.");
+     printf("MAP: configured=%u revision=%u; set Straight/U-turn/Left/Right on dashboard. Motion history384 rows; raw first2048 samples.\n",(wifi_mapping&WP_MAP_CONFIGURED)!=0,(unsigned)(wifi_mapping>>21));
+     printf("CAL FRONT white=%u,%u black=%u,%u valid=%u min_span=%u span=%d,%d barcode=AUTO_A0_GP27 profile=%u restored=%u imported=%u\n",
+         calibration.white[0],calibration.white[1],calibration.black[0],calibration.black[1],calibration_valid(&calibration),
+@@ -475,7 +475,7 @@
+     uint64_t now=time_us_64();uint32_t irq=save_and_disable_interrupts();
+     bool ok=guard_start(&guard,now,mode!=LINE_USB_HOLD || !gpio_get(HOLD),!gpio_get(STOP));
+     if(ok) {
+-        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=28;last_fast=false;
++        ++runs;rearm=(LineRearm){0};run_mode=mode;recorded_mode=test_mode;recorded_version=29;last_fast=false;
+         continuous_active=false;continuous_steering_reset(&continuous_steering);
+         memset(continuous_wheel,0,sizeof(continuous_wheel));
+         diag_begin(&diag_capture,guard.start_us,recorded_mode,calibration.white,calibration.black);
+@@ -642,11 +642,14 @@
+     side_adc=read_adc(1);side_analog.selected=AO_DEFAULT_BANK;stdio_init_all();load_log();
+     const BarcodeSaved *startup_record=(const BarcodeSaved *)(XIP_BASE+LOG_OFFSET);
+     if(successful_calibration_boot(&calibration,startup_record->version,barcode_record_valid(startup_record))) {
+-        test_mode=1;imported_front=true;
+-        puts("CAL PRESET: successful Continuous V2 run; white=163,160 black=3457,3700. w/l/r/k remain available; c restores preset.");
+-    } else puts("CAL SAVED: restoring this V2.3 firmware's saved calibration/profile; c restores preset.");
+-    recorded_version=28;
+-    load_raw();load_drive_diag();buddy_extension_init();side_cal=(SideCalibration){0,1,3};last_control=time_us_64();wifi_harness_init();
++        reset_log();test_mode=1;imported_front=true;
++        puts("CAL PRESET: raised-height measured endpoints; white=191,154 black=1940,2306. w/l/r/k remain available; c restores preset.");
++    } else {
++        puts("CAL SAVED: restoring this height build's record29 calibration/profile; c restores raised preset.");
++        load_raw();load_drive_diag();
++    }
++    recorded_version=29;
++    buddy_extension_init();side_cal=(SideCalibration){0,1,3};last_control=time_us_64();wifi_harness_init();
+     bool old_connected=false,usb_pending=false;uint8_t raw_buttons=0,buttons=0;
+     uint64_t changed=0,last_status=0,last_adc=0,usb_start_at=0;uint32_t seen_stops=0;
+     BenchArm arm={0};
+@@ -690,7 +693,7 @@
+                 puts("CAL RESTORE rejected: stop, wait5s, release both buttons.");
+             else {
+                 reset_log();calibration=successful_calibration();imported_front=true;
+-                puts("CAL RESTORED: white=163,160 black=3457,3700; k saves. Previous run rows cleared; profile unchanged.");
++                puts("CAL RESTORED: raised-height white=191,154 black=1940,2306; k saves. Previous run rows cleared; profile unchanged.");
+             }
+         } else if(ch=='w' || ch=='l' || ch=='r') { usb_pending=false;calibrate(ch); }
+         else if(ch=='o' || ch=='b') puts("No side calibration needed: automatic analogue A0 on GP27. w/l/r calibrate FRONT sensors only.");
+--- v2.3/v12_2/baseline/testing/subsystem2/circuit_with_barcode/barcode_record.h
++++ height_v1/v12_2/baseline/testing/subsystem2/circuit_with_barcode/barcode_record.h
+@@ -49,7 +49,7 @@
+ static inline bool barcode_record_valid(const BarcodeSaved *s) {
+     return s->magic==B_MAGIC &&
+ #ifdef BUDDY_WIFI_LOGGING
+-        (s->version>=26 && s->version<=28)
++        (s->version>=26 && s->version<=29)
+ #else
+         s->version>=1 && s->version<=25
+ #endif
