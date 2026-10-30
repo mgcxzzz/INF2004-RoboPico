@@ -1,0 +1,18 @@
+{
+ "source_repo": "INF2004-RoboPico buddy4 checkout (HEAD e6b19b0 + working tree), Buddy4 passive v0.9 validated sources",
+ "note": "copied byte-for-byte; must stay identical to the source hashes below",
+ "files": {
+  "subsystem2/b2_pack.c": "dedf5073f86e98b4ab9c66100a7e82f6829172192466751cfb58e107e3f95dd9",
+  "subsystem4/imu_proc.h": "7043cb99c3f72b81373569b67256047d0ce3771e1e4d12a678211ad6b4553f7b",
+  "subsystem4/b4_side_filter.h": "62aa101ce5cfc45434cc58e27dd4a5d2fb858ad989e58f250ddeff81c0d6d5bd",
+  "subsystem4/imu_iface.h": "e042fa1a1b992ae520e7fd32e2dd918d9cc15aac2702bc62feba2a28ce4be39e",
+  "subsystem4/drv_lsm303.h": "2cb50d566fb1cb5653feca3524634d44418c395a41dd1d466e66f75c36d0ebe6",
+  "subsystem4/imu_proc.c": "2dc096e53f61d13281c21014f4d3e93811f7b3b64e837e007f926856deb2d662",
+  "subsystem4/b4_diagnostics.h": "c85fc928a5e713b5fb6bdd7e5081ff1f96b7474a595309e4a170f2274c231467",
+  "subsystem4/b4_config.h": "3826c568ecfa5515e13ec471b22d0d9a2c1ed11321f7cbe3f0c1595d9ac2218c",
+  "subsystem4/b4_pack.c": "a36508b6028ada78342e0ce87b10915e40245c0557c9890d954f9d1e7826bd43",
+  "subsystem4/b4_side_ramp.h": "39cdb4bfb182db88e728c4b2df64f93ea94a3187f351f1c9e3b702b24fdd150f",
+  "system/sys_tlm.h": "da8382c7e36b1079f93ed1cc7c2d7ade2d39de91174d2468aa90abcf2b1d3dfd",
+  "system/sys_tlm.c": "63dcfa4708eaaa9efe9aaac9907696e99b046bb79130d64bc67c62c92190b78f"
+ }
+}

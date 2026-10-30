@@ -1,0 +1,763 @@
+diff -ruN -x firmware -x build -x __pycache__ -x bp_captured_fixtures.h -x BARCODE_PEAK_V0_1.patch bporig/interface_wifi_v2_3/CMakeLists.txt bpw/repo/testing/subsystem2/interface_wifi_v2_3_barcode_peak_v0_1/CMakeLists.txt
+--- bporig/interface_wifi_v2_3/CMakeLists.txt	2026-10-28 22:26:46.000000000 +0800
++++ bpw/repo/testing/subsystem2/interface_wifi_v2_3_barcode_peak_v0_1/CMakeLists.txt	2026-10-30 07:01:34.164121495 +0800
+@@ -11,7 +11,19 @@
+ 
+ add_executable(buddy123_interface_wifi_v2 main.c motion_api.c nav_coordinator.c motion_executor.c nav_codec.c buddy_hooks.c wifi_transport.c wifi_protocol.c wifi_packets.c)
+ # Include the complete release version in generated ELF/BIN/UF2 filenames.
+-set_target_properties(buddy123_interface_wifi_v2 PROPERTIES OUTPUT_NAME buddy123_interface_wifi_v2_3)
++# Barcode peak decoder v0.1 on the original v2.3 (no Buddy4 / ramp assist). Two variants:
++#   -DBARCODE_PEAK_ACTIVE=OFF (default): shadow, peak decoder logs only, navigation as v2.3
++#   -DBARCODE_PEAK_ACTIVE=ON           : peak decoder may queue letters the original decoder missed
++option(BARCODE_PEAK_ACTIVE "Let the peak decoder queue letters (OFF = shadow logging only)" OFF)
++if(BARCODE_PEAK_ACTIVE)
++    set(BP_VARIANT active)
++    set(BP_ACTIVE_VALUE 1)
++else()
++    set(BP_VARIANT shadow)
++    set(BP_ACTIVE_VALUE 0)
++endif()
++set_target_properties(buddy123_interface_wifi_v2 PROPERTIES OUTPUT_NAME buddy123_interface_wifi_v2_3_barcode_peak_v0_1_${BP_VARIANT})
++target_compile_definitions(buddy123_interface_wifi_v2 PRIVATE BARCODE_PEAK_ACTIVE=${BP_ACTIVE_VALUE})
+ target_include_directories(buddy123_interface_wifi_v2 PRIVATE "${CMAKE_CURRENT_LIST_DIR}")
+ target_link_libraries(buddy123_interface_wifi_v2 pico_stdlib hardware_adc hardware_pwm hardware_clocks hardware_sync hardware_flash pico_multicore m)
+ if(BUDDY_WIFI_ENABLED)
+diff -ruN -x firmware -x build -x __pycache__ -x bp_captured_fixtures.h -x BARCODE_PEAK_V0_1.patch bporig/interface_wifi_v2_3/barcode_peak.h bpw/repo/testing/subsystem2/interface_wifi_v2_3_barcode_peak_v0_1/barcode_peak.h
+--- bporig/interface_wifi_v2_3/barcode_peak.h	1970-01-01 07:30:00.000000000 +0730
++++ bpw/repo/testing/subsystem2/interface_wifi_v2_3_barcode_peak_v0_1/barcode_peak.h	2026-10-30 07:05:49.363054950 +0800
+@@ -0,0 +1,302 @@
++/* Barcode peak decoder v0.1 (pure C, host-testable; no SDK).
++ *
++ * Why: on the current car the barcode IR (GP27) resolves 9 mm wide bars as
++ * large peaks (~1700-2300 ADC) but 3 mm narrow bars only as small bumps
++ * (~205-225 on a ~175 white level), while the gaps next to them dip to
++ * ~190-209. A fixed ADC threshold (the original 63-bank decoder) then has no
++ * margin. The positions of the bars are still clear, so this decoder:
++ *
++ *  1. smooths the ADC over ~0.5 mm of travel,
++ *  2. finds every local maximum with >= BP_DELTA ADC prominence that rises
++ *     >= BP_MIN_RISE above the tracked white baseline (= one bar),
++ *  3. groups bars until BP_QUIET_MM of travel without a bar,
++ *  4. classifies bars wide/narrow by peak height relative to the group's
++ *     tallest bar, and spaces wide/narrow from bar-centre spacing
++ *     (in units of the frame's own narrow width, so odometry scale cancels),
++ *  5. accepts only a complete *X* Code39 frame (15 bars, 6 wide bars,
++ *     unambiguous spaces, narrow inter-character gaps), either direction.
++ *
++ * Assumes full-size labels as printed (narrow ~3 mm). Characters with no wide
++ * bars ($ / + %) are not supported. Diagnostic v0.1: shadow build only logs. */
++#ifndef BARCODE_PEAK_H
++#define BARCODE_PEAK_H
++#include <stdbool.h>
++#include <stdint.h>
++#include <string.h>
++#include <math.h>
++
++#define BP_VERSION        1
++#define BP_RING           32
++#define BP_SMOOTH_MM      0.5     /* moving average over this much travel ... */
++#define BP_SMOOTH_MIN     5       /* ... and at least this many samples */
++#define BP_DELTA          4.0     /* ADC: minimum prominence / extremum hysteresis */
++#define BP_DELTA_FRAC     0.05    /* ... or 5 % of the peak rise (tall flat wide-bar tops never split) */
++#define BP_MIN_RISE       20.0    /* ADC above white baseline for a bar peak */
++#define BP_MIN_SEP_MM     3.0     /* closer peaks are one bar (keep the higher); true bars are >= 2 units (~6 mm) apart */
++#define BP_QUIET_MM       24.0    /* no bar for this travel ends a group (max in-frame spacing ~18 mm; 21 if a weak bar is missed) */
++#define BP_EARLY_QUIET_MM 12.0    /* with >= 15 bars, try once after this much quiet (low latency) */
++#define BP_MAX_BARS       24
++#define BP_BASE_BIN_MM    5.0     /* white baseline = min over 12 x 5 mm bins */
++#define BP_BASE_BINS      12
++#define BP_NARROW_FRAC    0.15    /* bar rise < 15 % of tallest = narrow */
++#define BP_WIDE_FRAC      0.50    /* bar rise > 50 % of tallest = wide; between = reject */
++#define BP_NARROW_CONSIST  0.35   /* every narrow bar must rise >= 45 % of the frame's median narrow rise */
++#define BP_WIDE_MIN_RISE  300.0   /* tallest bar must rise this much (wide bars exist) */
++#define BP_UNIT_MIN_MM    2.0     /* accepted narrow width range */
++#define BP_UNIT_MAX_MM    4.5
++#define BP_SPACE_CUT      2.0     /* space wide if > 2 narrow units ... */
++#define BP_SPACE_AMBIG    0.4     /* ... reject if within +/-0.4 of the cut */
++#define BP_REPAIR_MAX_BARS 18     /* groups of 16..18 bars: try dropping the weakest narrow bars */
++#define BP_REPAIR_CANDIDATES 4
++#define BP_REPORT_MIN_BARS 6      /* groups smaller than this (junctions, noise) are not reported */
++
++enum { BP_OK = 0, BP_R_FEW = 1, BP_R_WIDTH_CLASS = 2, BP_R_WIDE_COUNT = 3, BP_R_UNIT = 4,
++       BP_R_SPACE = 5, BP_R_GAP = 6, BP_R_PATTERN = 7, BP_R_AMBIGUOUS = 8, BP_R_NO_WIDE = 9 };
++
++typedef struct { double mm; double peak; double rise; double prom; } BpBar;   /* prom = min(left, right) drop */
++
++typedef struct {
++    double rmm[BP_RING]; uint16_t radc[BP_RING]; uint8_t rhead, rcount;
++    double bin_min[BP_BASE_BINS], bin_start_mm; uint8_t bin_head; bool base_init;
++    bool rising, last_open, early_tried; double ext, ext_mm, valley;
++    BpBar bar[BP_MAX_BARS]; uint8_t nbars; bool overflow;
++    double last_mm; bool have_mm;
++} BarcodePeak;
++
++typedef struct {
++    bool decoded, reverse, overflow;
++    char code; uint8_t reason, nbars, offset, removed;
++    double start_mm, end_mm, unit_mm, base;
++    double max_narrow_space, min_wide_space;   /* in narrow units */
++    double min_narrow_rise, min_narrow_peak, max_wide_peak;
++    uint16_t pattern[3];
++} BpResult;
++
++static inline void bp_reset(BarcodePeak *p) { memset(p, 0, sizeof(*p)); }
++
++/* Same 9-bit Code39 table/bit order as barcode_scan.h (element 0 = MSB). */
++static inline char bp_character(uint16_t pattern) {
++    static const char alphabet[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-. $/+%";
++    static const uint16_t table[] = {
++        0x034,0x121,0x061,0x160,0x031,0x130,0x070,0x025,0x124,0x064,
++        0x109,0x049,0x148,0x019,0x118,0x058,0x00d,0x10c,0x04c,0x01c,
++        0x103,0x043,0x142,0x013,0x112,0x052,0x007,0x106,0x046,0x016,
++        0x181,0x0c1,0x1c0,0x091,0x190,0x0d0,0x085,0x184,0x0c4,0x0a8,
++        0x0a2,0x08a,0x02a};
++    for (unsigned n = 0; n < 43; ++n) if (table[n] == pattern) return alphabet[n];
++    return pattern == 0x094 ? '*' : '?';
++}
++
++static inline double bp_base(const BarcodePeak *p) {
++    double b = p->bin_min[0];
++    for (unsigned i = 1; i < BP_BASE_BINS; ++i) if (p->bin_min[i] < b) b = p->bin_min[i];
++    return b;
++}
++
++/* Decode bars[off..off+14]. Returns BP_OK and fills r on success. */
++static inline uint8_t bp_window(const BpBar *bar, unsigned off, BpResult *r) {
++    const BpBar *b = bar + off;
++    double maxrise = 0;
++    for (unsigned i = 0; i < 15; ++i) if (b[i].rise > maxrise) maxrise = b[i].rise;
++    if (maxrise < BP_WIDE_MIN_RISE) return BP_R_NO_WIDE;
++    bool wide[29]; unsigned nwide = 0;
++    double min_nrise = 1e9, min_npeak = 1e9, max_wpeak = 0;
++    for (unsigned i = 0; i < 15; ++i) {
++        double f = b[i].rise / maxrise;
++        if (f > BP_NARROW_FRAC && f < BP_WIDE_FRAC) return BP_R_WIDTH_CLASS;
++        wide[2 * i] = f >= BP_WIDE_FRAC;
++        if (wide[2 * i]) { ++nwide; if (b[i].peak > max_wpeak) max_wpeak = b[i].peak; }
++        else { if (b[i].rise < min_nrise) min_nrise = b[i].rise; if (b[i].peak < min_npeak) min_npeak = b[i].peak; }
++    }
++    if (nwide != 6) return BP_R_WIDE_COUNT;
++    double nr[9]; unsigned nn = 0;                       /* median narrow rise (insertion sort, 9 values) */
++    for (unsigned i = 0; i < 15; ++i) if (!wide[2 * i]) {
++        unsigned j = nn++; while (j > 0 && nr[j - 1] > b[i].rise) { nr[j] = nr[j - 1]; --j; } nr[j] = b[i].rise;
++    }
++    if (min_nrise < BP_NARROW_CONSIST * nr[nn / 2]) return BP_R_WIDTH_CLASS;
++    double u = (b[14].mm - b[0].mm) / 46.0;     /* *X*: 47 units, minus half of the two end bars */
++    if (u < BP_UNIT_MIN_MM || u > BP_UNIT_MAX_MM) return BP_R_UNIT;
++    double max_ns = 0, min_ws = 1e9;
++    for (unsigned i = 0; i < 14; ++i) {
++        double sp = (b[i + 1].mm - b[i].mm) / u - ((wide[2 * i] ? 3 : 1) + (wide[2 * i + 2] ? 3 : 1)) * 0.5;
++        if (sp < 0.2 || fabs(sp - BP_SPACE_CUT) < BP_SPACE_AMBIG || sp > 5.0) return BP_R_SPACE;
++        wide[2 * i + 1] = sp > BP_SPACE_CUT;
++        if (wide[2 * i + 1]) { if (sp < min_ws) min_ws = sp; } else if (sp > max_ns) max_ns = sp;
++    }
++    if (wide[9] || wide[19]) return BP_R_GAP;
++    char c[2][3]; uint16_t pat[2][3];
++    for (unsigned dir = 0; dir < 2; ++dir)
++        for (unsigned ch = 0; ch < 3; ++ch) {
++            uint16_t p = 0;
++            for (unsigned k = 0; k < 9; ++k) {
++                unsigned idx = ch * 10 + k;
++                p = (uint16_t)((p << 1) | (wide[dir ? 28 - idx : idx] ? 1u : 0u));
++            }
++            pat[dir][ch] = p; c[dir][ch] = bp_character(p);
++        }
++    bool ok[2];
++    for (unsigned dir = 0; dir < 2; ++dir)
++        ok[dir] = c[dir][0] == '*' && c[dir][2] == '*' && c[dir][1] != '*' && c[dir][1] != '?';
++    if (ok[0] == ok[1]) return ok[0] ? BP_R_AMBIGUOUS : BP_R_PATTERN;
++    unsigned dir = ok[1];
++    r->decoded = true; r->reverse = dir; r->code = c[dir][1]; r->offset = (uint8_t)off;
++    r->start_mm = b[0].mm - 0.5 * u; r->end_mm = b[14].mm + 0.5 * u; r->unit_mm = u;
++    r->max_narrow_space = max_ns; r->min_wide_space = min_ws;
++    r->min_narrow_rise = min_nrise; r->min_narrow_peak = min_npeak; r->max_wide_peak = max_wpeak;
++    memcpy(r->pattern, pat[dir], sizeof(r->pattern));
++    return BP_OK;
++}
++
++/* Try every 15-bar window of bars[0..n). Collects into *best; returns number of valid windows
++ * (sets *conflict if two windows disagree on the code). */
++static inline unsigned bp_windows(const BpBar *bars, unsigned n, BpResult *best, const BpResult *proto,
++                                  uint8_t *first_reason, bool *conflict) {
++    unsigned found = 0;
++    for (unsigned off = 0; off + 15 <= n; ++off) {
++        BpResult t = *proto;
++        uint8_t why = bp_window(bars, off, &t);
++        if (why == BP_OK) { if (found && t.code != best->code) *conflict = true; if (!found) *best = t; ++found; }
++        else if (off == 0 && first_reason) *first_reason = why;
++    }
++    return found;
++}
++/* Decode the current group. Exactly one code must result. If no window of the raw group decodes
++ * and it has 16..18 bars, retry without 1, then 2, of the weakest-prominence narrow bars (noise
++ * bumps); every successful removal must agree on the same code. */
++static inline void bp_decode(const BarcodePeak *p, BpResult *r) {
++    memset(r, 0, sizeof(*r));
++    r->nbars = p->nbars; r->overflow = p->overflow; r->code = '?'; r->base = bp_base(p);
++    if (p->nbars) { r->start_mm = p->bar[0].mm; r->end_mm = p->bar[p->nbars - 1].mm; }
++    if (p->nbars < 15) { r->reason = BP_R_FEW; return; }
++    uint8_t first_reason = BP_R_PATTERN; bool conflict = false; BpResult best = *r;
++    unsigned found = bp_windows(p->bar, p->nbars, &best, r, &first_reason, &conflict);
++    if (!found && p->nbars > 15 && p->nbars <= BP_REPAIR_MAX_BARS) {
++        double maxrise = 0;
++        for (unsigned i = 0; i < p->nbars; ++i) if (p->bar[i].rise > maxrise) maxrise = p->bar[i].rise;
++        unsigned cand[BP_REPAIR_CANDIDATES], nc = 0;            /* weakest narrow bars, ascending prominence */
++        for (unsigned i = 0; i < p->nbars; ++i) {
++            if (p->bar[i].rise >= BP_NARROW_FRAC * maxrise) continue;
++            unsigned j = nc < BP_REPAIR_CANDIDATES ? nc++ : BP_REPAIR_CANDIDATES;
++            if (j == BP_REPAIR_CANDIDATES) { if (p->bar[i].prom >= p->bar[cand[j - 1]].prom) continue; j = j - 1; }
++            while (j > 0 && p->bar[cand[j - 1]].prom > p->bar[i].prom) { cand[j] = cand[j - 1]; --j; }
++            cand[j] = i;
++        }
++        for (unsigned drop = 1; drop <= 2 && !found && p->nbars - drop >= 15; ++drop)
++            for (unsigned a = 0; a < nc; ++a)
++                for (unsigned b = drop == 2 ? a + 1 : nc; b < nc || (drop == 1 && b == nc); ++b) {
++                    static BpBar tmp[BP_MAX_BARS]; unsigned m = 0;   /* static: keeps ~0.8 KB off the core-0 stack (single caller) */
++                    for (unsigned i = 0; i < p->nbars; ++i)
++                        if (i != cand[a] && !(drop == 2 && i == cand[b])) tmp[m++] = p->bar[i];
++                    BpResult t = best; unsigned f = bp_windows(tmp, m, &t, r, NULL, &conflict);
++                    if (f) { if (found && t.code != best.code) conflict = true; if (!found) { best = t; best.removed = (uint8_t)drop; } found += f; }
++                    if (drop == 1) break;
++                }
++    }
++    if (conflict) { r->reason = BP_R_AMBIGUOUS; return; }
++    if (!found) { r->reason = first_reason; return; }
++    *r = best; r->reason = BP_OK;
++}
++
++static inline void bp_add_bar(BarcodePeak *p, double mm, double peak, double rise, double prom) {
++    if (p->nbars && mm - p->bar[p->nbars - 1].mm < BP_MIN_SEP_MM) {
++        BpBar *l = &p->bar[p->nbars - 1];
++        if (peak > l->peak) { l->mm = mm; l->peak = peak; l->rise = rise; l->prom = prom; }
++        p->last_open = true;
++        return;
++    }
++    if (p->nbars >= BP_MAX_BARS) { p->overflow = true; p->last_open = false; return; }
++    p->bar[p->nbars++] = (BpBar){ mm, peak, rise, prom };
++    p->last_open = true; p->early_tried = false;
++}
++static inline void bp_close_right(BarcodePeak *p, double valley) {
++    if (!p->last_open || !p->nbars) return;
++    BpBar *l = &p->bar[p->nbars - 1];
++    if (l->peak - valley < l->prom) l->prom = l->peak - valley;
++    p->last_open = false;
++}
++
++/* One ADC sample (about every 2 ms) with the mean wheel path in mm.
++ * Returns true when a bar group ended; *out then holds the attempt. */
++static inline bool bp_sample(BarcodePeak *p, uint16_t adc, double mm, BpResult *out) {
++    if (p->have_mm && mm < p->last_mm) mm = p->last_mm;      /* never step backwards */
++    p->last_mm = mm; p->have_mm = true;
++    p->rmm[p->rhead] = mm; p->radc[p->rhead] = adc;
++    p->rhead = (uint8_t)((p->rhead + 1) % BP_RING); if (p->rcount < BP_RING) ++p->rcount;
++    uint32_t sum = 0; unsigned n = 0;
++    for (unsigned k = 0; k < p->rcount; ++k) {
++        unsigned i = (p->rhead + BP_RING - 1 - k) % BP_RING;
++        if (n >= BP_SMOOTH_MIN && p->rmm[i] < mm - BP_SMOOTH_MM) break;
++        sum += p->radc[i]; ++n;
++    }
++    double s = (double)sum / n;
++    if (!p->base_init) {
++        for (unsigned i = 0; i < BP_BASE_BINS; ++i) p->bin_min[i] = s;
++        p->bin_start_mm = mm; p->base_init = true; p->rising = false; p->ext = s; p->ext_mm = mm; p->valley = s;
++    }
++    while (mm - p->bin_start_mm >= BP_BASE_BIN_MM) {
++        p->bin_head = (uint8_t)((p->bin_head + 1) % BP_BASE_BINS);
++        p->bin_min[p->bin_head] = s; p->bin_start_mm += BP_BASE_BIN_MM;
++        if (mm - p->bin_start_mm > BP_BASE_BIN_MM * BP_BASE_BINS) p->bin_start_mm = mm;
++    }
++    if (s < p->bin_min[p->bin_head]) p->bin_min[p->bin_head] = s;
++    double base = bp_base(p);
++    if (p->rising) {
++        if (s > p->ext) { p->ext = s; p->ext_mm = mm; }
++        else if (s <= p->ext - fmax(BP_DELTA, BP_DELTA_FRAC * (p->ext - base))) {
++            if (p->ext >= base + BP_MIN_RISE) bp_add_bar(p, p->ext_mm, p->ext, p->ext - base, p->ext - p->valley);
++            p->rising = false; p->ext = s; p->ext_mm = mm;
++        }
++    } else {
++        if (s < p->ext) { p->ext = s; p->ext_mm = mm; }
++        else if (s >= p->ext + BP_DELTA) { bp_close_right(p, p->ext); p->valley = p->ext; p->rising = true; p->ext = s; p->ext_mm = mm; }
++    }
++    bool pending = p->rising && p->ext >= base + BP_MIN_RISE;    /* a bar peak is still forming */
++    if (p->nbars && !pending) {
++        double quiet = mm - p->bar[p->nbars - 1].mm;
++        bool end = quiet > BP_QUIET_MM, early = !end && !p->early_tried && p->nbars >= 15 && quiet > BP_EARLY_QUIET_MM;
++        if (end || early) {
++            if (!p->rising) bp_close_right(p, p->ext);
++            bp_decode(p, out);
++            if (early) { p->early_tried = true; if (!out->decoded) return false; }   /* not yet: wait for full quiet */
++            p->nbars = 0; p->overflow = false; p->early_tried = false;
++            return true;
++        }
++    }
++    return false;
++}
++
++/* Source-15 barcode-peak telemetry: frame = [0xF2, 24, seq] + 24-byte payload.
++ *  0 u32 uptime_ms   4 u8 subtype 0xB1 (= peak decoder v0.1)
++ *  5 u8 flags: bit0 active build, bit1 decoded, bit2 applied (queued by peak),
++ *     bit3 original decoder already accepted this frame, bit4 reverse,
++ *     bit5 original accepted a DIFFERENT code here, bit6 bar overflow
++ *  6 u8 code ('?' none)   7 u8 reason (BP_*)   8 u8 bars in group
++ *  9 u8 window offset (bits0-3) | weak bars removed by repair (bits4-5)
++ * 10 u16 white baseline ADC  12 u16 lowest narrow-bar peak ADC  14 u16 highest wide-bar peak ADC
++ * 16 u8 lowest narrow-bar rise ADC (255 max)  17 u8 max narrow space x20 (units)
++ * 18 u8 min wide space x20 (units)  19 u8 narrow unit mm x50
++ * 20 u16 frame span mm x10   22 u16 groups reported since run start */
++#define BP_TLM_PAYLOAD 24
++#define BP_TLM_FRAME   (3 + BP_TLM_PAYLOAD)
++static inline uint8_t bp_u8(double v) { return (uint8_t)(v < 0 ? 0 : v > 255 ? 255 : v + 0.5); }
++static inline uint16_t bp_u16(double v) { return (uint16_t)(v < 0 ? 0 : v > 65535 ? 65535 : v + 0.5); }
++static inline void bp_put16(uint8_t *b, uint16_t v) { b[0] = (uint8_t)v; b[1] = (uint8_t)(v >> 8); }
++static inline void bp_tlm_pack(const BpResult *r, uint32_t uptime_ms, uint8_t flags, uint16_t groups,
++                               uint8_t seq, uint8_t f[BP_TLM_FRAME]) {
++    uint8_t *b = f + 3;
++    memset(f, 0, BP_TLM_FRAME);
++    f[0] = 0xF2; f[1] = BP_TLM_PAYLOAD; f[2] = seq;
++    b[0] = (uint8_t)uptime_ms; b[1] = (uint8_t)(uptime_ms >> 8); b[2] = (uint8_t)(uptime_ms >> 16); b[3] = (uint8_t)(uptime_ms >> 24);
++    b[4] = 0xB0 | BP_VERSION; b[5] = flags; b[6] = (uint8_t)(r->decoded ? r->code : '?'); b[7] = r->reason;
++    b[8] = r->nbars; b[9] = (uint8_t)((r->offset & 15u) | ((r->removed & 3u) << 4));
++    bp_put16(b + 10, bp_u16(r->base));
++    bp_put16(b + 12, bp_u16(r->decoded ? r->min_narrow_peak : 0));
++    bp_put16(b + 14, bp_u16(r->decoded ? r->max_wide_peak : 0));
++    b[16] = bp_u8(r->decoded ? r->min_narrow_rise : 0);
++    b[17] = bp_u8(r->decoded ? r->max_narrow_space * 20 : 0);
++    b[18] = bp_u8(r->decoded ? r->min_wide_space * 20 : 0);
++    b[19] = bp_u8(r->decoded ? r->unit_mm * 50 : 0);
++    bp_put16(b + 20, bp_u16((r->end_mm - r->start_mm) * 10));
++    bp_put16(b + 22, groups);
++}
++#endif
+diff -ruN -x firmware -x build -x __pycache__ -x bp_captured_fixtures.h -x BARCODE_PEAK_V0_1.patch bporig/interface_wifi_v2_3/barcode_peak_decode.py bpw/repo/testing/subsystem2/interface_wifi_v2_3_barcode_peak_v0_1/barcode_peak_decode.py
+--- bporig/interface_wifi_v2_3/barcode_peak_decode.py	1970-01-01 07:30:00.000000000 +0730
++++ bpw/repo/testing/subsystem2/interface_wifi_v2_3_barcode_peak_v0_1/barcode_peak_decode.py	2026-10-30 07:02:22.101100311 +0800
+@@ -0,0 +1,35 @@
++#!/usr/bin/env python3
++"""Decode barcode-peak v0.1 source-15 frames (0xF2, len 24, subtype 0xB1) from a native
++mosquitto_sub capture (lines: ISO-time topic hex) or bare hex lines. Prints CSV.
++Usage: barcode_peak_decode.py CAPTURE [FROM_LINE [TO_LINE]]"""
++import struct, sys
++REASON = {0: 'ok', 1: 'too_few_bars', 2: 'bar_height_unclear', 3: 'wide_bar_count', 4: 'unit_out_of_range',
++          5: 'space_unclear', 6: 'wide_char_gap', 7: 'not_a_*X*_frame', 8: 'ambiguous', 9: 'no_wide_bars'}
++FIELDS = ['time', 'seq', 'uptime_ms', 'version', 'build', 'decoded', 'applied', 'orig_same_frame', 'orig_conflict',
++          'direction', 'overflow', 'code', 'reason', 'bars', 'window', 'removed', 'base_adc', 'min_narrow_peak',
++          'max_wide_peak', 'min_narrow_rise', 'max_narrow_space_u', 'min_wide_space_u', 'unit_mm', 'span_mm', 'groups']
++def decode(b):
++    if len(b) != 27 or b[0] != 0xF2 or b[1] != 24 or (b[7] & 0xF0) != 0xB0:
++        return None
++    up, sub, fl, code, why, bars, win, base, npk, wpk, nrise, nsp, wsp, unit, span, groups = \
++        struct.unpack('<IBBBBBBHHHBBBBHH', bytes(b[3:]))
++    return {'seq': b[2], 'uptime_ms': up, 'version': f'v0.{sub & 15}', 'build': 'active' if fl & 1 else 'shadow',
++            'decoded': int(bool(fl & 2)), 'applied': int(bool(fl & 4)), 'orig_same_frame': int(bool(fl & 8)),
++            'orig_conflict': int(bool(fl & 32)), 'direction': 'rev' if fl & 16 else 'fwd', 'overflow': int(bool(fl & 64)),
++            'code': chr(code), 'reason': REASON.get(why, why), 'bars': bars, 'window': win & 15, 'removed': (win >> 4) & 3,
++            'base_adc': base, 'min_narrow_peak': npk, 'max_wide_peak': wpk, 'min_narrow_rise': nrise,
++            'max_narrow_space_u': nsp / 20, 'min_wide_space_u': wsp / 20, 'unit_mm': unit / 50, 'span_mm': span / 10,
++            'groups': groups}
++def main():
++    path = sys.argv[1]; a = int(sys.argv[2]) if len(sys.argv) > 2 else 1; z = int(sys.argv[3]) if len(sys.argv) > 3 else 1 << 62
++    print(','.join(FIELDS))
++    with open(path) as f:
++        for n, line in enumerate(f, 1):
++            if n < a or n > z: continue
++            p = line.split()
++            hx, t = (p[2], p[0]) if len(p) >= 3 else (p[0] if p else '', '')
++            if not hx.lower().startswith('f218'): continue
++            try: d = decode(bytes.fromhex(hx))
++            except ValueError: continue
++            if d: d['time'] = t; print(','.join(str(d[k]) for k in FIELDS))
++if __name__ == '__main__': main()
+diff -ruN -x firmware -x build -x __pycache__ -x bp_captured_fixtures.h -x BARCODE_PEAK_V0_1.patch bporig/interface_wifi_v2_3/barcode_peak_harness.h bpw/repo/testing/subsystem2/interface_wifi_v2_3_barcode_peak_v0_1/barcode_peak_harness.h
+--- bporig/interface_wifi_v2_3/barcode_peak_harness.h	1970-01-01 07:30:00.000000000 +0730
++++ bpw/repo/testing/subsystem2/interface_wifi_v2_3_barcode_peak_v0_1/barcode_peak_harness.h	2026-10-30 07:01:22.595624174 +0800
+@@ -0,0 +1,70 @@
++/* Barcode peak decoder v0.1 glue for the original SDK Wi-Fi v2.3 main
++ * (v12_2/baseline/.../circuit_with_barcode/main.c). Included after
++ * wifi_harness.h so it can use nav, side_analog, wifi_send and wifi_forward.
++ *
++ * Runs barcode_peak.h on every GP27 sample the original decoder sees (same
++ * 2 ms ADC average, same encoder path, only in an active AUTO run), next to
++ * the unchanged original 63-bank decoder.
++ *
++ * BARCODE_PEAK_ACTIVE=0 (shadow): logs only. Navigation uses the original
++ *   decoder exactly as in v2.3.
++ * BARCODE_PEAK_ACTIVE=1 (active): when the peak decoder reads a complete *X*
++ *   frame that the original decoder has NOT already accepted, the letter is
++ *   queued through the original path (barcode_queue_code + B_DECODE event, so
++ *   the dashboard shows it and the junction logic acts on it). If the original
++ *   decoder already accepted that frame, nothing is changed. If the original
++ *   decoder later reads a different letter for the same frame, its existing
++ *   conflict rule cancels the pending action.
++ *
++ * Every bar group of >= 6 bars sends one source-15 frame (see barcode_peak.h)
++ * and, on USB, one "BPEAK" console line. */
++#include "barcode_peak.h"
++#ifndef BARCODE_PEAK_ACTIVE
++#define BARCODE_PEAK_ACTIVE 0
++#endif
++
++static BarcodePeak bp_state;
++static uint16_t bp_groups;
++static uint8_t bp_seq;
++static uint32_t bp_decodes, bp_applied;
++
++static void barcode_peak_begin(void) {
++    bp_reset(&bp_state); bp_groups = 0; bp_decodes = bp_applied = 0;
++}
++
++static void barcode_peak_sample(uint16_t adc, uint64_t now, const double wheel[2]) {
++    if (nav.busy) { bp_reset(&bp_state); return; }          /* turning/U-turn: no labels */
++    double mm = (wheel[0] + wheel[1]) * .5;
++    BpResult r;
++    if (!bp_sample(&bp_state, adc, mm, &r) || r.nbars < BP_REPORT_MIN_BARS) return;
++    if (bp_groups < 65535u) ++bp_groups;
++    uint8_t flags = BARCODE_PEAK_ACTIVE ? 1u : 0u;
++    bool overlap = side_analog.accepted && fabs(r.start_mm - side_analog.accepted_start) <= 12 &&
++                   fabs(r.end_mm - side_analog.accepted_end) <= 12;
++    if (r.decoded) {
++        ++bp_decodes; flags |= 2u;
++        if (r.reverse) flags |= 16u;
++        if (overlap) { flags |= 8u; if (nav.last_code != r.code) flags |= 32u; }
++#if BARCODE_PEAK_ACTIVE
++        else {
++            barcode_queue_code(&nav, r.code);
++            nav.cross_candidate = nav.cross_ready = false;
++            side_analog.accepted = true; side_analog.accepted_start = r.start_mm; side_analog.accepted_end = r.end_mm;
++            AnalogBank *v = &side_analog.bank[side_analog.selected];
++            barcode_reader_reset(&v->reader, v->stable, now, mm);   /* a half-read noise frame must not block the junction search */
++            barcode_event(&nav, B_DECODE, now, mm, r.end_mm - r.start_mm, r.code,
++                          barcode_decode_action(&nav, r.code), 0x40u | (r.reverse ? 1u : 0u), r.pattern);
++            flags |= 4u; ++bp_applied;
++        }
++#endif
++    }
++    if (r.overflow) flags |= 64u;
++    uint8_t frame[BP_TLM_FRAME];
++    bp_tlm_pack(&r, (uint32_t)(now / 1000u), flags, bp_groups, bp_seq++, frame);
++    if (wifi_forward) (void)wifi_send(WIFI_TOPIC_TLM, frame, sizeof(frame));
++    if (stdio_usb_connected())
++        printf("BPEAK v0.%u %s bars=%u code=%c reason=%u dir=%s removed=%u unit=%.2fmm nspace<=%.2f wspace>=%.2f nrise>=%.0f base=%.0f orig=%s%s\n",
++               BP_VERSION, BARCODE_PEAK_ACTIVE ? "active" : "shadow", r.nbars, r.decoded ? r.code : '-', r.reason,
++               r.reverse ? "rev" : "fwd", r.removed, r.unit_mm, r.max_narrow_space, r.min_wide_space, r.min_narrow_rise, r.base,
++               overlap ? "same-frame" : "none", (flags & 4u) ? " APPLIED" : "");
++}
+diff -ruN -x firmware -x build -x __pycache__ -x bp_captured_fixtures.h -x BARCODE_PEAK_V0_1.patch bporig/interface_wifi_v2_3/barcode_peak_tests/test_barcode_peak.c bpw/repo/testing/subsystem2/interface_wifi_v2_3_barcode_peak_v0_1/barcode_peak_tests/test_barcode_peak.c
+--- bporig/interface_wifi_v2_3/barcode_peak_tests/test_barcode_peak.c	1970-01-01 07:30:00.000000000 +0730
++++ bpw/repo/testing/subsystem2/interface_wifi_v2_3_barcode_peak_v0_1/barcode_peak_tests/test_barcode_peak.c	2026-10-30 07:00:59.554208148 +0800
+@@ -0,0 +1,253 @@
++/* Host tests for barcode_peak.h (peak decoder v0.1). No SDK, no hardware.
++ *   cc -std=c11 -Wall -Wextra -Werror -O1 -I.. test_barcode_peak.c -lm */
++#include <stdio.h>
++#include <stdlib.h>
++#include "../barcode_peak.h"
++#include "bp_captured_fixtures.h"
++
++static int checks, fails;
++#define CHECK(c, msg) do { ++checks; if (!(c)) { ++fails; printf("FAIL %s (line %d)\n", msg, __LINE__); } } while (0)
++
++/* ---------- deterministic noise ---------- */
++static uint64_t rng = 88172645463325252ull;
++static double urand(void) { rng ^= rng << 13; rng ^= rng >> 7; rng ^= rng << 17; return (double)(rng >> 11) / 9007199254740992.0; }
++static double nrand(void) { double u = urand() + 1e-12, v = urand(); return sqrt(-2 * log(u)) * cos(6.283185307179586 * v); }
++
++/* ---------- synthetic label + optics ---------- */
++static const char *ALPHA = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-. ";
++static uint16_t code_of(char c) {
++    for (uint16_t p = 0; p < 512; ++p) if (bp_character(p) == c) return p;
++    return 0;
++}
++typedef struct { double a, b; } Iv;
++/* Black intervals of *c* starting at x0, narrow width u, wide = 3u. Optionally reversed. */
++static unsigned label(char c, double x0, double u, bool rev, Iv *iv) {
++    uint16_t pats[3] = { code_of('*'), code_of(c), code_of('*') };
++    int el[29]; unsigned k = 0;
++    for (unsigned ch = 0; ch < 3; ++ch) {
++        for (int bit = 8; bit >= 0; --bit) el[k++] = (pats[ch] >> bit) & 1;
++        if (ch < 2) el[k++] = 0;
++    }
++    if (rev) for (unsigned i = 0; i < 14; ++i) { int t = el[i]; el[i] = el[28 - i]; el[28 - i] = t; }
++    double x = x0; unsigned n = 0;
++    for (unsigned i = 0; i < 29; ++i) { double w = el[i] ? 3 * u : u; if (i % 2 == 0) iv[n++] = (Iv){ x, x + w }; x += w; }
++    return n;
++}
++/* Footprint: steep saturating core (sigma) + weak linear halo (sigma 4.5 mm, H ADC) that gives the
++ * long low tails seen around wide bars on the car. Matches the 2026-10-30 captures by eye. */
++typedef struct { double sigma, base, K, p, noise, scale, speed, stop_prob, H; } Optics;
++static double adc_at(const Iv *iv, unsigned n, double x, const Optics *o);
++static double coverage(const Iv *iv, unsigned n, double x, double s) {
++    double c = 0, k = 1.0 / (s * sqrt(2.0));
++    for (unsigned i = 0; i < n; ++i) c += 0.5 * (erf((iv[i].b - x) * k) - erf((iv[i].a - x) * k));
++    return c < 0 ? 0 : c > 1 ? 1 : c;
++}
++static double adc_at(const Iv *iv, unsigned n, double x, const Optics *o) {
++    return o->base + o->K * pow(coverage(iv, n, x, o->sigma), o->p) + o->H * coverage(iv, n, x, 4.5);
++}
++/* Drive the sensor over [0, len] mm; feed the decoder; return decoded codes. */
++static unsigned drive(const Iv *iv, unsigned n, double len, const Optics *o, char *codes, unsigned max, BpResult *last, unsigned *groups) {
++    BarcodePeak p; bp_reset(&p); unsigned got = 0; double x = 0; *groups = 0;
++    while (x < len) {
++        double adc = adc_at(iv, n, x, o) + o->noise * nrand();
++        if (adc < 0) adc = 0;
++        if (adc > 4095) adc = 4095;
++        BpResult r;
++        if (bp_sample(&p, (uint16_t)(adc + 0.5), x * o->scale, &r)) {
++            if (r.nbars >= BP_REPORT_MIN_BARS) ++*groups;
++            if (r.decoded && got < max) codes[got++] = r.code;
++            if (last) *last = r;
++        }
++        if (urand() < o->stop_prob) for (int k = 0; k < 40; ++k) {          /* stutter: 80 ms stop */
++            BpResult r2; double a2 = adc_at(iv, n, x, o) + o->noise * nrand();
++            if (bp_sample(&p, (uint16_t)(a2 < 0 ? 0 : a2 + 0.5), x * o->scale, &r2) && r2.decoded && got < max) codes[got++] = r2.code;
++        }
++        x += o->speed * 0.00213 * (0.7 + 0.6 * urand());
++    }
++    return got;
++}
++/* Narrow bar 3 mm, footprint sigma: choose K,p so narrow rise ~ target and wide ~1800. */
++static void tune(Optics *o, double u, double narrow_rise, double wide_rise) {
++    double k = 1.0 / (o->sigma * sqrt(2.0));
++    double cn = erf(0.5 * u * k), cw = erf(1.5 * u * k);
++    o->p = log(narrow_rise / wide_rise) / log(cn / cw);
++    o->K = wide_rise / pow(cw, o->p);
++}
++
++/* ---------- A: captured failures ---------- */
++static void test_captures(void) {
++    for (unsigned i = 0; i < sizeof bp_captures / sizeof bp_captures[0]; ++i) {
++        const BpCapture *c = &bp_captures[i];
++        BarcodePeak p; bp_reset(&p); BpResult r, got = { 0 }; unsigned decodes = 0, groups = 0;
++        for (unsigned k = 0; k < c->n; ++k)
++            if (bp_sample(&p, c->adc[k], c->path100[k] / 100.0, &r)) { if (r.nbars >= BP_REPORT_MIN_BARS) ++groups; if (r.decoded) { ++decodes; got = r; } }
++        /* captures stop 2048 samples in; flush with quiet white beyond the frame */
++        double mm = c->path100[c->n - 1] / 100.0;
++        for (unsigned k = 0; k < 400; ++k) if (bp_sample(&p, 175, mm + 0.1 * k, &r)) { if (r.nbars >= BP_REPORT_MIN_BARS) ++groups; if (r.decoded) { ++decodes; got = r; } }
++        printf("capture %-16s decoded %c (%s) groups %u bars %u unit %.2f mm narrow-space max %.2f u, wide-space min %.2f u, narrow rise min %.0f\n",
++               c->name, decodes ? got.code : '-', got.reverse ? "rev" : "fwd", groups, got.nbars, got.unit_mm, got.max_narrow_space, got.min_wide_space, got.min_narrow_rise);
++        CHECK(decodes == 1 && got.code == c->expect, "captured failure decodes to the known letter exactly once");
++        CHECK(groups == 1, "one reported bar group per capture");
++        /* the same capture with odometry scale +/-10 %, every 2nd sample, and +/-15 ADC offset */
++        const double scales[] = { 0.9, 1.1, 1.0, 1.0, 1.0 }; const unsigned steps[] = { 1, 1, 2, 1, 1 }; const int offs[] = { 0, 0, 0, -15, 15 };
++        for (unsigned v = 0; v < 5; ++v) {
++            BarcodePeak q; bp_reset(&q); unsigned d2 = 0; char c2 = 0;
++            for (unsigned k = 0; k < c->n; k += steps[v])
++                if (bp_sample(&q, (uint16_t)(c->adc[k] + offs[v]), scales[v] * c->path100[k] / 100.0, &r) && r.decoded) { ++d2; c2 = r.code; }
++            for (unsigned k = 0; k < 400; ++k) if (bp_sample(&q, (uint16_t)(175 + offs[v]), scales[v] * mm + 0.1 * k, &r) && r.decoded) { ++d2; c2 = r.code; }
++            if (!(d2 == 1 && c2 == c->expect)) printf("  variant %u of %s: decodes %u code %c\n", v, c->name, d2, c2 ? c2 : 0x2d);
++            CHECK(d2 == 1 && c2 == c->expect, "capture variant (odometry scale, half sample rate, ADC offset) still decodes");
++        }
++    }
++}
++
++/* ---------- B: synthetic labels, all supported characters, both directions ---------- */
++static void test_synthetic(void) {
++    unsigned trials = 0, ok = 0, mis = 0;
++    for (unsigned li = 0; ALPHA[li]; ++li) {
++        char c = ALPHA[li];
++        uint16_t pc = code_of(c); unsigned wb = 0;
++        for (int e = 8; e >= 0; e -= 2) wb += (pc >> e) & 1;
++        if (wb != 2) continue;
++        for (unsigned rev = 0; rev < 2; ++rev)
++            for (unsigned s = 0; s < 12; ++s) {
++                Optics o = { .sigma = 1.5 + 0.6 * urand(), .H = 20 + 40 * urand(), .base = 165 + 20 * urand(), .noise = 1 + 3 * urand(),
++                             .scale = 0.92 + 0.16 * urand(), .speed = 30 + 40 * urand(), .stop_prob = s % 3 == 0 ? 0.004 : 0 };
++                double u = 2.8 + 0.4 * urand();
++                tune(&o, u, 25 + 35 * urand(), 1500 + 800 * urand());
++                Iv iv[16]; unsigned n = label(c, 40, u, rev, iv);
++                char got[4]; unsigned groups; BpResult last;
++                unsigned k = drive(iv, n, 40 + 47 * u + 60, &o, got, 4, &last, &groups);
++                ++trials;
++                if (k == 1 && got[0] == c) ++ok;
++                for (unsigned j = 0; j < k; ++j) if (got[j] != c) ++mis;
++                if (!(k == 1 && got[0] == c) && trials - ok <= 3)
++                    printf("  synthetic miss %c rev=%u: k=%u reason=%u bars=%u sigma=%.2f u=%.2f noise=%.1f\n", c, rev, k, last.reason, last.nbars, o.sigma, u, o.noise);
++            }
++    }
++    printf("synthetic: %u/%u decoded, %u misreads\n", ok, trials, mis);
++    CHECK(mis == 0, "synthetic labels: no misreads");
++    CHECK(ok * 100 >= trials * 99, "synthetic labels (realistic blur/noise/speed/stutter): >= 99 % decoded");
++}
++
++/* ---------- C: harsh conditions -> may reject, must not misread ---------- */
++static void test_harsh(void) {
++    unsigned trials = 0, mis = 0, ok = 0;
++    for (unsigned t = 0; t < 2000; ++t) {
++        char c = "AFZYMW0Q"[t % 8];
++        Optics o = { .sigma = 1.4 + 1.2 * urand(), .H = 90 * urand(), .base = 160 + 30 * urand(), .noise = 3 + 6 * urand(),
++                     .scale = 0.85 + 0.3 * urand(), .speed = 20 + 80 * urand(), .stop_prob = 0.01 };
++        double u = 2.6 + 0.8 * urand();
++        tune(&o, u, 8 + 30 * urand(), 600 + 1800 * urand());
++        Iv iv[16]; unsigned n = label(c, 40, u, t & 1, iv);
++        char got[4]; unsigned groups; BpResult last;
++        unsigned k = drive(iv, n, 40 + 47 * u + 60, &o, got, 4, &last, &groups);
++        ++trials; if (k == 1 && got[0] == c) ++ok;
++        for (unsigned j = 0; j < k; ++j) if (got[j] != c) ++mis;
++    }
++    printf("harsh: %u/%u decoded, %u misreads\n", ok, trials, mis);
++    CHECK(mis == 0, "harsh conditions (low contrast, high noise, speed/scale extremes): no misreads");
++}
++
++/* ---------- D: things that are not barcodes ---------- */
++static void test_negatives(void) {
++    Optics o = { .sigma = 1.8, .H = 40, .base = 175, .noise = 3, .scale = 1, .speed = 45 };
++    tune(&o, 3, 35, 1800);
++    char got[4]; unsigned groups, k; BpResult last;
++    k = drive(NULL, 0, 1000, &o, got, 4, &last, &groups);
++    CHECK(k == 0 && groups == 0, "1 m of white: nothing");
++    Iv j[1] = { { 100, 120 } };
++    k = drive(j, 1, 300, &o, got, 4, &last, &groups);
++    CHECK(k == 0 && groups == 0, "20 mm junction stripe: not a barcode, not reported");
++    Iv two[2] = { { 100, 120 }, { 300, 320 } };
++    k = drive(two, 2, 500, &o, got, 4, &last, &groups);
++    CHECK(k == 0, "two junction stripes: nothing");
++    /* truncated label: only the first 10 bars (*X) */
++    Iv iv[16]; unsigned n = label('Z', 40, 3, false, iv);
++    k = drive(iv, 10, 260, &o, got, 4, &last, &groups);
++    CHECK(k == 0 && last.reason == BP_R_FEW, "truncated *Z: rejected as too few bars");
++    /* missing one narrow bar in the middle character */
++    n = label('A', 40, 3, false, iv);
++    for (unsigned i = 7; i + 1 < n; ++i) iv[i] = iv[i + 1];
++    k = drive(iv, n - 1, 260, &o, got, 4, &last, &groups);
++    CHECK(k == 0, "one bar missing: rejected, not guessed");
++    /* an extra narrow bar inside a wide space */
++    n = label('F', 40, 3, false, iv); unsigned m = n;
++    double gap_a = 0, gap_b = 0;
++    for (unsigned i = 0; i + 1 < n; ++i) if (iv[i + 1].a - iv[i].b > 8) { gap_a = iv[i].b; gap_b = iv[i + 1].a; break; }
++    iv[m++] = (Iv){ 0.5 * (gap_a + gap_b) - 1.5, 0.5 * (gap_a + gap_b) + 1.5 };
++    for (unsigned i = m - 1; i > 0 && iv[i].a < iv[i - 1].a; --i) { Iv t = iv[i]; iv[i] = iv[i - 1]; iv[i - 1] = t; }
++    k = drive(iv, m, 260, &o, got, 4, &last, &groups);
++    CHECK(k == 0, "extra bar in a wide space: rejected");
++    /* random 15-bar noise patterns never produce a frame unless they happen to be valid */
++    unsigned false_frames = 0;
++    for (unsigned t = 0; t < 300; ++t) {
++        Iv r[15]; double x = 40;
++        for (unsigned i = 0; i < 15; ++i) { double w = urand() < 0.4 ? 9 : 3; r[i] = (Iv){ x, x + w }; x += w + (urand() < 0.3 ? 9 : 3); }
++        k = drive(r, 15, x + 60, &o, got, 4, &last, &groups);
++        false_frames += k;
++    }
++    printf("random bar patterns: %u frames accepted out of 300 (only exact *X* patterns can pass)\n", false_frames);
++    CHECK(false_frames <= 3, "random bar patterns rarely form a valid *X* frame");
++    /* overflow */
++    Iv many[30]; for (unsigned i = 0; i < 30; ++i) many[i] = (Iv){ 40 + 6.0 * i, 43 + 6.0 * i };
++    BarcodePeak p; bp_reset(&p); bool ovf = false; unsigned dec = 0;
++    for (double x = 0; x < 300; x += 0.1) {
++        BpResult r; double a = adc_at(many, 30, x, &o) + o.noise * nrand();
++        if (bp_sample(&p, (uint16_t)(a + 0.5), x, &r)) { ovf |= r.overflow; dec += r.decoded; }
++    }
++    CHECK(ovf && dec == 0, "30 bars: overflow flagged, no decode");
++}
++
++/* ---------- E: sensor/odometry quirks ---------- */
++static void test_quirks(void) {
++    BarcodePeak p; bp_reset(&p); BpResult r; bool any = false;
++    for (unsigned k = 0; k < 5000; ++k) any |= bp_sample(&p, (uint16_t)(175 + (k % 7)), 10.0 - 0.001 * k, &r);  /* odometry backwards */
++    CHECK(!any && p.last_mm == 10.0, "path never steps backwards; stationary noise makes no bars");
++    bp_reset(&p); any = false;
++    for (unsigned k = 0; k < 20000; ++k) any |= bp_sample(&p, (uint16_t)(k & 1 ? 220 : 175), 50.0, &r);       /* stopped on noisy edge */
++    CHECK(!any, "stopped car: nothing reported (no travel)");
++}
++
++/* ---------- G: latency and a junction close behind the label ---------- */
++static void test_latency(void) {
++    Optics o = { .sigma = 1.8, .H = 40, .base = 175, .noise = 2.5, .scale = 1, .speed = 45 };
++    tune(&o, 3, 35, 1800);
++    unsigned worst_ok = 1; double worst = 0;
++    for (unsigned t = 0; t < 40; ++t) {
++        char c = "AFZY"[t % 4]; Iv iv[17]; unsigned n = label(c, 40, 3, t & 1, iv);
++        double last_edge = iv[n - 1].b;
++        iv[n] = (Iv){ last_edge + 30, last_edge + 48 };                 /* 18 mm junction 30 mm after the label */
++        BarcodePeak p; bp_reset(&p); unsigned dec = 0; char got = 0; double at = 0;
++        for (double x = 0; x < last_edge + 120; x += 0.1) {
++            BpResult r; double a = adc_at(iv, n + 1, x, &o) + o.noise * nrand();
++            if (bp_sample(&p, (uint16_t)(a + 0.5), x, &r) && r.decoded) { ++dec; got = r.code; at = x; }
++        }
++        if (dec != 1 || got != c) worst_ok = 0;
++        if (at - last_edge > worst) worst = at - last_edge;
++    }
++    printf("latency: decoded at most %.1f mm after the label's last edge (junction stripe 30 mm behind)\n", worst);
++    CHECK(worst_ok, "label then junction 30 mm later: one correct decode, junction not merged");
++    CHECK(worst < 20.0, "decode within 20 mm of the label's last edge (early path)");
++}
++
++/* ---------- F: telemetry ---------- */
++static void test_tlm(void) {
++    BpResult r = { .decoded = true, .reverse = true, .code = 'Z', .reason = BP_OK, .nbars = 15, .offset = 0,
++                   .start_mm = 100, .end_mm = 241.5, .unit_mm = 3.0, .base = 175, .max_narrow_space = 1.25,
++                   .min_wide_space = 3.05, .min_narrow_rise = 31, .min_narrow_peak = 206, .max_wide_peak = 2287 };
++    uint8_t f[BP_TLM_FRAME]; bp_tlm_pack(&r, 0x01020304u, 0x13, 7, 0x5a, f);
++    CHECK(f[0] == 0xF2 && f[1] == 24 && f[2] == 0x5a && sizeof f == 27, "source 15 header, 24-byte payload");
++    CHECK(f[3] == 4 && f[6] == 1 && f[7] == 0xB1 && f[8] == 0x13 && f[9] == 'Z' && f[11] == 15, "fields");
++    CHECK(f[13] == 175 && f[15] == 206 && (f[17] | f[18] << 8) == 2287 && f[19] == 31 && f[20] == 25 && f[21] == 61 && f[22] == 150, "stats");
++    CHECK((f[23] | f[24] << 8) == 1415 && (f[25] | f[26] << 8) == 7, "span and group count");
++    for (unsigned i = 0; i < sizeof f; ++i) printf("%02x", f[i]);
++    printf("\n");
++}
++
++int main(void) {
++    test_captures(); test_synthetic(); test_harsh(); test_negatives(); test_quirks(); test_latency(); test_tlm();
++    if (fails) { printf("FAILED %d of %d checks\n", fails, checks); return 1; }
++    printf("PASS barcode peak decoder v0.1 host tests: %d checks (4 captured car failures, synthetic A-Z/0-9 both directions, harsh no-misread, negatives, telemetry)\n", checks);
++    return 0;
++}
+diff -ruN -x firmware -x build -x __pycache__ -x bp_captured_fixtures.h -x BARCODE_PEAK_V0_1.patch bporig/interface_wifi_v2_3/run_barcode_peak_tests.sh bpw/repo/testing/subsystem2/interface_wifi_v2_3_barcode_peak_v0_1/run_barcode_peak_tests.sh
+--- bporig/interface_wifi_v2_3/run_barcode_peak_tests.sh	1970-01-01 07:30:00.000000000 +0730
++++ bpw/repo/testing/subsystem2/interface_wifi_v2_3_barcode_peak_v0_1/run_barcode_peak_tests.sh	2026-10-30 07:02:22.105200985 +0800
+@@ -0,0 +1,32 @@
++#!/bin/sh
++# Barcode peak decoder v0.1 host checks (no SDK, no hardware). From this folder:
++#   sh run_barcode_peak_tests.sh
++set -u
++cd "$(dirname "$0")"
++fails=0
++CCS=""; for c in clang gcc; do command -v "$c" >/dev/null 2>&1 && CCS="$CCS $c"; done
++O=${TMPDIR:-/tmp}/barcode_peak_tests.$$; mkdir -p "$O"
++for cc in $CCS; do
++  echo "== $cc -Wall -Wextra -Werror"
++  if $cc -std=c11 -Wall -Wextra -Werror -O1 -I. barcode_peak_tests/test_barcode_peak.c -lm -o "$O/t_$cc" && "$O/t_$cc" > "$O/out_$cc.txt"; then
++    grep -E '^(capture|synthetic|harsh|random|latency|PASS)' "$O/out_$cc.txt"
++  else cat "$O/out_$cc.txt" 2>/dev/null; echo "FAILED ($cc)"; fails=$((fails+1)); fi
++done
++san=""
++for cc in $CCS; do
++  if $cc -std=c11 -Wall -Wextra -Werror -O1 -g -fsanitize=address,undefined -fno-sanitize-recover=all -I. \
++       barcode_peak_tests/test_barcode_peak.c -lm -o "$O/t_san" 2>/dev/null; then san=$cc; break; fi
++done
++if [ -n "$san" ]; then
++  echo "== $san ASan/UBSan"
++  if "$O/t_san" > "$O/out_san.txt" 2>&1; then grep '^PASS' "$O/out_san.txt"; else tail -20 "$O/out_san.txt"; echo "FAILED (sanitizers)"; fails=$((fails+1)); fi
++else echo "SKIP sanitizers unavailable"; fi
++echo "== telemetry decoder round trip"
++first=$(echo $CCS | cut -d' ' -f1)
++grep '^f2' "$O/out_$first.txt" > "$O/hex.txt"
++if python3 barcode_peak_decode.py "$O/hex.txt" | tail -1 | grep -q '^,90,16909060,v0.1,active,1,0,0,0,rev,0,Z,ok,15,0,0,175,206,2287,31,1.25,3.05,3.0,141.5,7$'; then
++  echo "PASS source-15 barcode-peak frame decodes to the packed values"; else echo "FAILED decoder"; python3 barcode_peak_decode.py "$O/hex.txt"; fails=$((fails+1)); fi
++echo "== existing v2.3 suite (run_tests.py, CC=${CC:-clang})"
++if CC=${CC:-clang} python3 run_tests.py > "$O/run_tests.txt" 2>&1; then tail -1 "$O/run_tests.txt"; else tail -15 "$O/run_tests.txt"; echo "FAILED run_tests.py"; fails=$((fails+1)); fi
++rm -rf "$O"
++echo "failures: $fails"; exit "$fails"
+diff -ruN -x firmware -x build -x __pycache__ -x bp_captured_fixtures.h -x BARCODE_PEAK_V0_1.patch bporig/interface_wifi_v2_3/v12_2/baseline/testing/subsystem2/circuit_with_barcode/main.c bpw/repo/testing/subsystem2/interface_wifi_v2_3_barcode_peak_v0_1/v12_2/baseline/testing/subsystem2/circuit_with_barcode/main.c
+--- bporig/interface_wifi_v2_3/v12_2/baseline/testing/subsystem2/circuit_with_barcode/main.c	2026-10-28 22:26:46.000000000 +0800
++++ bpw/repo/testing/subsystem2/interface_wifi_v2_3_barcode_peak_v0_1/v12_2/baseline/testing/subsystem2/circuit_with_barcode/main.c	2026-10-30 07:01:34.163617279 +0800
+@@ -464,6 +464,7 @@
+ #include "../../../../../drive_diag_pico.h"
+ #include "../../../../../nav_log_harness.h"
+ #include "../../../../../wifi_harness.h"
++#include "../../../../../barcode_peak_harness.h"   /* barcode peak decoder v0.1 */
+ 
+ static unsigned start_block(unsigned mode) {
+     if(wifi_estop)return START_GP20;
+@@ -492,6 +493,7 @@
+         CircuitInput input={.now=now,.adc={analog_raw[0],analog_raw[1]},.side_black=false};
+         barcode_nav_begin(&nav,&input);nav.mapping=wifi_mapping;double initial_wheel[2]={0,0};
+         barcode_analog_begin(&side_analog,&nav,side_adc,now,initial_wheel);last_side_sample=now;last_nav_event=0;
++        barcode_peak_begin();
+         circuit_begin(&circuit,&input);motion_session_begin(now);demand=interface_navigation_step(&input,0);
+         barcode_recovery_events(&nav,now,0,false,false,false,0,current_tracker(),&demand,circuit.reason);
+         outputs_off();trace_count=trace_head=trace_dropped=summary_count=summary_head=0;
+@@ -728,6 +730,7 @@
+                 for(unsigned w=0;w<2;++w) ticks[w]=total_ticks[w]+enc[w].position;
+                 restore_interrupts(irq);double wheel[2]={wheel_mm(0,ticks[0]),wheel_mm(1,ticks[1])};
+                 barcode_analog_sample(&side_analog,&nav,side_adc,last_side_sample,wheel);
++                barcode_peak_sample(side_adc,last_side_sample,wheel);
+                 double path100=(wheel[0]+wheel[1])*50;
+                 int32_t point=path100>INT32_MAX?INT32_MAX:path100<INT32_MIN?INT32_MIN:(int32_t)path100;
+                 barcode_raw_sample(&raw_capture,last_side_sample-guard.start_us,point,side_adc);

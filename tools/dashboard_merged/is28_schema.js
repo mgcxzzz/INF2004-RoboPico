@@ -27,17 +27,18 @@
   const VERSION = 2;
   const SRC = { WIFI: 1, MOTION: 2, LINE: 3, IMU: 4, OBSTACLE: 5, NAV: 6, SAFETY: 7,
                 BARCODE_MAP: 8, SDK_MOTION: 9, SDK_LINE: 10, NAV_EVENT: 11, SUMMARY: 12,
-                LOG_CHUNK: 13, DIAGNOSTICS: 14 };
+                LOG_CHUNK: 13, DIAGNOSTICS: 14, SOURCE15: 15 };
   const SRC_NAME = ['?', 'WiFi (B1)', 'Motion (B2)', 'Line (B3)', 'IMU (B4)',
                     'Obstacle (B5)', 'Navigation', 'Safety', 'Barcode mapping',
                     'Motion telemetry', 'Line/barcode event', 'Coordinator event',
-                    'Run summary', 'Log data chunk', 'Diagnostics status'];
+                    'Run summary', 'Log data chunk', 'Diagnostics status',
+                    'Ramp assist / barcode peak'];
   /* Which firmware emits each source. 'shared' = both families with the
    * same layout; 'rtos'/'sdk' = only that family. Sources 2/4 are RTOS
    * Buddy2/Buddy4 frames, also emitted by the v2.3 + Buddy4 add-on. */
   const SRC_FAMILY = { 1: 'shared', 2: 'shared', 3: 'rtos', 4: 'shared', 5: 'rtos', 6: 'rtos',
                        7: 'rtos', 8: 'shared', 9: 'sdk', 10: 'sdk', 11: 'sdk', 12: 'sdk',
-                       13: 'sdk', 14: 'sdk' };
+                       13: 'sdk', 14: 'sdk', 15: 'sdk' };
   const MAX_FRAME = { rtos: 40, sdk: 64 };
 
   const NAV_STATE = ['Ready', 'Running', 'Paused', 'Safe Stop', 'Completed',
@@ -331,6 +332,45 @@
     d.scanning=!!(d.flags&1); d.pending=!!(d.flags&2); d.frontCalibrationValid=!!(d.flags&4); d.runActive=!!(d.flags&8);
     return d;
   }
+  /* Source 15 carries TWO layouts in SDK v2.3 integration builds; dispatch is by
+   * validated payload length and subtype, never by source number alone:
+   *  - ramp assist v0.1/v0.2 (+ Buddy4 estimator marker): payload 28 bytes
+   *    (ramp_assist.h ra_tlm_pack; flags bits4-6 detector, bit7 estimator v0.2);
+   *  - barcode peak decoder v0.1: payload 24 bytes, payload[4] = 0xB1
+   *    (barcode_peak.h bp_tlm_pack; flags bit7 = combined Buddy1-4 build).
+   * Anything else is rejected as an unknown layout. */
+  const RA_EVENT = ['periodic', 'activate', 'end', 'stall push', 'floor/hold end'];   /* 3 = v0.4 stall push started, 4 = v0.5 tilt floor / v0.6 speed hold ended */
+  const RA_END = ['none', 'level', 'descent', 'invalid', 'stale', 'timeout', 'not following', 'paused', 'stopped'];
+  const BP_REASON = ['ok', 'too few bars', 'bar height unclear', 'wide bar count', 'unit out of range',
+                     'space unclear', 'wide character gap', 'not a *X* frame', 'ambiguous', 'no wide bars',
+                     'run start'];
+  function i8(p, i) { return p[i] & 0x80 ? p[i] - 256 : p[i]; }
+  function decodeRampAssist(p) {
+    const fl = p[5], h = i8(p, 14), mx = i8(p, 16), mn = i8(p, 17);
+    return { kind: 'ramp', uptimeMs: u32(p, 0), event: p[4], eventName: name(RA_EVENT, p[4]),
+      active: !!(fl & 1), assisting: !!(fl & 2), latched: !!(fl & 4), sampleValid: !!(fl & 8),
+      detector: ((fl >> 4) & 7) || 1, estimator: fl & 0x80 ? 2 : 1,
+      lastEnd: p[6], lastEndName: name(RA_END, p[6]), activations: p[7], alphaMilli: u16(p, 8),
+      addedPwm: [i16(p, 10), i16(p, 12)], heightMm: h === -128 ? null : h, peakMm: i8(p, 15),
+      intervalMaxMm: mx === -128 ? null : mx, intervalMinMm: mn === 127 ? null : mn,
+      validSamples: p[18], invalidSamples: p[19], longestOverEnter: p[20], maxAbsI: [p[21], p[22]],
+      iLimitTicks: p[23], activeMs: u16(p, 24), peakAddedPwm: i16(p, 26) };
+  }
+  function decodeBarcodePeak(p) {
+    const fl = p[5];
+    return { kind: 'peak', uptimeMs: u32(p, 0), version: p[4] & 15, active: !!(fl & 1), decoded: !!(fl & 2),
+      applied: !!(fl & 4), originalSameFrame: !!(fl & 8), reverse: !!(fl & 16), originalConflict: !!(fl & 32),
+      overflow: !!(fl & 64), combinedBuild: !!(fl & 128), code: p[6] ? String.fromCharCode(p[6]) : '?',
+      reason: p[7], reasonName: name(BP_REASON, p[7]), bars: p[8], window: p[9] & 15, removed: (p[9] >> 4) & 3,
+      baseAdc: u16(p, 10), minNarrowPeak: u16(p, 12), maxWidePeak: u16(p, 14), minNarrowRise: p[16],
+      maxNarrowSpaceU: p[17] / 20, minWideSpaceU: p[18] / 20, unitMm: p[19] / 50, spanMm: u16(p, 20) / 10,
+      groups: u16(p, 22) };
+  }
+  function decodeSource15(p) {
+    if (p.length === 28) return decodeRampAssist(p);
+    if (p.length === 24 && p[4] === 0xB1) return decodeBarcodePeak(p);
+    return { error: 'unknown source-15 layout (payload ' + p.length + ' bytes' + (p.length > 4 ? ', byte4 0x' + p[4].toString(16) : '') + ')' };
+  }
   function decodeLogChunk(bytes) {
     const b = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
     if (b.length < 15) return { error: 'log chunk too short (' + b.length + ' bytes)' };
@@ -365,6 +405,11 @@
     if (b.length !== 3 + len) return { error: 'length ' + b.length + ' != 3 + ' + len, src };
     const out = { src, srcName: name(SRC_NAME, src), seq, len };
     if (src === SRC.LOG_CHUNK) return decodeLogChunk(b);
+    if (src === SRC.SOURCE15) {
+      const d = decodeSource15(b.subarray(3));
+      if (d.error) return { error: d.error, src };
+      out.data = d; return out;
+    }
     if (!(src in PAYLOAD)) { out.data = null; return out; }
     if (len !== PAYLOAD[src] && !(src === SRC.MOTION && B2_LENGTHS.includes(len)))
       return { error: 'payload ' + len + ' bytes, expected ' + PAYLOAD[src], src };
@@ -470,7 +515,8 @@
                 mappedMovement, mappingReadbackStatus, mappingTimedOut, connectivityVerdict,
                 decodeB1, decodeB2Motion, decodeImu, decodeLine, decodeB5, decodeNav,
                 decodeSafety, decodeMapping, decodeMotion, decodeLineEvent, decodeNavEvent,
-                decodeSummary, decodeDiagnostics, decodeLogChunk, picoUptimeMs, frameRunId,
+                decodeSummary, decodeDiagnostics, decodeLogChunk, decodeRampAssist, decodeBarcodePeak,
+                decodeSource15, picoUptimeMs, frameRunId,
                 detectProfile, effectiveProfile };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.IS28 = api;

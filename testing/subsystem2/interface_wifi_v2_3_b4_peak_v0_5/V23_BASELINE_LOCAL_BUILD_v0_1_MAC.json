@@ -1,0 +1,21 @@
+{
+  "version": "original-v2.3-baseline-local-0.1",
+  "firmware": "/Users/skyler/SIT/Y2T1/Embedded/bench_tools/buddy4/buddy123_interface_wifi_v2_3_baseline_local_v0_1.uf2",
+  "sha256": "f846cd5eae41d4d40500d735aeab94c3a1044573f7813407cb244cfc29797a58",
+  "bytes": 1002496,
+  "uf2_blocks_checked": 1958,
+  "baseline_commit": "8d7f3aa4935565636bba013c74e563f5e8135bcb",
+  "original_source_files_verified": 185,
+  "baseline_changed_files": 0,
+  "buddy4_added": false,
+  "local_wifi_config": "Identical ignored header to addon build; contents not printed",
+  "build_exit_code": 0,
+  "build_log": "/Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico-v23b4/testing/subsystem2/interface_wifi_v2_3/build_original_v23_local.log",
+  "warning_count": 0,
+  "error_count": 0,
+  "source_directory": "/Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico-v23b4/testing/subsystem2/interface_wifi_v2_3/build-original-v23-local/source",
+  "sdk": "Same local SDK and build type as addon",
+  "contains_credentials": true,
+  "local_only": true,
+  "purpose": "One brief plain-line A/B test on same current sensor mounting, calibration, mat and power; no controller or sensor edits. Hardware pending."
+}

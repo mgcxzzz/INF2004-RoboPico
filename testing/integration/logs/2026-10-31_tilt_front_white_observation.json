@@ -1,0 +1,20 @@
+{
+  "surface": "both front sensors over white, slight upward tilt (operator report)",
+  "method": "MQTT subscribe only; no calibration/profile/save commands",
+  "frames": 69,
+  "white_left": {
+    "min": 120,
+    "median": 124,
+    "max": 127
+  },
+  "white_right": {
+    "min": 135,
+    "median": 137,
+    "max": 139
+  },
+  "profiles": [
+    1
+  ],
+  "motion_active": false,
+  "latest_uptime_ms": 128240
+}

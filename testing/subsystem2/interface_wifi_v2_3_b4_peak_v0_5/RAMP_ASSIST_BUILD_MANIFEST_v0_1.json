@@ -1,0 +1,87 @@
+{
+  "version": "v2.3 + Buddy4 add-on v0.1 + ramp-assist v0.1",
+  "date": "2026-10-30",
+  "baseline_commit": "8d7f3aa4935565636bba013c74e563f5e8135bcb",
+  "worktree": "/Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico-v23b4",
+  "firmware": {
+    "shadow": {
+      "uf2": "/sessions/rcw-017hqgabks7kjqonwrihylxk/mnt/Embedded/bench_tools/buddy4/buddy123_interface_wifi_v2_3_b4_v0_1_ra_v0_1_shadow.uf2",
+      "uf2_sha256": "a58a252c32567f2aa5217c1b6c0eb3c3e18f3895cb57a24f929f084c0d7df168",
+      "uf2_bytes": 1019392,
+      "uf2_blocks": 1991,
+      "uf2_checks": "magic/sequence/256-byte payload valid; family RP2040 0xe48bff56",
+      "flash_range": "0x10000000..0x1007c700",
+      "elf": "/sessions/rcw-017hqgabks7kjqonwrihylxk/mnt/Embedded/bench_tools/buddy4/buddy123_interface_wifi_v2_3_b4_v0_1_ra_v0_1_shadow.elf",
+      "elf_sha256": "794f5fc91d75a5ff6b75181db3e165716e8d6801792d164e7609e5b9d7061df8",
+      "RAMP_ASSIST_ACTIVE": 0,
+      "motor_effect": "none (shadow: logic+telemetry only)",
+      "build_log": "/sessions/rcw-017hqgabks7kjqonwrihylxk/mnt/Embedded/INF2004-RoboPico-v23b4/testing/subsystem2/interface_wifi_v2_3/build_ra_v0_1_shadow.log",
+      "build_dir": "/sessions/rcw-017hqgabks7kjqonwrihylxk/rabuild_shadow (Mac VM, not in Git)"
+    },
+    "active": {
+      "uf2": "/sessions/rcw-017hqgabks7kjqonwrihylxk/mnt/Embedded/bench_tools/buddy4/buddy123_interface_wifi_v2_3_b4_v0_1_ra_v0_1_active.uf2",
+      "uf2_sha256": "005c7384daa44ce7a3c0cd8a440e531bd94eefa568c5ad5abcb5d48426920a83",
+      "uf2_bytes": 1019904,
+      "uf2_blocks": 1992,
+      "uf2_checks": "magic/sequence/256-byte payload valid; family RP2040 0xe48bff56",
+      "flash_range": "0x10000000..0x1007c800",
+      "elf": "/sessions/rcw-017hqgabks7kjqonwrihylxk/mnt/Embedded/bench_tools/buddy4/buddy123_interface_wifi_v2_3_b4_v0_1_ra_v0_1_active.elf",
+      "elf_sha256": "52992356c4d7d0289ee78a73febfb68f7e11505506fd85b6783282739d802e61",
+      "RAMP_ASSIST_ACTIVE": 1,
+      "motor_effect": "bounded feedforward assist applied",
+      "build_log": "/sessions/rcw-017hqgabks7kjqonwrihylxk/mnt/Embedded/INF2004-RoboPico-v23b4/testing/subsystem2/interface_wifi_v2_3/build_ra_v0_1_active.log",
+      "build_dir": "/sessions/rcw-017hqgabks7kjqonwrihylxk/rabuild_active (Mac VM, not in Git)"
+    }
+  },
+  "contains_credentials": true,
+  "local_only": true,
+  "git": "never commit UF2/ELF (credentials); wifi_config.local.h is git-ignored",
+  "wifi_config": "wifi_config.local.h unchanged since the v0.1 build (same broker/credential source as the working v0.1 image)",
+  "toolchain": "xPack arm-none-eabi-gcc 13.3.1-1.1 (aarch64) in the Mac VM; CMake/Ninja from pip; picotool fetched and built by the SDK",
+  "pico_sdk": "/sessions/rcw-017hqgabks7kjqonwrihylxk/mnt/Embedded/pico-sdk @ 98a542c1a62fb549ffb5d66a3e5892b06276b670 (v2.3 pinned)",
+  "compiler_warnings": {
+    "shadow": 0,
+    "active": 0
+  },
+  "errors": 0,
+  "memory": {
+    "text_bytes": {
+      "shadow": 519896,
+      "active": 519952
+    },
+    "bss_bytes": 200024,
+    "bss_end": "0x20030458",
+    "core0_stack": "0x2003c000..0x2003e000 (8 KB, unchanged)",
+    "stack_frames": "main 2368 + control_step 864 + ra_report 208 + ramp_assist_step 56 bytes (cloud -fstack-usage build)"
+  },
+  "baseline_changed_files_vs_8d7f3aa": [
+    "CMakeLists.txt",
+    "continuous_drive.h",
+    "v12_2/baseline/testing/subsystem2/circuit_with_barcode/main.c",
+    "wifi_harness.h"
+  ],
+  "baseline_manifest_files": 185,
+  "baseline_missing_files": [],
+  "source_sha256": {
+    "CMakeLists.txt": "2e3fe00daf248cc8f01c7ac9c1a1a9ad097d7059881cd2822f967b94f9b20738",
+    "continuous_drive.h": "455c6293aacf9ba25c6804bdaff68a926d05f04c1abef631fade38f8df7b59a0",
+    "wifi_harness.h": "c8330a32b29cb2867e4af2eb43c42fc93c5c5d59430b38fec55029f8cf8b5612",
+    "ramp_assist.h": "e98a4dee06095c31c932930ed759af7f1d900df4263ebcb2c1d5bb13a5503d23",
+    "ramp_assist_harness.h": "6fc5a23d6e00e0169537269746628cf3b0ab2b6003b2dddf53e70f15f4a342c9",
+    "v12_2/baseline/testing/subsystem2/circuit_with_barcode/main.c": "c0d412368b8f408c2fba9030ca2d1cce3cc83eb9c289f7e52f9e6f2e06c5846e",
+    "buddy4/buddy4_service.c": "a24d3d6720b7f9b63822c9175f48302bee86c6a149cc80f4c02580755f037403",
+    "buddy4/buddy4_v23.h": "96cfc1ae06da8e38800f24797d6b0dc8e10b0c264d637a311f4af05f92c87c4b",
+    "buddy4_harness.h": "5888d9a3f5f7ede8e974486d7e422928e8a0b013b4e175742b7997c4cd25e3d7",
+    "ramp_assist_decode.py": "42cca87e1cc101e6ce50e2edf8679856d4f6e1a0ef0f7584449cdf83a56f228f",
+    "ramp_assist_tests/test_ramp_assist.c": "9d7d8378ebc7a445ab363bb96f0456b9a2d50199df291b205bd3c82a91fbceeb"
+  },
+  "docs": [
+    "RAMP_ASSIST_V0_1.md",
+    "RAMP_ASSIST_V0_1.patch",
+    "RAMP_ASSIST_HOST_TESTS_v0_1.txt"
+  ],
+  "previous_uf2s_preserved": true,
+  "flashed": false,
+  "hardware_validation": "PENDING. Stationary calibration check first (left sensor replaced, lower bracket; flash keeps the last saved calibration 191/154,1940/2306), then flat-line regression, then correctly positioned 10 mm right-wheel ramp: shadow (off) then active (on).",
+  "constants_status": "PROVISIONAL - see RAMP_ASSIST_V0_1.md missing measurements"
+}

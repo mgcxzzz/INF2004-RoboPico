@@ -1,0 +1,2 @@
+USB s sent to end the short flat test; no settings changed.
+CAL FRONT white=122,138 black=246,267 valid=1 min_span=50 span=124,129 barcode=AUTO_A0_GP27 profile=1 restored=0 imported=1

@@ -1,0 +1,28 @@
+barcode peak v0.1 host tests, 2026-10-30T07:07:29+08:00, cloud (Ubuntu clang version 18.1.3 (1ubuntu1); gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0)
+== clang -Wall -Wextra -Werror
+capture z_original       decoded Z (rev) groups 1 bars 15 unit 2.95 mm narrow-space max 1.17 u, wide-space min 3.01 u, narrow rise min 38
+capture z_fine_v02_run3  decoded Z (rev) groups 1 bars 15 unit 2.94 mm narrow-space max 1.50 u, wide-space min 3.05 u, narrow rise min 34
+capture z_fine_v03_run1  decoded Z (fwd) groups 1 bars 15 unit 2.97 mm narrow-space max 1.15 u, wide-space min 3.08 u, narrow rise min 34
+capture y_original       decoded Y (rev) groups 1 bars 15 unit 3.01 mm narrow-space max 1.19 u, wide-space min 3.06 u, narrow rise min 38
+synthetic: 930/936 decoded, 0 misreads
+harsh: 843/2000 decoded, 0 misreads
+random bar patterns: 0 frames accepted out of 300 (only exact *X* patterns can pass)
+latency: decoded at most 11.0 mm after the label's last edge (junction stripe 30 mm behind)
+PASS barcode peak decoder v0.1 host tests: 47 checks (4 captured car failures, synthetic A-Z/0-9 both directions, harsh no-misread, negatives, telemetry)
+== gcc -Wall -Wextra -Werror
+capture z_original       decoded Z (rev) groups 1 bars 15 unit 2.95 mm narrow-space max 1.17 u, wide-space min 3.01 u, narrow rise min 38
+capture z_fine_v02_run3  decoded Z (rev) groups 1 bars 15 unit 2.94 mm narrow-space max 1.50 u, wide-space min 3.05 u, narrow rise min 34
+capture z_fine_v03_run1  decoded Z (fwd) groups 1 bars 15 unit 2.97 mm narrow-space max 1.15 u, wide-space min 3.08 u, narrow rise min 34
+capture y_original       decoded Y (rev) groups 1 bars 15 unit 3.01 mm narrow-space max 1.19 u, wide-space min 3.06 u, narrow rise min 38
+synthetic: 931/936 decoded, 0 misreads
+harsh: 825/2000 decoded, 0 misreads
+random bar patterns: 0 frames accepted out of 300 (only exact *X* patterns can pass)
+latency: decoded at most 11.0 mm after the label's last edge (junction stripe 30 mm behind)
+PASS barcode peak decoder v0.1 host tests: 47 checks (4 captured car failures, synthetic A-Z/0-9 both directions, harsh no-misread, negatives, telemetry)
+== gcc ASan/UBSan
+PASS barcode peak decoder v0.1 host tests: 47 checks (4 captured car failures, synthetic A-Z/0-9 both directions, harsh no-misread, negatives, telemetry)
+== telemetry decoder round trip
+PASS source-15 barcode-peak frame decodes to the packed values
+== existing v2.3 suite (run_tests.py, CC=clang)
+ALL INTERFACE AND WIFI TESTS PASSED; C test executables= 35
+failures: 0

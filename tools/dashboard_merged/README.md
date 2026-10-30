@@ -1,4 +1,15 @@
-# IS28 merged dashboard v0.2
+# IS28 merged dashboard v0.3
+
+v0.3 (2026-10-30) adds **source 15** for the SDK v2.3 integration builds, dispatched by validated payload
+length and subtype (never by source number alone): ramp assist (payload 28; detector/estimator markers) and
+barcode peak decoder v0.1 (payload 24, subtype 0xB1; flags bit7 = combined Buddy1-4 build). New cards in
+*Barcode and junction progress*: barcode peak result, ramp assist, firmware build; timeline events for peak
+reads/conflicts and ramp activations. The connectivity test counts the two source-15 streams separately.
+"Last decoded letter (B3)" updates from SDK sources 10/11 with the mapped movement from the confirmed readback
+(verified with frames from the real C packers, `test/ui_b4_peak.mjs`, `test/test_source15.js`). RTOS decoding,
+restart and staleness handling are unchanged. Diff: `DASHBOARD_V0_3_SOURCE15.patch`; v0.2 page in `archive/v0_2/`.
+
+## v0.2 notes
 
 v0.2 (2026-10-30) simplifies v0.1: the Recording panel (run label, markers,
 sync clock, export scope, evidence bundle, buffer discard) and the Firmware

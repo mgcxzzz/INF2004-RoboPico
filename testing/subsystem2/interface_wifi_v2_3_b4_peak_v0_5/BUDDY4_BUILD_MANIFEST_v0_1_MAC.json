@@ -1,0 +1,47 @@
+{
+  "version": "v2.3-buddy4-addon-0.1",
+  "firmware": "/Users/skyler/SIT/Y2T1/Embedded/bench_tools/buddy4/buddy123_interface_wifi_v2_3_b4_v0_1.uf2",
+  "sha256": "4281e4be488a532b4ebbffbd6fb5980294b84236dd948baa3e807a5ada7ecd1f",
+  "bytes": 1035776,
+  "uf2_blocks_checked": 2023,
+  "family": "RP2040",
+  "flash_range": "0x10000000..0x1007e700",
+  "repository": "/Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico-v23b4",
+  "baseline_commit": "8d7f3aa4935565636bba013c74e563f5e8135bcb",
+  "baseline_manifest_files": 185,
+  "baseline_identical_files": 182,
+  "baseline_changed_files": [
+    "CMakeLists.txt",
+    "v12_2/baseline/testing/subsystem2/circuit_with_barcode/main.c",
+    "wifi_harness.h"
+  ],
+  "baseline_missing_files": [],
+  "unchanged_buddy4_copies_checked": 12,
+  "local_config_ignored": true,
+  "contains_credentials": true,
+  "local_only": true,
+  "sdk_path": "/Users/skyler/SIT/Y2T1/Embedded/pico-sdk",
+  "build_generator": "Unix Makefiles",
+  "build_directory": "/Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico-v23b4/testing/subsystem2/interface_wifi_v2_3/build-b4-v0_1",
+  "build_log": "/Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico-v23b4/testing/subsystem2/interface_wifi_v2_3/build_b4_v0_1_mac.log",
+  "build_exit_code": 0,
+  "compiler_warning_count": 2,
+  "compiler_error_count": 0,
+  "initial_attempt": "Failed while dependency download blocked by sandbox DNS. Retried with network access, dependency fetched, configure/build successful. Full log retains both attempts.",
+  "hardware_validation": "PENDING; not flashed. Start with timing comparison against working originalv2.3, supported-wheel controls, then powered flat/ramp. This SDK component test build is not final RTOS integration.",
+  "source_sha256": {
+    "CMakeLists.txt": "95864b15bd0d4ec3b5d63c6484119ad1298dae1781a11815772e8fca06f75dc8",
+    "v12_2/baseline/testing/subsystem2/circuit_with_barcode/main.c": "9d0b0f691a70a5aaf74117c65ba3616df28b18142140a0fdb0b36f51d8c8cb61",
+    "wifi_harness.h": "5eac64aa93f5882751e637788b399450da085b78eb275320e0c86d5ebe06cbba"
+  },
+  "addon_manifest": "buddy4/BUDDY4_UNCHANGED_SHA256.json",
+  "warning_classification": {
+    "firmware_source_warnings": 0,
+    "host_picotool_warnings": 2,
+    "details": [
+      "picotool main.cpp static_assert without message is a C++17 extension",
+      "macOS linker ignores duplicate picotool libraries"
+    ],
+    "action": "No firmware source change needed; host tool and firmware build completed."
+  }
+}

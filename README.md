@@ -1,4 +1,4 @@
-> **Integration review branch:** start with [INTEGRATION_REVIEW.md](INTEGRATION_REVIEW.md) for the v2.3/Buddy4 source comparison, updated dashboard, test evidence and unresolved barcode issue. Barcode experiments are separate from the tested Buddy4 ramp build.
+> **Integration review branch:** start with [INTEGRATION_REVIEW.md](INTEGRATION_REVIEW.md). Current integrated SDK firmware (Buddy 1+2+3+4: barcode peak decoder + ramp detection/assist, both working on the car): [`testing/subsystem2/interface_wifi_v2_3_b4_peak_v0_5/`](testing/subsystem2/interface_wifi_v2_3_b4_peak_v0_5/).
 
 # micro T-Kernel 3.0 project for Raspberry Pi Pico W
 

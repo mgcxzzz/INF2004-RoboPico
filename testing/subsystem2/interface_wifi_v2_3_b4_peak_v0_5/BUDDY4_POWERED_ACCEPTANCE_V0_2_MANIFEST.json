@@ -1,0 +1,36 @@
+{
+  "release": "v2.3 + Buddy4 powered acceptance v0.2 + unchanged ramp-assist detector/controller v0.2",
+  "built_at": "2026-10-30T03:26:46.933150+08:00",
+  "firmware": "/Users/skyler/SIT/Y2T1/Embedded/bench_tools/buddy4/buddy123_interface_wifi_v2_3_b4_v0_2_ra_v0_2_active.uf2",
+  "sha256": "f0627657ceae6f28078b5cec2fcc06b1d3b0f8eef7cb9854bd90a82a86cebf50",
+  "bytes": 1042432,
+  "uf2_blocks": 2036,
+  "flash_start": "0x10000000",
+  "flash_end_exclusive": "0x1007f400",
+  "hardware": "RP2040 Pico W",
+  "markers": {
+    "source15_detector": 2,
+    "source15_estimator": 2,
+    "raw_source15_flags_bit7": 1
+  },
+  "contains_credentials": true,
+  "local_only": true,
+  "flashed": false,
+  "motor_commands_sent": false,
+  "main_c_sha256": "fd87cb26e5de87db3ed265c3d8344bc11c57194341fc4a5ab9d9c0cae9ad3d51",
+  "continuous_drive_sha256": "455c6293aacf9ba25c6804bdaff68a926d05f04c1abef631fade38f8df7b59a0",
+  "source_sha256": {
+    "buddy4/subsystem4/imu_proc.c": "50eb0e270e9701a870e17af9daef8094033d04e6fd916b4a5f66d87d0a490a62",
+    "buddy4/subsystem4/b4_config.h": "ff3ce2b9c42755923b812a7efa78e9ef82b6e328031c641c510c099717999a3b",
+    "buddy4/buddy4_service.c": "f9b7d0f14776420ed0d388578ce6da8aeecde8cc5442c5bd7a3828c4df23711c",
+    "buddy4_harness.h": "71aff39fe91db522d68e13b4c38b6f2bc051bca5e2b5461fafec09d92eac20a5",
+    "ramp_assist_harness.h": "4bc8491a894e7008c976f8cab7f7570f1aaeaa2936d56ce886d18481cc1017e2",
+    "ramp_assist.h": "4b106a1cc79f05f2399e1fce3893bf744e702a6a8da707e80184cffd0f44f640",
+    "ramp_assist_decode.py": "f2c6bc7e53c50c661c46a41bcb336a969ddf7fc7c7d236ec6713e6d02f2fc981",
+    "buddy4/host/test_powered_acceptance.c": "957a9dfd1fa75c27183e72b5dfaecdb1e4f92a3b7fd64cf1f0e78dabdf3cd1c7",
+    "run_ramp_assist_tests.sh": "aea1444c933351c761679e8724e667a14055b1eda00c09ccc1cd9e61ceb0c6a9",
+    "CMakeLists.txt": "16b6825c5fe6511a6dc768f2705c2738d6499c4cb19242e0d875d3e73f5a81bd"
+  },
+  "tests": "24 focused checks;45 existing side-ramp checks;service/64-frame decoding;35 v2.3 C executables;ramp-assist360849 checks per runner;ASan/UBSan;0 build warnings/errors",
+  "limitation": "Synthetic processing tests, not a full20ms replay of hardware data. Accepted height and accuracy still need hardware validation."
+}

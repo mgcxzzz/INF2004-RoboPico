@@ -1,0 +1,59 @@
+{
+ "version": "combined v0.1: SDK Wi-Fi v2.3 + Buddy4 estimator v0.2 + ramp-assist detector v0.2 + barcode peak decoder v0.1",
+ "date": "2026-10-30",
+ "folder": "testing/subsystem2/interface_wifi_v2_3_b4_peak_v0_1",
+ "base": "testing/subsystem2/interface_wifi_v2_3 @ a647b2c (unchanged)",
+ "peak_source": "testing/subsystem2/interface_wifi_v2_3_barcode_peak_v0_1 (unchanged; barcode_peak.h byte-identical)",
+ "firmware": {
+  "uf2": "bench_tools/buddy4/buddy1234_peak_v0_1_ra_active_bp_active.uf2",
+  "uf2_sha256": "26910f823893797e4fca3e5f68476765540ed64f1e5d88695bd7714bbbe4cd75",
+  "elf": "bench_tools/buddy4/buddy1234_peak_v0_1_ra_active_bp_active.elf",
+  "elf_sha256": "f464b36a5928cf13d00e9ad0f3087b8b3eb2ad5af3d73a26af2528eb9b03a3db",
+  "uf2_bytes": 1037824,
+  "uf2_blocks": 2027,
+  "flash_range": "0x10000000..0x1007eb00",
+  "uf2_checks": "magic/sequence/256-byte payload valid; family RP2040 0xe48bff56"
+ },
+ "modes": {
+  "RAMP_ASSIST_ACTIVE": 1,
+  "BARCODE_PEAK_ACTIVE": 1,
+  "BARCODE_PEAK_COMBINED": 1,
+  "BUDDY4_ADDON": 1
+ },
+ "build_id": "source-15 peak frame (payload 24, subtype 0xB1) flags bit7=1; run-start announce reason 10 at every Start; USB 'BPEAK build buddy1234_peak v0.1'",
+ "compiler_warnings": 0,
+ "errors": 0,
+ "memory": {
+  "text": 528992,
+  "bss": 202072,
+  "bss_delta_vs_integrated": 2036,
+  "bss_end": "0x20030c58",
+  "heap_limit": "0x2003c000",
+  "stack_main": 2368,
+  "stack_barcode_peak_sample": 592,
+  "stack_control_step": 864,
+  "core0_stack": 8192
+ },
+ "source_sha256": {
+  "barcode_peak.h": "e5c8949ff0e12f9436ff6cb0eb0b9b27c7af529d1686c3ee9dc95a1204ff8436",
+  "barcode_peak_harness.h": "283ea0ab82580290d1c6806cd8d426345ac4740ff35f9b3a3508d7bd9b883ffc",
+  "CMakeLists.txt": "63de7aab71281777cb7d1aa57c770c0bf3e8bece70db04f8ce5e68f52fde4ab5",
+  "v12_2/baseline/testing/subsystem2/circuit_with_barcode/main.c": "250288ab690922a66257932f791411bd654d84e1fcc9b59fb26649cc8ffab62a",
+  "continuous_drive.h (unchanged)": "455c6293aacf9ba25c6804bdaff68a926d05f04c1abef631fade38f8df7b59a0",
+  "ramp_assist_harness.h (unchanged)": "4bc8491a894e7008c976f8cab7f7570f1aaeaa2936d56ce886d18481cc1017e2",
+  "buddy4_harness.h (unchanged)": "71aff39fe91db522d68e13b4c38b6f2bc051bca5e2b5461fafec09d92eac20a5",
+  "wifi_harness.h (unchanged)": "c8330a32b29cb2867e4af2eb43c42fc93c5c5d59430b38fec55029f8cf8b5612",
+  "tools/dashboard_merged/is28_schema.js": "dc97bc279ab20c44a187d855ebbe6b322a9807e38619203a715e010e0eecf158",
+  "tools/dashboard_merged/index.html": "43bd62747244cce469a332fc8ce612ea80435e6f414f1afd4f1d6d262fbfdf88"
+ },
+ "toolchain": "xPack arm-none-eabi-gcc 13.3.1-1.1 (Mac VM), CMake/Ninja, Release; build dir ~/cbbuild_ra_on_bp_on; picotool reused from ~/rabuild_shadow",
+ "pico_sdk": "98a542c1a62fb549ffb5d66a3e5892b06276b670",
+ "cmake": "cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DPICO_BOARD=pico_w -DRAMP_ASSIST_ACTIVE=ON -DBARCODE_PEAK_ACTIVE=ON",
+ "contains_credentials": true,
+ "local_only": true,
+ "credentials_in_build_logs": 0,
+ "host_tests": "B4_PEAK_HOST_TESTS_v0_1.txt",
+ "hardware_validated": false,
+ "flashed": false,
+ "motor_commands_sent": false
+}

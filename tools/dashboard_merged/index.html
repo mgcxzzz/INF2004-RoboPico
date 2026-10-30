@@ -299,6 +299,9 @@
       <div class="metric"><label>Executing action</label><strong id="executingAction">—</strong></div>
       <div class="metric"><label>Completed action</label><strong id="completedAction">—</strong></div>
       <div class="metric"><label>Coordinator state</label><strong id="navState">—</strong></div>
+      <div class="metric"><label>Barcode peak decoder (src 15)</label><strong id="peakResult">—</strong></div>
+      <div class="metric"><label>Ramp assist (src 15)</label><strong id="rampAssist">—</strong></div>
+      <div class="metric"><label>Firmware build (src 15)</label><strong id="buildId">—</strong></div>
     </div>
     <h2 style="margin-top:10px">Event timeline (car events, Buddy 4 events, commands)</h2>
     <div id="eventTimeline" class="timeline" aria-live="polite"><article class="muted">Waiting for real events.</article></div>
@@ -344,6 +347,7 @@ let client = null, cmdId = Math.floor(Math.random() * 256);
 const pending = {};                     /* id -> {time, code}, for ack latency */
 const ownCommands = [];                 /* recent own command bytes, to spot other clients */
 let activeMapping = null, lastBarcodeLetter = null, mapPending = null;
+let lastRamp15 = null, lastPeak15 = null;   /* source 15: last ramp-assist and barcode-peak frames */
 let mappingQueried = false, lastUptime = null;
 /* RTOS Buddy2/Buddy4 live state (tools/dashboard logic) */
 let lastImuAt = 0, lastImuSeq = null, imuAwaitingFresh = false;
@@ -658,7 +662,9 @@ function onMessage(topic, payload, packet) {
     recordFrame(topic, b, f, retained, iso, at);
     if (f.error) { log(topic, `bad frame (${f.error}) [${hex(b)}]`); return; }
     if (retained) { log(topic, `retained ${f.srcName} #${f.seq} ignored for live display (not a fresh frame)`); return; }
-    if (test.running && f.src !== SRC.BARCODE_MAP && f.src !== SRC.LOG_CHUNK) test.seq.add(f.src, f.seq);
+    /* Source 15 carries two independently sequenced layouts: count the peak decoder under pseudo-key 16. */
+    if (test.running && f.src !== SRC.BARCODE_MAP && f.src !== SRC.LOG_CHUNK)
+      test.seq.add(f.src === 15 && f.data && f.data.kind === 'peak' ? 16 : f.src, f.seq);
     show(f);
     if (topic === 'is28/hb') heartbeat(f);
     if ((topic === 'is28/hb' && $('logHb').checked) || (topic !== 'is28/hb' && $('logTlm').checked))
@@ -812,7 +818,9 @@ function invalidateLive(reason) {
   const dash = '—';
   for (const id of ['speedMeasured','speedTarget','pwm','adc','levels','distance','averageSpeed','heading','runTime','profilePhase','telemetryTime',
                     'diagThreshold','diagState','diagCounts','diagErrors','diagGaps','diagDrops','diagInvalid','diagUptime',
-                    'eventLetter','pendingAction','pendingRevision','executingAction','completedAction','navState']) $(id).textContent = dash;
+                    'eventLetter','pendingAction','pendingRevision','executingAction','completedAction','navState',
+                    'peakResult','rampAssist','buildId']) $(id).textContent = dash;
+  lastRamp15 = null; lastPeak15 = null;
   $('sdkMotionStatus').textContent = `Cleared: ${reason}. Waiting for fresh frames.`; $('sdkMotionStatus').className = 'warn small'; $('sdkMotionGrid').className = 'metric-grid';
   $('diagStatus').textContent = `Cleared: ${reason}.`; $('diagStatus').className = 'warn small';
   $('progressStatus').textContent = `Cleared: ${reason}.`; $('progressStatus').className = 'warn small';
@@ -913,6 +921,9 @@ function summary(f) {
     case 12: return `run ${d.runId}, result ${d.result}, ${d.elapsedMs} ms, ${d.distanceMm} mm`;
     case 13: return `log dataset ${d.dataset} row ${d.rowIndex}/${d.totalRows} part ${d.partIndex+1}/${d.partCount} status ${d.status}`;
     case 14: return `barcode threshold ${d.thresholdAdc}, bank ${d.bank}, decoded ${d.decodedTotal}, bad frames ${d.badFrames}`;
+    case 15: return d.kind === 'peak' ?
+      `barcode peak v0.${d.version} ${d.reasonName}, code ${d.code}, bars ${d.bars}${d.applied ? ', applied' : ''}${d.originalConflict ? ', CONFLICT' : ''}` :
+      `ramp assist ${d.eventName}, ${d.assisting ? 'assisting' : 'idle'}, added PWM ${d.addedPwm.join('/')}, height ${d.heightMm === null ? 'invalid' : d.heightMm + ' mm'}`;
     default: return '';
   }
 }
@@ -990,6 +1001,7 @@ function show(f) {
       addEvent(`Run summary · run ${d.runId}, result ${d.result}, elapsed ${d.elapsedMs} ms, distance ${d.distanceMm} mm, average ${d.elapsedMs > 0 ? (d.distanceMm*1000/d.elapsedMs).toFixed(2) : '0.00'} mm/s, line ${d.lineEvents}, nav ${d.navEvents}, recoveries ${d.recoveries}`, d, 'sdk-summary', f); break;
     case 13: onLogChunk(d); break;
     case 14: groupFresh('sdkDiag'); showDiagnostics(d); break;
+    case 15: showSource15(d, f); break;
   }
   noteSource(f.src);
   refreshOpState();
@@ -1120,6 +1132,30 @@ function showDiagnostics(d) {
 function formatCalLevel(value, valid=true) { return valid && value !== 65535 ? String(value) : 'unavailable'; }
 function actionName(action) {
   return ({ S: 'Straight', U: 'U-turn', L: 'Left', R: 'Right', '-': 'none' })[action] || action;
+}
+function srcLabel(k) { return Number(k) === 15 ? 'Ramp assist (src 15)' : Number(k) === 16 ? 'Barcode peak (src 15)' : IS28.SRC_NAME[k]; }
+function showBuildId() {
+  const parts = [];
+  if (lastPeak15) parts.push(lastPeak15.combinedBuild ? 'combined Buddy1-4 + peak' : 'standalone peak (no Buddy4/ramp)',
+                             `peak v0.${lastPeak15.version} ${lastPeak15.active ? 'active' : 'shadow'}`);
+  if (lastRamp15) parts.push(`ramp ${lastRamp15.active ? 'active' : 'shadow'} · detector ${lastRamp15.detector} · estimator ${lastRamp15.estimator}`);
+  $('buildId').textContent = parts.join(' · ') || '—';
+}
+function showSource15(d, f) {
+  if (d.kind === 'ramp') {
+    lastRamp15 = d;
+    $('rampAssist').textContent = `${d.assisting ? 'assisting' : 'idle'} · added ${d.addedPwm.join('/')} PWM · height ${d.heightMm === null ? 'invalid' : d.heightMm + ' mm'} · last end ${d.lastEndName}`;
+    if (d.event !== 0) addEvent(`Ramp assist ${d.eventName}${d.event === 2 ? ' (' + d.lastEndName + ')' : ''} · peak added ${d.peakAddedPwm} PWM`, d, 'ramp-assist', f);
+  } else {
+    lastPeak15 = d;
+    if (d.reason === 10) addEvent(`Barcode peak decoder v0.${d.version} ${d.active ? 'active' : 'shadow'}${d.combinedBuild ? ' (combined Buddy1-4 build)' : ''}: run start`, d, 'barcode-peak', f);
+    else {
+      const outcome = d.decoded ? `read ${d.code}${d.applied ? ' → queued' : d.originalConflict ? ' — CONFLICT with original decoder, movement cancelled' : d.originalSameFrame ? ' (original decoder read it too)' : ' (not applied)'}` : `rejected: ${d.reasonName}`;
+      $('peakResult').textContent = `${outcome} · bars ${d.bars} · narrow rise ${d.minNarrowRise}`;
+      addEvent(`Barcode peak ${outcome} · bars ${d.bars}, narrow rise ${d.minNarrowRise} ADC, unit ${d.unitMm.toFixed(2)} mm`, d, 'barcode-peak', f);
+    }
+  }
+  showBuildId();
 }
 function showLineEvent(d, f) {
   if (!staleShown.sdkLine) { $('progressStatus').textContent = 'Live.'; $('progressStatus').className = 'ok small'; }
@@ -1405,7 +1441,7 @@ function updateTest() {
   $('testClock').textContent = test.running ? `${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')} left` : 'done';
   const rows = Object.keys(test.seq.per).sort((a, b) => a - b).map((k) => {
     const t = test.seq.per[k], pct = (100 * t.received) / (t.received + t.missing);
-    return `<tr><td>${IS28.SRC_NAME[k]}</td><td>${t.received}</td><td>${t.missing}</td><td class="${pct >= 95 ? 'ok' : 'bad'}">${pct.toFixed(1)} %</td></tr>`;
+    return `<tr><td>${srcLabel(k)}</td><td>${t.received}</td><td>${t.missing}</td><td class="${pct >= 95 ? 'ok' : 'bad'}">${pct.toFixed(1)} %</td></tr>`;
   });
   $('testRows').innerHTML = rows.join('') || '<tr><td colspan="4" class="muted">No frames yet.</td></tr>';
   const st = testStats();
@@ -1427,7 +1463,7 @@ $('testSave').onclick = () => {
     `NFR-WIFI-01=${st.verdict.complete ? (st.verdict.deliveryPass ? 'PASS' : 'FAIL') : 'INCOMPLETE'} NFR-WIFI-02=${st.verdict.complete ? (st.verdict.heartbeatPass ? 'PASS' : 'FAIL') : 'INCOMPLETE'}`,
     'source,received,missing,duplicates'];
   for (const k of Object.keys(test.seq.per)) {
-    const t = test.seq.per[k]; lines.push(`${IS28.SRC_NAME[k]},${t.received},${t.missing},${t.dup}`);
+    const t = test.seq.per[k]; lines.push(`${srcLabel(k)},${t.received},${t.missing},${t.dup}`);
   }
   lines.push('heartbeat_gaps_s=' + test.gaps.map((x) => x.toFixed(3)).join(' '));
   download(`is28_connectivity_${stamp()}.txt`, lines.join('\n') + '\n');

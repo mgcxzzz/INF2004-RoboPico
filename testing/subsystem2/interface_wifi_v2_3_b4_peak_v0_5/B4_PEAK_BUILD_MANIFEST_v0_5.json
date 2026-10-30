@@ -1,0 +1,36 @@
+{
+ "version": "combined v0.5: v2.3 + Buddy4 v0.2 + ramp assist v0.6 (ACCEL/SPREAD hold + stall push + speed hold: min 35 mm/s per wheel, I limit 300, 3x Ki until flat; 300 PWM floor removed) + barcode peak v0.1",
+ "date": "2026-10-31",
+ "firmware": {
+  "uf2": "bench_tools/buddy4/buddy1234_peak_v0_5_ra_active_bp_active.uf2",
+  "uf2_sha256": "dacc4e768ccbcdfa7485ec410e1b2ec4defff48c60b3ab65584292ac66a15118",
+  "elf_sha256": "609a500c2cbcef7b67eaaf7c06a3d0a7b769a98225e3967c630c53d6543d2da6",
+  "uf2_bytes": 1040896,
+  "uf2_blocks": 2033,
+  "flash_range": "0x10000000..0x1007f100"
+ },
+ "modes": {
+  "RAMP_ASSIST_ACTIVE": 1,
+  "BARCODE_PEAK_ACTIVE": 1,
+  "ramp_detector_version": 6,
+  "hold_min_speed_mm_s": 35,
+  "hold_i_max": 300,
+  "hold_ki_mult": 3,
+  "hold_budget_ms": 5000,
+  "hold_invalid_ms": 500,
+  "stall_push_pwm": 60
+ },
+ "compiler_warnings": 0,
+ "memory": {
+  "text": 530680,
+  "bss": 202176,
+  "stack_main": 2368,
+  "stack_control_step": 536
+ },
+ "host_tests": "run_combined_tests.sh failures 0; ramp-assist 360906 checks",
+ "contains_credentials": true,
+ "hardware_validated": true,
+ "flashed": true,
+ "hardware_result": "2026-10-31: 3/3 10 mm ramp runs crossed without stall, Buddy4 humps accepted 12/11/13 mm; peak decoder read Y on this build",
+ "cmake_defaults": "RAMP_ASSIST_ACTIVE=ON, BARCODE_PEAK_ACTIVE=ON (default build reproduces the same UF2 hash)"
+}

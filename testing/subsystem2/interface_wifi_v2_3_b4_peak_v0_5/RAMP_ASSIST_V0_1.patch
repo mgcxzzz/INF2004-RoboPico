@@ -1,0 +1,556 @@
+--- a/CMakeLists.txt (b4 v0.1)
++++ b/CMakeLists.txt (ra v0.1)
+@@ -15,7 +15,19 @@
+     buddy4/subsystem4/imu_proc.c buddy4/subsystem4/b4_pack.c
+     buddy4/subsystem2/b2_pack.c buddy4/system/sys_tlm.c)
+ # Include the complete release version in generated ELF/BIN/UF2 filenames.
+-set_target_properties(buddy123_interface_wifi_v2 PROPERTIES OUTPUT_NAME buddy123_interface_wifi_v2_3_b4_v0_1)
++# ramp-assist v0.1 on top of the Buddy4 add-on v0.1: two variants from one tree.
++#   -DRAMP_ASSIST_ACTIVE=OFF (default): shadow, logic + telemetry only, motors unchanged
++#   -DRAMP_ASSIST_ACTIVE=ON           : bounded feedforward assist applied
++option(RAMP_ASSIST_ACTIVE "Apply the ramp feedforward assist (OFF = shadow logging only)" OFF)
++if(RAMP_ASSIST_ACTIVE)
++    set(RA_VARIANT active)
++    set(RA_ACTIVE_VALUE 1)
++else()
++    set(RA_VARIANT shadow)
++    set(RA_ACTIVE_VALUE 0)
++endif()
++set_target_properties(buddy123_interface_wifi_v2 PROPERTIES OUTPUT_NAME buddy123_interface_wifi_v2_3_b4_v0_1_ra_v0_1_${RA_VARIANT})
++target_compile_definitions(buddy123_interface_wifi_v2 PRIVATE BUDDY4_ADDON=1 RAMP_ASSIST_ACTIVE=${RA_ACTIVE_VALUE})
+ target_include_directories(buddy123_interface_wifi_v2 PRIVATE "${CMAKE_CURRENT_LIST_DIR}")
+ target_link_libraries(buddy123_interface_wifi_v2 pico_stdlib hardware_adc hardware_pwm hardware_clocks hardware_sync hardware_flash pico_multicore m)
+ if(BUDDY_WIFI_ENABLED)
+--- a/wifi_harness.h (b4 v0.1)
++++ b/wifi_harness.h (ra v0.1)
+@@ -6,7 +6,12 @@
+ _Static_assert(WIFI_SETTINGS_OFFSET+FLASH_SECTOR_SIZE==DIAG_OFFSET,"WiFi settings overlap logs");
+ static bool start_run(unsigned mode);
+ static unsigned start_block(unsigned mode);
++#if defined(BUDDY4_ADDON) && BUDDY4_ADDON
+ static void buddy4_reset_request(void); /* Buddy4 add-on (buddy4_harness.h) */
++#define BUDDY4_RESET_HOOK() buddy4_reset_request()
++#else
++#define BUDDY4_RESET_HOOK() ((void)0) /* host tests and builds without the add-on */
++#endif
+ static bool wifi_forward=true,wifi_was_active;
+ static uint32_t wifi_lease,wifi_seen_barcode,wifi_seen_runs,wifi_app_drops,wifi_summary_run,wifi_summary_connection;
+ static uint32_t wifi_line_events,wifi_nav_events,wifi_recoveries;
+@@ -186,7 +191,7 @@
+         wifi_estop|=cmd->code==WP_CMD_ESTOP;wifi_stopped=true;return 0;
+     case WP_CMD_RESET:
+         if(guard.active || trace_settling || !gpio_get(STOP) || !gpio_get(HOLD))return WP_ACK_BUSY;
+-        wifi_estop=wifi_stopped=false;wifi_start_pending=false;wifi_lease=0;buddy4_reset_request();return 0;
++        wifi_estop=wifi_stopped=false;wifi_start_pending=false;wifi_lease=0;BUDDY4_RESET_HOOK();return 0;
+     case WP_CMD_CONFIG:wifi_forward=(cmd->arg&4095)!=0;return 0;
+     case WP_CMD_PING:wifi_last_hb=0;return 0;
+     case WP_CMD_MAP:
+--- a/v12_2/baseline/testing/subsystem2/circuit_with_barcode/main.c (b4 v0.1)
++++ b/v12_2/baseline/testing/subsystem2/circuit_with_barcode/main.c (ra v0.1)
+@@ -465,6 +465,7 @@
+ #include "../../../../../nav_log_harness.h"
+ #include "../../../../../wifi_harness.h"
+ #include "../../../../../buddy4_harness.h" /* Buddy4 add-on (observer only) */
++#include "../../../../../ramp_assist_harness.h" /* ramp-assist v0.1 */
+ 
+ static unsigned start_block(unsigned mode) {
+     if(wifi_estop)return START_GP20;
+@@ -519,6 +520,7 @@
+     restore_interrupts(irq);float dt=(float)elapsed/1e6f;
+     for(unsigned w=0;w<2;++w) velocity[w]+=0.25f*(raw_to_mm(w,e[w].position)/dt-velocity[w]);
+     buddy4_odometry_note(e,now,elapsed); /* Buddy4 add-on: observe drained encoders */
++    if(!active) ramp_assist_halt(now); /* ramp-assist v0.1: Stop/ESTOP/fault/run end */
+     if(!active) return;
+     diag_observing=diag_capture.begun && !diag_capture.frozen;
+     if(diag_observing) {
+@@ -564,7 +566,7 @@
+     int effort_outer=search_outer>=0?search_outer:capture_outer>=0?capture_outer:load_outer;
+     bool loaded[2]={turning || effort_outer==0,turning || effort_outer==1};
+     for(unsigned w=0;w<2;++w) {
+-        if(!continuous_active)continuous_leave(&continuous_wheel[w],&controller[w],w,demand.target[w],velocity[w],output[w]);
++        if(!continuous_active)continuous_leave(&continuous_wheel[w],&controller[w],w,demand.target[w],velocity[w],ramp_assist_unboosted(w,output[w])); /* ramp-assist v0.1: seed without added PWM */
+         if(!ramp_drive)ramp_wheel_leave(&ramp_wheel[w],&controller[w],demand.target[w]);
+         if(!maneuver_drive)maneuver_leave(&maneuver_power[w],&controller[w],demand.target[w]);
+     }
+@@ -578,6 +580,7 @@
+     if(diag_observing && preserve_cruise_I)diag_tick.v[D_FLAGS]|=DF_HANDOVER_KEEP;
+     if(leave_fast && !continuous_active) for(unsigned w=0;w<2;++w) cruise_handover_apply(&controller[w],preserve_cruise_I);
+     last_fast=circuit.fast;
++    ramp_assist_control(now,dt,continuous_active && !recovering); /* ramp-assist v0.1 */
+     feedback_mask=0;
+     for(unsigned w=0;w<2;++w) {
+         if(continuous_active)next[w]=continuous_drive_step(&continuous_wheel[w],&controller[w],w,demand.target[w],velocity[w],dt,now,output[w]);
+--- a/buddy4/buddy4_service.c (b4 v0.1)
++++ b/buddy4/buddy4_service.c (ra v0.1)
+@@ -39,6 +39,7 @@
+ static b4_out_t const   k_no_out;
+ static imu_tlm_t const  k_no_tlm;
+ static b4v23_odo_t      g_odo;           /* latest view, for source 2 */
++static b4v23_tilt_t     g_tilt;          /* ramp-assist v0.1: latest side tilt */
+ 
+ static void send_frame(const uint8_t *f, uint32_t n) { if (g_send) (void)g_send(f, n); }
+ 
+@@ -172,6 +173,7 @@
+ bool b4v23_due(uint64_t now_us) { return g_started && now_us >= g_next_us; }
+ uint32_t b4v23_last_tick_us(void) { return g_tick_us; }
+ uint32_t b4v23_max_tick_us(void) { return g_tick_max_us; }
++void b4v23_tilt(b4v23_tilt_t *out) { if (out) *out = g_tilt; }
+ 
+ /* One 20 ms period: task_imu.c loop body. */
+ void b4v23_tick(uint64_t now_us, b4v23_mission_t mission, const b4v23_odo_t *odo)
+@@ -179,6 +181,7 @@
+     b4_out_t imu_out = k_no_out;
+     uint32_t now = (uint32_t)now_us;
+     uint32_t t_begin = sys_time_us();
++    bool processed = false;
+     g_next_us = (g_next_us == 0U || now_us - g_next_us > (uint64_t)B4_PERIOD_MS * 1000U)
+                 ? now_us + (uint64_t)B4_PERIOD_MS * 1000U        /* (re)start the schedule */
+                 : g_next_us + (uint64_t)B4_PERIOD_MS * 1000U;    /* fixed rate, no drift  */
+@@ -207,7 +210,14 @@
+         }
+         b4_tick(&g_ctx, &g_in, &imu_out);
+         b4_diag_accumulate(&g_side_diag, &g_ctx);
++        processed = g_in.b_read_ok;
+     }
++    /* ramp-assist v0.1: publish this period's tilt view (observer data). */
++    g_tilt.seq++;
++    g_tilt.t_us = now_us;
++    g_tilt.valid = processed && g_ctx.b_side_valid &&
++                   ((g_ctx.state == IMU_ST_TRACKING) || (g_ctx.state == IMU_ST_HUMP));
++    g_tilt.height_mm = g_tilt.valid ? g_ctx.side_height_mm : 0;
+     handle(&imu_out, now);
+     if ((g_ctx.state != g_last_state) || ((now - g_status_us) >= (B4_STATUS_PERIOD_MS * 1000U))) {
+         publish(NULL);
+--- a/buddy4/buddy4_v23.h (b4 v0.1)
++++ b/buddy4/buddy4_v23.h (ra v0.1)
+@@ -30,4 +30,16 @@
+ void     b4v23_tick(uint64_t now_us, b4v23_mission_t mission, const b4v23_odo_t *odo);
+ uint32_t b4v23_last_tick_us(void);      /* duration of the last tick (I2C + processing) */
+ uint32_t b4v23_max_tick_us(void);
++
++/* ramp-assist v0.1: latest per-period side-tilt sample (read-only view).
++ * valid = Buddy4's own b_side_valid (all its quality guards) AND the IMU is
++ * sampling a run (Tracking/Hump) AND the FIFO read succeeded. seq advances
++ * every 20 ms period, valid or not, so a stopped Buddy4 is seen as stale. */
++typedef struct {
++    uint32_t seq;
++    uint64_t t_us;
++    bool     valid;
++    int16_t  height_mm;   /* right-minus-left, 0 when not valid */
++} b4v23_tilt_t;
++void b4v23_tilt(b4v23_tilt_t *out);
+ #endif
+--- a/buddy4/host/test_buddy4_v23_service.c (b4 v0.1)
++++ b/buddy4/host/test_buddy4_v23_service.c (ra v0.1)
+@@ -47,6 +47,10 @@
+     assert(last4.state == IMU_ST_TRACKING);
+     run_ms(600, B4V23_NONE, 45);                       /* flat, moving */
+     tilt_mm(10); run_ms(500, B4V23_NONE, 45);          /* right wheel up 10 mm */
++    { b4v23_tilt_t tl; uint32_t s0; b4v23_tilt(&tl); s0 = tl.seq;      /* ramp-assist v0.1 tilt view */
++      assert(tl.valid && tl.height_mm >= 9 && tl.height_mm <= 11 && tl.t_us == host_now_us);
++      run_ms(20, B4V23_NONE, 45); b4v23_tilt(&tl); assert(tl.seq == s0 + 1);
++      printf("tilt view: valid=%d height=%d mm seq+1 per period\n", tl.valid, tl.height_mm); }
+     tilt_mm(0);  run_ms(800, B4V23_NONE, 45);          /* back to flat */
+     printf("ramp: humps=%u max_h=%u rejected=%u side_h=%d\n", last4.humps, last4.max_height_mm, last4.rejected, last2.side_height_mm);
+     assert(last4.humps == 1 && last4.max_height_mm >= 9 && last4.max_height_mm <= 11);
+@@ -58,6 +62,7 @@
+     odo.clean = true;
+     run_ms(200, B4V23_STOP, 0);
+     assert(last4.state == IMU_ST_IDLE);
++    { b4v23_tilt_t tl; b4v23_tilt(&tl); assert(!tl.valid); }  /* Idle (no run) => tilt invalid */
+     /* Resume semantics are the harness's; STOP->RESUME keeps the run counters */
+     run_ms(200, B4V23_RESUME, 0);
+     assert(last4.state == IMU_ST_TRACKING && last4.humps == 1);
+@@ -65,6 +70,7 @@
+     /* sensor fault, then accepted Reset recovers (recalibrates while still) */
+     fake_ok = false; run_ms(2000, B4V23_NONE, 0);
+     assert(last4.state == IMU_ST_FAULT);
++    { b4v23_tilt_t tl; b4v23_tilt(&tl); assert(!tl.valid && tl.height_mm == 0); }  /* fault => tilt invalid */
+     fake_ok = true; run_ms(3000, B4V23_RESET, 0);
+     printf("after reset: state=%u fault=%u\n", last4.state, last4.fault);
+     assert(last4.state == IMU_ST_IDLE);
+--- a/continuous_drive.h (8d7f3aa)
++++ b/continuous_drive.h (ra v0.1)
+@@ -27,6 +27,14 @@
+     uint8_t still_timing:1;
+     uint8_t start_used:1;
+     uint8_t start_active:1;
++    /* v2.3+Buddy4 ramp-assist v0.1 (only addition to this controller):
++     * boost_frac raises the existing feedforward by a fraction, capped at
++     * boost_cap PWM; boost_pwm reports what was applied. All three are zero
++     * after any reset, so the controller is unchanged unless a caller sets
++     * them. Gains, limits, slew and anti-windup are untouched. */
++    float boost_frac;
++    float boost_cap;
++    float boost_pwm;
+ } ContinuousDrive;
+ 
+ static inline float continuous_clampf(float x, float lo, float hi) {
+@@ -91,7 +99,8 @@
+ 
+     float error = s->reference - measured;
+     float ff = continuous_feedforward(wheel, s->reference);
+-    float base = ff + error;
++    s->boost_pwm = continuous_clampf(ff * s->boost_frac, 0.0f, s->boost_cap);
++    float base = ff + s->boost_pwm + error;
+ 
+     /* One bounded assistance window per positive-command segment. A stalled
+      * wheel cannot re-arm it; target changes alone do not clear this latch. */
+--- /dev/null
++++ b/ramp_assist.h (new)
+@@ -0,0 +1,224 @@
++/* v2.3 + Buddy4 ramp-assist v0.1 — decision logic (pure C, host-testable).
++ *
++ * Purpose: while the car climbs a one-sided ramp, raise the EXISTING
++ * continuous-drive feedforward of both wheels by a small fraction, so the
++ * existing per-wheel speed controller needs less integral build-up to hold
++ * the unchanged target speed. It never changes targets, gains, PWM limits,
++ * slew or anti-windup (see continuous_drive.h, boost_*).
++ *
++ * Tilt input: Buddy4's per-20 ms quasistatic side estimate
++ * (right-minus-left height, mm) and its own validity flag (MAD/gravity/
++ * timing/acceleration/turn/impact guards, Tracking state). A completed or
++ * accepted ramp event is NOT required.
++ *
++ * All constants below are PROVISIONAL (RAMP_ASSIST_V0_1.md): they come from
++ * the controller limits and two 500 ms-resolution ramp captures; the shadow
++ * build exists to measure what they could not. */
++#ifndef RAMP_ASSIST_H
++#define RAMP_ASSIST_H
++#include <stdbool.h>
++#include <stdint.h>
++
++#define RA_ENTER_MM          4        /* |height| to start counting persistence      */
++#define RA_ENTER_TICKS       4        /* consecutive valid 20 ms samples (80 ms)     */
++#define RA_EXIT_MM           2        /* level band                                  */
++#define RA_EXIT_TICKS        2        /* 40 ms level ends an activation (LEVEL)      */
++#define RA_LEVEL_REARM_US    200000u  /* 200 ms level ends the episode, clears latch */
++#define RA_DESCENT_DROP_MM   3        /* below the activation peak => crest passed   */
++#define RA_DESCENT_TICKS     2
++#define RA_TIMEOUT_US        2500000u /* cumulative assisted time per episode        */
++#define RA_INVALID_US        40000u   /* invalid tilt longer than this ends assist   */
++#define RA_STALE_US          60000u   /* no Buddy4 sample for this long ends assist  */
++#define RA_ALPHA_MILLI       200      /* +20 % of the existing feedforward           */
++#define RA_SLEW_MILLI_PER_S  1000     /* 0 -> 200 milli in 200 ms (and back)         */
++#define RA_PWM_CAP           40       /* per-wheel absolute cap on added PWM         */
++
++enum {
++    RA_END_NONE = 0, RA_END_LEVEL = 1, RA_END_DESCENT = 2, RA_END_INVALID = 3,
++    RA_END_STALE = 4, RA_END_TIMEOUT = 5, RA_END_NOT_FOLLOWING = 6,
++    RA_END_PAUSED = 7, RA_END_STOPPED = 8
++};
++enum { RA_EVT_PERIODIC = 0, RA_EVT_ACTIVATE = 1, RA_EVT_END = 2 };
++
++typedef struct {
++    uint64_t now_us;
++    float    dt;            /* seconds since the previous call (control period) */
++    bool     run_active;    /* v2.3 guard active (cleared by Stop, ESTOP, faults, run end) */
++    bool     auto_mode;     /* coordinator session active in MOTION_AUTO (not paused)       */
++    bool     following;     /* existing continuous drive selected and not in line recovery  */
++    uint32_t tilt_seq;      /* increments on every Buddy4 20 ms period                      */
++    uint64_t tilt_us;
++    bool     tilt_valid;
++    int16_t  tilt_mm;       /* right-minus-left, only meaningful when valid                  */
++} RampAssistInput;
++
++typedef struct {
++    /* activation */
++    bool     assisting;
++    float    alpha_milli;   /* ramped value actually requested (0..RA_ALPHA_MILLI) */
++    uint64_t active_since_us;
++    uint32_t active_ms;     /* current or last activation */
++    uint8_t  last_end;
++    uint8_t  activations;   /* this run, saturating */
++    /* episode (one ramp) */
++    bool     latched;       /* after DESCENT/TIMEOUT: wait for level before re-arming */
++    uint64_t episode_us;    /* cumulative assisted time this episode */
++    int16_t  peak_mm;       /* |height| peak of the current activation */
++    int8_t   sign;          /* sign of the counted/assisting tilt */
++    uint8_t  over_ticks, level_ticks, drop_ticks;
++    uint64_t level_since_us;
++    uint64_t invalid_since_us;
++    bool     have_sample;
++    uint32_t last_seq;
++    uint64_t last_sample_us;
++    int16_t  last_mm; bool last_valid;
++    /* events for telemetry (consumed by the caller) */
++    uint8_t  pending_event; /* RA_EVT_* or 0xff none */
++    /* 500 ms interval statistics (reset by the caller after each report) */
++    int16_t  int_max_mm, int_min_mm;
++    uint8_t  int_valid, int_invalid, int_run, int_longest;
++} RampAssist;
++
++static inline void ra_interval_reset(RampAssist *a) {
++    a->int_max_mm = -128; a->int_min_mm = 127;
++    a->int_valid = a->int_invalid = a->int_run = a->int_longest = 0;
++}
++static inline void ra_reset(RampAssist *a) {
++    *a = (RampAssist){0};
++    a->pending_event = 0xff;
++    ra_interval_reset(a);
++}
++static inline int16_t ra_abs16(int16_t v) { return (int16_t)(v < 0 ? -v : v); }
++static inline uint8_t ra_inc8(uint8_t v) { return (uint8_t)(v < 255 ? v + 1 : 255); }
++
++static inline void ra_end(RampAssist *a, uint8_t reason, uint64_t now, bool latch) {
++    if (!a->assisting) return;
++    a->assisting = false;
++    a->active_ms = (uint32_t)((now - a->active_since_us) / 1000u);
++    a->last_end = reason;
++    if (latch) a->latched = true;
++    a->over_ticks = a->drop_ticks = 0;
++    a->pending_event = RA_EVT_END;
++}
++static inline void ra_end_episode(RampAssist *a) {
++    a->latched = false; a->episode_us = 0; a->peak_mm = 0;
++}
++
++/* One call per control step (10 ms). Returns the alpha (milli) to apply to
++ * both wheels this step. Ineligible states force 0 immediately (the existing
++ * controller is being reset or left at that moment anyway). */
++static inline float ramp_assist_step(RampAssist *a, const RampAssistInput *in) {
++    const uint64_t now = in->now_us;
++    if (!in->run_active) {                     /* Stop, ESTOP, fault, run end */
++        ra_end(a, RA_END_STOPPED, now, false);
++        uint8_t ev = a->pending_event, acts = a->activations, end = a->last_end;
++        uint32_t ms = a->active_ms;
++        bool had = a->have_sample;
++        ra_reset(a);                           /* a new run starts a fresh state */
++        a->pending_event = ev; a->activations = acts; a->last_end = end; a->active_ms = ms;
++        a->have_sample = had;
++        return 0.0f;
++    }
++    /* new Buddy4 sample? */
++    if (in->tilt_seq != a->last_seq || !a->have_sample) {
++        bool fresh = !a->have_sample || in->tilt_seq != a->last_seq;
++        a->have_sample = true; a->last_seq = in->tilt_seq;
++        if (fresh) {
++            a->last_sample_us = in->tilt_us; a->last_valid = in->tilt_valid; a->last_mm = in->tilt_mm;
++            if (in->tilt_valid) {
++                const int16_t h = in->tilt_mm, mag = ra_abs16(h);
++                const int8_t sg = (int8_t)(h > 0 ? 1 : h < 0 ? -1 : 0);
++                a->invalid_since_us = 0;
++                a->int_valid = ra_inc8(a->int_valid);
++                if (h > a->int_max_mm) a->int_max_mm = h;
++                if (h < a->int_min_mm) a->int_min_mm = h;
++                if (mag >= RA_ENTER_MM) { a->int_run = ra_inc8(a->int_run); if (a->int_run > a->int_longest) a->int_longest = a->int_run; }
++                else a->int_run = 0;
++                /* level band: ends activations quickly, episodes after 200 ms */
++                if (mag <= RA_EXIT_MM) {
++                    a->level_ticks = ra_inc8(a->level_ticks);
++                    if (!a->level_since_us) a->level_since_us = in->tilt_us;
++                    if (in->tilt_us - a->level_since_us >= RA_LEVEL_REARM_US && !a->assisting) ra_end_episode(a);
++                } else { a->level_ticks = 0; a->level_since_us = 0; }
++                if (a->assisting) {
++                    if (mag > a->peak_mm) a->peak_mm = mag;
++                    if (a->level_ticks >= RA_EXIT_TICKS) ra_end(a, RA_END_LEVEL, now, false);
++                    else {
++                        a->drop_ticks = (a->peak_mm - mag >= RA_DESCENT_DROP_MM) ? ra_inc8(a->drop_ticks) : 0;
++                        if (a->drop_ticks >= RA_DESCENT_TICKS) ra_end(a, RA_END_DESCENT, now, true);
++                    }
++                } else if (!a->latched && in->auto_mode && in->following && a->episode_us < RA_TIMEOUT_US) {
++                    if (mag >= RA_ENTER_MM && (a->over_ticks == 0 || sg == a->sign)) {
++                        a->sign = sg; a->over_ticks = ra_inc8(a->over_ticks);
++                    } else a->over_ticks = 0;
++                    if (a->over_ticks >= RA_ENTER_TICKS) {
++                        a->assisting = true; a->active_since_us = now; a->peak_mm = mag;
++                        a->drop_ticks = a->level_ticks = 0;
++                        a->activations = ra_inc8(a->activations);
++                        a->pending_event = RA_EVT_ACTIVATE;
++                    }
++                } else a->over_ticks = 0;
++            } else {
++                a->int_invalid = ra_inc8(a->int_invalid); a->int_run = 0;
++                a->over_ticks = 0; a->level_ticks = 0; a->level_since_us = 0;
++                if (!a->invalid_since_us) a->invalid_since_us = in->tilt_us ? in->tilt_us : 1;
++            }
++        }
++    }
++    /* time-based terminations */
++    if (a->assisting) {
++        if (!in->auto_mode) ra_end(a, RA_END_PAUSED, now, false);
++        else if (!in->following) ra_end(a, RA_END_NOT_FOLLOWING, now, false);
++        else if (now - a->last_sample_us > RA_STALE_US) ra_end(a, RA_END_STALE, now, false);
++        else if (a->invalid_since_us && now - a->invalid_since_us >= RA_INVALID_US) ra_end(a, RA_END_INVALID, now, false);
++        else {
++            float dt = in->dt > 0.0f ? (in->dt > 0.1f ? 0.1f : in->dt) : 0.0f;
++            a->episode_us += (uint64_t)(dt * 1e6f);
++            if (a->episode_us >= RA_TIMEOUT_US) ra_end(a, RA_END_TIMEOUT, now, true);
++        }
++    }
++    if (!in->auto_mode || !in->following) { a->alpha_milli = 0.0f; a->over_ticks = 0; return 0.0f; }
++    {
++        float goal = a->assisting ? (float)RA_ALPHA_MILLI : 0.0f;
++        float dt = in->dt > 0.0f ? (in->dt > 0.1f ? 0.1f : in->dt) : 0.0f;
++        float step = (float)RA_SLEW_MILLI_PER_S * dt;
++        float d = goal - a->alpha_milli;
++        a->alpha_milli += d > step ? step : (d < -step ? -step : d);
++    }
++    return a->alpha_milli;
++}
++
++/* Source-15 telemetry payload (little endian, 28 bytes; frame 31 bytes):
++ *  0 u32 uptime_ms         4 u8 event (RA_EVT_*)    5 u8 flags (bit0 active build,
++ *  bit1 assisting, bit2 latched, bit3 last sample valid)   6 u8 last end reason
++ *  7 u8 activations        8 u16 alpha_milli         10 i16 added PWM left
++ * 12 i16 added PWM right (shadow build: what WOULD be added)
++ * 14 i8 current height mm (-128 = invalid)          15 i8 activation peak |mm|
++ * 16 i8 interval max mm (-128 none)  17 i8 interval min mm (127 none)
++ * 18 u8 valid samples  19 u8 invalid samples  20 u8 longest run >= enter (samples)
++ * 21 u8 max |I| left   22 u8 max |I| right (continuous controller, 0..100)
++ * 23 u8 control ticks with either |I| >= 99 (controller authority limit)
++ * 24 u16 active_ms (current or last activation)  26 i16 peak added PWM (activation)
++ */
++#define RA_TLM_SOURCE        15u
++#define RA_TLM_PAYLOAD_BYTES 28u
++#define RA_TLM_FRAME_BYTES   (3u + RA_TLM_PAYLOAD_BYTES)
++typedef struct {
++    uint32_t uptime_ms; uint8_t event, flags, last_end, activations;
++    uint16_t alpha_milli; int16_t pwm_l, pwm_r; int8_t height_mm, peak_mm, int_max, int_min;
++    uint8_t valid, invalid, longest, max_i_l, max_i_r, sat_ticks;
++    uint16_t active_ms; int16_t peak_pwm;
++} RampAssistTlm;
++static inline int8_t ra_i8(int v) { return (int8_t)(v < -127 ? -127 : v > 126 ? 126 : v); }
++static inline void ra_put16(uint8_t *p, uint16_t v) { p[0] = (uint8_t)v; p[1] = (uint8_t)(v >> 8); }
++static inline void ra_tlm_pack(const RampAssistTlm *t, uint8_t seq, uint8_t out[RA_TLM_FRAME_BYTES]) {
++    uint8_t *p = out + 3;
++    out[0] = (uint8_t)((RA_TLM_SOURCE << 4) | 2u); out[1] = (uint8_t)RA_TLM_PAYLOAD_BYTES; out[2] = seq;
++    p[0] = (uint8_t)t->uptime_ms; p[1] = (uint8_t)(t->uptime_ms >> 8); p[2] = (uint8_t)(t->uptime_ms >> 16); p[3] = (uint8_t)(t->uptime_ms >> 24);
++    p[4] = t->event; p[5] = t->flags; p[6] = t->last_end; p[7] = t->activations;
++    ra_put16(p + 8, t->alpha_milli); ra_put16(p + 10, (uint16_t)t->pwm_l); ra_put16(p + 12, (uint16_t)t->pwm_r);
++    p[14] = (uint8_t)t->height_mm; p[15] = (uint8_t)t->peak_mm; p[16] = (uint8_t)t->int_max; p[17] = (uint8_t)t->int_min;
++    p[18] = t->valid; p[19] = t->invalid; p[20] = t->longest; p[21] = t->max_i_l; p[22] = t->max_i_r; p[23] = t->sat_ticks;
++    ra_put16(p + 24, t->active_ms); ra_put16(p + 26, (uint16_t)t->peak_pwm);
++}
++#endif
+--- /dev/null
++++ b/ramp_assist_harness.h (new)
+@@ -0,0 +1,128 @@
++/* v2.3 + Buddy4 ramp-assist v0.1 glue. Included by the v2.3 main
++ * (circuit_with_barcode/main.c) after buddy4_harness.h, like the other
++ * harness headers, so it can read v2.3 state.
++ *
++ * It only sets ContinuousDrive.boost_frac/boost_cap (the existing
++ * continuous drive controller, profile 1/3 ordinary line following) and
++ * sends a source-15 telemetry frame. Targets, gains, PWM/I/slew limits,
++ * steering, line search, junctions, barcode, coordinator, stop paths and
++ * MQTT are not modified.
++ *
++ * RAMP_ASSIST_ACTIVE=0 (shadow build): the decision logic, timing and
++ * telemetry run identically but boost_frac stays 0, so the motors get the
++ * original v2.3 output; telemetry reports the PWM that WOULD be added. */
++#include "ramp_assist.h"
++#ifndef RAMP_ASSIST_ACTIVE
++#define RAMP_ASSIST_ACTIVE 0
++#endif
++#define RA_REPORT_US 500000u
++
++static RampAssist ra_state;
++static uint32_t   ra_generation;
++static bool       ra_run_seen;
++static uint64_t   ra_last_report_us;
++static uint8_t    ra_seq, ra_max_i[2], ra_sat_ticks;
++static int16_t    ra_pwm_now[2], ra_peak_pwm;
++
++static int16_t ra_added_pwm(unsigned w, float alpha_milli) {
++    const ContinuousDrive *s = &continuous_wheel[w];
++    if (!s->active || alpha_milli <= 0.0f) return 0;
++    float v = continuous_feedforward(w, s->reference) * alpha_milli / 1000.0f;
++    if (v > (float)RA_PWM_CAP) v = (float)RA_PWM_CAP;
++    return (int16_t)(v < 0.0f ? 0.0f : v + 0.5f);
++}
++
++static void ra_report(uint64_t now, uint8_t event) {
++    RampAssistTlm t = {0};
++    uint8_t frame[RA_TLM_FRAME_BYTES];
++    t.uptime_ms = (uint32_t)(now / 1000u);
++    t.event = event;
++    t.flags = (uint8_t)((RAMP_ASSIST_ACTIVE ? 1u : 0u) | (ra_state.assisting ? 2u : 0u) |
++                        (ra_state.latched ? 4u : 0u) | (ra_state.last_valid ? 8u : 0u));
++    t.last_end = ra_state.last_end;
++    t.activations = ra_state.activations;
++    t.alpha_milli = (uint16_t)(ra_state.alpha_milli + 0.5f);
++    t.pwm_l = ra_pwm_now[0]; t.pwm_r = ra_pwm_now[1];
++    t.height_mm = ra_state.last_valid ? ra_i8(ra_state.last_mm) : (int8_t)-128;
++    t.peak_mm = ra_i8(ra_state.peak_mm);
++    t.int_max = ra_state.int_valid ? ra_i8(ra_state.int_max_mm) : (int8_t)-128;
++    t.int_min = ra_state.int_valid ? ra_i8(ra_state.int_min_mm) : (int8_t)127;
++    t.valid = ra_state.int_valid; t.invalid = ra_state.int_invalid; t.longest = ra_state.int_longest;
++    t.max_i_l = ra_max_i[0]; t.max_i_r = ra_max_i[1]; t.sat_ticks = ra_sat_ticks;
++    t.active_ms = (uint16_t)(ra_state.assisting ? (now - ra_state.active_since_us) / 1000u > 65535u ? 65535u :
++                             (now - ra_state.active_since_us) / 1000u : (ra_state.active_ms > 65535u ? 65535u : ra_state.active_ms));
++    t.peak_pwm = ra_peak_pwm;
++    ra_tlm_pack(&t, ra_seq++, frame);
++    if (wifi_forward) (void)wifi_send(WIFI_TOPIC_TLM, frame, sizeof(frame));
++    ra_interval_reset(&ra_state);
++    ra_max_i[0] = ra_max_i[1] = 0; ra_sat_ticks = 0;
++    ra_last_report_us = now;
++}
++
++/* control_step, run active: after the existing mode selection and before the
++ * per-wheel drive steps. `following` = continuous drive selected and no
++ * line-recovery (white) state. */
++static void ramp_assist_control(uint64_t now, float dt, bool following) {
++    if (!ra_run_seen || guard.generation != ra_generation) {
++        ra_reset(&ra_state); ra_generation = guard.generation; ra_run_seen = true;
++        ra_peak_pwm = 0; ra_pwm_now[0] = ra_pwm_now[1] = 0; ra_max_i[0] = ra_max_i[1] = 0; ra_sat_ticks = 0;
++        ra_last_report_us = now;
++    }
++    /* Observation of the existing controller after the previous step. */
++    bool sat = false;
++    for (unsigned w = 0; w < 2; ++w) {
++        const ContinuousDrive *s = &continuous_wheel[w];
++        if (!s->active) continue;
++        float m = s->integral < 0.0f ? -s->integral : s->integral;
++        uint8_t mi = (uint8_t)(m > 100.0f ? 100.0f : m);
++        if (mi > ra_max_i[w]) ra_max_i[w] = mi;
++        if (m >= (float)CONTINUOUS_I_MAX - 1.0f) sat = true;
++    }
++    if (sat && ra_sat_ticks < 255) ra_sat_ticks++;
++
++    MotionStatus st = nav_get_status();
++    b4v23_tilt_t tilt = {0};
++    if (b4h_ready) b4v23_tilt(&tilt);
++    RampAssistInput in = { .now_us = now, .dt = dt, .run_active = true,
++        .auto_mode = st.session_active && st.mode == MOTION_AUTO, .following = following,
++        .tilt_seq = tilt.seq, .tilt_us = tilt.t_us, .tilt_valid = tilt.valid, .tilt_mm = tilt.height_mm };
++    bool was = ra_state.assisting;
++    float alpha = ramp_assist_step(&ra_state, &in);
++    if (!was && ra_state.assisting) ra_peak_pwm = 0;
++    for (unsigned w = 0; w < 2; ++w) {
++        ContinuousDrive *s = &continuous_wheel[w];
++        s->boost_cap = (float)RA_PWM_CAP;
++#if RAMP_ASSIST_ACTIVE
++        s->boost_frac = s->active ? alpha / 1000.0f : 0.0f;   /* never seeds a fresh activation */
++#else
++        s->boost_frac = 0.0f;                                  /* shadow: motors unchanged */
++#endif
++        ra_pwm_now[w] = ra_added_pwm(w, alpha);
++        if (ra_pwm_now[w] > ra_peak_pwm) ra_peak_pwm = ra_pwm_now[w];
++    }
++    if (ra_state.pending_event != 0xff) {
++        uint8_t ev = ra_state.pending_event; ra_state.pending_event = 0xff;
++        ra_report(now, ev);
++    } else if (now - ra_last_report_us >= RA_REPORT_US) ra_report(now, RA_EVT_PERIODIC);
++}
++
++/* control_step, run NOT active (Stop, ESTOP, fault, run end): end any
++ * assistance (reason STOPPED) and send one final report. */
++static void ramp_assist_halt(uint64_t now) {
++    if (!ra_run_seen) return;
++    RampAssistInput in = { .now_us = now, .run_active = false };
++    (void)ramp_assist_step(&ra_state, &in);
++    for (unsigned w = 0; w < 2; ++w) { continuous_wheel[w].boost_frac = 0.0f; ra_pwm_now[w] = 0; }
++    uint8_t ev = ra_state.pending_event != 0xff ? ra_state.pending_event : RA_EVT_PERIODIC;
++    ra_state.pending_event = 0xff;
++    ra_report(now, ev);
++    ra_run_seen = false;
++}
++
++/* Output to seed the legacy controller when the continuous mode is left:
++ * remove this step's added PWM so it is never carried into another
++ * controller's integral. */
++static int32_t ramp_assist_unboosted(unsigned w, int32_t output) {
++    int32_t b = (int32_t)(continuous_wheel[w].boost_pwm + 0.5f);
++    return output - b < 0 ? 0 : output - b;
++}

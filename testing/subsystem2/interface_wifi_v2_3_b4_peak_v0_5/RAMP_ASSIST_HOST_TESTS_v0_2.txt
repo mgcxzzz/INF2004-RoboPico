@@ -1,0 +1,18 @@
+ramp-assist v0.2 host tests, 2026-10-30T02:39:49+08:00, cloud workspace (Ubuntu clang version 18.1.3 (1ubuntu1); gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0)
+== clang -Wall -Wextra -Werror
+replay v0.1: end 2 after 220 ms; v0.2: end 5 after 2490 ms, alpha 2 s into assist 200
+climb: mean speed deficit off 7.65 on 4.18 mm/s; peak |I| off 40.0 on 27.0
+after release: integral excess vs no-assist 0.000; from +500 ms output on-off max -1.00 (|max| 10.00), at end 2.00 PWM; overshoot on 11.17 off 8.48 mm/s
+PASS ramp-assist v0.2 host tests: 360849 checks (boost-0 identity vs 8d7f3aa, logic, captured-climb replay, controller limits/residual, telemetry)
+== gcc -Wall -Wextra -Werror
+replay v0.1: end 2 after 220 ms; v0.2: end 5 after 2490 ms, alpha 2 s into assist 200
+climb: mean speed deficit off 7.65 on 4.18 mm/s; peak |I| off 40.0 on 27.0
+after release: integral excess vs no-assist 0.000; from +500 ms output on-off max -1.00 (|max| 10.00), at end 2.00 PWM; overshoot on 11.17 off 8.48 mm/s
+PASS ramp-assist v0.2 host tests: 360849 checks (boost-0 identity vs 8d7f3aa, logic, captured-climb replay, controller limits/residual, telemetry)
+== gcc ASan/UBSan
+PASS ramp-assist v0.2 host tests: 360849 checks (boost-0 identity vs 8d7f3aa, logic, captured-climb replay, controller limits/residual, telemetry)
+== telemetry decoder round trip
+PASS source-15 frame decodes to the packed values
+== existing v2.3 suite (run_tests.py, CC=clang)
+ALL INTERFACE AND WIFI TESTS PASSED; C test executables= 35
+failures: 0

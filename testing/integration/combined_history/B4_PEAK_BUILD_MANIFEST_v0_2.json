@@ -1,0 +1,33 @@
+{
+ "version": "combined v0.2: v2.3 + Buddy4 v0.2 + ramp assist v0.3 (ACCEL/SPREAD hold) + barcode peak v0.1",
+ "date": "2026-10-31",
+ "previous": "interface_wifi_v2_3_b4_peak_v0_1 (unchanged)",
+ "firmware": {
+  "uf2": "bench_tools/buddy4/buddy1234_peak_v0_2_ra_active_bp_active.uf2",
+  "uf2_sha256": "e16d2f100953dbcc2e6694051c539ce7edfe3cc7076d56aeffc5cbcf61e09c94",
+  "elf_sha256": "aab494de171ad41da6afad0160de1543c22580a45c69c20101302814f399859e",
+  "uf2_bytes": 1038336,
+  "uf2_blocks": 2028,
+  "flash_range": "0x10000000..0x1007ec00"
+ },
+ "modes": {
+  "RAMP_ASSIST_ACTIVE": 1,
+  "BARCODE_PEAK_ACTIVE": 1,
+  "BARCODE_PEAK_COMBINED": 1,
+  "BUDDY4_ADDON": 1,
+  "ramp_detector_version": 3
+ },
+ "compiler_warnings": 0,
+ "memory": {
+  "text": 529328,
+  "bss": 202080,
+  "bss_end": "0x20030c60",
+  "stack_main": 2368,
+  "stack_control_step": 872
+ },
+ "contains_credentials": true,
+ "local_only": true,
+ "credentials_in_build_logs": 0,
+ "hardware_validated": false,
+ "flashed": false
+}

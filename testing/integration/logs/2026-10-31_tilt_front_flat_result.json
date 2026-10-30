@@ -1,0 +1,48 @@
+{
+  "motion": {
+    "run": 1,
+    "active": false,
+    "profile": 1,
+    "recovery": 0,
+    "speed": [
+      0.0,
+      0.0
+    ],
+    "pwm": [
+      0,
+      0
+    ],
+    "adc": [
+      227,
+      594
+    ],
+    "levels": [
+      846,
+      1000
+    ],
+    "distance_mm": 125
+  },
+  "nav": {
+    "event": 0,
+    "fault": 0,
+    "mode": 7,
+    "detail": 0
+  },
+  "diagnostics": {
+    "invalid": [
+      0,
+      0
+    ],
+    "control_gap_us": 13359
+  },
+  "usb_saved_run": {
+    "reason": "USB connection changed",
+    "duration_ms": 3063,
+    "distance_mm": 125.7,
+    "average_speed_mm_s": 41.04,
+    "invalid_left": 0,
+    "invalid_right": 0
+  },
+  "cause": "The serial helper closed its port after five seconds, about three seconds after the two-second USB countdown; this triggered the firmware USB-host interlock before the later s command.",
+  "calibration_persistence_note": "Source inspection confirms automatic save_log after stopping includes calibration. No k was sent, but RAM-only calibration was not guaranteed to remain unpersisted once a run completed. Original built-in preset remains 163/160 white,3457/3700 black; drive Profile1 unchanged."
+}

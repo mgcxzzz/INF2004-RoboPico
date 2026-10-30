@@ -1,0 +1,580 @@
+--- archive/ra_v0_1/ramp_assist.h	2026-10-29 17:49:12.977680295 +0000
++++ ramp_assist.h	2026-10-29 18:40:15.319900857 +0000
+@@ -1,4 +1,12 @@
+-/* v2.3 + Buddy4 ramp-assist v0.1 — decision logic (pure C, host-testable).
++/* v2.3 + Buddy4 ramp-assist v0.2 — decision logic (pure C, host-testable).
++ *
++ * v0.2 (2026-10-30): the v0.1 descent rule (3 mm below the raw peak for 2
++ * samples) ended and latched assistance 241 ms into the lower-bracket climb
++ * while the tilt rocked 4..7 mm, before the crest. v0.2 judges level and
++ * descent on a 3-sample median of valid heights and needs a sustained fall
++ * to half of the filtered peak (100 ms); level needs 100 ms. Activation,
++ * boost magnitude, cap, ramp rates, timeout, invalid/stale and all
++ * eligibility (pause/stop/fault/search/junction) rules are unchanged.
+  *
+  * Purpose: while the car climbs a one-sided ramp, raise the EXISTING
+  * continuous-drive feedforward of both wheels by a small fraction, so the
+@@ -22,10 +30,13 @@
+ #define RA_ENTER_MM          4        /* |height| to start counting persistence      */
+ #define RA_ENTER_TICKS       4        /* consecutive valid 20 ms samples (80 ms)     */
+ #define RA_EXIT_MM           2        /* level band                                  */
+-#define RA_EXIT_TICKS        2        /* 40 ms level ends an activation (LEVEL)      */
++#define RA_EXIT_TICKS        5        /* v0.2: 100 ms filtered level ends (LEVEL)    */
+ #define RA_LEVEL_REARM_US    200000u  /* 200 ms level ends the episode, clears latch */
+-#define RA_DESCENT_DROP_MM   3        /* below the activation peak => crest passed   */
+-#define RA_DESCENT_TICKS     2
++#define RA_DESCENT_MIN_PEAK  6        /* v0.2: descent rule armed once filtered peak >= 6 mm */
++#define RA_DESCENT_NUM       1        /* v0.2: descent when filtered |h| <= peak * 1/2 ...  */
++#define RA_DESCENT_DEN       2
++#define RA_DESCENT_TICKS     5        /* ... for 100 ms (5 consecutive valid samples)       */
++#define RA_DETECTOR_VERSION  2
+ #define RA_TIMEOUT_US        2500000u /* cumulative assisted time per episode        */
+ #define RA_INVALID_US        40000u   /* invalid tilt longer than this ends assist   */
+ #define RA_STALE_US          60000u   /* no Buddy4 sample for this long ends assist  */
+@@ -63,7 +74,8 @@
+     /* episode (one ramp) */
+     bool     latched;       /* after DESCENT/TIMEOUT: wait for level before re-arming */
+     uint64_t episode_us;    /* cumulative assisted time this episode */
+-    int16_t  peak_mm;       /* |height| peak of the current activation */
++    int16_t  peak_mm;       /* filtered |height| peak of the current activation */
++    int16_t  med[3]; uint8_t med_n; /* v0.2: last valid |heights| for the median */
+     int8_t   sign;          /* sign of the counted/assisting tilt */
+     uint8_t  over_ticks, level_ticks, drop_ticks;
+     uint64_t level_since_us;
+@@ -89,6 +101,14 @@
+     ra_interval_reset(a);
+ }
+ static inline int16_t ra_abs16(int16_t v) { return (int16_t)(v < 0 ? -v : v); }
++/* v0.2: median of the last (up to) 3 valid |heights|; a single dip or spike
++ * cannot move it. Cleared on any invalid sample. */
++static inline int16_t ra_median_push(int16_t *m, uint8_t *n, int16_t v) {
++    m[0] = m[1]; m[1] = m[2]; m[2] = v; if (*n < 3) (*n)++;
++    if (*n < 3) return v;
++    int16_t a = m[0], b = m[1], c = m[2];
++    return (a > b) ? ((b > c) ? b : (a > c ? c : a)) : ((a > c) ? a : (b > c ? c : b));
++}
+ static inline uint8_t ra_inc8(uint8_t v) { return (uint8_t)(v < 255 ? v + 1 : 255); }
+ 
+ static inline void ra_end(RampAssist *a, uint8_t reason, uint64_t now, bool latch) {
+@@ -134,17 +154,20 @@
+                 if (h < a->int_min_mm) a->int_min_mm = h;
+                 if (mag >= RA_ENTER_MM) { a->int_run = ra_inc8(a->int_run); if (a->int_run > a->int_longest) a->int_longest = a->int_run; }
+                 else a->int_run = 0;
+-                /* level band: ends activations quickly, episodes after 200 ms */
+-                if (mag <= RA_EXIT_MM) {
++                const int16_t hf = ra_median_push(a->med, &a->med_n, mag);   /* v0.2 filtered |h| */
++                /* level band (filtered): ends activations after 100 ms, episodes after 200 ms */
++                if (hf <= RA_EXIT_MM) {
+                     a->level_ticks = ra_inc8(a->level_ticks);
+                     if (!a->level_since_us) a->level_since_us = in->tilt_us;
+                     if (in->tilt_us - a->level_since_us >= RA_LEVEL_REARM_US && !a->assisting) ra_end_episode(a);
+                 } else { a->level_ticks = 0; a->level_since_us = 0; }
+                 if (a->assisting) {
+-                    if (mag > a->peak_mm) a->peak_mm = mag;
++                    if (hf > a->peak_mm) a->peak_mm = hf;
+                     if (a->level_ticks >= RA_EXIT_TICKS) ra_end(a, RA_END_LEVEL, now, false);
+                     else {
+-                        a->drop_ticks = (a->peak_mm - mag >= RA_DESCENT_DROP_MM) ? ra_inc8(a->drop_ticks) : 0;
++                        bool falling = a->peak_mm >= RA_DESCENT_MIN_PEAK &&
++                                       (int32_t)hf * RA_DESCENT_DEN <= (int32_t)a->peak_mm * RA_DESCENT_NUM;
++                        a->drop_ticks = falling ? ra_inc8(a->drop_ticks) : 0;
+                         if (a->drop_ticks >= RA_DESCENT_TICKS) ra_end(a, RA_END_DESCENT, now, true);
+                     }
+                 } else if (!a->latched && in->auto_mode && in->following && a->episode_us < RA_TIMEOUT_US) {
+@@ -152,14 +175,14 @@
+                         a->sign = sg; a->over_ticks = ra_inc8(a->over_ticks);
+                     } else a->over_ticks = 0;
+                     if (a->over_ticks >= RA_ENTER_TICKS) {
+-                        a->assisting = true; a->active_since_us = now; a->peak_mm = mag;
++                        a->assisting = true; a->active_since_us = now; a->peak_mm = hf > mag ? mag : hf;
+                         a->drop_ticks = a->level_ticks = 0;
+                         a->activations = ra_inc8(a->activations);
+                         a->pending_event = RA_EVT_ACTIVATE;
+                     }
+                 } else a->over_ticks = 0;
+             } else {
+-                a->int_invalid = ra_inc8(a->int_invalid); a->int_run = 0;
++                a->int_invalid = ra_inc8(a->int_invalid); a->int_run = 0; a->med_n = 0;
+                 a->over_ticks = 0; a->level_ticks = 0; a->level_since_us = 0;
+                 if (!a->invalid_since_us) a->invalid_since_us = in->tilt_us ? in->tilt_us : 1;
+             }
+@@ -190,10 +213,11 @@
+ 
+ /* Source-15 telemetry payload (little endian, 28 bytes; frame 31 bytes):
+  *  0 u32 uptime_ms         4 u8 event (RA_EVT_*)    5 u8 flags (bit0 active build,
+- *  bit1 assisting, bit2 latched, bit3 last sample valid)   6 u8 last end reason
++ *  bit1 assisting, bit2 latched, bit3 last sample valid, bits4-6 detector
++ *  version: 0 = v0.1, 2 = v0.2)                              6 u8 last end reason
+  *  7 u8 activations        8 u16 alpha_milli         10 i16 added PWM left
+  * 12 i16 added PWM right (shadow build: what WOULD be added)
+- * 14 i8 current height mm (-128 = invalid)          15 i8 activation peak |mm|
++ * 14 i8 current height mm (-128 = invalid)          15 i8 activation peak |mm| (v0.2: median-filtered)
+  * 16 i8 interval max mm (-128 none)  17 i8 interval min mm (127 none)
+  * 18 u8 valid samples  19 u8 invalid samples  20 u8 longest run >= enter (samples)
+  * 21 u8 max |I| left   22 u8 max |I| right (continuous controller, 0..100)
+--- archive/ra_v0_1/ramp_assist_harness.h	2026-10-29 17:49:13.799569838 +0000
++++ ramp_assist_harness.h	2026-10-29 18:40:16.181681115 +0000
+@@ -1,4 +1,5 @@
+-/* v2.3 + Buddy4 ramp-assist v0.1 glue. Included by the v2.3 main
++/* v2.3 + Buddy4 ramp-assist v0.2 glue (unchanged from v0.1 apart from the
++ * detector-version flag bits). Included by the v2.3 main
+  * (circuit_with_barcode/main.c) after buddy4_harness.h, like the other
+  * harness headers, so it can read v2.3 state.
+  *
+@@ -38,7 +39,8 @@
+     t.uptime_ms = (uint32_t)(now / 1000u);
+     t.event = event;
+     t.flags = (uint8_t)((RAMP_ASSIST_ACTIVE ? 1u : 0u) | (ra_state.assisting ? 2u : 0u) |
+-                        (ra_state.latched ? 4u : 0u) | (ra_state.last_valid ? 8u : 0u));
++                        (ra_state.latched ? 4u : 0u) | (ra_state.last_valid ? 8u : 0u) |
++                        (uint8_t)((RA_DETECTOR_VERSION & 7u) << 4));
+     t.last_end = ra_state.last_end;
+     t.activations = ra_state.activations;
+     t.alpha_milli = (uint16_t)(ra_state.alpha_milli + 0.5f);
+--- archive/ra_v0_1/CMakeLists.txt	2026-10-29 17:51:05.539000850 +0000
++++ CMakeLists.txt	2026-10-29 18:40:13.400409509 +0000
+@@ -15,7 +15,7 @@
+     buddy4/subsystem4/imu_proc.c buddy4/subsystem4/b4_pack.c
+     buddy4/subsystem2/b2_pack.c buddy4/system/sys_tlm.c)
+ # Include the complete release version in generated ELF/BIN/UF2 filenames.
+-# ramp-assist v0.1 on top of the Buddy4 add-on v0.1: two variants from one tree.
++# ramp-assist v0.2 (v0.1 + crest-hold detector fix) on top of the Buddy4 add-on v0.1: two variants from one tree.
+ #   -DRAMP_ASSIST_ACTIVE=OFF (default): shadow, logic + telemetry only, motors unchanged
+ #   -DRAMP_ASSIST_ACTIVE=ON           : bounded feedforward assist applied
+ option(RAMP_ASSIST_ACTIVE "Apply the ramp feedforward assist (OFF = shadow logging only)" OFF)
+@@ -26,7 +26,7 @@
+     set(RA_VARIANT shadow)
+     set(RA_ACTIVE_VALUE 0)
+ endif()
+-set_target_properties(buddy123_interface_wifi_v2 PROPERTIES OUTPUT_NAME buddy123_interface_wifi_v2_3_b4_v0_1_ra_v0_1_${RA_VARIANT})
++set_target_properties(buddy123_interface_wifi_v2 PROPERTIES OUTPUT_NAME buddy123_interface_wifi_v2_3_b4_v0_1_ra_v0_2_${RA_VARIANT})
+ target_compile_definitions(buddy123_interface_wifi_v2 PRIVATE BUDDY4_ADDON=1 RAMP_ASSIST_ACTIVE=${RA_ACTIVE_VALUE})
+ target_include_directories(buddy123_interface_wifi_v2 PRIVATE "${CMAKE_CURRENT_LIST_DIR}")
+ target_link_libraries(buddy123_interface_wifi_v2 pico_stdlib hardware_adc hardware_pwm hardware_clocks hardware_sync hardware_flash pico_multicore m)
+--- archive/ra_v0_1/ramp_assist_decode.py	2026-10-29 17:49:13.360344327 +0000
++++ ramp_assist_decode.py	2026-10-29 18:40:15.796494515 +0000
+@@ -1,7 +1,8 @@
+ #!/usr/bin/env python3
+-"""Decode ramp-assist v0.1 source-15 frames from a native mosquitto_sub capture
++"""Decode ramp-assist (v0.1/v0.2) source-15 frames from a native mosquitto_sub capture
+ (lines: ISO-time topic hex) or from bare hex lines. Prints CSV to stdout.
+-Usage: ramp_assist_decode.py CAPTURE [FROM_LINE [TO_LINE]]"""
++Usage: ramp_assist_decode.py CAPTURE [FROM_LINE [TO_LINE]]
++'detector' = flags bits 4-6 (0 in v0.1 firmware, reported as 1; v0.2 = 2)."""
+ import struct, sys
+ EVT = {0: 'periodic', 1: 'activate', 2: 'end'}
+ END = {0: 'none', 1: 'level', 2: 'descent', 3: 'invalid', 4: 'stale', 5: 'timeout',
+@@ -9,7 +10,7 @@
+ FIELDS = ['time', 'seq', 'uptime_ms', 'event', 'build', 'assisting', 'latched', 'sample_valid', 'last_end',
+           'activations', 'alpha_milli', 'added_pwm_left', 'added_pwm_right', 'height_mm', 'peak_mm',
+           'interval_max_mm', 'interval_min_mm', 'valid_samples', 'invalid_samples', 'longest_over_enter',
+-          'max_abs_i_left', 'max_abs_i_right', 'i_limit_ticks', 'active_ms', 'peak_added_pwm']
++          'max_abs_i_left', 'max_abs_i_right', 'i_limit_ticks', 'active_ms', 'peak_added_pwm', 'detector']
+ def decode(b):
+     if len(b) != 31 or b[0] != 0xF2 or b[1] != 28:
+         return None
+@@ -21,7 +22,8 @@
+             'added_pwm_right': pr, 'height_mm': '' if h == -128 else h, 'peak_mm': pk,
+             'interval_max_mm': '' if mx == -128 else mx, 'interval_min_mm': '' if mn == 127 else mn,
+             'valid_samples': v, 'invalid_samples': iv, 'longest_over_enter': lg, 'max_abs_i_left': il,
+-            'max_abs_i_right': ir, 'i_limit_ticks': sat, 'active_ms': ams, 'peak_added_pwm': ppk}
++            'max_abs_i_right': ir, 'i_limit_ticks': sat, 'active_ms': ams, 'peak_added_pwm': ppk,
++            'detector': ((fl >> 4) & 7) or 1}
+ def main():
+     path = sys.argv[1]; a = int(sys.argv[2]) if len(sys.argv) > 2 else 1; z = int(sys.argv[3]) if len(sys.argv) > 3 else 1 << 62
+     print(','.join(FIELDS))
+--- archive/ra_v0_1/run_ramp_assist_tests.sh	2026-10-29 17:49:15.730234491 +0000
++++ run_ramp_assist_tests.sh	2026-10-29 18:40:16.567372294 +0000
+@@ -1,5 +1,5 @@
+ #!/bin/sh
+-# ramp-assist v0.1 host checks (no SDK, no hardware). From interface_wifi_v2_3/:
++# ramp-assist v0.2 host checks (no SDK, no hardware). From interface_wifi_v2_3/:
+ #   sh run_ramp_assist_tests.sh
+ set -u
+ cd "$(dirname "$0")"
+@@ -10,7 +10,7 @@
+   echo "== $cc -Wall -Wextra -Werror"
+   if $cc -std=c11 -Wall -Wextra -Werror -O1 -I. -DLINE_CAL_MIN_SPAN=50 -DCIRCUIT_SWEEP_SEARCH=1 \
+        ramp_assist_tests/test_ramp_assist.c -lm -o "$O/t_$cc" && "$O/t_$cc" > "$O/out_$cc.txt"; then
+-    grep -E '^(climb|after|PASS)' "$O/out_$cc.txt"
++    grep -E '^(replay|climb|after|PASS)' "$O/out_$cc.txt"
+   else cat "$O/out_$cc.txt" 2>/dev/null; echo "FAILED ($cc)"; fails=$((fails+1)); fi
+ done
+ san=""
+@@ -25,7 +25,7 @@
+ echo "== telemetry decoder round trip"
+ first=$(echo $CCS | cut -d' ' -f1)
+ grep '^f2' "$O/out_$first.txt" > "$O/hex.txt"
+-if python3 ramp_assist_decode.py "$O/hex.txt" | tail -1 | grep -q '^,90,16909060,end,active,1,0,1,descent,3,200,30,36,-5,9,9,-2,24,1,12,100,55,7,1234,36$'; then
++if python3 ramp_assist_decode.py "$O/hex.txt" | tail -1 | grep -q '^,90,16909060,end,active,1,0,1,descent,3,200,30,36,-5,9,9,-2,24,1,12,100,55,7,1234,36,2$'; then
+   echo "PASS source-15 frame decodes to the packed values"; else echo "FAILED decoder"; fails=$((fails+1)); fi
+ echo "== existing v2.3 suite (run_tests.py, CC=clang)"
+ if CC=${CC:-clang} python3 run_tests.py > "$O/run_tests.txt" 2>&1; then tail -1 "$O/run_tests.txt"; else tail -15 "$O/run_tests.txt"; echo "FAILED run_tests.py"; fails=$((fails+1)); fi
+--- archive/ra_v0_1/ramp_assist_tests/test_ramp_assist.c	2026-10-29 17:49:15.340274594 +0000
++++ ramp_assist_tests/test_ramp_assist.c	2026-10-29 18:40:16.981612800 +0000
+@@ -1,4 +1,7 @@
+-/* Host tests for v2.3 + Buddy4 ramp-assist v0.1 (no SDK, no hardware).
++/* Host tests for v2.3 + Buddy4 ramp-assist v0.2 (no SDK, no hardware).
++ * v0.2 adds E: replay of the 2026-10-30 lower-bracket shadow climb (v0.1
++ * descent cutoff reproduced; v0.2 holds assistance to the timeout) and
++ * noisy-climb / genuine-descent / dip cases.
+  * Build from interface_wifi_v2_3/:  see run_ramp_assist_tests.sh
+  *  A. boost 0 => continuous_drive_step bit-identical to the 8d7f3aa original
+  *  B. decision logic: persistence, hysteresis, bump rejection, descent,
+@@ -15,6 +18,7 @@
+ #include "continuous_drive.h"
+ #include "ramp_assist_tests/continuous_drive_ref_8d7f3aa.h"
+ #include "ramp_assist.h"
++#include "ramp_assist_tests/ramp_assist_v0_1_ref.h"
+ 
+ static int checks;
+ #define CHECK(c, msg) do { if (!(c)) { printf("FAIL %s (line %d)\n", msg, __LINE__); return 1; } checks++; } while (0)
+@@ -89,7 +93,7 @@
+     CHECK(n == 0, "60 ms 7 mm bump rejected by persistence");
+     ra_reset(&a); n = 0; run_profile(&a, bump4, 1.0, ev, &n, &amax, &t0);
+     CHECK(n == 2 && ev[0] == RA_EVT_ACTIVATE && ev[1] == 100 + RA_END_LEVEL, "80 ms bump activates then ends LEVEL (persistence boundary)");
+-    CHECK(amax < 120.0f, "short activation stays inside the slew ramp (well below full alpha)");
++    CHECK(amax <= 200.0f, "short activation never exceeds full alpha");
+ 
+     ra_reset(&a); n = 0; run_profile(&a, ramp10, 3.5, ev, &n, &amax, &t0);
+     CHECK(n == 2 && ev[0] == RA_EVT_ACTIVATE && ev[1] == 100 + RA_END_DESCENT, "10 mm ramp: one activation, ends at DESCENT");
+@@ -200,7 +204,7 @@
+     CHECK(max_i_diff <= 0.5, "no integrator excess left by assistance (integral never above the no-assist run)");
+     CHECK(max_excess <= 1.0, "no residual boost: from 500 ms after release the output is never above the no-assist output");
+     CHECK(end_diff <= 3.0, "outputs converge to the no-assist trajectory");
+-    CHECK(overshoot_on <= overshoot_off + 1.0, "post-ramp overshoot within 1 mm/s of no-assist (abrupt load removal, worst case)");
++    CHECK(overshoot_on <= overshoot_off + 3.0, "post-ramp overshoot within 3 mm/s of no-assist (v0.2 100 ms filtered level + 200 ms release; abrupt load removal = worst case)");
+     /* flat run: assist logic never touches the output */
+     for (int k = 0; k < from; ++k) for (int w = 0; w < 2; ++w) CHECK(tr_on[k].out[w] == tr_off[k].out[w], "flat section identical with assist build");
+     /* continuous_leave seeding: subtracting boost_pwm gives the no-boost seed */
+@@ -213,21 +217,99 @@
+     return 0;
+ }
+ 
++/* ---------- E: replay ---------- */
++/* Sequence reconstructed (20 ms samples) from the 2026-10-30 02:27 shadow run
++ * (capture 2026-10-29_buddy4_drive_v1_1_codex1_capture.txt lines 593618..594558):
++ * source-15 interval stats (max/min/valid/longest>=4) and the activation/end
++ * frames (activate at h=4; v0.1 END=DESCENT after 241 ms, peak 7, current 4),
++ * source-2 snapshots (7,5,7,5,8 rocking), then 8..9 mm while stalled at the
++ * crest under command for ~7 s with both integrals at the limit. */
++static const int8_t replay_seq[] = {
++  /* interval to 254669: max 6 min 0, longest run>=4 = 2 */
++  0,1,0,1,2,1,2,1,2,3,2,3,2,3,2,3,1,2,3,2,3,4,6,2,3,
++  /* to activation (254922): 4 consecutive >= 4, current 4 */
++  3,2,3,2,3,3,2,3,4,4,5,4,
++  /* 241 ms after activation: rocking up to 7, two samples at 4 (v0.1 cut) */
++  5,6,7,6,5,7,6,5,6,4,4,4,
++  /* interval max 8 min 4 */
++  5,6,7,8,6,5,4,6,7,8,6,5,7,6,4,5,7,8,6,5,7,6,5,6,7,
++  /* interval max 10 min 6 */
++  7,8,9,8,7,6,8,9,10,9,8,7,8,9,10,9,8,9,8,7,8,9,10,9,8,
++  /* interval max 11 min 5 */
++  9,10,11,9,8,5,9,10,9,8,9,10,9,8,9,9,10,9,8,9,10,9,8,9,9 };
++static int replay_run(int which, uint8_t *end_reason, uint32_t *active_ms, uint64_t *end_at_ms, float *alpha_at_2s) {
++    RampAssist a; RampAssist01 b; ra_reset(&a); ra01_reset(&b);
++    const int n_seq = (int)sizeof replay_seq;
++    const int samples = n_seq + 7 * 50;                       /* + ~7 s stalled at 8/9 mm */
++    uint64_t t0 = 254163000ull, act_at = 0; *end_reason = 0; *active_ms = 0; *end_at_ms = 0; *alpha_at_2s = -1;
++    for (int k = 0; k < samples * 2; ++k) {                    /* 10 ms control steps */
++        uint64_t now = t0 + (uint64_t)k * 10000u; int i = k / 2;
++        int16_t h = (int16_t)(i < n_seq ? replay_seq[i] : (i % 2 ? 9 : 8));
++        RampAssistInput in = base_in(now); in.tilt_seq = (uint32_t)i + 1; in.tilt_us = t0 + (uint64_t)i * 20000u; in.tilt_valid = true; in.tilt_mm = h;
++        float al;
++        if (which == 1) { RampAssist01Input in1 = { in.now_us, in.dt, true, true, true, in.tilt_seq, in.tilt_us, true, h };
++            al = ramp_assist01_step(&b, &in1);
++            if (b.pending_event == RA01_EVT_ACTIVATE) act_at = now;
++            if (b.pending_event == RA01_EVT_END && !*end_reason) { *end_reason = b.last_end; *active_ms = b.active_ms; *end_at_ms = (now - act_at) / 1000; }
++            b.pending_event = 0xff;
++        } else {
++            al = ramp_assist_step(&a, &in);
++            if (a.pending_event == RA_EVT_ACTIVATE) act_at = now;
++            if (a.pending_event == RA_EVT_END && !*end_reason) { *end_reason = a.last_end; *active_ms = a.active_ms; *end_at_ms = (now - act_at) / 1000; }
++            a.pending_event = 0xff;
++        }
++        if (act_at && now - act_at == 2000000u) *alpha_at_2s = al;
++    }
++    return 0;
++}
++static int noisy_climb(double t, bool *v) {          /* 10 mm ramp with +/-3 mm rocking, crest held 1 s, real descent */
++    *v = true; unsigned k = (unsigned)(t * 50.0 + 0.5); int noise = (int)(k * 2654435761u >> 29) - 3;  /* -3..+4 */
++    if (noise > 3) noise = 3;
++    double base = t < 0.5 ? 0 : t < 2.0 ? (t - 0.5) / 1.5 * 10.0 : t < 3.0 ? 10.0 : t < 3.5 ? 10.0 - (t - 3.0) / 0.5 * 10.0 : 0.0;
++    int h = (int)(base + 0.5) + (base > 1.0 ? noise : 0);
++    return h < 0 ? 0 : h;
++}
++static int dip_profile(double t, bool *v) {          /* climb to 9, single 60 ms dip to 3, keep climbing */
++    *v = true; unsigned k = (unsigned)(t * 50.0 + 0.5);
++    if (k < 10) return 0;
++    if (k < 40) return 4 + (int)(k - 10) / 6;
++    if (k < 43) return 3;
++    if (k < 120) return 9;
++    return 0;
++}
++static int test_replay(void) {
++    uint8_t r1, r2; uint32_t ms1, ms2; uint64_t at1, at2; float al1, al2;
++    replay_run(1, &r1, &ms1, &at1, &al1); replay_run(2, &r2, &ms2, &at2, &al2);
++    printf("replay v0.1: end %u after %u ms; v0.2: end %u after %u ms, alpha 2 s into assist %.0f\n", r1, ms1, r2, ms2, al2);
++    CHECK(r1 == RA01_END_DESCENT && ms1 >= 200 && ms1 <= 260, "v0.1 reference reproduces the captured DESCENT cutoff (241 ms, peak 7, current 4)");
++    CHECK(r2 == RA_END_TIMEOUT, "v0.2 keeps assisting through the rocking climb and crest stall until the unchanged 2.5 s timeout");
++    CHECK(ms2 >= 2480 && ms2 <= 2520, "timeout still bounds total assistance at 2.5 s");
++    CHECK(fabsf(al2 - RA_ALPHA_MILLI) < 0.01f, "full (unchanged) alpha held during the stall");
++    RampAssist a; uint8_t ev[32]; int n; float amax; uint64_t t0 = 50000000;
++    ra_reset(&a); n = 0; run_profile(&a, noisy_climb, 4.5, ev, &n, &amax, &t0);
++    CHECK(n == 2 && ev[0] == RA_EVT_ACTIVATE && (ev[1] == 100 + RA_END_DESCENT || ev[1] == 100 + RA_END_LEVEL), "noisy 10 mm climb: one activation, ends only on the real descent/level");
++    CHECK(a.active_ms >= 2100 && a.active_ms <= 2500, "noisy climb: assistance covers rise + 1 s crest, released during descent");
++    ra_reset(&a); n = 0; run_profile(&a, dip_profile, 3.0, ev, &n, &amax, &t0);
++    CHECK(n == 2 && ev[1] == 100 + RA_END_LEVEL, "60 ms dip to 3 mm mid-climb does not end assistance; ends at level");
++    CHECK(a.active_ms > 1500, "dip case active through the climb");
++    return 0;
++}
++
+ /* ---------- D ---------- */
+ static int test_tlm(void) {
+-    RampAssistTlm t = { .uptime_ms = 0x01020304u, .event = RA_EVT_END, .flags = 0x0b, .last_end = RA_END_DESCENT, .activations = 3,
++    RampAssistTlm t = { .uptime_ms = 0x01020304u, .event = RA_EVT_END, .flags = 0x2b, .last_end = RA_END_DESCENT, .activations = 3,
+         .alpha_milli = 200, .pwm_l = 30, .pwm_r = 36, .height_mm = -5, .peak_mm = 9, .int_max = 9, .int_min = -2,
+         .valid = 24, .invalid = 1, .longest = 12, .max_i_l = 100, .max_i_r = 55, .sat_ticks = 7, .active_ms = 1234, .peak_pwm = 36 };
+     uint8_t f[RA_TLM_FRAME_BYTES]; ra_tlm_pack(&t, 0x5a, f);
+     CHECK(sizeof f == 31 && f[0] == 0xf2 && f[1] == 28 && f[2] == 0x5a, "source 15 header, 28-byte payload, 31-byte frame (<= 64)");
+-    CHECK(f[3] == 4 && f[6] == 1 && f[7] == RA_EVT_END && f[9] == RA_END_DESCENT && (int8_t)f[17] == -5 && f[24] == 100 && f[27] == 0xd2 && f[28] == 0x04, "field offsets");
++    CHECK(f[3] == 4 && f[6] == 1 && f[7] == RA_EVT_END && f[8] == 0x2b && f[9] == RA_END_DESCENT && (int8_t)f[17] == -5 && f[24] == 100 && f[27] == 0xd2 && f[28] == 0x04, "field offsets");
+     for (unsigned i = 0; i < sizeof f; ++i) printf("%02x", f[i]);
+     printf("\n");
+     return 0;
+ }
+ 
+ int main(void) {
+-    if (test_identity() || test_logic() || test_controller() || test_tlm()) return 1;
+-    printf("PASS ramp-assist v0.1 host tests: %d checks (boost-0 identity vs 8d7f3aa, logic, controller limits/residual, telemetry)\n", checks);
++    if (test_identity() || test_logic() || test_replay() || test_controller() || test_tlm()) return 1;
++    printf("PASS ramp-assist v0.2 host tests: %d checks (boost-0 identity vs 8d7f3aa, logic, captured-climb replay, controller limits/residual, telemetry)\n", checks);
+     return 0;
+ }
+--- /dev/null	2026-10-28 17:11:23.526000000 +0000
++++ ramp_assist_tests/ramp_assist_v0_1_ref.h	2026-10-29 18:40:17.533243121 +0000
+@@ -0,0 +1,224 @@
++/* v2.3 + Buddy4 ramp-assist v0.1 — decision logic (pure C, host-testable).
++ *
++ * Purpose: while the car climbs a one-sided ramp, raise the EXISTING
++ * continuous-drive feedforward of both wheels by a small fraction, so the
++ * existing per-wheel speed controller needs less integral build-up to hold
++ * the unchanged target speed. It never changes targets, gains, PWM limits,
++ * slew or anti-windup (see continuous_drive.h, boost_*).
++ *
++ * Tilt input: Buddy4's per-20 ms quasistatic side estimate
++ * (right-minus-left height, mm) and its own validity flag (MAD/gravity/
++ * timing/acceleration/turn/impact guards, Tracking state). A completed or
++ * accepted ramp event is NOT required.
++ *
++ * All constants below are PROVISIONAL (RAMP_ASSIST_V0_1.md): they come from
++ * the controller limits and two 500 ms-resolution ramp captures; the shadow
++ * build exists to measure what they could not. */
++#ifndef RAMP_ASSIST_V0_1_REF_H
++#define RAMP_ASSIST_V0_1_REF_H
++#include <stdbool.h>
++#include <stdint.h>
++
++#define RA01_ENTER_MM          4        /* |height| to start counting persistence      */
++#define RA01_ENTER_TICKS       4        /* consecutive valid 20 ms samples (80 ms)     */
++#define RA01_EXIT_MM           2        /* level band                                  */
++#define RA01_EXIT_TICKS        2        /* 40 ms level ends an activation (LEVEL)      */
++#define RA01_LEVEL_REARM_US    200000u  /* 200 ms level ends the episode, clears latch */
++#define RA01_DESCENT_DROP_MM   3        /* below the activation peak => crest passed   */
++#define RA01_DESCENT_TICKS     2
++#define RA01_TIMEOUT_US        2500000u /* cumulative assisted time per episode        */
++#define RA01_INVALID_US        40000u   /* invalid tilt longer than this ends assist   */
++#define RA01_STALE_US          60000u   /* no Buddy4 sample for this long ends assist  */
++#define RA01_ALPHA_MILLI       200      /* +20 % of the existing feedforward           */
++#define RA01_SLEW_MILLI_PER_S  1000     /* 0 -> 200 milli in 200 ms (and back)         */
++#define RA01_PWM_CAP           40       /* per-wheel absolute cap on added PWM         */
++
++enum {
++    RA01_END_NONE = 0, RA01_END_LEVEL = 1, RA01_END_DESCENT = 2, RA01_END_INVALID = 3,
++    RA01_END_STALE = 4, RA01_END_TIMEOUT = 5, RA01_END_NOT_FOLLOWING = 6,
++    RA01_END_PAUSED = 7, RA01_END_STOPPED = 8
++};
++enum { RA01_EVT_PERIODIC = 0, RA01_EVT_ACTIVATE = 1, RA01_EVT_END = 2 };
++
++typedef struct {
++    uint64_t now_us;
++    float    dt;            /* seconds since the previous call (control period) */
++    bool     run_active;    /* v2.3 guard active (cleared by Stop, ESTOP, faults, run end) */
++    bool     auto_mode;     /* coordinator session active in MOTION_AUTO (not paused)       */
++    bool     following;     /* existing continuous drive selected and not in line recovery  */
++    uint32_t tilt_seq;      /* increments on every Buddy4 20 ms period                      */
++    uint64_t tilt_us;
++    bool     tilt_valid;
++    int16_t  tilt_mm;       /* right-minus-left, only meaningful when valid                  */
++} RampAssist01Input;
++
++typedef struct {
++    /* activation */
++    bool     assisting;
++    float    alpha_milli;   /* ramped value actually requested (0..RA01_ALPHA_MILLI) */
++    uint64_t active_since_us;
++    uint32_t active_ms;     /* current or last activation */
++    uint8_t  last_end;
++    uint8_t  activations;   /* this run, saturating */
++    /* episode (one ramp) */
++    bool     latched;       /* after DESCENT/TIMEOUT: wait for level before re-arming */
++    uint64_t episode_us;    /* cumulative assisted time this episode */
++    int16_t  peak_mm;       /* |height| peak of the current activation */
++    int8_t   sign;          /* sign of the counted/assisting tilt */
++    uint8_t  over_ticks, level_ticks, drop_ticks;
++    uint64_t level_since_us;
++    uint64_t invalid_since_us;
++    bool     have_sample;
++    uint32_t last_seq;
++    uint64_t last_sample_us;
++    int16_t  last_mm; bool last_valid;
++    /* events for telemetry (consumed by the caller) */
++    uint8_t  pending_event; /* RA01_EVT_* or 0xff none */
++    /* 500 ms interval statistics (reset by the caller after each report) */
++    int16_t  int_max_mm, int_min_mm;
++    uint8_t  int_valid, int_invalid, int_run, int_longest;
++} RampAssist01;
++
++static inline void ra01_interval_reset(RampAssist01 *a) {
++    a->int_max_mm = -128; a->int_min_mm = 127;
++    a->int_valid = a->int_invalid = a->int_run = a->int_longest = 0;
++}
++static inline void ra01_reset(RampAssist01 *a) {
++    *a = (RampAssist01){0};
++    a->pending_event = 0xff;
++    ra01_interval_reset(a);
++}
++static inline int16_t ra01_abs16(int16_t v) { return (int16_t)(v < 0 ? -v : v); }
++static inline uint8_t ra01_inc8(uint8_t v) { return (uint8_t)(v < 255 ? v + 1 : 255); }
++
++static inline void ra01_end(RampAssist01 *a, uint8_t reason, uint64_t now, bool latch) {
++    if (!a->assisting) return;
++    a->assisting = false;
++    a->active_ms = (uint32_t)((now - a->active_since_us) / 1000u);
++    a->last_end = reason;
++    if (latch) a->latched = true;
++    a->over_ticks = a->drop_ticks = 0;
++    a->pending_event = RA01_EVT_END;
++}
++static inline void ra01_end_episode(RampAssist01 *a) {
++    a->latched = false; a->episode_us = 0; a->peak_mm = 0;
++}
++
++/* One call per control step (10 ms). Returns the alpha (milli) to apply to
++ * both wheels this step. Ineligible states force 0 immediately (the existing
++ * controller is being reset or left at that moment anyway). */
++static inline float ramp_assist01_step(RampAssist01 *a, const RampAssist01Input *in) {
++    const uint64_t now = in->now_us;
++    if (!in->run_active) {                     /* Stop, ESTOP, fault, run end */
++        ra01_end(a, RA01_END_STOPPED, now, false);
++        uint8_t ev = a->pending_event, acts = a->activations, end = a->last_end;
++        uint32_t ms = a->active_ms;
++        bool had = a->have_sample;
++        ra01_reset(a);                           /* a new run starts a fresh state */
++        a->pending_event = ev; a->activations = acts; a->last_end = end; a->active_ms = ms;
++        a->have_sample = had;
++        return 0.0f;
++    }
++    /* new Buddy4 sample? */
++    if (in->tilt_seq != a->last_seq || !a->have_sample) {
++        bool fresh = !a->have_sample || in->tilt_seq != a->last_seq;
++        a->have_sample = true; a->last_seq = in->tilt_seq;
++        if (fresh) {
++            a->last_sample_us = in->tilt_us; a->last_valid = in->tilt_valid; a->last_mm = in->tilt_mm;
++            if (in->tilt_valid) {
++                const int16_t h = in->tilt_mm, mag = ra01_abs16(h);
++                const int8_t sg = (int8_t)(h > 0 ? 1 : h < 0 ? -1 : 0);
++                a->invalid_since_us = 0;
++                a->int_valid = ra01_inc8(a->int_valid);
++                if (h > a->int_max_mm) a->int_max_mm = h;
++                if (h < a->int_min_mm) a->int_min_mm = h;
++                if (mag >= RA01_ENTER_MM) { a->int_run = ra01_inc8(a->int_run); if (a->int_run > a->int_longest) a->int_longest = a->int_run; }
++                else a->int_run = 0;
++                /* level band: ends activations quickly, episodes after 200 ms */
++                if (mag <= RA01_EXIT_MM) {
++                    a->level_ticks = ra01_inc8(a->level_ticks);
++                    if (!a->level_since_us) a->level_since_us = in->tilt_us;
++                    if (in->tilt_us - a->level_since_us >= RA01_LEVEL_REARM_US && !a->assisting) ra01_end_episode(a);
++                } else { a->level_ticks = 0; a->level_since_us = 0; }
++                if (a->assisting) {
++                    if (mag > a->peak_mm) a->peak_mm = mag;
++                    if (a->level_ticks >= RA01_EXIT_TICKS) ra01_end(a, RA01_END_LEVEL, now, false);
++                    else {
++                        a->drop_ticks = (a->peak_mm - mag >= RA01_DESCENT_DROP_MM) ? ra01_inc8(a->drop_ticks) : 0;
++                        if (a->drop_ticks >= RA01_DESCENT_TICKS) ra01_end(a, RA01_END_DESCENT, now, true);
++                    }
++                } else if (!a->latched && in->auto_mode && in->following && a->episode_us < RA01_TIMEOUT_US) {
++                    if (mag >= RA01_ENTER_MM && (a->over_ticks == 0 || sg == a->sign)) {
++                        a->sign = sg; a->over_ticks = ra01_inc8(a->over_ticks);
++                    } else a->over_ticks = 0;
++                    if (a->over_ticks >= RA01_ENTER_TICKS) {
++                        a->assisting = true; a->active_since_us = now; a->peak_mm = mag;
++                        a->drop_ticks = a->level_ticks = 0;
++                        a->activations = ra01_inc8(a->activations);
++                        a->pending_event = RA01_EVT_ACTIVATE;
++                    }
++                } else a->over_ticks = 0;
++            } else {
++                a->int_invalid = ra01_inc8(a->int_invalid); a->int_run = 0;
++                a->over_ticks = 0; a->level_ticks = 0; a->level_since_us = 0;
++                if (!a->invalid_since_us) a->invalid_since_us = in->tilt_us ? in->tilt_us : 1;
++            }
++        }
++    }
++    /* time-based terminations */
++    if (a->assisting) {
++        if (!in->auto_mode) ra01_end(a, RA01_END_PAUSED, now, false);
++        else if (!in->following) ra01_end(a, RA01_END_NOT_FOLLOWING, now, false);
++        else if (now - a->last_sample_us > RA01_STALE_US) ra01_end(a, RA01_END_STALE, now, false);
++        else if (a->invalid_since_us && now - a->invalid_since_us >= RA01_INVALID_US) ra01_end(a, RA01_END_INVALID, now, false);
++        else {
++            float dt = in->dt > 0.0f ? (in->dt > 0.1f ? 0.1f : in->dt) : 0.0f;
++            a->episode_us += (uint64_t)(dt * 1e6f);
++            if (a->episode_us >= RA01_TIMEOUT_US) ra01_end(a, RA01_END_TIMEOUT, now, true);
++        }
++    }
++    if (!in->auto_mode || !in->following) { a->alpha_milli = 0.0f; a->over_ticks = 0; return 0.0f; }
++    {
++        float goal = a->assisting ? (float)RA01_ALPHA_MILLI : 0.0f;
++        float dt = in->dt > 0.0f ? (in->dt > 0.1f ? 0.1f : in->dt) : 0.0f;
++        float step = (float)RA01_SLEW_MILLI_PER_S * dt;
++        float d = goal - a->alpha_milli;
++        a->alpha_milli += d > step ? step : (d < -step ? -step : d);
++    }
++    return a->alpha_milli;
++}
++
++/* Source-15 telemetry payload (little endian, 28 bytes; frame 31 bytes):
++ *  0 u32 uptime_ms         4 u8 event (RA01_EVT_*)    5 u8 flags (bit0 active build,
++ *  bit1 assisting, bit2 latched, bit3 last sample valid)   6 u8 last end reason
++ *  7 u8 activations        8 u16 alpha_milli         10 i16 added PWM left
++ * 12 i16 added PWM right (shadow build: what WOULD be added)
++ * 14 i8 current height mm (-128 = invalid)          15 i8 activation peak |mm|
++ * 16 i8 interval max mm (-128 none)  17 i8 interval min mm (127 none)
++ * 18 u8 valid samples  19 u8 invalid samples  20 u8 longest run >= enter (samples)
++ * 21 u8 max |I| left   22 u8 max |I| right (continuous controller, 0..100)
++ * 23 u8 control ticks with either |I| >= 99 (controller authority limit)
++ * 24 u16 active_ms (current or last activation)  26 i16 peak added PWM (activation)
++ */
++#define RA01_TLM_SOURCE        15u
++#define RA01_TLM_PAYLOAD_BYTES 28u
++#define RA01_TLM_FRAME_BYTES   (3u + RA01_TLM_PAYLOAD_BYTES)
++typedef struct {
++    uint32_t uptime_ms; uint8_t event, flags, last_end, activations;
++    uint16_t alpha_milli; int16_t pwm_l, pwm_r; int8_t height_mm, peak_mm, int_max, int_min;
++    uint8_t valid, invalid, longest, max_i_l, max_i_r, sat_ticks;
++    uint16_t active_ms; int16_t peak_pwm;
++} RampAssist01Tlm;
++static inline int8_t ra01_i8(int v) { return (int8_t)(v < -127 ? -127 : v > 126 ? 126 : v); }
++static inline void ra01_put16(uint8_t *p, uint16_t v) { p[0] = (uint8_t)v; p[1] = (uint8_t)(v >> 8); }
++static inline void ra01_tlm_pack(const RampAssist01Tlm *t, uint8_t seq, uint8_t out[RA01_TLM_FRAME_BYTES]) {
++    uint8_t *p = out + 3;
++    out[0] = (uint8_t)((RA01_TLM_SOURCE << 4) | 2u); out[1] = (uint8_t)RA01_TLM_PAYLOAD_BYTES; out[2] = seq;
++    p[0] = (uint8_t)t->uptime_ms; p[1] = (uint8_t)(t->uptime_ms >> 8); p[2] = (uint8_t)(t->uptime_ms >> 16); p[3] = (uint8_t)(t->uptime_ms >> 24);
++    p[4] = t->event; p[5] = t->flags; p[6] = t->last_end; p[7] = t->activations;
++    ra01_put16(p + 8, t->alpha_milli); ra01_put16(p + 10, (uint16_t)t->pwm_l); ra01_put16(p + 12, (uint16_t)t->pwm_r);
++    p[14] = (uint8_t)t->height_mm; p[15] = (uint8_t)t->peak_mm; p[16] = (uint8_t)t->int_max; p[17] = (uint8_t)t->int_min;
++    p[18] = t->valid; p[19] = t->invalid; p[20] = t->longest; p[21] = t->max_i_l; p[22] = t->max_i_r; p[23] = t->sat_ticks;
++    ra01_put16(p + 24, t->active_ms); ra01_put16(p + 26, (uint16_t)t->peak_pwm);
++}
++#endif

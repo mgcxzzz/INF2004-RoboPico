@@ -430,3 +430,51 @@ Latest failed Z yields one complete205ADC/hysteresis2 frame, blocked by neighbou
 ## 2026-10-30 barcode fine v0.3 physical run1 — still failed
 
 Version0xbc03 confirmed. User reports little stuttering.232mm/5344ms, recovery0, invalid0/0, barcodeADC169..2154, decoded0.2048 raw samples saved,0..222.51mm/5104.406ms. Real v0.3 replay has0candidates; diagnostic original-reader sweep160..300 ADC and hysteresis0/1/2/3/8/16 has no full-frame match. This run is not being blocked merely by quiet-zone/consensus gates. v0.3 is not physically validated as a fix. Need isolate acquisition/optics before further threshold tuning; no firmware change made from this run. See `logs/2026-10-30_barcode_Z_fine_v0_3_run1_*` and reviewJSON.
+
+## 2026-10-30 07:10 — barcode peak decoder v0.1 build (original v2.3 + peak decoder), not yet bench-tested
+
+- Separate barcode-only build: `testing/subsystem2/interface_wifi_v2_3_barcode_peak_v0_1/` (original 8d7f3aa tree, no Buddy4/ramp assist). Bars read from ADC peak positions; spaces from bar-centre spacing in frame units; strict `*X*` acceptance. Original 63-bank decoder unchanged alongside.
+- Host: all four failed captures (Z original, Z fine v0.2 run3, Z fine v0.3 run1, Y original) decode correctly in the C streaming code, also with ±10 % odometry scale, half sample rate and ±15 ADC offset; synthetic 930/936 with 0 misreads; harsh 0 misreads (20,000-trial offline run also 0); negatives pass; run_tests.py 35 pass.
+- Firmware (local only): `bench_tools/buddy4/buddy123_interface_wifi_v2_3_barcode_peak_v0_1_{shadow,active}.uf2` (shadow 5eef23d7…, active 39123c50…), 0 warnings. Source-15 subtype 0xB1 telemetry; decode with `barcode_peak_decode.py`.
+- Bench result: pending (shadow label runs, then active). Handoff: `claude_output/HANDOFF_2026-10-30_BARCODE_PEAK_V0_1.md`.
+
+## 2026-10-30 ~22:40 — barcode peak v0.1 ACTIVE on the car: user reports all labels decoded
+
+- Firmware: `buddy123_interface_wifi_v2_3_barcode_peak_v0_1_active.uf2` (39123c50…), lower bracket, no other physical change.
+- User report: "all decoded". Captures not yet reviewed here; repeatability, other letters and junction actions still to be recorded from native logs (source 15 via `barcode_peak_decode.py`).
+
+## 2026-10-30 23:15 — combined build v0.1 (v2.3 + Buddy4 v0.2 + ramp assist v0.2 + barcode peak v0.1), host-tested only
+
+- Folder `testing/subsystem2/interface_wifi_v2_3_b4_peak_v0_1/` (base `interface_wifi_v2_3/` unchanged; peak decoder byte-identical). main.c +3 hook lines, CMake option `BARCODE_PEAK_ACTIVE`; drive, Buddy4, ramp assist, original reader/cross logic and MQTT mapping unchanged.
+- Coexistence: same-letter duplicates suppressed (state bit-identical to original alone); conflicting letters on one label cancel the pending movement in either order; no-barcode runs leave navigation bit-identical.
+- Source 15: ramp (payload 28) and peak (payload 24, subtype 0xB1) dispatched by length/subtype in the dashboard and `source15_decode.py`; combined-build ID = peak flags bit7 + run-start announce (reason 10).
+- Dashboard v0.3: source-15 cards; "Last decoded letter (B3)" verified to update from a real SDK decode via the real C packers.
+- Host: `run_combined_tests.sh` pass (cloud clang/gcc, Mac VM gcc); dashboard browser checks 13/13 + 44/44. ARM: 0 warnings, bss +2,036 B, main stack 2,368 B, barcode_peak_sample 592 B.
+- Firmware (local only): `bench_tools/buddy4/buddy1234_peak_v0_1_ra_active_bp_active.uf2`, sha256 26910f823893797e4fca3e5f68476765540ed64f1e5d88695bd7714bbbe4cd75 (ramp ACTIVE, peak ACTIVE).
+- Hardware: pending. Steps in `B4_PEAK_V0_1.md`; handoff `claude_output/HANDOFF_2026-10-30_BUDDY1234_PEAK_V0_1.md`.
+
+## 2026-10-31 00:39 — combined v0.1 on the car: barcode OK; ramp run 20 analysis; combined v0.2 built (host only)
+
+- Earlier capture 00:18–00:20: Buddy4 in Fault 3 (calibration timeout) throughout → tilt invalid, no assist, no hump possible. Re-Reset fixed it.
+- Run 20 (00:39:20, 10 mm ramp): assist active at 171 mm (+30/+28); crest 216–219 mm speed → 0 for ~0.15 s; Buddy4 quality reasons ACCEL/SPREAD made tilt invalid in 60 ms bursts → assist ended INVALID 4×; integrals saturated, surge to ~80 mm/s; hump rejected detail 3 (peak 13 mm). No barcode seen; not a peak-decoder effect. Control gap 10.6–11.6 ms (unchanged).
+- Combined v0.2 (`interface_wifi_v2_3_b4_peak_v0_2/`, ramp assist v0.3): hold assist up to 150 ms through ACCEL/SPREAD-only exclusions; everything else unchanged. Host tests pass. Firmware `bench_tools/buddy4/buddy1234_peak_v0_2_ra_active_bp_active.uf2` sha256 e16d2f100953dbcc2e6694051c539ce7edfe3cc7076d56aeffc5cbcf61e09c94. Hardware pending.
+
+## 2026-10-31 01:21 — v0.1 ramp stall at 201 mm; combined v0.3 (stall push) built, host only
+
+- Run at 01:21 (v0.1 firmware, detector 2): stopped at 201 mm with right wheel up (tilt 8–11 mm), front settling onto mat (barcode ADC 430→1,230), ~20 s, output 295/165 PWM (limit 420; ff+error+I_max, steering target right 13 mm/s); assist chattered INVALID then timed out.
+- Combined v0.3 (`interface_wifi_v2_3_b4_peak_v0_3/`, ramp assist v0.4): v0.2 hold + stall push (+60 PWM both wheels after 200 ms at < 5 mm/s while assisting; released > 15 mm/s; 1.5 s budget, excluded from the 2.5 s timeout; Stop/Pause immediate; 420 clamp). Host model reproduces 295/165 and gives 385/235 with assist + push. Firmware `buddy1234_peak_v0_3_ra_active_bp_active.uf2` sha256 bc376eeca37798f410523a84b6888a60c808cc480314ff5b93dad2799d2447b5. Hardware pending.
+
+## 2026-10-31 01:49–01:51 — v0.3 with bracket tilted up: 4/5 ramps cleared; combined v0.4 (tilt floor) built, host only
+
+- Runs 01:49:11, :29, :50, 01:50:51 cleared; humps accepted 16/14/14/14 mm. Run 01:50:15 stuck at 225 mm after two successful pushes: left 295 PWM, ramp (right) wheel 12–51 PWM because steering targeted 2–9 mm/s. Flat speed today 46–47 mm/s (yesterday 44–48; same 45 target); right wheel needs ~223 PWM on the flat vs ~170–200 yesterday (possible extra drag on the right side).
+- Combined v0.4 (`interface_wifi_v2_3_b4_peak_v0_4/`, ramp assist v0.5): each wheel ≥ 300 PWM from assist activation until flat (5 s cap; Stop/Pause immediate; no integral wind). Firmware `buddy1234_peak_v0_4_ra_active_bp_active.uf2` sha256 d5bcd275a4930ec93ee44736f7c87c588cd1ed3d5e29240f3aa00c334fc04271. Hardware pending.
+
+## 2026-10-31 02:06–02:08 — combined v0.4 (300 PWM tilt floor): climbs too fast, stalls at the crest; combined v0.5 (speed hold) built, host only
+
+- Capture `logs/2026-10-31_buddy1234_peak_v0_4_capture.txt`: 2 flat runs, 4 ramp runs (02:07:27, :54, 02:08:13, :43). Each: floor 300/300 → 107–131 mm/s on the climb; ~0.47 s in, non-ACCEL/SPREAD invalid tilt ended assist + floor (single use); car stopped at the crest (193–216 mm, barcode ADC ~1,000–1,100 = nose on the mat); re-activation without floor, ramp wheel 0–25 PWM (steering 0–3 mm/s) until the stall push ~1 s later. Buddy4 rejected every hump (detail 3, 7–12 mm).
+- Combined v0.5 (`interface_wifi_v2_3_b4_peak_v0_5/`, ramp assist v0.6): floor removed; until flat 200 ms the speed loop gets min 35 mm/s per wheel, I limit 300, 3× Ki; survives invalid < 500 ms. Firmware `buddy1234_peak_v0_5_ra_active_bp_active.uf2` sha256 dacc4e768ccbcdfa7485ec410e1b2ec4defff48c60b3ab65584292ac66a15118. Hardware pending.
+
+## 2026-10-31 02:26–02:38 — combined v0.5 (ramp assist v0.6 speed hold): ramp and barcode working
+
+- Excerpt `logs/2026-10-31_combined_v0_5_speed_hold_runs_native_excerpt.txt`. Ramp runs 02:26:27, 02:27:42, 02:33:11: detected (detector 6), crossed with no stall and no stall push (slowest 22–31 mm/s at the crest, front touching the mat), Buddy4 hump accepted 12 / 11 / 13 mm. Climb peak ~60 mm/s (v0.4 floor: 107–131). Barcode run 02:38:44: peak decoder read Y (reverse), unmapped so no movement. User reports further runs OK.
+- Defaults in `CMakeLists.txt` set to the tested configuration (ramp assist ON, peak decoder ON); the default build reproduces UF2 sha256 dacc4e76…5118.

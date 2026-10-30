@@ -1,0 +1,47 @@
+{
+ "version": "original SDK Wi-Fi v2.3 + barcode peak decoder v0.1",
+ "date": "2026-10-30",
+ "baseline_commit": "8d7f3aa4935565636bba013c74e563f5e8135bcb",
+ "folder": "testing/subsystem2/interface_wifi_v2_3_barcode_peak_v0_1",
+ "includes_buddy4": false,
+ "includes_ramp_assist": false,
+ "firmware": {
+  "shadow": {
+   "uf2": "bench_tools/buddy4/buddy123_interface_wifi_v2_3_barcode_peak_v0_1_shadow.uf2",
+   "uf2_sha256": "5eef23d72751a2e227c38cd6aab5e2af331d697eaf95fc42e292787f12a5e47d",
+   "uf2_bytes": 994816,
+   "uf2_blocks": 1943,
+   "flash_range": "0x10000000..0x10079700",
+   "elf_sha256": "651db0c1ab455a0374980ee6f586982590037b914b10c24b1325b8df8c49a9cf",
+   "BARCODE_PEAK_ACTIVE": 0,
+   "text_bytes": 507408,
+   "navigation": "original decoder only (peak decoder logs)"
+  },
+  "active": {
+   "uf2": "bench_tools/buddy4/buddy123_interface_wifi_v2_3_barcode_peak_v0_1_active.uf2",
+   "uf2_sha256": "39123c501df764b6302300addcbf088550e6978950848710a87d326930aa2cab",
+   "uf2_bytes": 995840,
+   "uf2_blocks": 1945,
+   "flash_range": "0x10000000..0x10079900",
+   "elf_sha256": "53fc5a723853c779bd64cd379bd59e20752ed2db1fa51736d699ee4ebe5458de",
+   "BARCODE_PEAK_ACTIVE": 1,
+   "text_bytes": 508096,
+   "navigation": "peak decoder may queue frames the original decoder missed"
+  }
+ },
+ "uf2_checks": "magic/sequence/256-byte payload valid; family RP2040 0xe48bff56",
+ "compiler_warnings": {
+  "shadow": 0,
+  "active": 0
+ },
+ "stack": "barcode_peak_sample 592 B (static scratch), main 2432 B, core-0 stack 8 KB",
+ "contains_credentials": true,
+ "local_only": true,
+ "credentials_in_build_logs": 0,
+ "git": "never commit UF2/ELF; wifi_config.local.h copied from interface_wifi_v2_3 (git-ignored)",
+ "toolchain": "xPack arm-none-eabi-gcc 13.3.1-1.1 (Mac VM), fresh build dirs ~/bpbuild_OFF and ~/bpbuild_ON, picotool reused from ~/rabuild_shadow",
+ "pico_sdk": "pico-sdk @ 98a542c1a62fb549ffb5d66a3e5892b06276b670",
+ "host_tests": "BARCODE_PEAK_HOST_TESTS_v0_1.txt (cloud clang+gcc, gcc ASan/UBSan, decoder round trip, run_tests.py 35); VM gcc same suite PASS",
+ "flashed": false,
+ "motor_commands_sent": false
+}

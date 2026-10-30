@@ -1,0 +1,64 @@
+# Combined build v0.1 host tests (HOST/REPLAY ONLY — no hardware)
+
+## Mac VM run (gcc, CC=gcc CFLAGS=-Wno-misleading-indentation sh run_combined_tests.sh)
+== 1. peak decoder suite (captures, synthetic A-Z/0-9 both directions, harsh, negatives, telemetry) + v2.3 run_tests.py
+ALL INTERFACE AND WIFI TESTS PASSED; C test executables= 35
+PASS barcode peak decoder v0.1 host tests: 47 checks (4 captured car failures, synthetic A-Z/0-9 both directions, harsh no-misread, negatives, telemetry)
+PASS source-15 barcode-peak frame decodes to the packed values
+== 2. combined integration: real original decoder + runtime mapping + peak harness
+gcc: PASS combined peak integration (BARCODE_PEAK_ACTIVE=1): 28 checks (real original decoder + runtime mapping + peak harness: apply, duplicate, both conflict orders, unmapped, junction, no-barcode identity, busy reset, mixed source-15)
+gcc: PASS combined peak integration (BARCODE_PEAK_ACTIVE=0): 19 checks (real original decoder + runtime mapping + peak harness: apply, duplicate, both conflict orders, unmapped, junction, no-barcode identity, busy reset, mixed source-15)
+gcc ASan/UBSan: PASS combined peak integration (BARCODE_PEAK_ACTIVE=1): 28 checks (real original decoder + runtime mapping + peak harness: apply, duplicate, both conflict orders, unmapped, junction, no-barcode identity, busy reset, mixed source-15)
+== 3. combined reporting path: real C packers -> fixture -> Python and dashboard decoders
+PASS C packer output matches the committed dashboard fixture (124 frames)
+PASS source15_decode.py: 24 ramp + 2 peak frames interleaved, 0 unknown
+PASS dashboard decoders: # pass 25
+== 4. existing ramp-assist suite (detector v0.2)
+PASS ramp-assist v0.2 host tests: 360849 checks (boost-0 identity vs 8d7f3aa, logic, captured-climb replay, controller limits/residual, telemetry)
+PASS source-15 frame decodes to the packed values
+== 5. existing Buddy4 suites (service/packets, powered acceptance estimator v0.2)
+PASS buddy4 v2.3 service: calibrate, start/stop/resume/reset mapping, 10 mm ramp accepted, unclean odometry gated, fault+reset recovery, frames unpack
+PASS Buddy4 powered acceptance: powered acceptance: 24 checks, 0 failures
+failures: 0
+
+### Cloud workspace run 2026-10-30T23:11:11+08:00 (Ubuntu clang version 18.1.3 (1ubuntu1); gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0; node v22.23.4)
+== 1. peak decoder suite (captures, synthetic A-Z/0-9 both directions, harsh, negatives, telemetry) + v2.3 run_tests.py
+ALL INTERFACE AND WIFI TESTS PASSED; C test executables= 35
+PASS barcode peak decoder v0.1 host tests: 47 checks (4 captured car failures, synthetic A-Z/0-9 both directions, harsh no-misread, negatives, telemetry)
+PASS source-15 barcode-peak frame decodes to the packed values
+== 2. combined integration: real original decoder + runtime mapping + peak harness
+clang: PASS combined peak integration (BARCODE_PEAK_ACTIVE=1): 28 checks (real original decoder + runtime mapping + peak harness: apply, duplicate, both conflict orders, unmapped, junction, no-barcode identity, busy reset, mixed source-15)
+clang: PASS combined peak integration (BARCODE_PEAK_ACTIVE=0): 19 checks (real original decoder + runtime mapping + peak harness: apply, duplicate, both conflict orders, unmapped, junction, no-barcode identity, busy reset, mixed source-15)
+gcc: PASS combined peak integration (BARCODE_PEAK_ACTIVE=1): 28 checks (real original decoder + runtime mapping + peak harness: apply, duplicate, both conflict orders, unmapped, junction, no-barcode identity, busy reset, mixed source-15)
+gcc: PASS combined peak integration (BARCODE_PEAK_ACTIVE=0): 19 checks (real original decoder + runtime mapping + peak harness: apply, duplicate, both conflict orders, unmapped, junction, no-barcode identity, busy reset, mixed source-15)
+gcc ASan/UBSan: PASS combined peak integration (BARCODE_PEAK_ACTIVE=1): 28 checks (real original decoder + runtime mapping + peak harness: apply, duplicate, both conflict orders, unmapped, junction, no-barcode identity, busy reset, mixed source-15)
+== 3. combined reporting path: real C packers -> fixture -> Python and dashboard decoders
+PASS C packer output matches the committed dashboard fixture (124 frames)
+PASS source15_decode.py: 24 ramp + 2 peak frames interleaved, 0 unknown
+PASS dashboard decoders: # pass 25
+== 4. existing ramp-assist suite (detector v0.2)
+PASS ramp-assist v0.2 host tests: 360849 checks (boost-0 identity vs 8d7f3aa, logic, captured-climb replay, controller limits/residual, telemetry)
+PASS source-15 frame decodes to the packed values
+== 5. existing Buddy4 suites (service/packets, powered acceptance estimator v0.2)
+PASS buddy4 v2.3 service: calibrate, start/stop/resume/reset mapping, 10 mm ramp accepted, unclean odometry gated, fault+reset recovery, frames unpack
+PASS Buddy4 powered acceptance: powered acceptance: 24 checks, 0 failures
+failures: 0
+
+### Dashboard browser checks (Playwright/Chromium, simulated MQTT, cloud)
+PASS P01 before any decode the B3 letter shows no frames
+PASS P02 Last decoded letter (B3) updates from the real SDK decode (sources 10/11)
+PASS P03 mapped movement from the confirmed mapping readback
+PASS P04 progress card: latest letter and pending action
+PASS P05 peak decoder card shows the queued letter
+PASS P06 ramp-assist card decodes the interleaved ramp frames
+PASS P07 combined build identified (peak bit7 + ramp detector/estimator)
+PASS P08 SDK profile selected
+PASS P09 timeline has the peak read and the run-start announce
+PASS P10 connectivity test counts ramp and peak source-15 streams separately, 0 missing each
+PASS P11 unknown source-15 layout is rejected
+PASS P12 car restart: mapping unknown again, build/peak cards cleared
+PASS P13 no page or console errors
+
+13 passed, 0 failed (simulated MQTT; frames from the real C packers)
+44 passed, 0 failed (simulated MQTT; no broker, Pico or car)
+Note: compat/rtos_check_dashboard.mjs, rtos_check_imu_dashboard.py and rtos_check_dashboard_ui.mjs need RTOS-branch files (testing/subsystem1/host/vectors.json, testing/integration/host/imu_vectors.c, app_program/subsystem4/b4_pack.c) that do not exist in this worktree; they stop on the missing files before any dashboard code runs (independent of this change). RTOS frames are covered by ui_merged.mjs R01-R08 and test_merged_schema.js (differential vs the RTOS decoder).

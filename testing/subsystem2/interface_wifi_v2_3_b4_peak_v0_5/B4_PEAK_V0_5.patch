@@ -1,0 +1,610 @@
+diff -ruN -x archive -x build -x 'B4_PEAK_V0_*.patch' -x ramp_assist_v0_5_ref.h interface_wifi_v2_3_b4_peak_v0_4/CMakeLists.txt interface_wifi_v2_3_b4_peak_v0_5/CMakeLists.txt
+--- interface_wifi_v2_3_b4_peak_v0_4/CMakeLists.txt	2026-10-31 01:55:16.799569573 +0800
++++ interface_wifi_v2_3_b4_peak_v0_5/CMakeLists.txt	2026-10-31 02:18:35.187295286 +0800
+@@ -15,7 +15,7 @@
+     buddy4/subsystem4/imu_proc.c buddy4/subsystem4/b4_pack.c
+     buddy4/subsystem2/b2_pack.c buddy4/system/sys_tlm.c)
+ # Include the complete release version in generated ELF/BIN/UF2 filenames.
+-# ramp-assist v0.5 (v0.4 + tilt floor 300 PWM until flat) on top of the Buddy4 add-on v0.1: two variants from one tree.
++# ramp-assist v0.6 (v0.4 + speed hold: min 35 mm/s per wheel, I limit 300, 3x Ki until flat; replaces the v0.5 300 PWM floor) on top of the Buddy4 add-on v0.1: two variants from one tree.
+ #   -DRAMP_ASSIST_ACTIVE=OFF (default): shadow, logic + telemetry only, motors unchanged
+ #   -DRAMP_ASSIST_ACTIVE=ON           : bounded feedforward assist applied
+ option(RAMP_ASSIST_ACTIVE "Apply the ramp feedforward assist (OFF = shadow logging only)" OFF)
+@@ -37,7 +37,7 @@
+     set(BP_VARIANT shadow)
+     set(BP_ACTIVE_VALUE 0)
+ endif()
+-set_target_properties(buddy123_interface_wifi_v2 PROPERTIES OUTPUT_NAME buddy1234_peak_v0_4_ra_${RA_VARIANT}_bp_${BP_VARIANT})
++set_target_properties(buddy123_interface_wifi_v2 PROPERTIES OUTPUT_NAME buddy1234_peak_v0_5_ra_${RA_VARIANT}_bp_${BP_VARIANT})
+ target_compile_definitions(buddy123_interface_wifi_v2 PRIVATE BUDDY4_ADDON=1 RAMP_ASSIST_ACTIVE=${RA_ACTIVE_VALUE}
+     BARCODE_PEAK_ACTIVE=${BP_ACTIVE_VALUE} BARCODE_PEAK_COMBINED=1)
+ target_include_directories(buddy123_interface_wifi_v2 PRIVATE "${CMAKE_CURRENT_LIST_DIR}")
+Binary files interface_wifi_v2_3_b4_peak_v0_4/__pycache__/barcode_peak_decode.cpython-313.pyc and interface_wifi_v2_3_b4_peak_v0_5/__pycache__/barcode_peak_decode.cpython-313.pyc differ
+Binary files interface_wifi_v2_3_b4_peak_v0_4/__pycache__/check_mqtt.cpython-313.pyc and interface_wifi_v2_3_b4_peak_v0_5/__pycache__/check_mqtt.cpython-313.pyc differ
+Binary files interface_wifi_v2_3_b4_peak_v0_4/__pycache__/provision_wifi.cpython-313.pyc and interface_wifi_v2_3_b4_peak_v0_5/__pycache__/provision_wifi.cpython-313.pyc differ
+Binary files interface_wifi_v2_3_b4_peak_v0_4/__pycache__/ramp_assist_decode.cpython-313.pyc and interface_wifi_v2_3_b4_peak_v0_5/__pycache__/ramp_assist_decode.cpython-313.pyc differ
+Binary files interface_wifi_v2_3_b4_peak_v0_4/__pycache__/run_dashboard.cpython-313.pyc and interface_wifi_v2_3_b4_peak_v0_5/__pycache__/run_dashboard.cpython-313.pyc differ
+Binary files interface_wifi_v2_3_b4_peak_v0_4/__pycache__/test_network_diagnostics.cpython-313.pyc and interface_wifi_v2_3_b4_peak_v0_5/__pycache__/test_network_diagnostics.cpython-313.pyc differ
+Binary files interface_wifi_v2_3_b4_peak_v0_4/__pycache__/test_setup_helpers.cpython-313.pyc and interface_wifi_v2_3_b4_peak_v0_5/__pycache__/test_setup_helpers.cpython-313.pyc differ
+diff -ruN -x archive -x build -x 'B4_PEAK_V0_*.patch' -x ramp_assist_v0_5_ref.h interface_wifi_v2_3_b4_peak_v0_4/barcode_peak_harness.h interface_wifi_v2_3_b4_peak_v0_5/barcode_peak_harness.h
+--- interface_wifi_v2_3_b4_peak_v0_4/barcode_peak_harness.h	2026-10-31 01:55:16.799788410 +0800
++++ interface_wifi_v2_3_b4_peak_v0_5/barcode_peak_harness.h	2026-10-31 02:18:35.189646268 +0800
+@@ -62,7 +62,7 @@
+     BpResult r; memset(&r, 0, sizeof(r)); r.code = '?'; r.reason = BP_R_RUN_START;
+     bp_send(&r, now, bp_build_flags());
+     if (stdio_usb_connected())
+-        printf("BPEAK build buddy1234_peak v0.4: v2.3 + Buddy4 v0.2 + ramp assist v0.5 %s + peak decoder v0.%u %s\n",
++        printf("BPEAK build buddy1234_peak v0.5: v2.3 + Buddy4 v0.2 + ramp assist v0.6 %s + peak decoder v0.%u %s\n",
+                RAMP_ASSIST_ACTIVE ? "active" : "shadow", BP_VERSION, BARCODE_PEAK_ACTIVE ? "active" : "shadow");
+ }
+ 
+diff -ruN -x archive -x build -x 'B4_PEAK_V0_*.patch' -x ramp_assist_v0_5_ref.h interface_wifi_v2_3_b4_peak_v0_4/continuous_drive.h interface_wifi_v2_3_b4_peak_v0_5/continuous_drive.h
+--- interface_wifi_v2_3_b4_peak_v0_4/continuous_drive.h	2026-10-31 01:54:19.192701592 +0800
++++ interface_wifi_v2_3_b4_peak_v0_5/continuous_drive.h	2026-10-31 02:15:09.739612813 +0800
+@@ -38,11 +38,18 @@
+     /* ramp-assist v0.4 stall push: absolute PWM added on top (>= 0), zero
+      * after any reset. Same output clamp/slew/anti-windup as everything else. */
+     float boost_add;
+-    /* ramp-assist v0.5 tilt floor: while > 0, the requested output is at least
+-     * this (still clamped to 0..420 and slew-limited). The integral keeps its
+-     * normal PI update (no tracking of the floored output), so releasing the
+-     * floor leaves no wound-up integral. Zero after any reset. */
+-    float floor_pwm;
++    /* ramp-assist v0.6 speed hold (replaces the v0.5 PWM floor). All zero after
++     * any reset; zero = the unchanged controller.
++     *  hold_min_speed: the speed target is at least this (mm/s), also when the
++     *    steering asks for 0 (continuous drive is only selected without a stop
++     *    demand, so 0 here is steering, not a stop);
++     *  hold_i_max: integral limit while > CONTINUOUS_I_MAX (e.g. 300);
++     *  hold_ki: integral gain multiplier while > 1.
++     * Output clamp 0..420, slew 1200/s and anti-windup are unchanged. When the
++     * hold is ramped out the integral is clamped back to the active limit. */
++    float hold_min_speed;
++    float hold_i_max;
++    float hold_ki;
+ } ContinuousDrive;
+ 
+ static inline float continuous_clampf(float x, float lo, float hi) {
+@@ -68,7 +75,8 @@
+                                              uint64_t now,
+                                              int32_t previous_output) {
+     if (!s || !p) return 0;
+-    if (wanted <= 0) {
++    const bool hold = s->hold_min_speed > 0.0f;                 /* ramp-assist v0.6 */
++    if (wanted < 0 || (wanted == 0 && !hold)) {
+         continuous_drive_reset(s, p);
+         return 0;
+     }
+@@ -83,6 +91,9 @@
+     float prior = continuous_clampf((float)previous_output, 0.0f,
+                                     (float)CONTINUOUS_PWM_MAX);
+     float target = (float)wanted;
++    if (hold && target < s->hold_min_speed) target = s->hold_min_speed;   /* v0.6 */
++    const float i_max = s->hold_i_max > (float)CONTINUOUS_I_MAX ? s->hold_i_max : (float)CONTINUOUS_I_MAX;
++    const float ki = s->hold_ki > 1.0f ? s->hold_ki : 1.0f;
+ 
+     if (!s->active) {
+         s->active = true;
+@@ -91,15 +102,13 @@
+         float error = s->reference - measured;
+         float ff = continuous_feedforward(wheel, s->reference);
+         s->integral = continuous_clampf(prior - ff - error,
+-                                        -(float)CONTINUOUS_I_MAX,
+-                                        (float)CONTINUOUS_I_MAX);
++                                        -i_max, i_max);
+     } else {
+         /* The adapter may impose a tighter envelope after this function. Use
+          * its actual prior output as the anti-windup reference. */
+         s->duty = prior;
+         s->integral = continuous_clampf(s->integral,
+-                                        -(float)CONTINUOUS_I_MAX,
+-                                        (float)CONTINUOUS_I_MAX);
++                                        -i_max, i_max);
+         float delta = target - s->reference;
+         s->reference += continuous_clampf(delta, -250.0f * dt, 150.0f * dt);
+         s->reference = fmaxf(0.0f, s->reference);
+@@ -140,8 +149,6 @@
+             if (requested < assist) requested = assist;
+         }
+     }
+-    bool floored = s->floor_pwm > 0.0f && requested < s->floor_pwm;   /* ramp-assist v0.5 */
+-    if (floored) requested = s->floor_pwm;
+     requested = continuous_clampf(requested, 0.0f,
+                                    (float)CONTINUOUS_PWM_MAX);
+ 
+@@ -155,15 +162,13 @@
+      * saturated, or being helped. This prevents stored I from fighting the
+      * actuator envelope and gives the startup aid a smooth release. */
+     float unconstrained = base + s->integral;
+-    bool constrained = !floored && (s->start_active || fabsf(output - unconstrained) > 0.5f);
++    bool constrained = s->start_active || fabsf(output - unconstrained) > 0.5f;
+     if (constrained) {
+         s->integral = continuous_clampf(output - base,
+-                                        -(float)CONTINUOUS_I_MAX,
+-                                        (float)CONTINUOUS_I_MAX);
++                                        -i_max, i_max);
+     } else {
+-        float candidate = continuous_clampf(s->integral + 3.0f * error * dt,
+-                                            -(float)CONTINUOUS_I_MAX,
+-                                            (float)CONTINUOUS_I_MAX);
++        float candidate = continuous_clampf(s->integral + 3.0f * ki * error * dt,
++                                            -i_max, i_max);
+         float raw = base + candidate;
+         if (!((raw > CONTINUOUS_PWM_MAX && error > 0.0f) ||
+               (raw < 0.0f && error < 0.0f))) s->integral = candidate;
+diff -ruN -x archive -x build -x 'B4_PEAK_V0_*.patch' -x ramp_assist_v0_5_ref.h interface_wifi_v2_3_b4_peak_v0_4/ramp_assist.h interface_wifi_v2_3_b4_peak_v0_5/ramp_assist.h
+--- interface_wifi_v2_3_b4_peak_v0_4/ramp_assist.h	2026-10-31 01:54:58.051614042 +0800
++++ interface_wifi_v2_3_b4_peak_v0_5/ramp_assist.h	2026-10-31 02:15:42.678747045 +0800
+@@ -1,4 +1,23 @@
+-/* v2.3 + Buddy4 ramp-assist v0.5 — decision logic (pure C, host-testable).
++/* v2.3 + Buddy4 ramp-assist v0.6 — decision logic (pure C, host-testable).
++ *
++ * v0.6 (2026-10-31): speed hold replaces the v0.5 300 PWM floor. Runs
++ * 02:07-02:08 (v0.5): the fixed floor drove the car up the climb at 107-131
++ * mm/s (3x the 45 target); ~0.5 s in, Buddy4 reported a non-ACCEL/SPREAD
++ * invalid tilt, which ended the floor (single use); the car hit the crest
++ * fast, nose on the mat (barcode ADC ~1000), stopped, and on the descent
++ * steering starved the ramp wheel again (0-25 PWM) until the stall push.
++ * Buddy4 rejected every hump (quality budget) at that speed.
++ * v0.6: from activation, while the episode lasts, the continuous drive gets
++ * (scaled by hold_level, ramped 0..1 in 0.2 s): a minimum speed target of
++ * RA_HOLD_MIN_MM_S per wheel (steering can no longer ask a wheel to stop), an
++ * integral limit of RA_HOLD_I_MAX instead of 100 and RA_HOLD_KI x the integral
++ * gain, so the existing speed loop adds whatever PWM (to 420) it needs to
++ * hold the speed instead of a fixed PWM. It ends when the filtered tilt has
++ * been flat for 200 ms (episode end), after RA_HOLD_MAX_US per episode, on
++ * stale Buddy4 (RA_HOLD_STALE_US) or invalid tilt of any reason longer than
++ * RA_HOLD_INVALID_US (shorter invalid only keeps it); a re-activation in the
++ * same episode restarts it within the budget. Stop/Pause/not following
++ * remove it at once. +20 % assist, v0.3 hold and v0.4 push unchanged.
+  *
+  * v0.5 (2026-10-31): tilt floor. Run 01:50:15 (bracket tilted up; 4 of 5 runs
+  * cleared): the final stall at 225 mm had the left wheel at 295 PWM but the
+@@ -74,7 +93,7 @@
+ #define RA_DESCENT_NUM       1        /* v0.2: descent when filtered |h| <= peak * 1/2 ...  */
+ #define RA_DESCENT_DEN       2
+ #define RA_DESCENT_TICKS     5        /* ... for 100 ms (5 consecutive valid samples)       */
+-#define RA_DETECTOR_VERSION  5
++#define RA_DETECTOR_VERSION  6
+ #define RA_TIMEOUT_US        2500000u /* cumulative assisted time per episode        */
+ #define RA_INVALID_US        40000u   /* invalid tilt longer than this ends assist   */
+ #define RA_SKIP_HOLD_US      150000u  /* v0.3: max hold through ACCEL/SPREAD-only exclusion */
+@@ -90,9 +109,13 @@
+ #define RA_PUSH_SLEW         200.0f   /* PWM/s: 0 -> 60 in 0.3 s and back                 */
+ #define RA_PUSH_RELEASE_MM_S 15.0f    /* moving again: release the push                   */
+ #define RA_PUSH_MAX_US       1500000u /* push budget per ramp episode                     */
+-#define RA_FLOOR_PWM         300.0f   /* v0.5: minimum requested output per wheel while tilted */
+-#define RA_FLOOR_SLEW        1000.0f  /* PWM/s: floor value 0 -> 300 in 0.3 s and back       */
+-#define RA_FLOOR_MAX_US      5000000u /* v0.5: floor budget per ramp (from activation)       */
++#define RA_HOLD_MIN_MM_S     35.0f    /* v0.6: minimum speed target per wheel while held      */
++#define RA_HOLD_I_MAX        300.0f   /* v0.6: integral limit while held (normal 100)        */
++#define RA_HOLD_KI           3.0f     /* v0.6: integral gain multiplier while held            */
++#define RA_HOLD_SLEW         5.0f     /* hold_level per second: 0 -> 1 in 0.2 s and back      */
++#define RA_HOLD_MAX_US       5000000u /* v0.6: hold budget per ramp episode                   */
++#define RA_HOLD_INVALID_US   500000u  /* v0.6: invalid tilt (any reason) longer than this ends */
++#define RA_HOLD_STALE_US     200000u  /* v0.6: no Buddy4 sample for this long ends the hold    */
+ 
+ enum {
+     RA_END_NONE = 0, RA_END_LEVEL = 1, RA_END_DESCENT = 2, RA_END_INVALID = 3,
+@@ -100,7 +123,7 @@
+     RA_END_PAUSED = 7, RA_END_STOPPED = 8
+ };
+ enum { RA_EVT_PERIODIC = 0, RA_EVT_ACTIVATE = 1, RA_EVT_END = 2, RA_EVT_PUSH = 3 /* v0.4 stall push started */,
+-       RA_EVT_FLOOR_END = 4 /* v0.5 tilt floor ended (it starts at activation) */ };
++       RA_EVT_HOLD_END = 4 /* v0.6 speed hold ended (v0.5: tilt floor ended); it starts at activation */ };
+ 
+ typedef struct {
+     uint64_t now_us;
+@@ -139,9 +162,9 @@
+     bool     pushing;       /* v0.4: push wanted this step */
+     uint64_t stall_since_us, push_used_us;
+     uint8_t  pushes;        /* v0.4: pushes started this run (saturating) */
+-    bool     floor_on, floor_used;   /* v0.5 tilt floor: active / already used this episode */
+-    float    floor_pwm;              /* v0.5: ramped floor value (PWM) */
+-    uint64_t floor_since_us, floor_inv_since_us, floor_skip_since_us;
++    bool     hold_on;                /* v0.6 speed hold wanted */
++    float    hold_level;             /* v0.6: ramped 0..1, scales the hold parameters */
++    uint64_t hold_since_us, hold_used_us, hold_inv_since_us;
+     bool     have_sample;
+     uint32_t last_seq;
+     uint64_t last_sample_us;
+@@ -187,8 +210,14 @@
+     a->over_ticks = a->drop_ticks = 0; a->skip_since_us = 0;
+     a->pending_event = RA_EVT_END;
+ }
+-static inline void ra_end_episode(RampAssist *a) {
+-    a->latched = false; a->episode_us = 0; a->peak_mm = 0; a->push_used_us = 0; a->floor_used = false;
++static inline void ra_hold_off(RampAssist *a, uint64_t now) {          /* v0.6 */
++    if (!a->hold_on) return;
++    a->hold_on = false; a->hold_used_us += now - a->hold_since_us;
++    if (a->pending_event == 0xff) a->pending_event = RA_EVT_HOLD_END;
++}
++static inline void ra_end_episode(RampAssist *a, uint64_t now) {
++    ra_hold_off(a, now);
++    a->latched = false; a->episode_us = 0; a->peak_mm = 0; a->push_used_us = 0; a->hold_used_us = 0;
+ }
+ 
+ /* One call per control step (10 ms). Returns the alpha (milli) to apply to
+@@ -216,7 +245,7 @@
+                 const int16_t h = in->tilt_mm, mag = ra_abs16(h);
+                 const int8_t sg = (int8_t)(h > 0 ? 1 : h < 0 ? -1 : 0);
+                 a->invalid_since_us = 0; a->skip_since_us = 0;
+-                a->floor_inv_since_us = a->floor_skip_since_us = 0;               /* v0.5 */
++                a->hold_inv_since_us = 0;                                          /* v0.6 */
+                 a->int_valid = ra_inc8(a->int_valid);
+                 if (h > a->int_max_mm) a->int_max_mm = h;
+                 if (h < a->int_min_mm) a->int_min_mm = h;
+@@ -227,7 +256,7 @@
+                 if (hf <= RA_EXIT_MM) {
+                     a->level_ticks = ra_inc8(a->level_ticks);
+                     if (!a->level_since_us) a->level_since_us = in->tilt_us;
+-                    if (in->tilt_us - a->level_since_us >= RA_LEVEL_REARM_US && !a->assisting) ra_end_episode(a);
++                    if (in->tilt_us - a->level_since_us >= RA_LEVEL_REARM_US && !a->assisting) ra_end_episode(a, now);
+                 } else { a->level_ticks = 0; a->level_since_us = 0; }
+                 if (a->assisting) {
+                     if (hf > a->peak_mm) a->peak_mm = hf;
+@@ -247,15 +276,12 @@
+                         a->drop_ticks = a->level_ticks = 0;
+                         a->activations = ra_inc8(a->activations);
+                         a->pending_event = RA_EVT_ACTIVATE;
+-                        if (!a->floor_used) { a->floor_on = a->floor_used = true; a->floor_since_us = now ? now : 1;
+-                                              a->floor_inv_since_us = a->floor_skip_since_us = 0; }   /* v0.5 */
++                        if (!a->hold_on && a->hold_used_us < RA_HOLD_MAX_US) {             /* v0.6 */
++                            a->hold_on = true; a->hold_since_us = now; a->hold_inv_since_us = 0; }
+                     }
+                 } else a->over_ticks = 0;
+             }
+-            if (!in->tilt_valid) {                                                 /* v0.5 floor data timers */
+-                if (in->tilt_skip && !a->floor_inv_since_us) { if (!a->floor_skip_since_us) a->floor_skip_since_us = in->tilt_us ? in->tilt_us : 1; }
+-                else { a->floor_skip_since_us = 0; if (!a->floor_inv_since_us) a->floor_inv_since_us = in->tilt_us ? in->tilt_us : 1; }
+-            }
++            if (!in->tilt_valid && !a->hold_inv_since_us) a->hold_inv_since_us = in->tilt_us ? in->tilt_us : 1;   /* v0.6 */
+             if (in->tilt_valid) {
+                 /* handled above */
+             } else if (in->tilt_skip && a->assisting && !a->invalid_since_us) {
+@@ -283,26 +309,25 @@
+             if (a->episode_us >= RA_TIMEOUT_US) ra_end(a, RA_END_TIMEOUT, now, true);
+         }
+     }
+-    if (a->floor_on) {                                                     /* v0.5 floor end conditions */
+-        bool end = now - a->floor_since_us >= RA_FLOOR_MAX_US ||
+-                   now - a->last_sample_us > RA_STALE_US ||
+-                   (a->floor_inv_since_us && now - a->floor_inv_since_us >= RA_INVALID_US) ||
+-                   (a->floor_skip_since_us && now - a->floor_skip_since_us >= RA_SKIP_HOLD_US) ||
+-                   a->level_ticks >= RA_EXIT_TICKS;
+-        if (end) { a->floor_on = false; if (a->pending_event == 0xff) a->pending_event = RA_EVT_FLOOR_END; }
++    if (a->hold_on) {                                                      /* v0.6 hold end conditions */
++        bool end = a->hold_used_us + (now - a->hold_since_us) >= RA_HOLD_MAX_US ||
++                   now - a->last_sample_us > RA_HOLD_STALE_US ||
++                   (a->hold_inv_since_us && now - a->hold_inv_since_us >= RA_HOLD_INVALID_US) ||
++                   (a->level_since_us && a->last_sample_us - a->level_since_us >= RA_LEVEL_REARM_US);
++        if (end) ra_hold_off(a, now);
+     }
+     if (!in->auto_mode || !in->following) {
+         a->alpha_milli = 0.0f; a->over_ticks = 0;
+         a->push_pwm = 0.0f; a->pushing = false; a->stall_since_us = 0;      /* v0.4: removed at once */
+-        if (a->floor_on && a->pending_event == 0xff) a->pending_event = RA_EVT_FLOOR_END;
+-        a->floor_on = false; a->floor_pwm = 0.0f;                            /* v0.5: removed at once */
++        ra_hold_off(a, now); a->hold_level = 0.0f;                           /* v0.6: removed at once */
+         return 0.0f;
+     }
+-    {   /* v0.5 floor ramp */
++    {   /* v0.6 hold level ramp */
+         float dt = in->dt > 0.0f ? (in->dt > 0.1f ? 0.1f : in->dt) : 0.0f;
+-        float goal = a->floor_on ? RA_FLOOR_PWM : 0.0f, step = RA_FLOOR_SLEW * dt, d = goal - a->floor_pwm;
+-        a->floor_pwm += d > step ? step : (d < -step ? -step : d);
+-        if (a->floor_pwm < 0.0f) a->floor_pwm = 0.0f;
++        float goal = a->hold_on ? 1.0f : 0.0f, step = RA_HOLD_SLEW * dt, d = goal - a->hold_level;
++        a->hold_level += d > step ? step : (d < -step ? -step : d);
++        if (a->hold_level < 0.0f) a->hold_level = 0.0f;
++        if (a->hold_level > 1.0f) a->hold_level = 1.0f;
+     }
+     {   /* v0.4 stall push */
+         float dt = in->dt > 0.0f ? (in->dt > 0.1f ? 0.1f : in->dt) : 0.0f;
+@@ -334,16 +359,16 @@
+ }
+ 
+ /* Source-15 telemetry payload (little endian, 28 bytes; frame 31 bytes):
+- *  0 u32 uptime_ms         4 u8 event (RA_EVT_*; 3 = stall push started, 4 = tilt floor ended)    5 u8 flags (bit0 active build,
++ *  0 u32 uptime_ms         4 u8 event (RA_EVT_*; 3 = stall push started, 4 = speed hold ended (v0.5: tilt floor ended))    5 u8 flags (bit0 active build,
+  *  bit1 assisting, bit2 latched, bit3 last sample valid, bits4-6 detector
+- *  version: 0 = v0.1, 2-5 = v0.2-v0.5; bit7 powered-estimator v0.2) 6 u8 last end reason
++ *  version: 0 = v0.1, 2-6 = v0.2-v0.6; bit7 powered-estimator v0.2) 6 u8 last end reason
+  *  7 u8 activations        8 u16 alpha_milli         10 i16 added PWM left
+  * 12 i16 added PWM right (shadow build: what WOULD be added; v0.4 includes the stall push)
+  * 14 i8 current height mm (-128 = invalid)          15 i8 activation peak |mm| (v0.2: median-filtered)
+  * 16 i8 interval max mm (-128 none)  17 i8 interval min mm (127 none)
+  * 18 u8 valid samples  19 u8 invalid samples  20 u8 longest run >= enter (samples)
+- * 21 u8 max |I| left   22 u8 max |I| right (continuous controller, 0..100)
+- * 23 u8 control ticks with either |I| >= 99 (controller authority limit)
++ * 21 u8 max |I| left   22 u8 max |I| right (continuous controller, 0..100; v0.6: 0..255, held limit 300 reported as 255)
++ * 23 u8 control ticks with either |I| at its active limit - 1 (controller authority limit)
+  * 24 u16 active_ms (current or last activation)  26 i16 peak added PWM (activation)
+  */
+ #define RA_TLM_SOURCE        15u
+diff -ruN -x archive -x build -x 'B4_PEAK_V0_*.patch' -x ramp_assist_v0_5_ref.h interface_wifi_v2_3_b4_peak_v0_4/ramp_assist_decode.py interface_wifi_v2_3_b4_peak_v0_5/ramp_assist_decode.py
+--- interface_wifi_v2_3_b4_peak_v0_4/ramp_assist_decode.py	2026-10-31 01:55:16.799947658 +0800
++++ interface_wifi_v2_3_b4_peak_v0_5/ramp_assist_decode.py	2026-10-31 02:18:25.716019942 +0800
+@@ -4,7 +4,7 @@
+ Usage: ramp_assist_decode.py CAPTURE [FROM_LINE [TO_LINE]]
+ 'detector' = flags bits 4-6 (0 in v0.1 firmware, reported as 1; v0.2 = 2)."""
+ import struct, sys
+-EVT = {0: 'periodic', 1: 'activate', 2: 'end', 3: 'stall_push', 4: 'floor_end'}
++EVT = {0: 'periodic', 1: 'activate', 2: 'end', 3: 'stall_push', 4: 'hold_end'}  # 4: v0.5 tilt floor end, v0.6 speed hold end
+ END = {0: 'none', 1: 'level', 2: 'descent', 3: 'invalid', 4: 'stale', 5: 'timeout',
+        6: 'not_following', 7: 'paused', 8: 'stopped'}
+ FIELDS = ['time', 'seq', 'uptime_ms', 'event', 'build', 'assisting', 'latched', 'sample_valid', 'last_end',
+diff -ruN -x archive -x build -x 'B4_PEAK_V0_*.patch' -x ramp_assist_v0_5_ref.h interface_wifi_v2_3_b4_peak_v0_4/ramp_assist_harness.h interface_wifi_v2_3_b4_peak_v0_5/ramp_assist_harness.h
+--- interface_wifi_v2_3_b4_peak_v0_4/ramp_assist_harness.h	2026-10-31 01:55:16.798928091 +0800
++++ interface_wifi_v2_3_b4_peak_v0_5/ramp_assist_harness.h	2026-10-31 02:16:01.539898707 +0800
+@@ -1,4 +1,4 @@
+-/* v2.3 + Buddy4 ramp-assist v0.5 glue (v0.5: tilt floor out via floor_pwm; v0.3: ACCEL/SPREAD skip flag; v0.4: wheel speeds in, stall push out via boost_add) (unchanged from v0.1 apart from the
++/* v2.3 + Buddy4 ramp-assist v0.6 glue (v0.6: speed hold out via hold_min_speed/hold_i_max/hold_ki, replacing the v0.5 floor_pwm; v0.3: ACCEL/SPREAD skip flag; v0.4: wheel speeds in, stall push out via boost_add) (unchanged from v0.1 apart from the
+  * detector-version flag bits). Included by the v2.3 main
+  * (circuit_with_barcode/main.c) after buddy4_harness.h, like the other
+  * harness headers, so it can read v2.3 state.
+@@ -79,9 +79,10 @@
+         const ContinuousDrive *s = &continuous_wheel[w];
+         if (!s->active) continue;
+         float m = s->integral < 0.0f ? -s->integral : s->integral;
+-        uint8_t mi = (uint8_t)(m > 100.0f ? 100.0f : m);
++        uint8_t mi = (uint8_t)(m > 255.0f ? 255.0f : m);                         /* v0.6: up to 255 */
+         if (mi > ra_max_i[w]) ra_max_i[w] = mi;
+-        if (m >= (float)CONTINUOUS_I_MAX - 1.0f) sat = true;
++        float lim = s->hold_i_max > (float)CONTINUOUS_I_MAX ? s->hold_i_max : (float)CONTINUOUS_I_MAX;
++        if (m >= lim - 1.0f) sat = true;
+     }
+     if (sat && ra_sat_ticks < 255) ra_sat_ticks++;
+ 
+@@ -102,11 +103,17 @@
+ #if RAMP_ASSIST_ACTIVE
+         s->boost_frac = s->active ? alpha / 1000.0f : 0.0f;   /* never seeds a fresh activation */
+         s->boost_add = s->active ? ra_state.push_pwm : 0.0f;   /* v0.4 stall push */
+-        s->floor_pwm = s->active ? ra_state.floor_pwm : 0.0f;  /* v0.5 tilt floor */
++        {   /* v0.6 speed hold, scaled by the ramped hold level (not gated on s->active:
++             * the minimum target must also cover a wheel the steering had stopped) */
++            float hl = ra_state.hold_level;
++            s->hold_min_speed = hl > 0.0f ? RA_HOLD_MIN_MM_S * hl : 0.0f;
++            s->hold_i_max = hl > 0.0f ? (float)CONTINUOUS_I_MAX + (RA_HOLD_I_MAX - (float)CONTINUOUS_I_MAX) * hl : 0.0f;
++            s->hold_ki = hl > 0.0f ? 1.0f + (RA_HOLD_KI - 1.0f) * hl : 0.0f;
++        }
+ #else
+         s->boost_frac = 0.0f;                                  /* shadow: motors unchanged */
+         s->boost_add = 0.0f;
+-        s->floor_pwm = 0.0f;
++        s->hold_min_speed = 0.0f; s->hold_i_max = 0.0f; s->hold_ki = 0.0f;
+ #endif
+         ra_pwm_now[w] = ra_added_pwm(w, alpha, ra_state.push_pwm);
+         if (ra_pwm_now[w] > ra_peak_pwm) ra_peak_pwm = ra_pwm_now[w];
+@@ -123,7 +130,7 @@
+     if (!ra_run_seen) return;
+     RampAssistInput in = { .now_us = now, .run_active = false };
+     (void)ramp_assist_step(&ra_state, &in);
+-    for (unsigned w = 0; w < 2; ++w) { continuous_wheel[w].boost_frac = 0.0f; continuous_wheel[w].boost_add = 0.0f; continuous_wheel[w].floor_pwm = 0.0f; ra_pwm_now[w] = 0; }
++    for (unsigned w = 0; w < 2; ++w) { continuous_wheel[w].boost_frac = 0.0f; continuous_wheel[w].boost_add = 0.0f; continuous_wheel[w].hold_min_speed = 0.0f; continuous_wheel[w].hold_i_max = 0.0f; continuous_wheel[w].hold_ki = 0.0f; ra_pwm_now[w] = 0; }
+     uint8_t ev = ra_state.pending_event != 0xff ? ra_state.pending_event : RA_EVT_PERIODIC;
+     ra_state.pending_event = 0xff;
+     ra_report(now, ev);
+diff -ruN -x archive -x build -x 'B4_PEAK_V0_*.patch' -x ramp_assist_v0_5_ref.h interface_wifi_v2_3_b4_peak_v0_4/ramp_assist_tests/test_ramp_assist.c interface_wifi_v2_3_b4_peak_v0_5/ramp_assist_tests/test_ramp_assist.c
+--- interface_wifi_v2_3_b4_peak_v0_4/ramp_assist_tests/test_ramp_assist.c	2026-10-31 01:56:26.949324209 +0800
++++ interface_wifi_v2_3_b4_peak_v0_5/ramp_assist_tests/test_ramp_assist.c	2026-10-31 02:18:09.792686523 +0800
+@@ -67,7 +67,7 @@
+         in.tilt_seq = seq; in.tilt_us = tilt_us; in.tilt_valid = valid; in.tilt_mm = valid ? h : 0;
+         last = ramp_assist_step(a, &in);
+         if (last > *alpha_max) *alpha_max = last;
+-        if (a->pending_event == RA_EVT_FLOOR_END) a->pending_event = 0xff;   /* v0.5 floor events are tested in H */
++        if (a->pending_event == RA_EVT_HOLD_END) a->pending_event = 0xff;   /* v0.6 hold events are tested in H */
+         if (a->pending_event != 0xff) { if (*nev < 32) events[(*nev)++] = (uint8_t)(a->pending_event == RA_EVT_END ? 100 + a->last_end : a->pending_event); a->pending_event = 0xff; }
+     }
+     *t0 += (uint64_t)(seconds * 1e6);
+@@ -495,14 +495,13 @@
+     return 0;
+ }
+ 
+-/* ---------- H: v0.5 tilt floor ---------- */
+-typedef struct { int floor_end_events, activations; float floor_max, floor_at[64]; bool floor_after_stop; double floor_off_t; } FRes;
+-/* tilt profile h(ts) in mm; speeds fixed 40 mm/s (moving) */
++/* ---------- H: v0.6 speed hold (replaces the v0.5 tilt floor) ---------- */
++typedef struct { int hold_end_events, activations; float level_max, level_at[100]; bool level_after_stop, bad_slew; double off_t, on_again_t; } SRes;
+ typedef int16_t (*tilt_fn)(double ts);
+ static int16_t tf_ramp_flat(double ts) { return ts < 0.2 ? 0 : ts < 0.5 ? (int16_t)(4 + (ts - 0.2) * 16) : ts < 2.0 ? 9 : ts < 2.3 ? (int16_t)(9 - (ts - 2.0) * 30) : 0; }
+ static int16_t tf_stuck(double ts) { return ts < 0.2 ? 0 : ts < 0.5 ? (int16_t)(4 + (ts - 0.2) * 16) : 9; }
+-static FRes frun(tilt_fn f, double total_s, double stop_at, double pause_at, double invalid_from, double invalid_to, bool skip) {
+-    FRes r = { 0 }; RampAssist a; ra_reset(&a); uint64_t t0 = 50000000; r.floor_off_t = -1; bool was_on = false;
++static SRes srun(tilt_fn f, double total_s, double stop_at, double pause_at, double invalid_from, double invalid_to, bool skip) {
++    SRes r = { 0 }; RampAssist a; ra_reset(&a); uint64_t t0 = 50000000; r.off_t = r.on_again_t = -1; bool was_on = false; float prev = 0;
+     for (int k = 0; k < (int)(total_s * 100); ++k) {
+         double t = k * 0.01; int i = k / 2; double ts = i * 0.02; uint64_t now = t0 + (uint64_t)k * 10000u;
+         RampAssistInput in = base_in(now);
+@@ -511,70 +510,113 @@
+         in.tilt_seq = (uint32_t)i + 1; in.tilt_us = t0 + (uint64_t)i * 20000u; in.tilt_valid = !inv; in.tilt_mm = inv ? 0 : f(ts);
+         in.tilt_skip = inv && skip;
+         (void)ramp_assist_step(&a, &in);
+-        if (a.pending_event == RA_EVT_FLOOR_END) ++r.floor_end_events;
++        if (a.pending_event == RA_EVT_HOLD_END) ++r.hold_end_events;
+         if (a.pending_event == RA_EVT_ACTIVATE) ++r.activations;
+         a.pending_event = 0xff;
+-        if (a.floor_pwm > r.floor_max) r.floor_max = a.floor_pwm;
+-        if (k % 10 == 0 && k / 10 < 64) r.floor_at[k / 10] = a.floor_pwm;
+-        if (((stop_at > 0 && t >= stop_at) || (pause_at > 0 && t >= pause_at)) && a.floor_pwm > 0) r.floor_after_stop = true;
+-        if (was_on && !a.floor_on && r.floor_off_t < 0) r.floor_off_t = t;
+-        was_on = a.floor_on;
++        if (a.hold_level > r.level_max) r.level_max = a.hold_level;
++        if (k % 10 == 0 && k / 10 < 100) r.level_at[k / 10] = a.hold_level;
++        if (((stop_at > 0 && t >= stop_at) || (pause_at > 0 && t >= pause_at)) && a.hold_level > 0) r.level_after_stop = true;
++        if (in.run_active && in.auto_mode && fabsf(a.hold_level - prev) > RA_HOLD_SLEW * 0.01f + 1e-4f) r.bad_slew = true;
++        prev = a.hold_level;
++        if (was_on && !a.hold_on && r.off_t < 0) r.off_t = t;
++        if (!was_on && a.hold_on && r.off_t >= 0 && r.on_again_t < 0) r.on_again_t = t;
++        was_on = a.hold_on;
+     }
+     return r;
+ }
+-static int test_floor(void) {
+-    FRes r = frun(tf_ramp_flat, 4.0, 0, 0, 0, 0, false);
+-    printf("tilt floor: max %.0f PWM, on until %.2f s (flat from 2.3 s), floor-end events %d\n", r.floor_max, r.floor_off_t, r.floor_end_events);
+-    CHECK(r.activations == 1 && fabsf(r.floor_max - RA_FLOOR_PWM) < 0.01f, "floor rises to 300 PWM from activation");
+-    CHECK(r.floor_off_t >= 2.3 && r.floor_off_t <= 2.6 && r.floor_end_events == 1, "floor holds through crest/descent and ends ~100 ms after flat (not at the descent rule)");
+-    CHECK(r.floor_at[30] < 0.01f, "floor ramped out after flat");
+-    r = frun(tf_stuck, 8.0, 0, 0, 0, 0, false);
+-    CHECK(r.floor_off_t >= 5.2 && r.floor_off_t <= 5.4, "stuck tilted: floor ends at the 5 s budget (from activation)");
+-    r = frun(tf_stuck, 3.0, 1.5, 0, 0, 0, false);
+-    CHECK(!r.floor_after_stop, "Stop removes the floor at once");
+-    r = frun(tf_stuck, 3.0, 0, 1.5, 0, 0, false);
+-    CHECK(!r.floor_after_stop, "Pause removes the floor at once (assist END PAUSED reported)");
+-    r = frun(tf_stuck, 3.0, 0, 0, 1.0, 1.1, true);       /* 100 ms ACCEL/SPREAD exclusion: hold */
+-    CHECK(r.floor_off_t < 0 || r.floor_off_t > 2.9, "ACCEL/SPREAD exclusion < 150 ms: floor held");
+-    r = frun(tf_stuck, 3.0, 0, 0, 1.0, 1.3, true);       /* 300 ms exclusion */
+-    CHECK(r.floor_off_t >= 1.14 && r.floor_off_t <= 1.2, "ACCEL/SPREAD exclusion > 150 ms ends the floor");
+-    r = frun(tf_stuck, 3.0, 0, 0, 1.0, 1.1, false);      /* other invalid 100 ms */
+-    CHECK(r.floor_off_t >= 1.03 && r.floor_off_t <= 1.08, "other invalid tilt ends the floor after 40 ms");
+-    r = frun(tf_ramp_flat, 0.15, 0, 0, 0, 0, false);
+-    CHECK(r.floor_max == 0.0f, "no floor on the flat before a ramp is detected");
+-    /* controller: floor with a starved wheel (the 01:50:15 case: target 3 mm/s, stalled) */
+-    ContinuousDrive c1, c2; SignedWheel p1, p2; memset(&c1, 0, sizeof c1); memset(&c2, 0, sizeof c2); memset(&p1, 0, sizeof p1); memset(&p2, 0, sizeof p2);
+-    int32_t o1 = 0, o2 = 0; float omax = 0; int32_t o_floor = 0;
+-    for (int k = 0; k < 500; ++k) {
+-        uint64_t now = 3000000 + (uint64_t)k * 10000u; float meas = k < 50 ? 10.0f : 0.0f;
+-        { float goal = (k >= 100 && k < 300) ? RA_FLOOR_PWM : 0.0f, st = RA_FLOOR_SLEW * 0.01f, d = goal - c2.floor_pwm;   /* as the harness ramps it */
+-          c2.floor_pwm += d > st ? st : (d < -st ? -st : d); if (c2.floor_pwm < 0.0f) c2.floor_pwm = 0.0f; }
+-        o1 = continuous_drive_step(&c1, &p1, 1, 3, meas, 0.01f, now, o1);
+-        o2 = continuous_drive_step(&c2, &p2, 1, 3, meas, 0.01f, now, o2);
+-        if (o2 > omax) omax = (float)o2;
+-        if (k == 250) o_floor = o2;
+-        if (k == 250) printf("starved ramp wheel (target 3 mm/s, stalled): without floor %d PWM, with floor %d PWM\n", o1, o2);
+-    }
+-    CHECK(o_floor >= 299 && o_floor <= 301, "starved wheel gets the 300 PWM floor");
+-    CHECK(omax <= CONTINUOUS_PWM_MAX, "floor never exceeds the 420 clamp");
+-    CHECK(fabsf(c1.integral - c2.integral) < 0.01f && abs(o1 - o2) <= 1, "floor does not wind the integral: after release identical to no floor");
+-    ContinuousDrive c3; memset(&c3, 0, sizeof c3); c3.floor_pwm = 300; continuous_drive_reset(&c3, &p1);
+-    CHECK(c3.floor_pwm == 0.0f, "controller reset clears the floor");
+-    /* floor 0 => identical to v0.4 controller on random inputs */
+-    ContinuousDrive d1, d2; SignedWheel q1, q2; memset(&d1, 0, sizeof d1); memset(&d2, 0, sizeof d2); memset(&q1, 0, sizeof q1); memset(&q2, 0, sizeof q2);
+-    int32_t e1 = 0, e2 = 0; int diff = 0;
+-    for (int k = 0; k < 20000; ++k) {
+-        uint64_t now = 9000000 + (uint64_t)k * 10000u; int16_t tg = (int16_t)frand(-5, 80); float ms = frand(0, 90);
+-        e1 = continuous_drive_step(&d1, &q1, (unsigned)(k & 1), tg, ms, 0.01f, now, e1);
+-        e2 = continuous_drive_step(&d2, &q2, (unsigned)(k & 1), tg, ms, 0.01f, now, e2);
+-        diff |= e1 != e2;
++/* harness mapping (ramp_assist_harness.h) */
++static void hold_apply(ContinuousDrive *s, float hl) {
++    s->hold_min_speed = hl > 0.0f ? RA_HOLD_MIN_MM_S * hl : 0.0f;
++    s->hold_i_max = hl > 0.0f ? (float)CONTINUOUS_I_MAX + (RA_HOLD_I_MAX - (float)CONTINUOUS_I_MAX) * hl : 0.0f;
++    s->hold_ki = hl > 0.0f ? 1.0f + (RA_HOLD_KI - 1.0f) * hl : 0.0f;
++}
++/* One wheel, plant as in C (tau 80 ms, PWM-equivalent load). Hold level ramps
++ * in at hold_from and out at hold_to (5/s). load(k) in PWM; target fixed. */
++typedef struct { float v_max, vn_max, v_max_held, v_min_held, v_at[8], out_max, i_max_seen, i_after, out_end_diff; int bad_slew; } CRes;
++static CRes crun(unsigned w, int16_t target, float (*load)(int k), bool hold, int hold_from, int hold_to, int steps) {
++    CRes r = { 0 }; r.v_min_held = 1e9f;
++    ContinuousDrive c, n; SignedWheel p, q; memset(&c, 0, sizeof c); memset(&n, 0, sizeof n); memset(&p, 0, sizeof p); memset(&q, 0, sizeof q);
++    int32_t o = 0, on = 0; float v = 0, vn = 0, hl = 0; const float slope = w == 0 ? 150.0f / 45.0f : 180.0f / 45.0f;
++    for (int k = 0; k < steps; ++k) {
++        uint64_t now = 7000000 + (uint64_t)k * 10000u; float goal = hold && k >= hold_from && k < hold_to ? 1.0f : 0.0f, st = RA_HOLD_SLEW * 0.01f, d = goal - hl;
++        hl += d > st ? st : (d < -st ? -st : d);
++        hold_apply(&c, hl);
++        int32_t prev = o;
++        o = continuous_drive_step(&c, &p, w, target, v, 0.01f, now, o);
++        on = continuous_drive_step(&n, &q, w, target, vn, 0.01f, now, on);
++        if (k > 0 && abs(o - prev) > 13) ++r.bad_slew;
++        float drv = ((float)o - load(k)) / slope; if (drv < 0) drv = 0; v += (drv - v) * 0.01f / 0.08f;
++        float drn = ((float)on - load(k)) / slope; if (drn < 0) drn = 0; vn += (drn - vn) * 0.01f / 0.08f;
++        if (v > r.v_max) r.v_max = v;
++        if (vn > r.vn_max) r.vn_max = vn;
++        if (k >= hold_from && k < hold_to && load(k) == load(hold_from) && v > r.v_max_held) r.v_max_held = v;   /* while the load is unchanged */
++        if (k >= hold_from + 150 && k < hold_to && v < r.v_min_held) r.v_min_held = v;
++        if (k % 100 == 0 && k / 100 < 8) r.v_at[k / 100] = v;
++        if (o > r.out_max) r.out_max = (float)o;
++        if (fabsf(c.integral) > r.i_max_seen) r.i_max_seen = fabsf(c.integral);
++        if (k == hold_to + 30) r.i_after = fabsf(c.integral);
++        if (k == steps - 1) r.out_end_diff = (float)abs(o - on);
+     }
+-    CHECK(!diff, "floor 0: controller output identical (deterministic)");
++    return r;
++}
++static float ld_crest(int k) { return k >= 50 && k < 420 ? 250.0f : 0.0f; }   /* nose on the mat (needs > 250 PWM to move), then flat */
++static float ld_climb(int k) { return k >= 50 && k < 250 ? 60.0f : 0.0f; }
++static float ld_none(int k) { (void)k; return 0.0f; }
++static int test_speed_hold(void) {
++    SRes r = srun(tf_ramp_flat, 4.0, 0, 0, 0, 0, false);
++    printf("speed hold: level max %.2f, on until %.2f s (|h| <= 2 mm from 2.22 s), hold-end events %d\n", r.level_max, r.off_t, r.hold_end_events);
++    CHECK(r.activations == 1 && fabsf(r.level_max - 1.0f) < 1e-4f, "hold ramps to full from activation");
++    CHECK(r.off_t >= 2.4 && r.off_t <= 2.5 && r.hold_end_events == 1, "hold kept through crest/descent, ends 200 ms after the tilt is within 2 mm (|h| <= 2 from 2.22 s)");
++    CHECK(r.level_at[30] < 1e-4f && !r.bad_slew, "hold ramped out after flat; level slew <= 5/s");
++    r = srun(tf_stuck, 8.0, 0, 0, 0, 0, false);
++    CHECK(r.off_t >= 5.2 && r.off_t <= 5.4, "stuck tilted: hold ends at the 5 s budget");
++    r = srun(tf_stuck, 3.0, 1.5, 0, 0, 0, false);
++    CHECK(!r.level_after_stop, "Stop removes the hold at once");
++    r = srun(tf_stuck, 3.0, 0, 1.5, 0, 0, false);
++    CHECK(!r.level_after_stop, "Pause removes the hold at once");
++    r = srun(tf_stuck, 3.0, 0, 0, 1.0, 1.3, false);       /* 300 ms non-ACCEL invalid (the 02:07 case) */
++    CHECK(r.off_t < 0 && r.level_at[12] > 0.999f, "300 ms invalid tilt of any reason: hold kept (v0.5 floor ended after 40 ms)");
++    r = srun(tf_stuck, 3.0, 0, 0, 1.0, 1.3, true);
++    CHECK(r.off_t < 0, "300 ms ACCEL/SPREAD exclusion: hold kept");
++    r = srun(tf_stuck, 4.0, 0, 0, 1.0, 1.7, false);       /* 700 ms invalid */
++    CHECK(r.off_t >= 1.49 && r.off_t <= 1.53, "invalid longer than 500 ms ends the hold");
++    CHECK(r.on_again_t > 1.7 && r.on_again_t < 1.9 && r.activations == 2, "valid tilt re-activates and restarts the hold (budget left)");
++    r = srun(tf_ramp_flat, 0.15, 0, 0, 0, 0, false);
++    CHECK(r.level_max == 0.0f, "no hold on the flat before a ramp is detected");
++    { RampAssist a; ra_reset(&a); uint64_t t0 = 60000000; uint32_t seq = 0; float lvl = 1;     /* stale Buddy4 */
++      for (int k = 0; k < 200; ++k) { RampAssistInput in = base_in(t0 + (uint64_t)k * 10000u); if (k < 100 && k % 2 == 0) seq++;
++        in.tilt_seq = seq; in.tilt_us = t0 + (uint64_t)((k < 100 ? k : 99) / 2) * 20000u; in.tilt_valid = true; in.tilt_mm = k < 20 ? 0 : 9;
++        (void)ramp_assist_step(&a, &in); if (k == 99) CHECK(a.hold_on, "held before Buddy4 goes silent"); lvl = a.hold_level; }
++      CHECK(!a.hold_on && lvl == 0.0f, "no Buddy4 sample for 200 ms ends the hold"); }
++
++    /* controller: 02:07 descent stall - ramp wheel asked for 2 mm/s, nose load 250 PWM */
++    CRes off = crun(1, 2, ld_crest, false, 0, 0, 1200), on = crun(1, 2, ld_crest, true, 60, 460, 1200);
++    printf("descent stall (steer target 2 mm/s, 250 PWM load): without hold v %.1f mm/s, out max %.0f; with hold v(held, min) %.1f mm/s, out max %.0f, |I| max %.0f\n",
++           off.v_at[3], off.out_max, on.v_min_held, on.out_max, on.i_max_seen);
++    CHECK(off.v_at[3] < 1.0f, "without hold the steered ramp wheel stays stalled (reproduces the log)");
++    CHECK(on.v_min_held >= 28.0f && on.v_min_held <= 40.0f, "with hold the wheel is driven to ~35 mm/s through the 250 PWM load (from 1.5 s after the hold starts)");
++    CHECK(on.out_max <= CONTINUOUS_PWM_MAX && on.i_max_seen <= RA_HOLD_I_MAX + 1e-3f && on.bad_slew == 0, "420 clamp, held I limit 300 and 1200/s slew kept");
++    CHECK(on.i_after <= CONTINUOUS_I_MAX + 1e-3f && on.out_end_diff <= 1.0f, "after the hold (flat again) the integral is back within 100 and the output converges to the no-hold controller");
++    /* climb at 45: no 130 mm/s surge (v0.5) - speed controlled */
++    CRes cl = crun(0, 45, ld_climb, true, 60, 260, 500), cl0 = crun(0, 45, ld_none, true, 60, 260, 500);
++    printf("climb with hold: v max while loaded %.1f mm/s (60 PWM load), %.1f (no load); overall peak %.1f vs no-hold %.1f (abrupt load removal); v0.5 floor 300 = %.0f mm/s unloaded left wheel\n",
++           cl.v_max_held, cl0.v_max_held, cl.v_max, cl.vn_max, 300.0f / (150.0f / 45.0f));
++    CHECK(cl.v_max_held <= 50.0f && cl0.v_max_held <= 50.0f, "hold keeps the climb near 45 mm/s (no fixed-PWM surge)");
++    CHECK(cl.v_max <= cl.vn_max + 2.0f, "overshoot when the load suddenly disappears within 2 mm/s of no hold");
++    CHECK(cl.v_min_held >= 38.0f, "hold keeps speed through the climb load");
++    /* minimum target applies to a steering target of 0, never to a negative target */
++    { ContinuousDrive s; SignedWheel pw; memset(&s, 0, sizeof s); memset(&pw, 0, sizeof pw); int32_t o = 0;
++      hold_apply(&s, 1.0f); for (int k = 0; k < 100; ++k) o = continuous_drive_step(&s, &pw, 1, 0, 0.0f, 0.01f, 8000000u + (uint64_t)k * 10000u, o);
++      CHECK(o > 0 && s.active && fabsf(s.reference - RA_HOLD_MIN_MM_S) < 0.5f, "steering 0 with hold: wheel driven toward 35 mm/s");
++      hold_apply(&s, 1.0f); o = continuous_drive_step(&s, &pw, 1, -5, 0.0f, 0.01f, 9000000u, o);
++      CHECK(o == 0 && !s.active, "negative target with hold: reset to 0 (unchanged)");
++      s.hold_min_speed = 35; s.hold_i_max = 300; s.hold_ki = 3; continuous_drive_reset(&s, &pw);
++      CHECK(s.hold_min_speed == 0.0f && s.hold_i_max == 0.0f && s.hold_ki == 0.0f, "controller reset clears the hold"); }
+     return 0;
+ }
+ 
+ int main(void) {
+-    if (test_identity() || test_logic() || test_replay() || test_hold() || test_push() || test_floor() || test_controller() || test_tlm()) return 1;
+-    printf("PASS ramp-assist v0.5 host tests: %d checks (boost-0 identity vs 8d7f3aa, logic, captured-climb replay, v0.3 ACCEL/SPREAD hold, v0.4 stall push, v0.5 tilt floor, controller limits/residual, telemetry)\n", checks);
++    if (test_identity() || test_logic() || test_replay() || test_hold() || test_push() || test_speed_hold() || test_controller() || test_tlm()) return 1;
++    printf("PASS ramp-assist v0.6 host tests: %d checks (boost-0 identity vs 8d7f3aa, logic, captured-climb replay, v0.3 ACCEL/SPREAD hold, v0.4 stall push, v0.6 speed hold, controller limits/residual, telemetry)\n", checks);
+     return 0;
+ }
+diff -ruN -x archive -x build -x 'B4_PEAK_V0_*.patch' -x ramp_assist_v0_5_ref.h interface_wifi_v2_3_b4_peak_v0_4/run_combined_tests.sh interface_wifi_v2_3_b4_peak_v0_5/run_combined_tests.sh
+--- interface_wifi_v2_3_b4_peak_v0_4/run_combined_tests.sh	2026-10-31 01:55:16.800089551 +0800
++++ interface_wifi_v2_3_b4_peak_v0_5/run_combined_tests.sh	2026-10-31 02:19:36.019388862 +0800
+@@ -46,7 +46,7 @@
+ if (cd "$DASH" && node --test test/test_source15.js test/test_merged_schema.js test/compat/v23_test_schema.js > "$O/dash.txt" 2>&1); then
+   ok "dashboard decoders: $(grep -E '^# pass' "$O/dash.txt")"; else grep -E 'not ok|Error' "$O/dash.txt" | head; bad "dashboard node tests"; fi
+ 
+-echo "== 4. existing ramp-assist suite (detector v0.5)"
++echo "== 4. existing ramp-assist suite (detector v0.6)"
+ if sh run_ramp_assist_tests.sh > "$O/ra.txt" 2>&1; then grep -E '^PASS' "$O/ra.txt" | sort -u; else tail -15 "$O/ra.txt"; bad "run_ramp_assist_tests.sh"; fi
+ 
+ echo "== 5. existing Buddy4 suites (service/packets, powered acceptance estimator v0.2)"
+--- a/tools/dashboard_merged/is28_schema.js	2026-10-31 02:18:25.721416491 +0800
++++ ../../tools/dashboard_merged/is28_schema.js	2026-10-31 02:18:25.723188082 +0800
+@@ -339,7 +339,7 @@
+    *  - barcode peak decoder v0.1: payload 24 bytes, payload[4] = 0xB1
+    *    (barcode_peak.h bp_tlm_pack; flags bit7 = combined Buddy1-4 build).
+    * Anything else is rejected as an unknown layout. */
+-  const RA_EVENT = ['periodic', 'activate', 'end', 'stall push', 'tilt floor end'];   /* 3 = v0.4 stall push started, 4 = v0.5 tilt floor ended */
++  const RA_EVENT = ['periodic', 'activate', 'end', 'stall push', 'floor/hold end'];   /* 3 = v0.4 stall push started, 4 = v0.5 tilt floor / v0.6 speed hold ended */
+   const RA_END = ['none', 'level', 'descent', 'invalid', 'stale', 'timeout', 'not following', 'paused', 'stopped'];
+   const BP_REASON = ['ok', 'too few bars', 'bar height unclear', 'wide bar count', 'unit out of range',
+                      'space unclear', 'wide character gap', 'not a *X* frame', 'ambiguous', 'no wide bars',

@@ -1,0 +1,26 @@
+== Combined v0.5: peak decoder, integration with the original decoder, dashboard path, ramp assist, Buddy4
+== 1. peak decoder suite (captures, synthetic A-Z/0-9 both directions, harsh, negatives, telemetry) + v2.3 run_tests.py
+ALL INTERFACE AND WIFI TESTS PASSED; C test executables= 35
+PASS barcode peak decoder v0.1 host tests: 47 checks (4 captured car failures, synthetic A-Z/0-9 both directions, harsh no-misread, negatives, telemetry)
+PASS source-15 barcode-peak frame decodes to the packed values
+== 2. combined integration: real original decoder + runtime mapping + peak harness
+gcc: PASS combined peak integration (BARCODE_PEAK_ACTIVE=1): 28 checks (real original decoder + runtime mapping + peak harness: apply, duplicate, both conflict orders, unmapped, junction, no-barcode identity, busy reset, mixed source-15)
+gcc: PASS combined peak integration (BARCODE_PEAK_ACTIVE=0): 19 checks (real original decoder + runtime mapping + peak harness: apply, duplicate, both conflict orders, unmapped, junction, no-barcode identity, busy reset, mixed source-15)
+gcc ASan/UBSan: PASS combined peak integration (BARCODE_PEAK_ACTIVE=1): 28 checks (real original decoder + runtime mapping + peak harness: apply, duplicate, both conflict orders, unmapped, junction, no-barcode identity, busy reset, mixed source-15)
+== 3. combined reporting path: real C packers -> fixture -> Python and dashboard decoders
+PASS C packer output matches the committed dashboard fixture (124 frames)
+PASS source15_decode.py: 24 ramp + 2 peak frames interleaved, 0 unknown
+PASS dashboard decoders: # pass 25
+== 4. existing ramp-assist suite (detector v0.6)
+PASS ramp-assist v0.6 host tests: 360906 checks (boost-0 identity vs 8d7f3aa, logic, captured-climb replay, v0.3 ACCEL/SPREAD hold, v0.4 stall push, v0.6 speed hold, controller limits/residual, telemetry)
+PASS source-15 frame decodes to the packed values
+== 5. existing Buddy4 suites (service/packets, powered acceptance estimator v0.2)
+PASS buddy4 v2.3 service: calibrate, start/stop/resume/reset mapping, 10 mm ramp accepted, unclean odometry gated, fault+reset recovery, frames unpack
+PASS Buddy4 powered acceptance: powered acceptance: 24 checks, 0 failures
+failures: 0
+== Standalone barcode peak decoder (v2.3 + peak only)
+PASS barcode peak decoder v0.1 host tests: 47 checks (4 captured car failures, synthetic A-Z/0-9 both directions, harsh no-misread, negatives, telemetry)
+PASS barcode peak decoder v0.1 host tests: 47 checks (4 captured car failures, synthetic A-Z/0-9 both directions, harsh no-misread, negatives, telemetry)
+PASS source-15 barcode-peak frame decodes to the packed values
+ALL INTERFACE AND WIFI TESTS PASSED; C test executables= 35
+PASS review checks (host only).

@@ -1,0 +1,62 @@
+{
+  "firmware_version": "v2.3",
+  "architecture": "standalone Pico SDK; core0 controller, core1 network owner; no micro T-Kernel",
+  "date": "2026-10-28",
+  "base_commit": "adcfb6c91326f1636aecd90d7b64e03c810e1411",
+  "base_folder": "testing/subsystem2/interface_wifi_v2",
+  "pico_sdk_commit": "98a542c1a62fb549ffb5d66a3e5892b06276b670",
+  "arm_compiler": "arm-none-eabi-gcc.exe (Arm GNU Toolchain 14.2.Rel1 (Build arm-14.52)) 14.2.1 20241119",
+  "artifact": "firmware/buddy123_interface_wifi_v2_3.uf2",
+  "bundle": "firmware/buddy123_interface_wifi_v2_3_bundle.zip",
+  "sha256": "cceab279c3dd99b1548e65a67bf5764fcffddf4c288dc5175d3fbdb4d15bdf5e",
+  "bytes": 1009152,
+  "blocks": 1971,
+  "arm_builds": {
+    "network_on": {
+      "text": 514600,
+      "data": 0,
+      "bss": 198644
+    }
+  },
+  "symbols": {
+    "__flash_binary_end": "0x1007b22c",
+    "__bss_end__": "0x2002ff64",
+    "__HeapLimit": "0x2003c000",
+    "__StackLimit": "0x2003c000",
+    "__StackOneBottom": "0x2003c000",
+    "core1_stack": "0x2003c000",
+    "__StackBottom": "0x2003e000",
+    "__StackOneTop": "0x2003e000",
+    "__StackTop": "0x20040000"
+  },
+  "calibration": {
+    "white": [
+      163,
+      160
+    ],
+    "black": [
+      3457,
+      3700
+    ],
+    "record_version": 28
+  },
+  "host_c_executables": 35,
+  "javascript_schema_tests": 10,
+  "python_helper_tests": 20,
+  "embedded_credentials": false,
+  "default_buddy_extension": null,
+  "timeout_pool": {
+    "core_slots": 7,
+    "total_slots": 11,
+    "additional_bss_bytes": 64,
+    "real_allocator_regression": "core-only pool exhausts; fixed 100 callback reschedules and 1000 add/remove cycles pass"
+  },
+  "stack_layout": {
+    "core0_bytes": 8192,
+    "core1_bytes": 8192,
+    "known_driving_chain_frame_bytes": 4424,
+    "complete_worst_case_bound": false
+  },
+  "base_physical_result": "V2.2 success reported directly by user and teammate; not independently observed here",
+  "physical_v2_3_validated": false
+}

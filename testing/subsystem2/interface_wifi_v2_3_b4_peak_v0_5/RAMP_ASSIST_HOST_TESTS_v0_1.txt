@@ -1,0 +1,36 @@
+# ramp-assist v0.1 host tests, Mac VM aarch64 2026-10-29T17:53:19Z; gcc (Ubuntu 11.4.0-1ubuntu1~22.04.3) 11.4.0; ; copy of the worktree without credentials
+== gcc -Wall -Wextra -Werror
+climb: mean speed deficit off 7.65 on 4.18 mm/s; peak |I| off 40.0 on 27.0
+after release: integral excess vs no-assist 0.000; from +500 ms output on-off max 0.00 (|max| 9.00), at end 2.00 PWM; overshoot on 9.31 off 8.48 mm/s
+PASS ramp-assist v0.1 host tests: 360841 checks (boost-0 identity vs 8d7f3aa, logic, controller limits/residual, telemetry)
+== gcc ASan/UBSan
+PASS ramp-assist v0.1 host tests: 360841 checks (boost-0 identity vs 8d7f3aa, logic, controller limits/residual, telemetry)
+== telemetry decoder round trip
+PASS source-15 frame decodes to the packed values
+== existing v2.3 suite (run_tests.py, CC=clang)
+/sessions/rcw-017hqgabks7kjqonwrihylxk/ratest/testing/subsystem2/interface_wifi_v2_3/v12_2/baseline/testing/subsystem2/circuit_with_barcode/test_analog.c:17:5: error: this ‘for’ clause does not guard... [-Werror=misleading-indentation]
+   17 |     for(unsigned j=0;j<29;++j) length+=width[j];return length;
+      |     ^~~
+/sessions/rcw-017hqgabks7kjqonwrihylxk/ratest/testing/subsystem2/interface_wifi_v2_3/v12_2/baseline/testing/subsystem2/circuit_with_barcode/test_analog.c:17:49: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘for’
+   17 |     for(unsigned j=0;j<29;++j) length+=width[j];return length;
+      |                                                 ^~~~~~
+cc1: all warnings being treated as errors
+Traceback (most recent call last):
+  File "/sessions/rcw-017hqgabks7kjqonwrihylxk/ratest/testing/subsystem2/interface_wifi_v2_3/run_tests.py", line 26, in <module>
+    for source in [root/'v12_2/test_scan_smooth.c']+sorted(base.glob('test_*.c')):run(source)
+  File "/sessions/rcw-017hqgabks7kjqonwrihylxk/ratest/testing/subsystem2/interface_wifi_v2_3/run_tests.py", line 23, in run
+    subprocess.run([*compiler,'-std=c11','-Wall','-Wextra','-Werror','-O0','-UNDEBUG',*shlex.split(os.environ.get('CFLAGS','')),
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['gcc', '-std=c11', '-Wall', '-Wextra', '-Werror', '-O0', '-UNDEBUG', '-DLINE_CAL_MIN_SPAN=50', '-DCIRCUIT_SWEEP_SEARCH=1', '/sessions/rcw-017hqgabks7kjqonwrihylxk/ratest/testing/subsystem2/interface_wifi_v2_3/v12_2/baseline/testing/subsystem2/circuit_with_barcode/test_analog.c', '-lm', '-o', '/sessions/rcw-017hqgabks7kjqonwrihylxk/ratest/testing/subsystem2/interface_wifi_v2_3/build/test_analog.exe']' returned non-zero exit status 1.
+FAILED run_tests.py
+failures: 1
+== buddy4 add-on host test
+tilt view: valid=1 height=9 mm seq+1 per period
+PASS buddy4 v2.3 service: calibrate, start/stop/resume/reset mapping, 10 mm ramp accepted, unclean odometry gated, fault+reset recovery, frames unpack
+{"frames":64,"src2":29,"src4":35,"errors":0,"humps":1,"maxH":10}
+
+== NOTE: clang is not installed on the Mac VM, so run_tests.py above failed at compile of the unmodified baseline test_analog.c (gcc -Werror=misleading-indentation, pre-existing; the original suite uses zig/clang).
+== existing v2.3 suite rerun: CC=gcc CFLAGS=-Wno-misleading-indentation python3 run_tests.py
+ALL INTERFACE AND WIFI TESTS PASSED; C test executables= 35
+== same suite with CC=clang ran in the cloud workspace on identical files: ALL INTERFACE AND WIFI TESTS PASSED; C test executables= 35

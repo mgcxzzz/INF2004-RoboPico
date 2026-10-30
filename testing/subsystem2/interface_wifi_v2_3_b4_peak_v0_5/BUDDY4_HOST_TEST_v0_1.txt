@@ -1,0 +1,9 @@
+# 2026-10-29T10:59:24Z gcc 11.4.0 node v22.23.4
+boot: state=2 fault=0 n4=7 n2=7 bad=0
+ramp: humps=1 max_h=10 rejected=0 side_h=0
+after reset: state=2 fault=0
+max tick (host) 0 us; frames: src4 35, src2 29
+PASS buddy4 v2.3 service: calibrate, start/stop/resume/reset mapping, 10 mm ramp accepted, unclean odometry gated, fault+reset recovery, frames unpack
+{"frames":64,"src2":29,"src4":35,"errors":0,"humps":1,"maxH":10}
+last src4 keys: state,stateName,motion,event,detail,valid,odometry,pitchDeg,lastFault,heightMm,highestMm,humps,rejected,shockMg,shockNotifyMs,shocks,i2cErrors,framesMissed,eventMs
+exit=0

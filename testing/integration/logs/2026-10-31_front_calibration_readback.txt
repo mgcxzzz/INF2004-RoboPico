@@ -1,0 +1,5 @@
+Read-only USB command h; no c/k/w/l/r sent.
+BUDDY123 INTERFACE WIFI v2.3 | AUTO ANALOG GP27 | A-Z MQTT MAPPING | no boot assignments | motors OFF on boot
+CAL FRONT white=163,160 black=3457,3700 valid=1 min_span=50 span=3294,3540 barcode=AUTO_A0_GP27 profile=1 restored=1 imported=1
+BUDDY123 INTERFACE WIFI v2.3 | AUTO ANALOG GP27 | A-Z MQTT MAPPING | no boot assignments | motors OFF on boot
+CAL FRONT white=163,160 black=3457,3700 valid=1 min_span=50 span=3294,3540 barcode=AUTO_A0_GP27 profile=1 restored=1 imported=1
