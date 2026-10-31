@@ -1,0 +1,30 @@
+{
+  "name": "robopico_rtos_motor_bringup_v0_1",
+  "status": "EXPERIMENTAL; hardware acceptance pending; Step1 bench only",
+  "branch": "codex/micro-tkernel-migration",
+  "source_commit": "24aaf553d021c981d53f9a215555ce8e35392c72",
+  "reference_main_commit": "7843f45fbe45d5a774bc18c93be9bb11084d1b64",
+  "build_profile": "APP=rtos_bringup SMP=1 CONSOLE=usb_cdc WIFI=none NET=none MQTT=0 CRASH_REPORT=0 TEST=0",
+  "compiler": "arm-none-eabi-gcc.exe (Arm GNU Toolchain 14.2.Rel1 (Build arm-14.52)) 14.2.1 20241119",
+  "sdk_commit": "a1438dff1d38bd9c65dbd693f0e5db4b9ae91779",
+  "uf2_sha256": "6efea834079bbf0ff37e4b8f2f6cc9f2cd04aafe24f9f3f96efc464753ce4875",
+  "uf2_bytes": 131072,
+  "elf_sha256": "44e137d635a8c1fcc523ff230e699a09f86a62b03663258ebd379f643f3009aa",
+  "uf2_layout": {
+    "blocks": 256,
+    "first_xip": "0x10000000",
+    "end_xip_exclusive": "0x10010000",
+    "flash_ceiling": "0x10100000"
+  },
+  "source_file_count": 798,
+  "unchanged_shared_files_verified": 103,
+  "linked_symbol_check": "Five application tasks, coordinator API and commit present; Wi-Fi, sample ADC/UART, Buddy5 and flash programming absent.",
+  "software_checks": [
+    "5 strict production-C regression executables",
+    "10 Python capture-analysis tests",
+    "Strict ARM build of new application",
+    "UF2 block/family/bounds and source parity checks"
+  ],
+  "hardware_checks": "Not run: laptop-vs-kernel/TIMER timing, wheels, encoders and emergency stop require the user test.",
+  "calibration": "Not read or written in Step1; saved reference sectors outside this image remain untouched."
+}
