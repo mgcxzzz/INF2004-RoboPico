@@ -1,0 +1,119 @@
+
+=== Buddy 5 profile bench v0.7.1 (rule B; sweep -550..+440 dd) (wheels never driven) ===
+  a  auto: guard/confirm below 150 mm, then scan + plan (any key leaves)
+  s  one scan + plan now          p  one ping straight ahead (class, width, rise latency)
+  c  centre servo                 , .  servo centre trim -/+5 us (now 1450 us)
+  m  settle time 40 <-> 80 ms (now 40 ms)
+  w  fall wait 100 <-> 250 ms (now 100 ms; 250 = diagnostic only, to measure the no-target pulse)
+  i  inject for the NEXT scan only: stuck-high -> no-rise -> off (now off)
+  [ / ]  hold at the LEFT / RIGHT end of the sweep (check frame clearance)
+  1 / 5 / 3  auto stop distance 110 / 150 / 150 mm (now 150 mm; bench only)
+  h  this help
+Angles: - = left, + = right. Gap test = car 155 + 2 x 50 mm; footprint check uses pivot-to-front 150 mm (ASSUMED).
+ping: ECHO E; width 1947 us; range 333 mm; pre-trigger low wait 2 us; rise latency 198 us; short pulses 0
+ping: ECHO E; width 1902 us; range 326 mm; pre-trigger low wait 0 us; rise latency 199 us; short pulses 0
+ping: ECHO E; width 1952 us; range 334 mm; pre-trigger low wait 0 us; rise latency 198 us; short pulses 0
+ping: ECHO E; width 1927 us; range 330 mm; pre-trigger low wait 0 us; rise latency 198 us; short pulses 0
+ping: ECHO E; width 1927 us; range 330 mm; pre-trigger low wait 0 us; rise latency 198 us; short pulses 0
+ping: ECHO E; width 1951 us; range 334 mm; pre-trigger low wait 0 us; rise latency 198 us; short pulses 0
+ping: ECHO E; width 1952 us; range 334 mm; pre-trigger low wait 0 us; rise latency 197 us; short pulses 0
+ping: ECHO E; width 1953 us; range 334 mm; pre-trigger low wait 0 us; rise latency 198 us; short pulses 0
+ping: ECHO E; width 1952 us; range 334 mm; pre-trigger low wait 0 us; rise latency 198 us; short pulses 0
+[b5]  Guard (auto: stop below 150 mm; any key = leave)
+[bench] auto mode off
+[bench] scan 16: v0.7.1 rule B, sweep -550..440 dd; settle 40 ms, servo centre 1450 us, stop 150 mm, fall wait 100 ms
+[b5 profile] observed span 179 mm; model allowance 112 mm; planning envelope 312 mm; evidence 0x8d; clearance L/R 0/409 mm
+[b5 scan] 25 samples (angle_dd:range_mm; suffix u = unstable echo, p = echo+1 fault, b = echo+faults (block only), w = weak no-return clear, x = unknown)
+[b5 scan] -550:620u -495:4000w -440:4000w -385:4000w -330:1059u -275:715u -268:396 -261:400
+[b5 scan] -247:396u -220:396 -165:396u -110:397u -55:397 0:394 7:1022 14:1026
+[b5 scan] 28:1026 55:1026 110:1026 165:1026 220:1027 275:1040 330:1040 385:1041u
+[b5 scan] 440:1050u
+[b5 decision] side NONE (stay stopped); found 1; confidence 88%; closest 394 mm at 0 dd; edges L/R -268/0 dd; at arc limit L/R 0/0; need 255 mm; lateral 0 mm; forward 834 mm
+[b5 evidence] measured 88%; coverage 100%; stable-return span 179 mm (provisional, not planning width); weak clearance no
+[b5 sweep] L: not run (gap too small); weak 0; outline points 0 (assumed 0, weak 0)
+[b5 sweep] R: FAIL; weak 1; outline points 3933 (assumed 2062, weak 34); why behind a side return at leg 4 (433, 921) mm
+[b5 sweep] forward watch during the bypass sees ahead only; sides and rear during turns are not monitored
+[b5 sweep] geometry: pivot-to-front 150 mm ASSUMED, sensor 45 mm behind front, margin 50 mm, turn 450 dd; planning took 125 ms
+[b5]  obstacle 179 mm wide at 394 mm, go nowhere (would stay stopped / reverse)
+[b5 pings] echo 63, no-return 12, fault 0 (stuck-high 0, no-rise 0, no-fall 0, short 0); no-return widths 58866..58873 us
+[b5 raw] per ping: class value/rise-latency-us (E = echo mm, NR = no-return width us, F* = fault width us)
+[b5 raw] -550:NR58868/198,E624/198,E620/198  -495:NR58873/197,NR58873/197,NR58872/198  -440:NR58868/198,NR58869/198,NR58867/198  -385:NR58866/198,NR58867/198,NR58867/198
+[b5 raw] -330:E1059/199,E1067/198,E1105/198  -275:E715/197,E719/198,E736/197  -220:E396/197,E401/198,E396/198  -165:E1037/198,E396/197,E405/197
+[b5 raw] -110:E1036/198,E397/198,E397/198  -55:E397/198,E397/198,E397/198  0:E394/198,E398/198,E402/197  55:E1027/197,E1027/197,E1026/198
+[b5 raw] 110:E1026/199,E1036/198,E1035/197  165:E1035/198,E1027/197,E1026/197  220:E1039/198,E1027/197,E1036/197  275:E1040/198,E1041/198,E1057/197
+[b5 raw] 330:E1040/198,E1045/198,E1044/197  385:E1041/198,NR58869/197,E1045/198  440:E1067/198,NR58868/198,E1050/198  -247:E400/198,E396/198,E723/199
+[b5 raw] -261:E400/198,E401/198,E401/197  -268:E396/198,E396/197,E396/197  28:E1026/198,E1031/198,E1035/197  14:E1026/197,E1035/198,E1039/198
+[b5 raw] 7:E1022/197,E1036/198,E1031/198
+[bench] scan took 5198 ms
+[bench] scan 17: v0.7.1 rule B, sweep -550..440 dd; settle 40 ms, servo centre 1450 us, stop 150 mm, fall wait 100 ms
+[b5 profile] observed span 204 mm; model allowance 114 mm; planning envelope 318 mm; evidence 0x8f; clearance L/R 239/432 mm
+[b5 scan] 25 samples (angle_dd:range_mm; suffix u = unstable echo, p = echo+1 fault, b = echo+faults (block only), w = weak no-return clear, x = unknown)
+[b5 scan] -550:633u -495:4000w -440:4000w -385:4000w -357:1054u -343:4000w -336:1059u -330:409u
+[b5 scan] -275:396 -220:396 -165:396 -110:385 -55:397u -27:406u -20:1022 -13:1027
+[b5 scan] 0:1026 55:1031 110:1026 165:1026 220:1031 275:1040 330:1036 385:1045u
+[b5 scan] 440:1063u
+[b5 decision] side NONE (stay stopped); found 1; confidence 84%; closest 385 mm at -110 dd; edges L/R -330/-27 dd; at arc limit L/R 0/0; need 255 mm; lateral 0 mm; forward 825 mm
+[b5 evidence] measured 84%; coverage 100%; stable-return span 110 mm (provisional, not planning width); weak clearance no
+[b5 sweep] L: not run (gap too small); weak 0; outline points 0 (assumed 0, weak 0)
+[b5 sweep] R: FAIL; weak 1; outline points 3934 (assumed 2062, weak 33); why behind a side return at leg 4 (453, 919) mm
+[b5 sweep] forward watch during the bypass sees ahead only; sides and rear during turns are not monitored
+[b5 sweep] geometry: pivot-to-front 150 mm ASSUMED, sensor 45 mm behind front, margin 50 mm, turn 450 dd; planning took 125 ms
+[b5]  obstacle 204 mm wide at 385 mm, go nowhere (would stay stopped / reverse)
+[b5 pings] echo 56, no-return 19, fault 0 (stuck-high 0, no-rise 0, no-fall 0, short 0); no-return widths 58862..58871 us
+[b5 raw] per ping: class value/rise-latency-us (E = echo mm, NR = no-return width us, F* = fault width us)
+[b5 raw] -550:NR58869/198,NR58871/197,E633/198  -495:NR58870/198,NR58871/197,NR58865/198  -440:NR58866/198,NR58866/198,NR58868/198  -385:NR58863/198,NR58862/198,NR58863/198
+[b5 raw] -330:E1089/198,E1067/198,E409/198  -275:E405/198,E405/197,E396/197  -220:E396/198,E401/198,E405/198  -165:E401/197,E396/198,E396/197
+[b5 raw] -110:E393/198,E385/197,E397/198  -55:E1035/198,E397/198,E397/197  0:E1026/198,E1031/198,E1026/198  55:E1035/198,E1031/198,E1039/198
+[b5 raw] 110:E1027/197,E1026/198,E1035/198  165:E1026/198,E1027/197,E1026/197  220:E1031/198,E1031/198,E1039/198  275:E1040/198,E1044/198,E1040/198
+[b5 raw] 330:E1053/198,E1036/198,E1049/198  385:E1067/198,E1062/197,E1045/197  440:NR58864/198,E1063/198,NR58862/197  -357:E1054/198,NR58870/198,NR58869/198
+[b5 raw] -343:NR58862/199,NR58866/197,NR58864/198  -336:NR58868/198,E1059/197,E1063/198  -27:E406/197,E1039/198,E1027/198  -13:E1035/197,E1031/198,E1027/197
+[b5 raw] -20:E1035/198,E1022/198,E1026/198
+[bench] scan took 5384 ms
+[bench] scan 18: v0.7.1 rule B, sweep -550..440 dd; settle 40 ms, servo centre 1450 us, stop 150 mm, fall wait 100 ms
+[b5 profile] observed span 208 mm; model allowance 112 mm; planning envelope 320 mm; evidence 0xcf; clearance L/R 812/289 mm
+[b5 scan] 25 samples (angle_dd:range_mm; suffix u = unstable echo, p = echo+1 fault, b = echo+faults (block only), w = weak no-return clear, x = unknown)
+[b5 scan] -550:4000w -495:4000w -440:4000w -385:4000w -330:1096u -275:1041u -220:1037 -165:1027
+[b5 scan] -110:1040 -55:1036 0:1027 28:1027 42:1022 49:1022 55:386 110:381u
+[b5 scan] 165:364 220:360 275:360 330:399u 385:378u 399:382u 406:1054u 413:4000w
+[b5 scan] 440:4000w
+[b5 decision] side NONE (stay stopped); found 1; confidence 76%; closest 360 mm at 220 dd; edges L/R 55/399 dd; at arc limit L/R 0/0; need 255 mm; lateral 0 mm; forward 800 mm
+[b5 evidence] measured 76%; coverage 100%; stable-return span 129 mm (provisional, not planning width); weak clearance no
+[b5 sweep] L: FAIL; weak 1; outline points 4761 (assumed 1670, weak 1280); why behind a side return at leg 6 (-205, 997) mm
+[b5 sweep] R: FAIL; weak 1; outline points 1288 (assumed 977, weak 49); why measured return inside footprint at leg 2 (235, 296) mm
+[b5 sweep] forward watch during the bypass sees ahead only; sides and rear during turns are not monitored
+[b5 sweep] geometry: pivot-to-front 150 mm ASSUMED, sensor 45 mm behind front, margin 50 mm, turn 450 dd; planning took 89 ms
+[b5]  obstacle 208 mm wide at 360 mm, go nowhere (would stay stopped / reverse)
+[b5 pings] echo 51, no-return 24, fault 0 (stuck-high 0, no-rise 0, no-fall 0, short 0); no-return widths 58860..58870 us
+[b5 raw] per ping: class value/rise-latency-us (E = echo mm, NR = no-return width us, F* = fault width us)
+[b5 raw] -550:NR58860/197,NR58863/198,NR58868/198  -495:NR58868/198,NR58864/197,NR58869/198  -440:NR58867/198,NR58869/197,NR58866/198  -385:NR58861/199,NR58862/197,NR58866/198
+[b5 raw] -330:NR58869/199,E1096/198,E1096/198  -275:E1079/198,E1041/198,E1066/198  -220:E1054/198,E1045/198,E1037/197  -165:E1040/198,E1036/198,E1027/198
+[b5 raw] -110:E1041/198,E1040/198,E1044/197  -55:E1036/197,E1044/197,E1044/198  0:E1036/198,E1027/198,E1040/197  55:E386/198,E386/197,E395/198
+[b5 raw] 110:E756/198,E399/198,E381/198  165:E364/198,E364/199,E368/198  220:E360/198,E360/198,E368/199  275:E360/198,E364/198,E364/198
+[b5 raw] 330:E1083/198,E1062/198,E399/198  385:E378/198,NR58869/198,NR58867/198  440:NR58868/198,NR58868/198,NR58864/198  28:E1036/197,E1027/198,E1027/198
+[b5 raw] 42:E1036/198,E1031/197,E1022/197  49:E1022/198,E1036/197,E1022/197  413:NR58867/198,NR58867/198,NR58870/197  399:NR58870/198,E382/198,E386/198
+[b5 raw] 406:NR58864/198,NR58866/198,E1054/198
+[bench] scan took 5419 ms
+[bench] scan 19: v0.7.1 rule B, sweep -550..440 dd; settle 40 ms, servo centre 1450 us, stop 150 mm, fall wait 100 ms
+[b5 profile] observed span 203 mm; model allowance 112 mm; planning envelope 315 mm; evidence 0xcf; clearance L/R 504/306 mm
+[b5 scan] 25 samples (angle_dd:range_mm; suffix u = unstable echo, p = echo+1 fault, b = echo+faults (block only), w = weak no-return clear, x = unknown)
+[b5 scan] -550:633u -495:4000w -440:4000w -385:4000w -330:1066u -275:1054 -220:1037 -165:1036
+[b5 scan] -110:1036 -55:1022 0:1036 55:1031 62:378 69:373 83:399 110:364
+[b5 scan] 165:368 220:364 275:360 330:377 385:377 413:369u 420:4000w 427:4000w
+[b5 scan] 440:4000w
+[b5 decision] side NONE (stay stopped); found 1; confidence 76%; closest 360 mm at 275 dd; edges L/R 62/413 dd; at arc limit L/R 0/0; need 255 mm; lateral 0 mm; forward 800 mm
+[b5 evidence] measured 76%; coverage 100%; stable-return span 194 mm (provisional, not planning width); weak clearance no
+[b5 sweep] L: FAIL; weak 1; outline points 2241 (assumed 1433, weak 538); why behind a side return at leg 3 (-514, 366) mm
+[b5 sweep] R: FAIL; weak 1; outline points 1288 (assumed 978, weak 46); why measured return inside footprint at leg 2 (235, 295) mm
+[b5 sweep] forward watch during the bypass sees ahead only; sides and rear during turns are not monitored
+[b5 sweep] geometry: pivot-to-front 150 mm ASSUMED, sensor 45 mm behind front, margin 50 mm, turn 450 dd; planning took 39 ms
+[b5]  obstacle 203 mm wide at 360 mm, go nowhere (would stay stopped / reverse)
+[b5 pings] echo 53, no-return 22, fault 0 (stuck-high 0, no-rise 0, no-fall 0, short 0); no-return widths 58865..58874 us
+[b5 raw] per ping: class value/rise-latency-us (E = echo mm, NR = no-return width us, F* = fault width us)
+[b5 raw] -550:NR58869/197,E633/198,NR58870/198  -495:NR58868/198,NR58866/198,NR58870/198  -440:NR58873/198,NR58868/199,NR58869/198  -385:NR58867/198,NR58866/198,NR58865/198
+[b5 raw] -330:E1101/198,E1066/197,E1084/198  -275:E1071/198,E1054/198,E1058/198  -220:E1037/198,E1049/198,E1041/198  -165:E1036/198,E1036/197,E1037/197
+[b5 raw] -110:E1040/198,E1040/198,E1036/198  -55:E1026/198,E1026/198,E1022/197  0:E1036/198,E1039/198,E1039/197  55:E1039/198,E1039/198,E1031/197
+[b5 raw] 110:E368/198,E364/198,E377/198  165:E373/197,E368/198,E377/198  220:E364/198,E368/197,E373/198  275:E364/198,E360/198,E360/197
+[b5 raw] 330:E377/197,E386/198,E395/198  385:E377/199,E378/198,E378/198  440:NR58873/198,NR58871/198,NR58870/198  83:E403/198,E403/198,E399/198
+[b5 raw] 69:E373/199,E378/198,E382/198  62:E378/198,E378/197,E378/199  413:E369/198,NR58874/197,NR58874/198  427:NR58874/198,NR58872/198,NR58871/198
+[b5 raw] 420:NR58869/198,NR58871/198,NR58870/198
+[bench] scan took 5373 ms

@@ -1,0 +1,199 @@
+
+
+microT-Kernel Version 3.00
+
+
+=== micro T-Kernel on Raspberry Pi Pico W (spec 0x6300, product 0x0003) ===
+dual-core (SMP) build, usermain on core 0
+[safety] Normal
+[safety] drive off 0 ms after the stop (worst 0 ms, limit 100)
+all subsystems started
+
+[nav] Ready, motion owner: none
+[bench] GP20 button = emergency stop, GP21 = reset and start
+monitor: I am task 9
+[bench] simulated car follows the line at 150 mm/s
+[b5]  Idle  (range 0 mm)
+monitor: batch  n=5 last=40 from core 1
+monitor: t=3355771096 ms  samples=5  min=0 max=40 avg=20  free slots=4  free blocks=4
+monitor: batch  n=10 last=90 from core 1
+monitor: t=3355772646 ms  samples=10  min=0 max=90 avg=45  free slots=4  free blocks=4
+[bench] starting a run
+[nav] Running, motion owner: line
+[b5]  Guard  (range 0 mm)
+[poll] seq 1 echo lvl at start 0 (trig 0); rise@+4 us fall@+1384 us width 1380 us -> 236 mm
+[ping] seq 1 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[b5]  Confirm  (range 236 mm)
+[poll] seq 2 echo lvl at start 0 (trig 0); rise@+5 us fall@+1384 us width 1379 us -> 236 mm
+[ping] seq 2 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[poll] seq 3 echo lvl at start 0 (trig 0); rise@+4 us fall@+1384 us width 1380 us -> 236 mm
+[ping] seq 3 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[b5]  Halting  (range 236 mm)
+[nav] Running, motion owner: obstacle (slow)
+[b5]  Coarse Sweep  (range 236 mm)
+[poll] seq 4 echo lvl at start 0 (trig 0); rise@+5 us fall@+1384 us width 1379 us -> 236 mm
+[ping] seq 4 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[poll] seq 5 echo lvl at start 0 (trig 0); rise@+5 us fall@+1384 us width 1379 us -> 236 mm
+[ping] seq 5 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[poll] seq 6 echo lvl at start 0 (trig 0); rise@+4 us fall@+1384 us width 1380 us -> 236 mm
+[ping] seq 6 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[poll] seq 7 echo lvl at start 0 (trig 0); rise@+5 us fall@+203 us width 198 us -> 33 mm
+[ping] seq 7 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[poll] seq 8 echo lvl at start 0 (trig 0); rise@+4 us fall@+1384 us width 1380 us -> 236 mm
+[ping] seq 8 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+monitor: batch  n=15 last=60 from core 1
+monitor: t=3355774196 ms  samples=15  min=0 max=100 avg=56  free slots=4  free blocks=4
+[poll] seq 9 echo lvl at start 0 (trig 0); rise@+4 us fall@+1384 us width 1380 us -> 236 mm
+[ping] seq 9 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[poll] seq 10 echo lvl at start 0 (trig 0); rise@+4 us fall@+1384 us width 1380 us -> 236 mm
+[ping] seq 10 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[poll] seq 11 echo lvl at start 0 (trig 0); rise@+4 us fall@+196 us width 192 us -> 32 mm
+[ping] seq 11 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[poll] seq 12 echo lvl at start 0 (trig 0); rise@+4 us fall@+1384 us width 1380 us -> 236 mm
+[ping] seq 12 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[poll] seq 13 echo lvl at start 0 (trig 0); rise@+5 us fall@+1384 us width 1379 us -> 236 mm
+[ping] seq 13 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[poll] seq 14 echo lvl at start 0 (trig 0); rise@+4 us fall@+1384 us width 1380 us -> 236 mm
+[ping] seq 14 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[poll] seq 15 echo lvl at start 0 (trig 0); rise@+4 us fall@+1384 us width 1380 us -> 236 mm
+[ping] seq 15 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[poll] seq 16 echo lvl at start 0 (trig 0); rise@+5 us fall@+1384 us width 1379 us -> 236 mm
+[ping] seq 16 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[poll] seq 17 echo lvl at start 0 (trig 0); rise@+4 us fall@+1384 us width 1380 us -> 236 mm
+[ping] seq 17 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[poll] seq 18 echo lvl at start 0 (trig 0); rise@+4 us fall@+1384 us width 1380 us -> 236 mm
+[ping] seq 18 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+monitor: batch  n=20 last=10 from core 1
+monitor: t=3355775746 ms  samples=20  min=0 max=100 avg=50  free slots=4  free blocks=4
+[poll] seq 19 echo lvl at start 0 (trig 0); rise@+5 us fall@+1384 us width 1379 us -> 236 mm
+[ping] seq 19 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[poll] seq 20 echo lvl at start 0 (trig 0); rise@+4 us fall@+1384 us width 1380 us -> 236 mm
+[ping] seq 20 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[poll] seq 21 echo lvl at start 0 (trig 0); rise@+4 us fall@+1384 us width 1380 us -> 236 mm
+[ping] seq 21 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[poll] seq 22 echo lvl at start 0 (trig 0); rise@+4 us fall@+151 us width 147 us -> 25 mm
+[ping] seq 22 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[poll] seq 23 echo lvl at start 0 (trig 0); rise@+4 us fall@+1384 us width 1380 us -> 236 mm
+[ping] seq 23 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[poll] seq 24 echo lvl at start 0 (trig 0); rise@+4 us fall@+1384 us width 1380 us -> 236 mm
+[ping] seq 24 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[poll] seq 25 echo lvl at start 0 (trig 0); rise@+4 us fall@+1384 us width 1380 us -> 236 mm
+[ping] seq 25 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[poll] seq 26 echo lvl at start 0 (trig 0); rise@+5 us fall@+154 us width 149 us -> 25 mm
+[ping] seq 26 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[poll] seq 27 echo lvl at start 0 (trig 0); rise@+5 us fall@+1384 us width 1379 us -> 236 mm
+[ping] seq 27 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[poll] seq 28 echo lvl at start 0 (trig 0); rise@+5 us fall@+151 us width 146 us -> 25 mm
+[ping] seq 28 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[poll] seq 29 echo lvl at start 0 (trig 0); rise@+4 us fall@+154 us width 150 us -> 25 mm
+[ping] seq 29 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+monitor: batch  n=25 last=40 from core 1
+monitor: t=3355777296 ms  samples=25  min=0 max=100 avg=44  free slots=4  free blocks=4
+[poll] seq 30 echo lvl at start 0 (trig 0); rise@+4 us fall@+1384 us width 1380 us -> 236 mm
+[ping] seq 30 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[poll] seq 31 echo lvl at start 0 (trig 0); rise@+4 us fall@+1384 us width 1380 us -> 236 mm
+[ping] seq 31 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[poll] seq 32 echo lvl at start 0 (trig 0); rise@+4 us fall@+1384 us width 1380 us -> 236 mm
+[ping] seq 32 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[poll] seq 33 echo lvl at start 0 (trig 0); rise@+4 us fall@+1384 us width 1380 us -> 236 mm
+[ping] seq 33 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[poll] seq 34 echo lvl at start 0 (trig 0); rise@+4 us fall@+1384 us width 1380 us -> 236 mm
+[ping] seq 34 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[poll] seq 35 echo lvl at start 0 (trig 0); rise@+4 us fall@+1384 us width 1380 us -> 236 mm
+[ping] seq 35 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[poll] seq 36 echo lvl at start 0 (trig 0); rise@+4 us fall@+148 us width 144 us -> 24 mm
+[ping] seq 36 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[poll] seq 37 echo lvl at start 0 (trig 0); rise@+5 us fall@+1384 us width 1379 us -> 236 mm
+[ping] seq 37 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[poll] seq 38 echo lvl at start 0 (trig 0); rise@+4 us fall@+1384 us width 1380 us -> 236 mm
+[ping] seq 38 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[poll] seq 39 echo lvl at start 0 (trig 0); rise@+4 us fall@+1384 us width 1380 us -> 236 mm
+[ping] seq 39 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+monitor: batch  n=30 last=90 from core 1
+monitor: t=3355778846 ms  samples=30  min=0 max=100 avg=48  free slots=4  free blocks=4
+monitor: LED task paused, state=WAIT+SUSPEND, pri=13
+[poll] seq 40 echo lvl at start 0 (trig 0); rise@+4 us fall@+1384 us width 1380 us -> 236 mm
+[ping] seq 40 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[poll] seq 41 echo lvl at start 0 (trig 0); rise@+4 us fall@+1384 us width 1380 us -> 236 mm
+[ping] seq 41 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[poll] seq 42 echo lvl at start 0 (trig 0); rise@+4 us fall@+94 us width 90 us -> 15 mm
+[ping] seq 42 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[poll] seq 43 echo lvl at start 0 (trig 0); rise@+5 us fall@+104 us width 99 us -> 16 mm
+[ping] seq 43 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[poll] seq 44 echo lvl at start 0 (trig 0); rise@+4 us fall@+101 us width 97 us -> 16 mm
+[ping] seq 44 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[poll] seq 45 echo lvl at start 0 (trig 0); rise@+5 us fall@+1384 us width 1379 us -> 236 mm
+[ping] seq 45 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[poll] seq 46 echo lvl at start 0 (trig 0); rise@+5 us fall@+1384 us width 1379 us -> 236 mm
+[ping] seq 46 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[poll] seq 47 echo lvl at start 0 (trig 0); rise@+5 us fall@+1384 us width 1379 us -> 236 mm
+[ping] seq 47 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[poll] seq 48 echo lvl at start 0 (trig 0); rise@+4 us fall@+1384 us width 1380 us -> 236 mm
+[ping] seq 48 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[poll] seq 49 echo lvl at start 0 (trig 0); rise@+5 us fall@+102 us width 97 us -> 16 mm
+[ping] seq 49 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[poll] seq 50 echo lvl at start 0 (trig 0); rise@+4 us fall@+99 us width 95 us -> 16 mm
+[ping] seq 50 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+monitor: batch  n=35 last=60 from core 1
+monitor: t=3355780396 ms  samples=35  min=0 max=100 avg=52  free slots=4  free blocks=4
+[poll] seq 51 echo lvl at start 0 (trig 0); rise@+4 us fall@+1384 us width 1380 us -> 236 mm
+[ping] seq 51 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[poll] seq 52 echo lvl at start 0 (trig 0); rise@+4 us fall@+1384 us width 1380 us -> 236 mm
+[ping] seq 52 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[poll] seq 53 echo lvl at start 0 (trig 0); rise@+4 us fall@+93 us width 89 us -> 15 mm
+[ping] seq 53 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[poll] seq 54 echo lvl at start 0 (trig 0); rise@+5 us fall@+92 us width 87 us -> 14 mm
+[ping] seq 54 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[poll] seq 55 echo lvl at start 0 (trig 0); rise@+4 us fall@+1384 us width 1380 us -> 236 mm
+[ping] seq 55 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[poll] seq 56 echo lvl at start 0 (trig 0); rise@+5 us fall@+1384 us width 1379 us -> 236 mm
+[ping] seq 56 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[poll] seq 57 echo lvl at start 0 (trig 0); rise@+4 us fall@+1384 us width 1380 us -> 236 mm
+[ping] seq 57 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[poll] seq 58 echo lvl at start 0 (trig 0); rise@+5 us fall@+1384 us width 1379 us -> 236 mm
+[ping] seq 58 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[poll] seq 59 echo lvl at start 0 (trig 0); rise@+4 us fall@+1384 us width 1380 us -> 236 mm
+[ping] seq 59 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[poll] seq 60 echo lvl at start 0 (trig 0); rise@+4 us fall@+1384 us width 1380 us -> 236 mm
+[ping] seq 60 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[poll] seq 61 echo lvl at start 0 (trig 0); rise@+4 us fall@+1384 us width 1380 us -> 236 mm
+[ping] seq 61 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+monitor: batch  n=40 last=10 from core 1
+monitor: t=3355781946 ms  samples=40  min=0 max=100 avg=50  free slots=4  free blocks=4
+[poll] seq 62 echo lvl at start 0 (trig 0); rise@+4 us fall@+1384 us width 1380 us -> 236 mm
+[ping] seq 62 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[poll] seq 63 echo lvl at start 0 (trig 0); rise@+4 us fall@+1384 us width 1380 us -> 236 mm
+[ping] seq 63 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[poll] seq 64 echo lvl at start 0 (trig 0); rise@+4 us fall@+1384 us width 1380 us -> 236 mm
+[ping] seq 64 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[poll] seq 65 echo lvl at start 0 (trig 0); rise@+4 us fall@+1385 us width 1381 us -> 236 mm
+[ping] seq 65 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[poll] seq 66 echo lvl at start 0 (trig 0); rise@+4 us fall@+1385 us width 1381 us -> 236 mm
+[ping] seq 66 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[b5]  Edge Refinement  (range 236 mm)
+[b5]  Planning  (range 236 mm)
+[b5 profile] observed span 386 mm; model allowance 74 mm; planning envelope 460 mm; evidence 0x1; clearance L/R 0/0 mm
+[b5 scan] 21 samples (angle_dd:range_mm, x = no valid echo)
+[b5 scan] -550:236 -495:236x -440:236x -385:236 -330:236 -275:236 -220:236x -165:236x
+[b5 scan] -110:4000x -55:236 0:236x 55:236 110:236x 165:4000x 220:236 275:4000x
+[b5 scan] 330:4000x 385:236 440:236 495:236 550:236
+[b5 decision] side NONE (stay stopped); found 1; confidence 52%; closest 236 mm at -550 dd; edges L/R -550/550 dd; at arc limit L/R 1/1; need 255 mm; lateral 0 mm; forward 676 mm
+[b5]  obstacle 386 mm wide at 236 mm, confidence 52 %, go nowhere (no side wide enough)
+[b5]  Blocked  (range 236 mm)
+monitor: batch  n=45 last=40 from core 1
+monitor: t=3355783496 ms  samples=45  min=0 max=100 avg=46  free slots=4  free blocks=4
+monitor: batch  n=50 last=90 from core 1
+monitor: t=3355785046 ms  samples=50  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=55 last=60 from core 1
+monitor: t=3355786596 ms  samples=55  min=0 max=100 avg=51  free slots=4  free blocks=4
+monitor: batch  n=60 last=10 from core 1
+monitor: t=3355788146 ms  samples=60  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: LED task resumed, state=RUN, pri=12
+monitor: batch  n=65 last=40 from core 1
+monitor: t=3355789696 ms  samples=65  min=0 max=100 avg=47  free slots=4  free blocks=4
+monitor: batch  n=70 last=90 from core 1
+monitor: t=3355791246 ms  samples=70  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=75 last=60 from core 1
+monitor: t=3355792796 ms  samples=75  min=0 max=100 avg=51  free slots=4  free blocks=4
+monitor: batch  n=80 last=10 from core 1
+monitor: t=3355794346 ms  samples=80  min=0 max=100 avg=50  free slots=4  free blocks=4

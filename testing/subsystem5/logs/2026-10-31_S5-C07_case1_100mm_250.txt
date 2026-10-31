@@ -1,0 +1,70 @@
+
+=== Buddy 5 profile bench (real obstacle_profile.c; wheels never driven) ===
+  a  auto: guard/confirm below 300 mm, then scan + plan (any key leaves)
+  s  one scan + plan now          p  one ping straight ahead
+  c  centre servo                 , .  servo centre trim -/+5 us (now 1450 us)
+  m  settle time 40 <-> 80 ms (now 40 ms)
+  h  this help
+Angles: - = left, + = right. Needed side clearance = car 155 + 2 x 50 mm.
+ping: no target 4000 mm
+ping: no target 4000 mm
+ping: echo 122 mm
+ping: no target 4000 mm
+ping: echo 109 mm
+ping: no target 4000 mm
+ping: no target 4000 mm
+ping: echo 108 mm
+ping: echo 102 mm
+ping: echo 110 mm
+ping: echo 105 mm
+ping: echo 109 mm
+ping: echo 104 mm
+ping: echo 105 mm
+ping: echo 109 mm
+ping: echo 105 mm
+ping: echo 106 mm
+ping: echo 114 mm
+ping: echo 114 mm
+[b5]  Guard (auto: stop below 300 mm; any key = leave)
+[b5]  Confirm (range 298 mm)
+[b5]  Confirm (range 295 mm)
+[b5]  Confirm (range 296 mm)
+[b5]  Halting (range 298 mm)
+[bench] scan 1: settle 40 ms, servo centre 1450 us
+[b5 profile] observed span 163 mm; model allowance 86 mm; planning envelope 286 mm; evidence 0x1; clearance L/R 0/0 mm
+[b5 scan] 22 samples (angle_dd:range_mm, x = no valid echo)
+[b5 scan] -550:1102x -495:1107x -440:1133x -385:4000 -330:323x -275:297x -220:288 -165:284
+[b5 scan] -110:284 -55:284 0:284 55:285 110:289 138:701x 165:671 220:669x
+[b5 scan] 275:657x 330:670x 385:709x 440:706x 495:911x 550:850x
+[b5 decision] side NONE (stay stopped); found 1; confidence 40%; closest 284 mm at -165 dd; edges L/R -220/110 dd; at arc limit L/R 0/0; need 255 mm; lateral 0 mm; forward 724 mm
+[b5]  low confidence: would stay stopped (Blocked)
+[bench] scan took 4369 ms
+[bench] remove the obstacle; re-arms after 1 s clear
+[b5]  Guard (re-armed)
+[b5]  Confirm (range 285 mm)
+[b5]  Halting (range 271 mm)
+[bench] scan 2: settle 40 ms, servo centre 1450 us
+[b5 profile] observed span 203 mm; model allowance 86 mm; planning envelope 289 mm; evidence 0x1; clearance L/R 0/0 mm
+[b5 scan] 25 samples (angle_dd:range_mm, x = no valid echo)
+[b5 scan] -550:4000 -495:4000 -440:4000 -385:4000 -330:4000 -302:4000x -275:279 -220:269
+[b5 scan] -165:265 -110:261 -55:261 0:265 55:266 110:266 138:274 152:283
+[b5 scan] 159:675x 165:683 220:687 275:692x 330:794x 385:738x 440:4000x 495:741x
+[b5 scan] 550:4000
+[b5 decision] side NONE (stay stopped); found 1; confidence 72%; closest 261 mm at -110 dd; edges L/R -275/152 dd; at arc limit L/R 0/0; need 255 mm; lateral 0 mm; forward 701 mm
+[b5]  obstacle 203 mm wide at 261 mm, go nowhere (would stay stopped)
+[bench] scan took 5231 ms
+[bench] remove the obstacle; re-arms after 1 s clear
+[b5]  Guard (re-armed)
+[b5]  Confirm (range 285 mm)
+[b5]  Confirm (range 258 mm)
+[b5]  Halting (range 257 mm)
+[bench] scan 3: settle 40 ms, servo centre 1450 us
+[b5 profile] observed span 204 mm; model allowance 84 mm; planning envelope 288 mm; evidence 0x1; clearance L/R 0/0 mm
+[b5 scan] 22 samples (angle_dd:range_mm, x = no valid echo)
+[b5 scan] -550:4000 -495:4000 -440:4000 -385:4000 -330:1055 -302:1054x -275:278 -220:257
+[b5 scan] -165:252 -110:252 -55:252 0:252 55:257 110:257 165:266 220:724x
+[b5 scan] 275:701x 330:787x 385:714x 440:736x 495:719 550:744x
+[b5 decision] side NONE (stay stopped); found 1; confidence 68%; closest 252 mm at -165 dd; edges L/R -275/165 dd; at arc limit L/R 0/0; need 255 mm; lateral 0 mm; forward 692 mm
+[b5]  obstacle 204 mm wide at 252 mm, go nowhere (would stay stopped)
+[bench] scan took 4505 ms
+[bench] remove the obstacle; re-arms after 1 s clear

@@ -1,0 +1,28 @@
+{
+  "branch": "buddy5",
+  "base_commit": "1a0b559fa435e584903da058a16749eb1ec6ae71",
+  "worktree": "/Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico-buddy5",
+  "scope": "HC-SR04+servo conservative span/clearance policy and targeted task correctness fixes",
+  "source_sha256": {
+    "app_program/subsystem5/b5_config.h": "3df776a9e35680f046d59ad3001f2bef5ea8c1fa9fc39619e12d3387a1bf1d8a",
+    "app_program/subsystem5/b5_iface.h": "5dc75a15e34f7edfd86a8f4f725e0fcef078ee6afb842e0e130dbc134f5fc857",
+    "app_program/subsystem5/obstacle_profile.c": "393f7bfc074fdad729953d1c2994e627700af7c39971b6077811b24f0331c189",
+    "app_program/subsystem5/obstacle_profile.h": "990a6cc06a34ee62be2e0daa0beb3740e783d1f93bfef1008e6605dbf0a62d97",
+    "app_program/subsystem5/task_obstacle.c": "88b537d0b9f2606b912fca0e777d0d6e986505197736883a349d23926d61c73f",
+    "app_program/subsystem5/subsystem5_test.c": "42a7217f2053dbbb6b7b1128e1f4971836d8ebfc52c38cbc3f5c697a3c236db4",
+    "testing/host/test_b5_navigation.c": "c55503d60339c04014b5be0d600921253f0331fee4bbad9d8c068cc205c18567",
+    "testing/host/test_b5_task.c": "3499f8e18fcbd04571d9badeb378be234ec49af323938fb488c21f9672c51244",
+    "testing/host/test_b5_pack.c": "ec30e9e1ec7affa554d5dec8f850d7872e2b4e8afa8d25d47cf9acb6fd948908",
+    "testing/host/Makefile": "53be0ac7c71ab24a3425eb90d9f21fc3e3028070691079df516df8142b642b9c"
+  },
+  "checks": "legacy profile95/95,pack43/43,navigation tests+UBSan,task scenarios1..9,existing S3/Nav/Safety mocks; normal and TEST=1 WIFI=none ARM builds clean",
+  "physical_tests": "NOT RUN; no flash or motor action",
+  "unresolved": [
+    "analog IR port vs legacy digital S3",
+    "real B2 motion/odometry integration",
+    "new dense scan exceeds internal3s confirmation/rejoin target",
+    "physical range/pose uncertainty, clearance and line reacquisition",
+    "same-pose background subtraction and cross-pose scan fusion not implemented"
+  ],
+  "original_buddy4_preserved": true
+}

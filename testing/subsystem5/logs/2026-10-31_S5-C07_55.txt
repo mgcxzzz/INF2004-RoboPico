@@ -1,0 +1,36 @@
+
+
+microT-Kernel Version 3.00
+
+
+=== micro T-Kernel on Raspberry Pi Pico W (spec 0x6300, product 0x0003) ===
+dual-core (SMP) build, usermain on core 0
+[safety] Normal
+[safety] drive off 0 ms after the stop (worst 0 ms, limit 100)
+all subsystems started
+
+[nav] Ready, motion owner: none
+[bench] GP20 button = emergency stop, GP21 = reset and start
+monitor: I am task 9
+[bench] simulated car follows the line at 150 mm/s
+[b5]  Idle  (range 0 mm)
+monitor: batch  n=5 last=40 from core 1
+monitor: t=3355771096 ms  samples=5  min=0 max=40 avg=20  free slots=4  free blocks=4
+monitor: batch  n=10 last=90 from core 1
+monitor: t=3355772646 ms  samples=10  min=0 max=90 avg=45  free slots=4  free blocks=4
+[bench] starting a run
+[nav] Running, motion owner: line
+[b5]  Guard  (range 0 mm)
+[poll] seq 1 echo lvl at start 0 (trig 0); rise@+0 us fall@+0 us width 0 us -> 0 mm
+[ping] seq 1 NO-RISE; edges r0 f0 short0
+[poll] seq 2 echo lvl at start 0 (trig 0); rise@+0 us fall@+0 us width 0 us -> 0 mm
+[ping] seq 2 NO-RISE; edges r0 f0 short0
+[poll] seq 3 echo lvl at start 0 (trig 0); rise@+0 us fall@+0 us width 0 us -> 0 mm
+[ping] seq 3 NO-RISE; edges r0 f0 short0
+[b5]  Fault  (range 0 mm)
+[safety] Fault, motor drive inhibited
+[nav] Fault, motion owner: none
+[safety] fault from source 4, code 0x1
+[safety] shared fault mask 0x08
+monitor: batch  n=15 last=60 from core 1
+monitor: t=3355774196 ms  samples=15  min=0 max=100 avg=56  free slots=4  free blocks=4

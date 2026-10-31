@@ -1,0 +1,612 @@
+
+
+microT-Kernel Version 3.00
+
+
+=== micro T-Kernel on Raspberry Pi Pico W (spec 0x6300, product 0x0003) ===
+dual-core (SMP) build, usermain on core 0
+[safety] Normal
+[safety] drive off 0 ms after the stop (worst 0 ms, limit 100)
+all subsystems started
+
+[nav] Ready, motion owner: none
+[bench] GP20 button = emergency stop, GP21 = reset and start
+monitor: I am task 9
+[bench] simulated car follows the line at 150 mm/s
+[b5]  Idle  (range 0 mm)
+monitor: batch  n=5 last=40 from core 1
+monitor: t=3355771096 ms  samples=5  min=0 max=40 avg=20  free slots=4  free blocks=4
+monitor: batch  n=10 last=90 from core 1
+monitor: t=3355772646 ms  samples=10  min=0 max=90 avg=45  free slots=4  free blocks=4
+[bench] starting a run
+[nav] Running, motion owner: line
+[b5]  Guard  (range 0 mm)
+[ping] seq 1 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 2 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 3 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 4 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 5 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 6 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 7 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 8 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 9 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 10 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+monitor: batch  n=15 last=60 from core 1
+monitor: t=3355774196 ms  samples=15  min=0 max=100 avg=56  free slots=4  free blocks=4
+[ping] seq 11 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 12 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 13 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 14 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 15 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 16 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 17 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 18 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 19 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 20 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 21 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 22 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+monitor: batch  n=20 last=10 from core 1
+monitor: t=3355775746 ms  samples=20  min=0 max=100 avg=50  free slots=4  free blocks=4
+[ping] seq 23 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 24 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 25 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 26 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 27 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 28 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 29 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 30 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 31 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 32 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 33 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 34 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+monitor: batch  n=25 last=40 from core 1
+monitor: t=3355777296 ms  samples=25  min=0 max=100 avg=44  free slots=4  free blocks=4
+[ping] seq 35 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 36 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 37 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[b5]  Confirm  (range 236 mm)
+[ping] seq 38 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 39 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[b5]  Halting  (range 236 mm)
+[nav] Running, motion owner: obstacle (slow)
+[b5]  Coarse Sweep  (range 236 mm)
+[ping] seq 40 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 41 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 42 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 43 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 44 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+monitor: batch  n=30 last=90 from core 1
+monitor: t=3355778846 ms  samples=30  min=0 max=100 avg=48  free slots=4  free blocks=4
+monitor: LED task paused, state=WAIT+SUSPEND, pri=13
+[ping] seq 45 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 46 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 47 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 48 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 49 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 50 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 51 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 52 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 53 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 54 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 55 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+monitor: batch  n=35 last=60 from core 1
+monitor: t=3355780396 ms  samples=35  min=0 max=100 avg=52  free slots=4  free blocks=4
+[ping] seq 56 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 57 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 58 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 59 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 60 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 61 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 62 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 63 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 64 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 65 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 66 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+monitor: batch  n=40 last=10 from core 1
+monitor: t=3355781946 ms  samples=40  min=0 max=100 avg=50  free slots=4  free blocks=4
+[ping] seq 67 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 68 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 69 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 70 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 71 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 72 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 73 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 74 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 75 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 76 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 77 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+monitor: batch  n=45 last=40 from core 1
+monitor: t=3355783496 ms  samples=45  min=0 max=100 avg=46  free slots=4  free blocks=4
+[ping] seq 78 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 79 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 80 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 81 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 82 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 83 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 84 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 85 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 86 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 87 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 88 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+monitor: batch  n=50 last=90 from core 1
+monitor: t=3355785046 ms  samples=50  min=0 max=100 avg=49  free slots=4  free blocks=4
+[ping] seq 89 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 90 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 91 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 92 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 93 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 94 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 95 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 96 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 97 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 98 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 99 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+monitor: batch  n=55 last=60 from core 1
+monitor: t=3355786596 ms  samples=55  min=0 max=100 avg=51  free slots=4  free blocks=4
+[ping] seq 100 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 101 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 102 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[b5]  Edge Refinement  (range 236 mm)
+[ping] seq 103 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 104 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 105 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 106 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 107 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 108 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 109 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+monitor: batch  n=60 last=10 from core 1
+monitor: t=3355788146 ms  samples=60  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: LED task resumed, state=RUN, pri=12
+[ping] seq 110 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 111 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[b5]  Planning  (range 4000 mm)
+[b5 profile] observed span 372 mm; model allowance 74 mm; planning envelope 446 mm; evidence 0x1; clearance L/R 0/0 mm
+[b5 scan] 24 samples (angle_dd:range_mm, x = no valid echo)
+[b5 scan] -550:236 -495:236 -440:236 -385:236 -330:236 -275:236x -220:4000 -165:4000x
+[b5 scan] -110:4000 -55:4000 0:4000 14:4000 21:4000x 28:236 55:236 110:236x
+[b5 scan] 165:236x 220:4000 275:4000 330:4000 385:4000x 440:4000x 495:236 550:236x
+[b5 decision] side NONE (stay stopped); found 1; confidence 66%; closest 236 mm at -550 dd; edges L/R -550/495 dd; at arc limit L/R 1/0; need 255 mm; lateral 0 mm; forward 676 mm
+[b5]  obstacle 372 mm wide at 236 mm, confidence 66 %, go nowhere (no side wide enough)
+[b5]  Blocked  (range 4000 mm)
+  [motion] drive -150 mm
+monitor: batch  n=65 last=40 from core 1
+monitor: t=3355789696 ms  samples=65  min=0 max=100 avg=47  free slots=4  free blocks=4
+monitor: batch  n=70 last=90 from core 1
+monitor: t=3355791246 ms  samples=70  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=75 last=60 from core 1
+monitor: t=3355792796 ms  samples=75  min=0 max=100 avg=51  free slots=4  free blocks=4
+[b5]  Halting  (range 4000 mm)
+[b5]  Coarse Sweep  (range 4000 mm)
+[ping] seq 112 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 113 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 114 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 115 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 116 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 117 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 118 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 119 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 120 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+monitor: batch  n=80 last=10 from core 1
+monitor: t=3355794346 ms  samples=80  min=0 max=100 avg=50  free slots=4  free blocks=4
+[ping] seq 121 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 122 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 123 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 124 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 125 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 126 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 127 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 128 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 129 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 130 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 131 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+monitor: batch  n=85 last=40 from core 1
+monitor: t=3355795896 ms  samples=85  min=0 max=100 avg=48  free slots=4  free blocks=4
+[ping] seq 132 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 133 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 134 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 135 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 136 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 137 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 138 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 139 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 140 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 141 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 142 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+monitor: batch  n=90 last=90 from core 1
+monitor: t=3355797446 ms  samples=90  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: LED task paused, state=WAIT+SUSPEND, pri=13
+[ping] seq 143 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 144 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 145 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 146 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 147 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 148 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 149 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 150 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 151 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 152 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 153 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+monitor: batch  n=95 last=60 from core 1
+monitor: t=3355798996 ms  samples=95  min=0 max=100 avg=51  free slots=4  free blocks=4
+[ping] seq 154 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 155 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 156 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 157 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 158 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 159 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 160 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 161 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 162 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 163 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 164 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+monitor: batch  n=100 last=10 from core 1
+monitor: t=3355800546 ms  samples=100  min=0 max=100 avg=50  free slots=4  free blocks=4
+[ping] seq 165 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 166 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 167 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 168 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 169 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 170 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 171 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 172 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 173 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 174 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[b5]  Edge Refinement  (range 236 mm)
+monitor: batch  n=105 last=40 from core 1
+monitor: t=3355802096 ms  samples=105  min=0 max=100 avg=48  free slots=4  free blocks=4
+[ping] seq 175 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 176 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 177 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 178 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 179 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 180 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 181 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 182 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 183 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 184 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 185 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+monitor: batch  n=110 last=90 from core 1
+monitor: t=3355803646 ms  samples=110  min=0 max=100 avg=49  free slots=4  free blocks=4
+[ping] seq 186 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 187 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 188 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 189 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 190 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 191 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 192 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 193 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 194 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 195 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+monitor: batch  n=115 last=60 from core 1
+monitor: t=3355805196 ms  samples=115  min=0 max=100 avg=50  free slots=4  free blocks=4
+[ping] seq 196 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 197 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 198 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[b5]  Planning  (range 236 mm)
+[b5 profile] observed span 386 mm; model allowance 74 mm; planning envelope 460 mm; evidence 0x1; clearance L/R 0/0 mm
+[b5 scan] 29 samples (angle_dd:range_mm, x = no valid echo)
+[b5 scan] -550:236 -495:236 -440:236 -385:236 -330:236 -275:236 -220:236 -165:236x
+[b5 scan] -110:4000 -82:4000 -68:4000 -61:4000 -55:236 -48:4000 -41:4000 -27:4000
+[b5 scan] 0:4000 55:4000 69:236x 83:236 110:236 165:4000x 220:236 275:236
+[b5 scan] 330:236 385:236x 440:236 495:236 550:236
+[b5 decision] side NONE (stay stopped); found 1; confidence 86%; closest 236 mm at -550 dd; edges L/R -550/550 dd; at arc limit L/R 1/1; need 255 mm; lateral 0 mm; forward 676 mm
+[b5]  obstacle 386 mm wide at 236 mm, confidence 86 %, go nowhere (no side wide enough)
+[b5]  Blocked  (range 236 mm)
+  [motion] drive -150 mm
+monitor: batch  n=120 last=10 from core 1
+monitor: t=3355806746 ms  samples=120  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: LED task resumed, state=RUN, pri=12
+monitor: batch  n=125 last=40 from core 1
+monitor: t=3355808296 ms  samples=125  min=0 max=100 avg=48  free slots=4  free blocks=4
+monitor: batch  n=130 last=90 from core 1
+monitor: t=3355809846 ms  samples=130  min=0 max=100 avg=49  free slots=4  free blocks=4
+[b5]  Halting  (range 236 mm)
+[b5]  Coarse Sweep  (range 236 mm)
+[ping] seq 199 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 200 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 201 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 202 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 203 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 204 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 205 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 206 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 207 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+monitor: batch  n=135 last=60 from core 1
+monitor: t=3355811396 ms  samples=135  min=0 max=100 avg=50  free slots=4  free blocks=4
+[ping] seq 208 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 209 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 210 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 211 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 212 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 213 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 214 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 215 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 216 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 217 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 218 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+monitor: batch  n=140 last=10 from core 1
+monitor: t=3355812946 ms  samples=140  min=0 max=100 avg=50  free slots=4  free blocks=4
+[ping] seq 219 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 220 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 221 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 222 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 223 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 224 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 225 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 226 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 227 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 228 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+monitor: batch  n=145 last=40 from core 1
+monitor: t=3355814496 ms  samples=145  min=0 max=100 avg=48  free slots=4  free blocks=4
+[ping] seq 229 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 230 TIMEOUT-HIGH rise@+4 us; edges r1 f1 short1
+[ping] seq 231 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 232 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 233 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 234 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 235 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 236 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 237 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 238 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 239 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+monitor: batch  n=150 last=90 from core 1
+monitor: t=3355816046 ms  samples=150  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: LED task paused, state=WAIT+SUSPEND, pri=13
+[ping] seq 240 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 241 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 242 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 243 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 244 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 245 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 246 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 247 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 248 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 249 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 250 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+monitor: batch  n=155 last=60 from core 1
+monitor: t=3355817596 ms  samples=155  min=0 max=100 avg=50  free slots=4  free blocks=4
+[ping] seq 251 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 252 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 253 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 254 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 255 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 0 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 1 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 2 width 1379 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 3 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 4 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[ping] seq 5 width 1380 us -> 236 mm; rise@+4 us; edges r1 f1 short0
+[b5]  Edge Refinement  (range 236 mm)
+[b5]  Planning  (range 236 mm)
+monitor: batch  n=160 last=10 from core 1
+[b5 profile] observed span 386 mm; model allowance 74 mm; planning envelope 460 mm; evidence 0x1; clearance L/R 0/0 mm
+monitor: t=3355819146 ms  samples=160  min=0 max=100 avg=50  free slots=4  free blocks=4
+[b5 scan] 21 samples (angle_dd:range_mm, x = no valid echo)
+[b5 scan] -550:236 -495:236 -440:236 -385:236 -330:236 -275:236 -220:4000x -165:4000
+[b5 scan] -110:4000 -55:4000 0:4000x 55:236 110:236 165:236 220:236 275:236
+[b5 scan] 330:236 385:236 440:236 495:236 550:236
+[b5 decision] side NONE (stay stopped); found 1; confidence 90%; closest 236 mm at -550 dd; edges L/R -550/550 dd; at arc limit L/R 1/1; need 255 mm; lateral 0 mm; forward 676 mm
+[b5]  obstacle 386 mm wide at 236 mm, confidence 90 %, go nowhere (no side wide enough)
+[b5]  Blocked  (range 236 mm)
+[b5]  Fault  (range 236 mm)
+[safety] warning from source 4, code 0x4
+[nav] Safe Stop, motion owner: none (slow)
+[safety] shared fault mask 0x80
+[safety] warning from source 5, code 0x3
+monitor: batch  n=165 last=40 from core 1
+monitor: t=3355820696 ms  samples=165  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=170 last=90 from core 1
+monitor: t=3355822246 ms  samples=170  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=175 last=60 from core 1
+monitor: t=3355823796 ms  samples=175  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=180 last=10 from core 1
+monitor: t=3355825346 ms  samples=180  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: LED task resumed, state=RUN, pri=12
+monitor: batch  n=185 last=40 from core 1
+monitor: t=3355826896 ms  samples=185  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=190 last=90 from core 1
+monitor: t=3355828446 ms  samples=190  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=195 last=60 from core 1
+monitor: t=3355829996 ms  samples=195  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=200 last=10 from core 1
+monitor: t=3355831546 ms  samples=200  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=205 last=40 from core 1
+monitor: t=3355833096 ms  samples=205  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=210 last=90 from core 1
+monitor: t=3355834646 ms  samples=210  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: LED task paused, state=WAIT+SUSPEND, pri=13
+monitor: batch  n=215 last=60 from core 1
+monitor: t=3355836196 ms  samples=215  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=220 last=10 from core 1
+monitor: t=3355837746 ms  samples=220  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=225 last=40 from core 1
+monitor: t=3355839296 ms  samples=225  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=230 last=90 from core 1
+monitor: t=3355840846 ms  samples=230  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=235 last=60 from core 1
+monitor: t=3355842396 ms  samples=235  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=240 last=10 from core 1
+monitor: t=3355843946 ms  samples=240  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: LED task resumed, state=RUN, pri=12
+monitor: batch  n=245 last=40 from core 1
+monitor: t=3355845496 ms  samples=245  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=250 last=90 from core 1
+monitor: t=3355847046 ms  samples=250  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=255 last=60 from core 1
+monitor: t=3355848596 ms  samples=255  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=260 last=10 from core 1
+monitor: t=3355850146 ms  samples=260  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=265 last=40 from core 1
+monitor: t=3355851696 ms  samples=265  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=270 last=90 from core 1
+monitor: t=3355853246 ms  samples=270  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: LED task paused, state=WAIT+SUSPEND, pri=13
+monitor: batch  n=275 last=60 from core 1
+monitor: t=3355854796 ms  samples=275  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=280 last=10 from core 1
+monitor: t=3355856346 ms  samples=280  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=285 last=40 from core 1
+monitor: t=3355857896 ms  samples=285  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=290 last=90 from core 1
+monitor: t=3355859446 ms  samples=290  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=295 last=60 from core 1
+monitor: t=3355860996 ms  samples=295  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=300 last=10 from core 1
+monitor: t=3355862546 ms  samples=300  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: LED task resumed, state=RUN, pri=12
+monitor: batch  n=305 last=40 from core 1
+monitor: t=3355864096 ms  samples=305  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=310 last=90 from core 1
+monitor: t=3355865646 ms  samples=310  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=315 last=60 from core 1
+monitor: t=3355867196 ms  samples=315  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=320 last=10 from core 1
+monitor: t=3355868746 ms  samples=320  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=325 last=40 from core 1
+monitor: t=3355870296 ms  samples=325  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=330 last=90 from core 1
+monitor: t=3355871846 ms  samples=330  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: LED task paused, state=WAIT+SUSPEND, pri=13
+monitor: batch  n=335 last=60 from core 1
+monitor: t=3355873396 ms  samples=335  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=340 last=10 from core 1
+monitor: t=3355874946 ms  samples=340  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=345 last=40 from core 1
+monitor: t=3355876496 ms  samples=345  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=350 last=90 from core 1
+monitor: t=3355878046 ms  samples=350  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=355 last=60 from core 1
+monitor: t=3355879596 ms  samples=355  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=360 last=10 from core 1
+monitor: t=3355881146 ms  samples=360  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: LED task resumed, state=RUN, pri=12
+monitor: batch  n=365 last=40 from core 1
+monitor: t=3355882696 ms  samples=365  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=370 last=90 from core 1
+monitor: t=3355884246 ms  samples=370  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=375 last=60 from core 1
+monitor: t=3355885796 ms  samples=375  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=380 last=10 from core 1
+monitor: t=3355887346 ms  samples=380  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=385 last=40 from core 1
+monitor: t=3355888896 ms  samples=385  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=390 last=90 from core 1
+monitor: t=3355890446 ms  samples=390  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: LED task paused, state=WAIT+SUSPEND, pri=13
+monitor: batch  n=395 last=60 from core 1
+monitor: t=3355891996 ms  samples=395  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=400 last=10 from core 1
+monitor: t=3355893546 ms  samples=400  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=405 last=40 from core 1
+monitor: t=3355895096 ms  samples=405  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=410 last=90 from core 1
+monitor: t=3355896646 ms  samples=410  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=415 last=60 from core 1
+monitor: t=3355898196 ms  samples=415  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=420 last=10 from core 1
+monitor: t=3355899746 ms  samples=420  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: LED task resumed, state=RUN, pri=12
+monitor: batch  n=425 last=40 from core 1
+monitor: t=3355901296 ms  samples=425  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=430 last=90 from core 1
+monitor: t=3355902846 ms  samples=430  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=435 last=60 from core 1
+monitor: t=3355904396 ms  samples=435  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=440 last=10 from core 1
+monitor: t=3355905946 ms  samples=440  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=445 last=40 from core 1
+monitor: t=3355907496 ms  samples=445  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=450 last=90 from core 1
+monitor: t=3355909046 ms  samples=450  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: LED task paused, state=WAIT+SUSPEND, pri=13
+monitor: batch  n=455 last=60 from core 1
+monitor: t=3355910596 ms  samples=455  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=460 last=10 from core 1
+monitor: t=3355912146 ms  samples=460  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=465 last=40 from core 1
+monitor: t=3355913696 ms  samples=465  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=470 last=90 from core 1
+monitor: t=3355915246 ms  samples=470  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=475 last=60 from core 1
+monitor: t=3355916796 ms  samples=475  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=480 last=10 from core 1
+monitor: t=3355918346 ms  samples=480  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: LED task resumed, state=RUN, pri=12
+monitor: batch  n=485 last=40 from core 1
+monitor: t=3355919896 ms  samples=485  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=490 last=90 from core 1
+monitor: t=3355921446 ms  samples=490  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=495 last=60 from core 1
+monitor: t=3355922996 ms  samples=495  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=500 last=10 from core 1
+monitor: t=3355924546 ms  samples=500  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=505 last=40 from core 1
+monitor: t=3355926096 ms  samples=505  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=510 last=90 from core 1
+monitor: t=3355927646 ms  samples=510  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: LED task paused, state=WAIT+SUSPEND, pri=13
+monitor: batch  n=515 last=60 from core 1
+monitor: t=3355929196 ms  samples=515  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=520 last=10 from core 1
+monitor: t=3355930746 ms  samples=520  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=525 last=40 from core 1
+monitor: t=3355932296 ms  samples=525  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=530 last=90 from core 1
+monitor: t=3355933846 ms  samples=530  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=535 last=60 from core 1
+monitor: t=3355935396 ms  samples=535  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=540 last=10 from core 1
+monitor: t=3355936946 ms  samples=540  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: LED task resumed, state=RUN, pri=12
+monitor: batch  n=545 last=40 from core 1
+monitor: t=3355938496 ms  samples=545  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=550 last=90 from core 1
+monitor: t=3355940046 ms  samples=550  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=555 last=60 from core 1
+monitor: t=3355941596 ms  samples=555  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=560 last=10 from core 1
+monitor: t=3355943146 ms  samples=560  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=565 last=40 from core 1
+monitor: t=3355944696 ms  samples=565  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=570 last=90 from core 1
+monitor: t=3355946246 ms  samples=570  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: LED task paused, state=WAIT+SUSPEND, pri=13
+monitor: batch  n=575 last=60 from core 1
+monitor: t=3355947796 ms  samples=575  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=580 last=10 from core 1
+monitor: t=3355949346 ms  samples=580  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=585 last=40 from core 1
+monitor: t=3355950896 ms  samples=585  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=590 last=90 from core 1
+monitor: t=3355952446 ms  samples=590  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=595 last=60 from core 1
+monitor: t=3355953996 ms  samples=595  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=600 last=10 from core 1
+monitor: t=3355955546 ms  samples=600  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: LED task resumed, state=RUN, pri=12
+monitor: batch  n=605 last=40 from core 1
+monitor: t=3355957096 ms  samples=605  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=610 last=90 from core 1
+monitor: t=3355958646 ms  samples=610  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=615 last=60 from core 1
+monitor: t=3355960196 ms  samples=615  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=620 last=10 from core 1
+monitor: t=3355961746 ms  samples=620  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=625 last=40 from core 1
+monitor: t=3355963296 ms  samples=625  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=630 last=90 from core 1
+monitor: t=3355964846 ms  samples=630  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: LED task paused, state=WAIT+SUSPEND, pri=13
+monitor: batch  n=635 last=60 from core 1
+monitor: t=3355966396 ms  samples=635  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=640 last=10 from core 1
+monitor: t=3355967946 ms  samples=640  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=645 last=40 from core 1
+monitor: t=3355969496 ms  samples=645  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=650 last=90 from core 1
+monitor: t=3355971046 ms  samples=650  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=655 last=60 from core 1
+monitor: t=3355972596 ms  samples=655  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=660 last=10 from core 1
+monitor: t=3355974146 ms  samples=660  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: LED task resumed, state=RUN, pri=12

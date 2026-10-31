@@ -228,11 +228,24 @@ interrupt hand-over.
 
 ---
 
+## Rule B (2026-10-31): ping classes and swept footprint
+
+Each ping is ECHO, NO_RETURN (completed, nothing in range) or FAULT
+(ECHO high before TRIG, no rise, rise without fall, noise only) —
+`b5_classify_ping()`. Per angle (`b5_combine_pings()`): any echo blocks
+at the nearest echo; three clean no-returns are weak, flagged clearance;
+faults or incomplete triplets are unknown. A side is chosen only if its
+gap test passes AND the whole manoeuvre footprint (spin, diagonal, spin
+back, pass, rejoin) passes `b5_check_sweep()`; unscanned parts are
+reported as PASS_ASSUMED. Measured confidence excludes weak clears;
+coverage gates Planning. The forward watch during a bypass sees ahead
+only. Details and test plan: `testing/subsystem5/BENCH_PROFILE_TEST_2026-10-31.md`.
+
 ## Tuning (`b5_config.h`)
 
 | Value | Default | Where it comes from |
 |---|---|---|
-| `B5_D_STOP_MM` | 300 | stop distance D_stop; tune on the track |
+| `B5_D_STOP_MM` | 150 | stop distance D_stop (2026-10-31 bench: better width estimates than 300; provisional) |
 | `B5_D_SLOW_MM` | 500 | slow-down request (FR-USO-02) |
 | `B5_PING_PERIOD_MS` | 60 | NFR-USO-06 |
 | `B5_CONFIRM_COUNT` | 3 | Confirm state |
@@ -242,9 +255,13 @@ interrupt hand-over.
 | `B5_SERVO_MIN_US` / `MAX_US` | 500 / 2400 | 0 (1450 µs) faces straight ahead on our car (S5-C01). MIN = full right, MAX = full left |
 | `B5_SERVO_SPEED_DD_S` | 6000 (600°/s, the SG90's own speed) | how fast the servo turns; 600 (60°/s) if the bracket hits the wiring (it did before the cables were re-routed); slower costs about 3 s of scanning |
 | `B5_SERVO_SETTLE_MS` | 40 | rest after each move before the next ping (A8, S5-C02) |
-| `B5_CAR_WIDTH_MM` / `LENGTH_MM` | 150 / 200 | **placeholders: measure the PicoCar** |
+| `B5_CAR_WIDTH_MM` / `LENGTH_MM` | 155 / 190 | measured (S5-C05) |
 | `B5_MARGIN_MM` | 50 | clearance margin |
-| `B5_MIN_CONFIDENCE_PCT` | 50 | Planning |
+| `B5_MIN_CONFIDENCE_PCT` | 50 | Planning gate, applied to `coverage_pct` (usable samples) since rule B |
+| `B5_NORETURN_WAIT_MS` / `B5_PRETRIG_LOW_WAIT_MS` | 100 / 100 | rule B: wait for the fall of a no-target pulse / ECHO must be low before TRIG |
+| `B5_NORETURN_WEAK_CLEAR` | 1 | rule B: 3 clean no-returns = weak tentative clearance (flagged); 0 = unknown |
+| `B5_PIVOT_TO_FRONT_MM` | 150 | **ASSUMED: measure** (spin centre to car front), used by the swept-footprint check |
+| `B5_SWEEP_ALLOW_ASSUMED` / `_WEAK` | 1 / 1 | rule B: footprint in unscanned space / on no-return rays allowed but flagged |
 | `B5_BLOCKED_RETRIES` | 2 | FR-USO-07 |
 | `B5_RECOVER_ATTEMPTS` | 3 | LINE_LOST |
 

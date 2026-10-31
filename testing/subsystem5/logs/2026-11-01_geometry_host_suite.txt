@@ -1,0 +1,353 @@
+cc -std=c11 -Wall -Wextra -Werror -O2 -I../../app_program/subsystem5 -o test_b5_bench_replay test_b5_bench_replay.c ../../app_program/subsystem5/obstacle_profile.c
+./test_s3
+Code 39 table (checked against a reference encoder)
+the course barcodes from Barcode_Sample.pdf
+every character, 3:1 and 2:1 prints
+bad reads send no command
+noise: +-25 % on every element, 2000 random barcodes
+reader: edges timed by interrupt, placed by distance
+reader: the barcode ends only after a quiet zone
+line: steering, curve vs junction, lost, stuck
+telemetry frame (team schema, source 3)
+
+58 passed, 0 failed
+
+./test_s3_task
+start-up, mission start, line following
+course barcode *A* -> LEFT at the next junction, spin to line
+one barcode = one event, even with a stray mark after it
+half-size sample barcode *Z* (1.5 mm bars): read, not a command
+write-up table: C -> STRAIGHT, D -> U-TURN
+bad, backwards and unknown barcodes send nothing
+no distance from Motion Control: time widths at steady speed
+coordinator ignores an event (keeps control): resume anyway
+LEFT with no junction after it: dropped, never turns blind
+line lost while a RIGHT waits: normal LOST, command dropped
+junction, then line lost and found again
+pause, emergency stop, stuck sensor fault and reset
+lost interrupt edges abort the read and warn
+telemetry: 292 frames
+
+74 passed, 0 failed
+
+./test_b5_pack
+record sizes
+  sample 4, profile 32, plan 8, rejoin 8, status 44 bytes
+masks, shifts and sign extension
+scan samples clamp instead of wrapping
+16-bit net distance wraps safely (agreed with Buddy 2)
+echo result word (single writer: the ISR)
+binary telemetry frame (3-byte common header + 16-byte payload)
+
+43 passed, 0 failed
+
+./test_b5_profile
+trig and median
+no obstacle -> Planning returns to Guard
+width accuracy, refinement stops at alpha (Week 6 text)
+  worst width error 2.0 %, max refinement samples 12 (for comparison only)
+width accuracy, refinement stops at B5_REFINE_STOP_DD
+  worst width error 8.0 %, max refinement samples 6
+side choice (NFR-USO-03)
+obstacle wider than the scan arc -> blocked
+dead sensor -> low confidence
+
+95 passed, 0 failed
+./test_b5_navigation
+navigation profiler checks passed
+./test_b5_bench_replay
+cases12_s1                 bench-v0.2 LEFT  now NONE  clearance  564/0    (bench 564/0) lateral 0 planning 284 span 172
+                             sweep L FAIL(why 1 leg 2 at -161,255) R not-run(why 0 leg 0 at 0,0) evidence 0x4b
+                             weak replay: 5 no-return angles, side NONE, measured 77% coverage 100%, evidence 0x4b
+cases12_s2_both_blocked    bench-v0.2 NONE  now NONE  clearance    0/178  (bench 0/178) lateral 0 planning 317 span 235
+                             sweep L not-run(why 0 leg 0 at 0,0) R not-run(why 0 leg 0 at 0,0) evidence 0x05
+                             weak replay: 4 no-return angles, side NONE, measured 83% coverage 100%, evidence 0x05
+cases12_s4                 bench-v0.2 LEFT  now NONE  clearance  534/0    (bench 534/0) lateral 0 planning 321 span 235
+                             sweep L FAIL(why 1 leg 2 at -143,244) R not-run(why 0 leg 0 at 0,0) evidence 0x4b
+                             weak replay: 4 no-return angles, side NONE, measured 80% coverage 100%, evidence 0x4b
+offset_s1                  bench-v0.2 RIGHT now NONE  clearance  489/556  (bench 489/556) lateral 0 planning 409 span 271
+                             sweep L FAIL(why 1 leg 2 at -157,258) R FAIL(why 1 leg 2 at 157,258) evidence 0xcf
+                             weak replay: 13 no-return angles, side NONE, measured 40% coverage 100%, evidence 0xcf
+offset_s2_tie              bench-v0.2 LEFT  now LEFT  clearance  578/560  (bench 578/560) lateral 317 planning 282 span 144
+                             sweep L PASS_ASSUMED(why 0 leg 0 at 0,0) R FAIL(why 1 leg 2 at 143,244) evidence 0xaf
+                             weak replay: 15 no-return angles, side LEFT, measured 37% coverage 100%, evidence 0xbf
+sides_s4                   bench-v0.2 RIGHT now NONE  clearance  524/569  (bench 524/569) lateral 0 planning 339 span 255
+                             sweep L FAIL(why 2 leg 2 at -150,231) R FAIL(why 1 leg 2 at 147,247) evidence 0xcf
+                             weak replay: 8 no-return angles, side NONE, measured 61% coverage 100%, evidence 0xcf
+d150_s9_left_shift         bench-v0.2 RIGHT now NONE  clearance   63/491  (bench 63/491) lateral 0 planning 262 span 83
+                             sweep L not-run(why 0 leg 0 at 0,0) R FAIL(why 1 leg 2 at 58,159) evidence 0x8f
+                             weak replay: 11 no-return angles, side NONE, measured 54% coverage 100%, evidence 0x8f
+d150_s10_left_shift        bench-v0.2 RIGHT now NONE  clearance   62/495  (bench 62/495) lateral 0 planning 262 span 52
+                             sweep L not-run(why 0 leg 0 at 0,0) R FAIL(why 1 leg 2 at 58,159) evidence 0x8f
+                             weak replay: 5 no-return angles, side NONE, measured 76% coverage 100%, evidence 0x8f
+42 checks, 0 failed
+./test_b5_ruleb
+rule B host tests (pivot-to-front 130 mm ASSUMED, margin 50 mm, turn 450 dd)
+classifier
+per-angle combination
+sensor faults through the planner
+  persistent ECHO-high               side NONE  found 0 measured   0% coverage   0% clear L/R    0/0    sweep L not-run(why 0) R not-run(why 0) ev 0x00
+  ECHO rises, never falls            side NONE  found 0 measured   0% coverage   0% clear L/R    0/0    sweep L not-run(why 0) R not-run(why 0) ev 0x00
+  disconnected sensor (no rise)      side NONE  found 0 measured   0% coverage   0% clear L/R    0/0    sweep L not-run(why 0) R not-run(why 0) ev 0x00
+  noise pulses only                  side NONE  found 0 measured   0% coverage   0% clear L/R    0/0    sweep L not-run(why 0) R not-run(why 0) ev 0x00
+mixed and incomplete triplets
+  open both sides (reference)        side LEFT  found 1 measured  20% coverage 100% clear L/R  719/435  sweep L PASS_ASSUMED(why 0) R PASS_ASSUMED(why 0) ev 0x3f
+  right: one near echo among no-returns side LEFT  found 1 measured  35% coverage 100% clear L/R  749/0    sweep L PASS_ASSUMED(why 0) R not-run(why 0) ev 0x3b
+  left: no-return x2 + fault         side NONE  found 1 measured  20% coverage  72% clear L/R    0/435  sweep L not-run(why 0) R FAIL(why 4) ev 0x8d
+both sides blocked
+  walls 230 mm both sides            side NONE  found 1 measured 100% coverage 100% clear L/R    0/0    sweep L not-run(why 0) R not-run(why 0) ev 0x01
+enlarged lateral move vs. available clearance
+  left walled, right post ~425 mm    side NONE  found 1 measured  64% coverage 100% clear L/R    0/283  sweep L not-run(why 0) R FAIL(why 2) ev 0x8d
+  tie: right post, left far wall     side LEFT  found 1 measured  48% coverage 100% clear L/R  323/283  sweep L PASS_ASSUMED(why 0) R FAIL(why 3) ev 0xbf
+unscanned footprint and stop distance
+  open, far readings measured        side LEFT  found 1 measured 100% coverage 100% clear L/R  719/435  sweep L PASS_ASSUMED(why 0) R PASS_ASSUMED(why 0) ev 0x2f
+  stopped at 130 mm                  side NONE  found 1 measured 100% coverage 100% clear L/R  446/259  sweep L FAIL(why 1) R FAIL(why 1) ev 0xcf
+46 checks, 0 failed
+
+statechart scenarios
+[b5 profile] observed span 131 mm; model allowance 52 mm; planning envelope 252 mm; evidence 0xcf; clearance L/R 447/260 mm
+[b5 scan] 25 samples (angle_dd:range_mm; suffix u = unstable echo, p = echo+1 fault, b = echo+faults (block only), w = weak no-return clear, x = unknown)
+[b5 scan] -550:4000w -495:4000w -440:4000w -385:4000w -330:4000w -302:4000w -288:4000w -281:139
+[b5 scan] -275:138 -220:134 -165:132 -110:130 -55:130 0:130 55:130 110:130
+[b5 scan] 165:132 220:134 275:138 282:139 289:4000w 303:4000w 330:4000w 385:4000w
+[b5 scan] 440:4000w
+[b5 decision] side NONE (stay stopped); found 1; confidence 52%; closest 130 mm at -110 dd; edges L/R -281/282 dd; at arc limit L/R 0/0; need 235 mm; lateral 0 mm; forward 570 mm
+[b5 evidence] measured 52%; coverage 100%; stable-return span 131 mm (provisional, not planning width); weak clearance no
+[b5 sweep] L: FAIL; weak 1; outline points 54 (assumed 43, weak 6); why measured return inside footprint at leg 1 (64, 122) mm
+[b5 sweep] R: FAIL; weak 1; outline points 54 (assumed 43, weak 6); why measured return inside footprint at leg 1 (-64, 122) mm
+[b5 sweep] forward watch during the bypass sees ahead only; sides and rear during turns are not monitored
+[b5 profile] observed span 168 mm; model allowance 86 mm; planning envelope 286 mm; evidence 0x3f; clearance L/R 599/357 mm
+[b5 scan] 25 samples (angle_dd:range_mm; suffix u = unstable echo, p = echo+1 fault, b = echo+faults (block only), w = weak no-return clear, x = unknown)
+[b5 scan] -550:4000w -495:4000w -440:4000w -385:4000w -330:4000w -275:4000w -220:4000w -192:4000w
+[b5 scan] -178:4000w -171:284 -165:283 -110:281 -55:280 0:280 55:280 110:281
+[b5 scan] 165:284 172:284 179:4000w 193:4000w 220:4000w 275:4000w 330:4000w 385:4000w
+[b5 scan] 440:4000w
+[b5 decision] side LEFT; found 1; confidence 36%; closest 280 mm at -55 dd; edges L/R -171/172 dd; at arc limit L/R 0/0; need 235 mm; lateral 317 mm; forward 720 mm
+[b5 evidence] measured 36%; coverage 100%; stable-return span 168 mm (provisional, not planning width); weak clearance YES (tentative, no-return rays)
+[b5 sweep] L: PASS_ASSUMED; weak 1; outline points 5670 (assumed 2970, weak 2583)
+[b5 sweep] R: PASS_ASSUMED; weak 1; outline points 5670 (assumed 3349, weak 2203)
+[b5 sweep] forward watch during the bypass sees ahead only; sides and rear during turns are not monitored
+scenario 1 (11.2 s simulated)
+  states: Idle -> Guard -> Confirm -> Halting -> Coarse Sweep -> Edge Refinement -> Planning -> Blocked -> Halting -> Coarse Sweep -> Edge Refinement -> Planning -> Bypassing -> Recovering -> Guard -> Idle
+  fault reported: 0 (expected 0), shared fault mask 0x00, bad frames 0
+  PASS
+scenario 2 (0.3 s simulated)
+  states: Idle -> Guard -> Fault
+  fault reported: 1 (expected 1), shared fault mask 0x08, bad frames 0
+  PASS
+  plans sent: 0 (expected 0)
+[b5 profile] observed span 685 mm; model allowance 132 mm; planning envelope 817 mm; evidence 0x1; clearance L/R 0/0 mm
+[b5 scan] 19 samples (angle_dd:range_mm; suffix u = unstable echo, p = echo+1 fault, b = echo+faults (block only), w = weak no-return clear, x = unknown)
+[b5 scan] -550:488 -495:444 -440:411 -385:385 -330:366 -275:138 -220:134 -165:132
+[b5 scan] -110:130 -55:130 0:130 55:130 110:130 165:132 220:134 275:138
+[b5 scan] 330:366 385:385 440:411
+[b5 decision] side NONE (stay stopped); found 1; confidence 100%; closest 130 mm at -110 dd; edges L/R -550/440 dd; at arc limit L/R 1/1; need 235 mm; lateral 0 mm; forward 570 mm
+[b5 evidence] measured 100%; coverage 100%; stable-return span 685 mm (provisional, not planning width); weak clearance no
+[b5 sweep] L: not run (gap too small); weak 0; outline points 0 (assumed 0, weak 0)
+[b5 sweep] R: not run (gap too small); weak 0; outline points 0 (assumed 0, weak 0)
+[b5 sweep] forward watch during the bypass sees ahead only; sides and rear during turns are not monitored
+[b5 profile] observed span 698 mm; model allowance 150 mm; planning envelope 848 mm; evidence 0x1; clearance L/R 0/0 mm
+[b5 scan] 25 samples (angle_dd:range_mm; suffix u = unstable echo, p = echo+1 fault, b = echo+faults (block only), w = weak no-return clear, x = unknown)
+[b5 scan] -550:710 -495:646 -440:597 -385:560 -371:552 -364:548 -357:545 -330:532
+[b5 scan] -275:511 -220:496 -165:283 -110:281 -55:280 0:280 55:280 110:281
+[b5 scan] 165:284 220:496 275:511 330:532 358:546 365:549 372:553 385:561
+[b5 scan] 440:598
+[b5 decision] side NONE (stay stopped); found 1; confidence 100%; closest 280 mm at -55 dd; edges L/R -385/385 dd; at arc limit L/R 0/0; need 235 mm; lateral 0 mm; forward 720 mm
+[b5 evidence] measured 100%; coverage 100%; stable-return span 698 mm (provisional, not planning width); weak clearance no
+[b5 sweep] L: not run (gap too small); weak 0; outline points 0 (assumed 0, weak 0)
+[b5 sweep] R: not run (gap too small); weak 0; outline points 0 (assumed 0, weak 0)
+[b5 sweep] forward watch during the bypass sees ahead only; sides and rear during turns are not monitored
+[b5 profile] observed span 206 mm; model allowance 120 mm; planning envelope 326 mm; evidence 0x1; clearance L/R 0/0 mm
+[b5 scan] 25 samples (angle_dd:range_mm; suffix u = unstable echo, p = echo+1 fault, b = echo+faults (block only), w = weak no-return clear, x = unknown)
+[b5 scan] -550:933 -495:848 -440:784 -385:735 -330:698 -275:670 -220:651 -165:641
+[b5 scan] -151:641 -144:641 -137:433 -110:431 -55:430 0:430 55:430 110:431
+[b5 scan] 138:433 145:642 152:642 165:641 220:651 275:671 330:699 385:736
+[b5 scan] 440:785
+[b5 decision] side NONE (stay stopped); found 1; confidence 100%; closest 430 mm at -55 dd; edges L/R -137/138 dd; at arc limit L/R 0/0; need 235 mm; lateral 0 mm; forward 870 mm
+[b5 evidence] measured 100%; coverage 100%; stable-return span 206 mm (provisional, not planning width); weak clearance no
+[b5 sweep] L: not run (gap too small); weak 0; outline points 0 (assumed 0, weak 0)
+[b5 sweep] R: not run (gap too small); weak 0; outline points 0 (assumed 0, weak 0)
+[b5 sweep] forward watch during the bypass sees ahead only; sides and rear during turns are not monitored
+scenario 3 (15.2 s simulated)
+  states: Idle -> Guard -> Confirm -> Halting -> Coarse Sweep -> Edge Refinement -> Planning -> Blocked -> Halting -> Coarse Sweep -> Edge Refinement -> Planning -> Blocked -> Halting -> Coarse Sweep -> Edge Refinement -> Planning -> Blocked -> Fault
+  fault reported: 4 (expected 4), shared fault mask 0x80, bad frames 0
+  PASS
+  reverses: 2 (expected 2)
+[b5 profile] observed span 131 mm; model allowance 52 mm; planning envelope 252 mm; evidence 0xcf; clearance L/R 447/260 mm
+[b5 scan] 25 samples (angle_dd:range_mm; suffix u = unstable echo, p = echo+1 fault, b = echo+faults (block only), w = weak no-return clear, x = unknown)
+[b5 scan] -550:4000w -495:4000w -440:4000w -385:4000w -330:4000w -302:4000w -288:4000w -281:139
+[b5 scan] -275:138 -220:134 -165:132 -110:130 -55:130 0:130 55:130 110:130
+[b5 scan] 165:132 220:134 275:138 282:139 289:4000w 303:4000w 330:4000w 385:4000w
+[b5 scan] 440:4000w
+[b5 decision] side NONE (stay stopped); found 1; confidence 52%; closest 130 mm at -110 dd; edges L/R -281/282 dd; at arc limit L/R 0/0; need 235 mm; lateral 0 mm; forward 570 mm
+[b5 evidence] measured 52%; coverage 100%; stable-return span 131 mm (provisional, not planning width); weak clearance no
+[b5 sweep] L: FAIL; weak 1; outline points 54 (assumed 43, weak 6); why measured return inside footprint at leg 1 (64, 122) mm
+[b5 sweep] R: FAIL; weak 1; outline points 54 (assumed 43, weak 6); why measured return inside footprint at leg 1 (-64, 122) mm
+[b5 sweep] forward watch during the bypass sees ahead only; sides and rear during turns are not monitored
+[b5 profile] observed span 168 mm; model allowance 86 mm; planning envelope 286 mm; evidence 0x3f; clearance L/R 599/357 mm
+[b5 scan] 25 samples (angle_dd:range_mm; suffix u = unstable echo, p = echo+1 fault, b = echo+faults (block only), w = weak no-return clear, x = unknown)
+[b5 scan] -550:4000w -495:4000w -440:4000w -385:4000w -330:4000w -275:4000w -220:4000w -192:4000w
+[b5 scan] -178:4000w -171:284 -165:283 -110:281 -55:280 0:280 55:280 110:281
+[b5 scan] 165:284 172:284 179:4000w 193:4000w 220:4000w 275:4000w 330:4000w 385:4000w
+[b5 scan] 440:4000w
+[b5 decision] side LEFT; found 1; confidence 36%; closest 280 mm at -55 dd; edges L/R -171/172 dd; at arc limit L/R 0/0; need 235 mm; lateral 317 mm; forward 720 mm
+[b5 evidence] measured 36%; coverage 100%; stable-return span 168 mm (provisional, not planning width); weak clearance YES (tentative, no-return rays)
+[b5 sweep] L: PASS_ASSUMED; weak 1; outline points 5670 (assumed 2970, weak 2583)
+[b5 sweep] R: PASS_ASSUMED; weak 1; outline points 5670 (assumed 3349, weak 2203)
+[b5 sweep] forward watch during the bypass sees ahead only; sides and rear during turns are not monitored
+scenario 4 (11.2 s simulated)
+  states: Idle -> Guard -> Confirm -> Halting -> Coarse Sweep -> Edge Refinement -> Planning -> Blocked -> Halting -> Coarse Sweep -> Edge Refinement -> Planning -> Bypassing -> Recovering -> Fault
+  fault reported: 3 (expected 3), shared fault mask 0x80, bad frames 0
+  PASS
+[b5 profile] observed span 131 mm; model allowance 52 mm; planning envelope 252 mm; evidence 0xcf; clearance L/R 447/260 mm
+[b5 scan] 25 samples (angle_dd:range_mm; suffix u = unstable echo, p = echo+1 fault, b = echo+faults (block only), w = weak no-return clear, x = unknown)
+[b5 scan] -550:4000w -495:4000w -440:4000w -385:4000w -330:4000w -302:4000w -288:4000w -281:139
+[b5 scan] -275:138 -220:134 -165:132 -110:130 -55:130 0:130 55:130 110:130
+[b5 scan] 165:132 220:134 275:138 282:139 289:4000w 303:4000w 330:4000w 385:4000w
+[b5 scan] 440:4000w
+[b5 decision] side NONE (stay stopped); found 1; confidence 52%; closest 130 mm at -110 dd; edges L/R -281/282 dd; at arc limit L/R 0/0; need 235 mm; lateral 0 mm; forward 570 mm
+[b5 evidence] measured 52%; coverage 100%; stable-return span 131 mm (provisional, not planning width); weak clearance no
+[b5 sweep] L: FAIL; weak 1; outline points 54 (assumed 43, weak 6); why measured return inside footprint at leg 1 (64, 122) mm
+[b5 sweep] R: FAIL; weak 1; outline points 54 (assumed 43, weak 6); why measured return inside footprint at leg 1 (-64, 122) mm
+[b5 sweep] forward watch during the bypass sees ahead only; sides and rear during turns are not monitored
+[b5 profile] observed span 168 mm; model allowance 86 mm; planning envelope 286 mm; evidence 0x3f; clearance L/R 599/357 mm
+[b5 scan] 25 samples (angle_dd:range_mm; suffix u = unstable echo, p = echo+1 fault, b = echo+faults (block only), w = weak no-return clear, x = unknown)
+[b5 scan] -550:4000w -495:4000w -440:4000w -385:4000w -330:4000w -275:4000w -220:4000w -192:4000w
+[b5 scan] -178:4000w -171:284 -165:283 -110:281 -55:280 0:280 55:280 110:281
+[b5 scan] 165:284 172:284 179:4000w 193:4000w 220:4000w 275:4000w 330:4000w 385:4000w
+[b5 scan] 440:4000w
+[b5 decision] side LEFT; found 1; confidence 36%; closest 280 mm at -55 dd; edges L/R -171/172 dd; at arc limit L/R 0/0; need 235 mm; lateral 317 mm; forward 720 mm
+[b5 evidence] measured 36%; coverage 100%; stable-return span 168 mm (provisional, not planning width); weak clearance YES (tentative, no-return rays)
+[b5 sweep] L: PASS_ASSUMED; weak 1; outline points 5670 (assumed 2970, weak 2583)
+[b5 sweep] R: PASS_ASSUMED; weak 1; outline points 5670 (assumed 3349, weak 2203)
+[b5 sweep] forward watch during the bypass sees ahead only; sides and rear during turns are not monitored
+scenario 5 (11.3 s simulated)
+  states: Idle -> Guard -> Confirm -> Halting -> Coarse Sweep -> Edge Refinement -> Planning -> Blocked -> Halting -> Coarse Sweep -> Edge Refinement -> Planning -> Bypassing -> Recovering -> Guard -> Idle
+  fault reported: 0 (expected 0), shared fault mask 0x00, bad frames 0
+  PASS
+[b5 profile] observed span 128 mm; model allowance 52 mm; planning envelope 252 mm; evidence 0x1; clearance L/R 0/0 mm
+[b5 scan] 19 samples (angle_dd:range_mm; suffix u = unstable echo, p = echo+1 fault, b = echo+faults (block only), w = weak no-return clear, x = unknown)
+[b5 scan] -550:4000x -495:4000x -440:4000x -385:4000x -330:4000x -275:138b -220:134b -165:132b
+[b5 scan] -110:130b -55:130b 0:130b 55:130b 110:130b 165:132b 220:134b 275:138b
+[b5 scan] 330:4000x 385:4000x 440:4000x
+[b5 decision] side NONE (stay stopped); found 1; confidence 57%; closest 130 mm at -110 dd; edges L/R -275/275 dd; at arc limit L/R 0/0; need 235 mm; lateral 0 mm; forward 570 mm
+[b5 evidence] measured 57%; coverage 0%; stable-return span 0 mm (provisional, not planning width); weak clearance no
+[b5 sweep] L: not run (gap too small); weak 0; outline points 0 (assumed 0, weak 0)
+[b5 sweep] R: not run (gap too small); weak 0; outline points 0 (assumed 0, weak 0)
+[b5 sweep] forward watch during the bypass sees ahead only; sides and rear during turns are not monitored
+scenario 6 (4.5 s simulated)
+unknown scan stays stopped: PASS
+[b5 profile] observed span 131 mm; model allowance 52 mm; planning envelope 252 mm; evidence 0xcf; clearance L/R 447/260 mm
+[b5 scan] 25 samples (angle_dd:range_mm; suffix u = unstable echo, p = echo+1 fault, b = echo+faults (block only), w = weak no-return clear, x = unknown)
+[b5 scan] -550:4000w -495:4000w -440:4000w -385:4000w -330:4000w -302:4000w -288:4000w -281:139
+[b5 scan] -275:138 -220:134 -165:132 -110:130 -55:130 0:130 55:130 110:130
+[b5 scan] 165:132 220:134 275:138 282:139 289:4000w 303:4000w 330:4000w 385:4000w
+[b5 scan] 440:4000w
+[b5 decision] side NONE (stay stopped); found 1; confidence 52%; closest 130 mm at -110 dd; edges L/R -281/282 dd; at arc limit L/R 0/0; need 235 mm; lateral 0 mm; forward 570 mm
+[b5 evidence] measured 52%; coverage 100%; stable-return span 131 mm (provisional, not planning width); weak clearance no
+[b5 sweep] L: FAIL; weak 1; outline points 54 (assumed 43, weak 6); why measured return inside footprint at leg 1 (64, 122) mm
+[b5 sweep] R: FAIL; weak 1; outline points 54 (assumed 43, weak 6); why measured return inside footprint at leg 1 (-64, 122) mm
+[b5 sweep] forward watch during the bypass sees ahead only; sides and rear during turns are not monitored
+[b5 profile] observed span 168 mm; model allowance 86 mm; planning envelope 286 mm; evidence 0x3f; clearance L/R 599/357 mm
+[b5 scan] 25 samples (angle_dd:range_mm; suffix u = unstable echo, p = echo+1 fault, b = echo+faults (block only), w = weak no-return clear, x = unknown)
+[b5 scan] -550:4000w -495:4000w -440:4000w -385:4000w -330:4000w -275:4000w -220:4000w -192:4000w
+[b5 scan] -178:4000w -171:284 -165:283 -110:281 -55:280 0:280 55:280 110:281
+[b5 scan] 165:284 172:284 179:4000w 193:4000w 220:4000w 275:4000w 330:4000w 385:4000w
+[b5 scan] 440:4000w
+[b5 decision] side LEFT; found 1; confidence 36%; closest 280 mm at -55 dd; edges L/R -171/172 dd; at arc limit L/R 0/0; need 235 mm; lateral 317 mm; forward 720 mm
+[b5 evidence] measured 36%; coverage 100%; stable-return span 168 mm (provisional, not planning width); weak clearance YES (tentative, no-return rays)
+[b5 sweep] L: PASS_ASSUMED; weak 1; outline points 5670 (assumed 2970, weak 2583)
+[b5 sweep] R: PASS_ASSUMED; weak 1; outline points 5670 (assumed 3349, weak 2203)
+[b5 sweep] forward watch during the bypass sees ahead only; sides and rear during turns are not monitored
+scenario 7 (11.2 s simulated)
+missing motion estimate prevents bypass: PASS
+scenario 8 (5.8 s simulated)
+stop before planning prevents movement: PASS
+[b5 profile] observed span 131 mm; model allowance 52 mm; planning envelope 252 mm; evidence 0xcf; clearance L/R 447/260 mm
+[b5 scan] 25 samples (angle_dd:range_mm; suffix u = unstable echo, p = echo+1 fault, b = echo+faults (block only), w = weak no-return clear, x = unknown)
+[b5 scan] -550:4000w -495:4000w -440:4000w -385:4000w -330:4000w -302:4000w -288:4000w -281:139
+[b5 scan] -275:138 -220:134 -165:132 -110:130 -55:130 0:130 55:130 110:130
+[b5 scan] 165:132 220:134 275:138 282:139 289:4000w 303:4000w 330:4000w 385:4000w
+[b5 scan] 440:4000w
+[b5 decision] side NONE (stay stopped); found 1; confidence 52%; closest 130 mm at -110 dd; edges L/R -281/282 dd; at arc limit L/R 0/0; need 235 mm; lateral 0 mm; forward 570 mm
+[b5 evidence] measured 52%; coverage 100%; stable-return span 131 mm (provisional, not planning width); weak clearance no
+[b5 sweep] L: FAIL; weak 1; outline points 54 (assumed 43, weak 6); why measured return inside footprint at leg 1 (64, 122) mm
+[b5 sweep] R: FAIL; weak 1; outline points 54 (assumed 43, weak 6); why measured return inside footprint at leg 1 (-64, 122) mm
+[b5 sweep] forward watch during the bypass sees ahead only; sides and rear during turns are not monitored
+[b5 profile] observed span 168 mm; model allowance 86 mm; planning envelope 286 mm; evidence 0x3f; clearance L/R 599/357 mm
+[b5 scan] 25 samples (angle_dd:range_mm; suffix u = unstable echo, p = echo+1 fault, b = echo+faults (block only), w = weak no-return clear, x = unknown)
+[b5 scan] -550:4000w -495:4000w -440:4000w -385:4000w -330:4000w -275:4000w -220:4000w -192:4000w
+[b5 scan] -178:4000w -171:284 -165:283 -110:281 -55:280 0:280 55:280 110:281
+[b5 scan] 165:284 172:284 179:4000w 193:4000w 220:4000w 275:4000w 330:4000w 385:4000w
+[b5 scan] 440:4000w
+[b5 decision] side LEFT; found 1; confidence 36%; closest 280 mm at -55 dd; edges L/R -171/172 dd; at arc limit L/R 0/0; need 235 mm; lateral 317 mm; forward 720 mm
+[b5 evidence] measured 36%; coverage 100%; stable-return span 168 mm (provisional, not planning width); weak clearance YES (tentative, no-return rays)
+[b5 sweep] L: PASS_ASSUMED; weak 1; outline points 5670 (assumed 2970, weak 2583)
+[b5 sweep] R: PASS_ASSUMED; weak 1; outline points 5670 (assumed 3349, weak 2203)
+[b5 sweep] forward watch during the bypass sees ahead only; sides and rear during turns are not monitored
+scenario 9 (11.2 s simulated)
+lost bypass odometry stops/faults: PASS
+scenario 10 (0.3 s simulated)
+  states: Idle -> Guard -> Fault
+  fault reported: 1 (expected 1), shared fault mask 0x08, bad frames 0
+  PASS
+  plans sent: 0 (expected 0)
+scenario 11 (0.8 s simulated)
+  states: Idle -> Guard -> Confirm -> Halting -> Coarse Sweep -> Fault
+  fault reported: 1 (expected 1), shared fault mask 0x08, bad frames 0
+  PASS
+  plans sent: 0 (expected 0)
+scenario 12 (0.8 s simulated)
+  states: Idle -> Guard -> Confirm -> Halting -> Coarse Sweep -> Fault
+  fault reported: 1 (expected 1), shared fault mask 0x08, bad frames 0
+  PASS
+  plans sent: 0 (expected 0)
+[b5 profile] observed span 131 mm; model allowance 52 mm; planning envelope 252 mm; evidence 0xcf; clearance L/R 447/260 mm
+[b5 scan] 25 samples (angle_dd:range_mm; suffix u = unstable echo, p = echo+1 fault, b = echo+faults (block only), w = weak no-return clear, x = unknown)
+[b5 scan] -550:4000w -495:4000w -440:4000w -385:4000w -330:4000w -302:4000w -288:4000w -281:139
+[b5 scan] -275:138 -220:134 -165:132 -110:130 -55:130 0:130 55:130 110:130
+[b5 scan] 165:132 220:134 275:138 282:139 289:4000w 303:4000w 330:4000w 385:4000w
+[b5 scan] 440:4000w
+[b5 decision] side NONE (stay stopped); found 1; confidence 52%; closest 130 mm at -110 dd; edges L/R -281/282 dd; at arc limit L/R 0/0; need 235 mm; lateral 0 mm; forward 570 mm
+[b5 evidence] measured 52%; coverage 100%; stable-return span 131 mm (provisional, not planning width); weak clearance no
+[b5 sweep] L: FAIL; weak 1; outline points 54 (assumed 43, weak 6); why measured return inside footprint at leg 1 (64, 122) mm
+[b5 sweep] R: FAIL; weak 1; outline points 54 (assumed 43, weak 6); why measured return inside footprint at leg 1 (-64, 122) mm
+[b5 sweep] forward watch during the bypass sees ahead only; sides and rear during turns are not monitored
+[b5 profile] observed span 168 mm; model allowance 86 mm; planning envelope 286 mm; evidence 0x3f; clearance L/R 599/357 mm
+[b5 scan] 25 samples (angle_dd:range_mm; suffix u = unstable echo, p = echo+1 fault, b = echo+faults (block only), w = weak no-return clear, x = unknown)
+[b5 scan] -550:4000w -495:4000w -440:4000w -385:4000w -330:4000w -275:4000w -220:4000w -192:4000w
+[b5 scan] -178:4000w -171:284 -165:283 -110:281 -55:280 0:280 55:280 110:281
+[b5 scan] 165:284 172:284 179:4000w 193:4000w 220:4000w 275:4000w 330:4000w 385:4000w
+[b5 scan] 440:4000w
+[b5 decision] side LEFT; found 1; confidence 36%; closest 280 mm at -55 dd; edges L/R -171/172 dd; at arc limit L/R 0/0; need 235 mm; lateral 317 mm; forward 720 mm
+[b5 evidence] measured 36%; coverage 100%; stable-return span 168 mm (provisional, not planning width); weak clearance YES (tentative, no-return rays)
+[b5 sweep] L: PASS_ASSUMED; weak 1; outline points 5670 (assumed 2970, weak 2583)
+[b5 sweep] R: PASS_ASSUMED; weak 1; outline points 5670 (assumed 3349, weak 2203)
+[b5 sweep] forward watch during the bypass sees ahead only; sides and rear during turns are not monitored
+scenario 13 (11.2 s simulated)
+  states: Idle -> Guard -> Confirm -> Halting -> Coarse Sweep -> Edge Refinement -> Planning -> Blocked -> Halting -> Coarse Sweep -> Edge Refinement -> Planning -> Bypassing -> Recovering -> Guard -> Idle
+  fault reported: 0 (expected 0), shared fault mask 0x00, bad frames 0
+  PASS
+  reverses: 1 (expected 1), plans: 1 (expected 1)
+
+./test_nav
+start, line following, slow request
+obstacle: stop, bypass right, rejoin, release
+barcode turns: stop, spin slowly until the line is found
+line lost: search found, then search exhausted
+pause, resume, reset, emergency stop, Buddy 5 fault, timeout
+Buddy 3 direct steering: only while line control is granted
+minimum bits: packed inbox, telemetry frame, dropped count
+
+84 passed, 0 failed
+
+./test_safety
+emergency stop, fast drive-off
+reset after emergency stop
+critical fault, slow drive-off
+emergency stop during a fault keeps the fault
+warnings do not stop the car
+health monitoring
+minimum bits: frame, saturation, wrapping, fault mask
+
+36 passed, 0 failed

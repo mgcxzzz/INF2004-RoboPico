@@ -1,0 +1,121 @@
+cc -std=c11 -Wall -Wextra -Werror -O2 -Imock_b5 -I../../app_program/subsystem5 -I../../app_program/system -o test_b5_task \
+	    test_b5_task.c ../../app_program/subsystem5/task_obstacle.c ../../app_program/subsystem5/obstacle_profile.c \
+	    ../../app_program/subsystem5/b5_pack.c -lm
+./test_s3
+Code 39 table (checked against a reference encoder)
+the course barcodes from Barcode_Sample.pdf
+every character, 3:1 and 2:1 prints
+bad reads send no command
+noise: +-25 % on every element, 2000 random barcodes
+reader: edges timed by interrupt, placed by distance
+reader: the barcode ends only after a quiet zone
+line: steering, curve vs junction, lost, stuck
+telemetry frame (team schema, source 3)
+
+58 passed, 0 failed
+
+./test_s3_task
+start-up, mission start, line following
+course barcode *A* -> LEFT at the next junction, spin to line
+one barcode = one event, even with a stray mark after it
+half-size sample barcode *Z* (1.5 mm bars): read, not a command
+write-up table: C -> STRAIGHT, D -> U-TURN
+bad, backwards and unknown barcodes send nothing
+no distance from Motion Control: time widths at steady speed
+coordinator ignores an event (keeps control): resume anyway
+LEFT with no junction after it: dropped, never turns blind
+line lost while a RIGHT waits: normal LOST, command dropped
+junction, then line lost and found again
+pause, emergency stop, stuck sensor fault and reset
+lost interrupt edges abort the read and warn
+telemetry: 292 frames
+
+74 passed, 0 failed
+
+./test_b5_pack
+record sizes
+  sample 4, profile 32, plan 8, rejoin 8, status 44 bytes
+masks, shifts and sign extension
+scan samples clamp instead of wrapping
+16-bit net distance wraps safely (agreed with Buddy 2)
+echo result word (single writer: the ISR)
+binary telemetry frame (3-byte common header + 16-byte payload)
+
+43 passed, 0 failed
+
+./test_b5_profile
+trig and median
+no obstacle -> Planning returns to Guard
+width accuracy, refinement stops at alpha (Week 6 text)
+  worst width error 2.0 %, max refinement samples 12 (for comparison only)
+width accuracy, refinement stops at B5_REFINE_STOP_DD
+  worst width error 8.0 %, max refinement samples 6
+side choice (NFR-USO-03)
+obstacle wider than the scan arc -> blocked
+dead sensor -> low confidence
+
+95 passed, 0 failed
+./test_b5_navigation
+navigation profiler checks passed
+
+statechart scenarios
+[b5 profile] observed span 168 mm; model allowance 86 mm; planning envelope 286 mm; evidence 0xf; clearance L/R 599/599 mm
+scenario 1 (6.3 s simulated)
+  states: Idle -> Guard -> Confirm -> Halting -> Coarse Sweep -> Edge Refinement -> Planning -> Bypassing -> Recovering -> Guard -> Idle
+  fault reported: 0 (expected 0), shared fault mask 0x00, bad frames 0
+  PASS
+scenario 2 (0.3 s simulated)
+  states: Idle -> Guard -> Fault
+  fault reported: 1 (expected 1), shared fault mask 0x08, bad frames 0
+  PASS
+[b5 profile] observed span 801 mm; model allowance 134 mm; planning envelope 935 mm; evidence 0x1; clearance L/R 0/0 mm
+[b5 profile] observed span 801 mm; model allowance 134 mm; planning envelope 935 mm; evidence 0x1; clearance L/R 0/0 mm
+[b5 profile] observed span 801 mm; model allowance 134 mm; planning envelope 935 mm; evidence 0x1; clearance L/R 0/0 mm
+scenario 3 (13.9 s simulated)
+  states: Idle -> Guard -> Confirm -> Halting -> Coarse Sweep -> Edge Refinement -> Planning -> Blocked -> Halting -> Coarse Sweep -> Edge Refinement -> Planning -> Blocked -> Halting -> Coarse Sweep -> Edge Refinement -> Planning -> Blocked -> Fault
+  fault reported: 4 (expected 4), shared fault mask 0x80, bad frames 0
+  PASS
+  reverses: 2 (expected 2)
+[b5 profile] observed span 168 mm; model allowance 86 mm; planning envelope 286 mm; evidence 0xf; clearance L/R 599/599 mm
+scenario 4 (6.3 s simulated)
+  states: Idle -> Guard -> Confirm -> Halting -> Coarse Sweep -> Edge Refinement -> Planning -> Bypassing -> Recovering -> Fault
+  fault reported: 3 (expected 3), shared fault mask 0x80, bad frames 0
+  PASS
+[b5 profile] observed span 168 mm; model allowance 86 mm; planning envelope 286 mm; evidence 0xf; clearance L/R 599/599 mm
+scenario 5 (6.4 s simulated)
+  states: Idle -> Guard -> Confirm -> Halting -> Coarse Sweep -> Edge Refinement -> Planning -> Bypassing -> Recovering -> Guard -> Idle
+  fault reported: 0 (expected 0), shared fault mask 0x00, bad frames 0
+  PASS
+[b5 profile] observed span 0 mm; model allowance 0 mm; planning envelope 0 mm; evidence 0x0; clearance L/R 0/0 mm
+scenario 6 (4.9 s simulated)
+unknown scan stays stopped: PASS
+[b5 profile] observed span 168 mm; model allowance 86 mm; planning envelope 286 mm; evidence 0xf; clearance L/R 599/599 mm
+scenario 7 (6.3 s simulated)
+missing motion estimate prevents bypass: PASS
+scenario 8 (6.2 s simulated)
+stop before planning prevents movement: PASS
+[b5 profile] observed span 168 mm; model allowance 86 mm; planning envelope 286 mm; evidence 0xf; clearance L/R 599/599 mm
+scenario 9 (6.3 s simulated)
+lost bypass odometry stops/faults: PASS
+
+./test_nav
+start, line following, slow request
+obstacle: stop, bypass right, rejoin, release
+barcode turns: stop, spin slowly until the line is found
+line lost: search found, then search exhausted
+pause, resume, reset, emergency stop, Buddy 5 fault, timeout
+Buddy 3 direct steering: only while line control is granted
+minimum bits: packed inbox, telemetry frame, dropped count
+
+84 passed, 0 failed
+
+./test_safety
+emergency stop, fast drive-off
+reset after emergency stop
+critical fault, slow drive-off
+emergency stop during a fault keeps the fault
+warnings do not stop the car
+health monitoring
+minimum bits: frame, saturation, wrapping, fault mask
+
+36 passed, 0 failed

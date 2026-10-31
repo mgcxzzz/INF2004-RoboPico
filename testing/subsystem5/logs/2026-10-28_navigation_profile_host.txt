@@ -1,0 +1,12 @@
+navigation profiler checks passed
+trig and median
+no obstacle -> Planning returns to Guard
+width accuracy, refinement stops at alpha (Week 6 text)
+  worst width error 2.0 %, max refinement samples 12 (for comparison only)
+width accuracy, refinement stops at B5_REFINE_STOP_DD
+  worst width error 8.0 %, max refinement samples 6
+side choice (NFR-USO-03)
+obstacle wider than the scan arc -> blocked
+dead sensor -> low confidence
+
+95 passed, 0 failed

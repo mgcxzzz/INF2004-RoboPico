@@ -5,3 +5,6 @@ test_safety
 test_b5_pack
 test_s3
 test_s3_task
+test_b5_navigation
+test_b5_bench_replay
+test_b5_ruleb

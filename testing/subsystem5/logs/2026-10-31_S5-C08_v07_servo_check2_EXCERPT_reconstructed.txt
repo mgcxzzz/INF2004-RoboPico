@@ -1,0 +1,34 @@
+# RECONSTRUCTED EXCERPT, NOT THE RAW LOG.
+# The raw log 2026-10-31_S5-C08_v07_servo_check2.txt (scans 4-7) was overwritten to 0 bytes: screenlog.0 was renamed
+# while screen was still logging, and a later `mv screenlog.0 ...` replaced it. These lines were captured verbatim
+# (grep of [bench] scan / [b5 profile] / [b5 scan] / [b5 decision]) when the log was analysed at 22:20; [b5 raw],
+# [b5 evidence], [b5 sweep] and [b5 pings] lines of these scans are lost.
+# Placement: 4 = front-left, 5 = front-right, 6 and 7 = centre, object about 315 mm from the sensor.
+[bench] scan 4: v0.7 rule B; settle 40 ms, servo centre 1450 us, stop 150 mm, fall wait 250 ms
+[b5 profile] observed span 217 mm; model allowance 108 mm; planning envelope 325 mm; evidence 0xcf; clearance L/R 521/782 mm
+[b5 scan] -550:4000w -495:4000w -440:4000w -412:4000w -398:4000w -391:379 -385:367u -330:370
+[b5 scan] -275:354 -220:345 -165:345 -110:354 -55:358 -41:367 -34:367 -27:1065
+[b5 scan] 0:1060 55:1060u 110:1060 165:1060 220:1060 275:1066 330:1070 385:1079
+[b5 scan] 440:1088u 495:4000w 550:4000w
+[b5 decision] side NONE (stay stopped); found 1; confidence 74%; closest 345 mm at -220 dd; edges L/R -391/-34 dd; at arc limit L/R 0/0; need 255 mm; lateral 0 mm; forward 785 mm
+[bench] scan 5: v0.7 rule B; settle 40 ms, servo centre 1450 us, stop 150 mm, fall wait 250 ms
+[b5 profile] observed span 79 mm; model allowance 110 mm; planning envelope 310 mm; evidence 0xcf; clearance L/R 875/509 mm
+[b5 scan] -550:4000w -495:4000w -440:4000w -385:4000w -330:1096u -275:1075u -220:1069u -165:1082
+[b5 scan] -110:1070 -55:1069 0:1060 55:1064 110:1064 165:1060 220:1061u 227:374u
+[b5 scan] 234:374u 248:374u 275:374u 330:379 344:387u 351:387u 358:1084 385:1084u
+[b5 scan] 440:1101u 495:4000w 550:4000w
+[b5 decision] side NONE (stay stopped); found 1; confidence 77%; closest 374 mm at 227 dd; edges L/R 227/351 dd; at arc limit L/R 0/0; need 255 mm; lateral 0 mm; forward 814 mm
+[bench] scan 6: v0.7 rule B; settle 40 ms, servo centre 1450 us, stop 150 mm, fall wait 250 ms
+[b5 profile] observed span 231 mm; model allowance 106 mm; planning envelope 337 mm; evidence 0x8d; clearance L/R 0/576 mm
+[b5 scan] -550:611u -495:4000w -440:4000w -385:4000w -330:4000w -275:4000w -220:4000w -165:669u
+[b5 scan] -110:1082 -103:336 -96:348 -82:332 -55:339u 0:344 55:335 110:335
+[b5 scan] 165:336 220:340u 275:370u 282:1070 289:1074u 303:1070u 330:1074 385:1083u
+[b5 scan] 440:4000w 495:4000w 550:4000w
+[b5 decision] side NONE (stay stopped); found 1; confidence 66%; closest 332 mm at -82 dd; edges L/R -103/275 dd; at arc limit L/R 0/0; need 255 mm; lateral 0 mm; forward 772 mm
+[bench] scan 7: v0.7 rule B; settle 40 ms, servo centre 1450 us, stop 150 mm, fall wait 250 ms
+[b5 profile] observed span 263 mm; model allowance 106 mm; planning envelope 369 mm; evidence 0x01; clearance L/R 0/0 mm
+[b5 scan] -550:657u -495:4000w -440:4000w -385:4000w -330:4000w -275:4000w -220:715u -165:664u
+[b5 scan] -158:369 -151:361u -137:352u -110:344 -55:335 0:335 55:335 110:335
+[b5 scan] 165:336u 220:344 248:353 262:370u 269:667u 275:680u 330:1074u 385:1083u
+[b5 scan] 440:4000w 495:4000w 550:4000w
+[b5 decision] side NONE (stay stopped); found 1; confidence 70%; closest 335 mm at -55 dd; edges L/R -158/262 dd; at arc limit L/R 0/0; need 255 mm; lateral 0 mm; forward 775 mm

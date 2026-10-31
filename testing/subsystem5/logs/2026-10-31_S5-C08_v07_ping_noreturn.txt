@@ -1,0 +1,33 @@
+
+=== Buddy 5 profile bench v0.7 (rule B: echo / no-return / fault; swept footprint) (wheels never driven) ===
+  a  auto: guard/confirm below 150 mm, then scan + plan (any key leaves)
+  s  one scan + plan now          p  one ping straight ahead (class, width, rise latency)
+  c  centre servo                 , .  servo centre trim -/+5 us (now 1450 us)
+  m  settle time 40 <-> 80 ms (now 40 ms)
+  w  fall wait 100 <-> 250 ms (now 100 ms; 250 = diagnostic only, to measure the no-target pulse)
+  i  inject for the NEXT scan only: stuck-high -> no-rise -> off (now off)
+  [ / ]  hold at the LEFT (-55) / RIGHT (+55) end for angle calibration
+  1 / 5 / 3  auto stop distance 110 / 150 / 150 mm (now 150 mm; bench only)
+  h  this help
+Angles: - = left, + = right. Gap test = car 155 + 2 x 50 mm; footprint check uses pivot-to-front 150 mm (ASSUMED).
+ping: NO_RETURN NR; width 58997 us; range 4000 mm; pre-trigger low wait 1 us; rise latency 198 us; short pulses 0
+ping: NO_RETURN NR; width 58996 us; range 4000 mm; pre-trigger low wait 1 us; rise latency 198 us; short pulses 0
+ping: NO_RETURN NR; width 59000 us; range 4000 mm; pre-trigger low wait 0 us; rise latency 198 us; short pulses 0
+ping: NO_RETURN NR; width 58996 us; range 4000 mm; pre-trigger low wait 0 us; rise latency 198 us; short pulses 0
+ping: NO_RETURN NR; width 58997 us; range 4000 mm; pre-trigger low wait 0 us; rise latency 198 us; short pulses 0
+ping: NO_RETURN NR; width 59000 us; range 4000 mm; pre-trigger low wait 1 us; rise latency 198 us; short pulses 0
+ping: NO_RETURN NR; width 59001 us; range 4000 mm; pre-trigger low wait 0 us; rise latency 198 us; short pulses 0
+ping: NO_RETURN NR; width 59001 us; range 4000 mm; pre-trigger low wait 0 us; rise latency 198 us; short pulses 0
+ping: NO_RETURN NR; width 58996 us; range 4000 mm; pre-trigger low wait 0 us; rise latency 198 us; short pulses 0
+ping: NO_RETURN NR; width 59002 us; range 4000 mm; pre-trigger low wait 1 us; rise latency 198 us; short pulses 0
+fall wait 250 ms (diagnostic)
+ping: NO_RETURN NR; width 58994 us; range 4000 mm; pre-trigger low wait 0 us; rise latency 198 us; short pulses 0
+ping: NO_RETURN NR; width 59001 us; range 4000 mm; pre-trigger low wait 0 us; rise latency 198 us; short pulses 0
+ping: NO_RETURN NR; width 59002 us; range 4000 mm; pre-trigger low wait 1 us; rise latency 199 us; short pulses 0
+ping: NO_RETURN NR; width 58998 us; range 4000 mm; pre-trigger low wait 0 us; rise latency 198 us; short pulses 0
+ping: NO_RETURN NR; width 59002 us; range 4000 mm; pre-trigger low wait 0 us; rise latency 198 us; short pulses 0
+ping: NO_RETURN NR; width 59003 us; range 4000 mm; pre-trigger low wait 0 us; rise latency 199 us; short pulses 0
+ping: NO_RETURN NR; width 59003 us; range 4000 mm; pre-trigger low wait 0 us; rise latency 198 us; short pulses 0
+ping: NO_RETURN NR; width 59002 us; range 4000 mm; pre-trigger low wait 0 us; rise latency 198 us; short pulses 0
+ping: NO_RETURN NR; width 58998 us; range 4000 mm; pre-trigger low wait 0 us; rise latency 198 us; short pulses 0
+ping: NO_RETURN NR; width 58997 us; range 4000 mm; pre-trigger low wait 0 us; rise latency 198 us; short pulses 0

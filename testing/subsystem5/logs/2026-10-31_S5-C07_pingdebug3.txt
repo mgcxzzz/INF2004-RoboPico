@@ -1,0 +1,75 @@
+
+
+microT-Kernel Version 3.00
+
+
+=== micro T-Kernel on Raspberry Pi Pico W (spec 0x6300, product 0x0003) ===
+dual-core (SMP) build, usermain on core 0
+[safety] Normal
+[safety] drive off 0 ms after the stop (worst 0 ms, limit 100)
+all subsystems started
+
+[nav] Ready, motion owner: none
+[bench] GP20 button = emergency stop, GP21 = reset and start
+monitor: I am task 9
+[bench] simulated car follows the line at 150 mm/s
+[b5]  Idle  (range 0 mm)
+monitor: batch  n=5 last=40 from core 1
+monitor: t=3355771096 ms  samples=5  min=0 max=40 avg=20  free slots=4  free blocks=4
+monitor: batch  n=10 last=90 from core 1
+monitor: t=3355772646 ms  samples=10  min=0 max=90 avg=45  free slots=4  free blocks=4
+[bench] starting a run
+[nav] Running, motion owner: line
+[b5]  Guard  (range 0 mm)
+[poll] seq 1 echo lvl at start 0 (trig 0); rise@+0 us fall@+0 us width 0 us -> 0 mm
+monitor: batch  n=15 last=60 from core 1
+monitor: t=3355774196 ms  samples=15  min=0 max=100 avg=56  free slots=4  free blocks=4
+[ping] seq 1 NO-RISE; edges r0 f0 short0
+[poll] seq 2 echo lvl at start 0 (trig 0); rise@+0 us fall@+0 us width 0 us -> 0 mm
+[ping] seq 2 NO-RISE; edges r0 f0 short0
+monitor: batch  n=20 last=10 from core 1
+monitor: t=3355775746 ms  samples=20  min=0 max=100 avg=50  free slots=4  free blocks=4
+[poll] seq 3 echo lvl at start 0 (trig 0); rise@+0 us fall@+0 us width 0 us -> 0 mm
+[ping] seq 3 NO-RISE; edges r0 f0 short0
+[b5]  Fault  (range 0 mm)
+[safety] Fault, motor drive inhibited
+[nav] Fault, motion owner: none
+[safety] fault from source 4, code 0x1
+[safety] shared fault mask 0x08
+monitor: batch  n=25 last=40 from core 1
+monitor: t=3355777296 ms  samples=25  min=0 max=100 avg=44  free slots=4  free blocks=4
+monitor: batch  n=30 last=90 from core 1
+monitor: t=3355778846 ms  samples=30  min=0 max=100 avg=48  free slots=4  free blocks=4
+monitor: LED task paused, state=WAIT+SUSPEND, pri=13
+monitor: batch  n=35 last=60 from core 1
+monitor: t=3355780396 ms  samples=35  min=0 max=100 avg=52  free slots=4  free blocks=4
+monitor: batch  n=40 last=10 from core 1
+monitor: t=3355781946 ms  samples=40  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=45 last=40 from core 1
+monitor: t=3355783496 ms  samples=45  min=0 max=100 avg=46  free slots=4  free blocks=4
+monitor: batch  n=50 last=90 from core 1
+monitor: t=3355785046 ms  samples=50  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=55 last=60 from core 1
+monitor: t=3355786596 ms  samples=55  min=0 max=100 avg=51  free slots=4  free blocks=4
+monitor: batch  n=60 last=10 from core 1
+monitor: t=3355788146 ms  samples=60  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: LED task resumed, state=RUN, pri=12
+monitor: batch  n=65 last=40 from core 1
+monitor: t=3355789696 ms  samples=65  min=0 max=100 avg=47  free slots=4  free blocks=4
+monitor: batch  n=70 last=90 from core 1
+monitor: t=3355791246 ms  samples=70  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: batch  n=75 last=60 from core 1
+monitor: t=3355792796 ms  samples=75  min=0 max=100 avg=51  free slots=4  free blocks=4
+monitor: batch  n=80 last=10 from core 1
+monitor: t=3355794346 ms  samples=80  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=85 last=40 from core 1
+monitor: t=3355795896 ms  samples=85  min=0 max=100 avg=48  free slots=4  free blocks=4
+monitor: batch  n=90 last=90 from core 1
+monitor: t=3355797446 ms  samples=90  min=0 max=100 avg=49  free slots=4  free blocks=4
+monitor: LED task paused, state=WAIT+SUSPEND, pri=13
+monitor: batch  n=95 last=60 from core 1
+monitor: t=3355798996 ms  samples=95  min=0 max=100 avg=51  free slots=4  free blocks=4
+monitor: batch  n=100 last=10 from core 1
+monitor: t=3355800546 ms  samples=100  min=0 max=100 avg=50  free slots=4  free blocks=4
+monitor: batch  n=105 last=40 from core 1
+monitor: t=3355802096 ms  samples=105  min=0 max=100 avg=48  free slots=4  free blocks=4

@@ -74,9 +74,21 @@ EXPORT void subsystem5_test(void)
 	b5_build_profile(&scan, &par, &prof);
 	TEST_CHECK("S5-U02", prof.b_found && (prof.width_mm >= 90)
 			  && (prof.width_mm <= 110),
-		   "100 mm obstacle measured within 10 % (NFR-USO-02)");
+		   "legacy synthetic beam model only; not physical width accuracy");
 	TEST_CHECK("S5-U03", prof.side != B5_SIDE_NONE,
-		   "open both sides: a bypass side is chosen");
+		   "legacy synthetic side-selection regression");
+
+    b5_scan_clear(&scan);
+    for (INT angle=B5_SCAN_START_DD; angle<=B5_SCAN_END_DD; angle+=B5_SCAN_STEP_DD)
+        (void)b5_scan_add(&scan,(int16_t)angle,(angle>=-165 && angle<=165)?300:2000,true);
+    par.alpha_dd=0;
+    b5_build_navigation_profile(&scan,&par,&prof);
+    TEST_CHECK("S5-U17",prof.b_found && prof.planning_width_mm>=B5_EXPECTED_MAX_WIDTH_MM &&
+               prof.span_uncertainty_mm>0,"conservative navigation envelope; hardware accuracy pending");
+    b5_scan_clear(&scan);
+    (void)b5_scan_add(&scan,0,300,true);
+    b5_build_navigation_profile(&scan,&par,&prof);
+    TEST_CHECK("S5-U18",prof.side==B5_SIDE_NONE,"isolated hit cannot establish safe clearance");
 
 	/* --- minimum-bit representation (Tribunal 1) ---------------------- */
 	tin = (b5_tlm_t){ 0 };

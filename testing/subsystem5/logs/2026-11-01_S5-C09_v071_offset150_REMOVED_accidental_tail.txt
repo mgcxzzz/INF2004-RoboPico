@@ -1,0 +1,4 @@
+# Removed from 2026-11-01_S5-C09_v071_offset150.txt at the operator's request: accidental key presses after scan 18
+# (settle toggled to 80 ms and an unfinished scan 19). Not part of the test.
+settle 80 ms
+[bench] scan 19: v0.7.1 rule B, sweep -550..440 dd; settle 80 ms, servo centre 1450 us, stop 150 mm, fall wait 100 ms

@@ -1,0 +1,3 @@
+cc -std=c11 -Wall -Wextra -Werror -O2 -Imock_b5 -I../../app_program/subsystem5 -I../../app_program/system -o test_b5_task \
+	    test_b5_task.c ../../app_program/subsystem5/task_obstacle.c ../../app_program/subsystem5/obstacle_profile.c \
+	    ../../app_program/subsystem5/b5_pack.c -lm

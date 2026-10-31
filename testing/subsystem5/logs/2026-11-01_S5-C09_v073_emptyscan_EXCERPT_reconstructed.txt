@@ -1,0 +1,4 @@
+# RECONSTRUCTED EXCERPT, NOT THE RAW LOG (raw screenlog was overwritten by the next run before it was saved).
+# Lines captured verbatim when analysed live, 03:05. Scan 1 = no box; scan 2 = box put back (read ~300 mm).
+SCAN 1: [clearance L/R 0/0] -550:4000w -495:4000w -440:4000w -385:4000w -330:4000w -275:4000w -220:4000w -165:1021u -110:1030u -55:2023u 0:4000w 55:2036u 110:4000w 165:4000w 220:4000w 275:4000w 330:4000w 385:4000w 440:4000w
+SCAN 2: [clearance L/R 259/386] -550:4000w -495:4000w -440:4000w -385:4000w -330:4000w -302:4000w -288:4000w -281:4000w -275:418 -220:405 -165:322 -110:313 -55:308 -27:293u -13:297u -6:4000w 0:4000w 55:4000w 62:4000w 69:302 83:310u 110:318u 117:323u 124:4000w 138:4000w 165:4000w 220:4000w 275:4000w 330:4000w 385:4000w 440:4000w

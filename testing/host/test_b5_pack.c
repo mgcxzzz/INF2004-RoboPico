@@ -30,7 +30,7 @@ test_sizes (void)
 {
     printf("record sizes\n");
     CHECK(sizeof(b5_sample_t) == 4U, "sample %zu bytes", sizeof(b5_sample_t));
-    CHECK(sizeof(b5_profile_t) <= 28U, "profile %zu bytes",
+    CHECK(sizeof(b5_profile_t) <= 32U, "profile %zu bytes",
           sizeof(b5_profile_t));
     CHECK(sizeof(b5_plan_t) <= 8U, "plan %zu bytes", sizeof(b5_plan_t));
     CHECK(sizeof(b5_rejoin_t) <= 8U, "rejoin %zu bytes", sizeof(b5_rejoin_t));

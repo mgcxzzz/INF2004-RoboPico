@@ -1,0 +1,164 @@
+
+=== Buddy 5 profile bench v0.2 (real obstacle_profile.c; wheels never driven) ===
+  a  auto: guard/confirm below 300 mm, then scan + plan (any key leaves)
+  s  one scan + plan now          p  one ping straight ahead
+  c  centre servo                 , .  servo centre trim -/+5 us (now 1450 us)
+  m  settle time 40 <-> 80 ms (now 40 ms)
+  h  this help
+Angles: - = left, + = right. Needed side clearance = car 155 + 2 x 50 mm.
+[b5]  Guard (auto: stop below 300 mm; any key = leave)
+[b5]  Confirm (range 298 mm)
+[b5]  Halting (range 283 mm)
+[bench] scan 1: settle 40 ms, servo centre 1450 us
+[b5 profile] observed span 157 mm; model allowance 84 mm; planning envelope 284 mm; evidence 0x1; clearance L/R 0/0 mm
+[b5 scan] 22 samples (angle_dd:range_mm, x = no valid echo)
+[b5 scan] -550:4000 -495:4000 -440:4000 -385:4000 -330:4000x -275:4000x -220:281 -165:273
+[b5 scan] -110:268 -55:268 0:269 55:265 110:274 138:696x 165:655 220:661
+[b5 scan] 275:692 330:678 385:693x 440:4000 495:885x 550:823x
+[b5 decision] side NONE (stay stopped); found 1; confidence 72%; closest 265 mm at 55 dd; edges L/R -220/110 dd; at arc limit L/R 0/0; need 255 mm; lateral 0 mm; forward 705 mm
+[b5]  obstacle 157 mm wide at 265 mm, go nowhere (would stay stopped)
+[b5 alt] rule: unstable triplet = occupied at its nearest reading (comparison only)
+[b5 profile alt] observed span 172 mm; model allowance 84 mm; planning envelope 284 mm; evidence 0xb; clearance L/R 564/0 mm
+[b5 scan alt] 22 samples (angle_dd:range_mm, x = no valid echo)
+[b5 scan alt] -550:4000 -495:4000 -440:4000 -385:4000 -330:1181 -275:1177 -220:281 -165:273
+[b5 scan alt] -110:268 -55:268 0:269 55:265 110:274 138:279 165:655 220:661
+[b5 scan alt] 275:692 330:678 385:683 440:4000 495:725 550:729
+[b5 decision alt] side LEFT; found 1; confidence 100%; closest 265 mm at 55 dd; edges L/R -220/138 dd; at arc limit L/R 0/0; need 255 mm; lateral 288 mm; forward 705 mm
+[b5 alt]  obstacle 172 mm wide at 265 mm, go left
+[b5 raw] pings per angle (mm, -1 = no response; (n) responses):
+[b5 raw] -550:4000/4000/4000(3)  -495:4000/4000/4000(3)  -440:4000/4000/4000(3)  -385:4000/4000/4000(3)  -330:1181/4000/4000(3)  -275:4000/4000/1177(3)
+[b5 raw] -220:281/281/277(3)  -165:273/273/273(3)  -110:268/273/268(3)  -55:268/268/268(3)  0:265/269/269(3)  55:274/265/265(3)
+[b5 raw] 110:274/274/274(3)  165:655/651/664(3)  220:664/661/656(3)  275:680/692/696(3)  330:671/681/678(3)  385:683/693/716(3)
+[b5 raw] 440:4000/4000/4000(3)  495:725/885/4000(3)  550:4000/823/729(3)  138:279/719/696(3)
+[bench] scan took 4518 ms
+[bench] remove the obstacle; re-arms after 1 s clear
+[b5]  Guard (re-armed)
+[b5]  Confirm (range 269 mm)
+[b5]  Halting (range 249 mm)
+[bench] scan 2: settle 40 ms, servo centre 1450 us
+[b5 profile] observed span 210 mm; model allowance 82 mm; planning envelope 292 mm; evidence 0x5; clearance L/R 0/54 mm
+[b5 scan] 24 samples (angle_dd:range_mm, x = no valid echo)
+[b5 scan] -550:898x -495:971x -440:4000x -385:4000 -330:285x -275:267 -220:267 -165:258
+[b5 scan] -110:258 -55:250 0:254 55:254 110:267 165:272 179:268 186:272
+[b5 scan] 193:4000 220:799 275:4000x 330:4000x 385:4000x 440:4000 495:4000x 550:4000
+[b5 decision] side NONE (stay stopped); found 1; confidence 66%; closest 250 mm at -55 dd; edges L/R -275/186 dd; at arc limit L/R 0/0; need 255 mm; lateral 0 mm; forward 690 mm
+[b5]  obstacle 210 mm wide at 250 mm, go nowhere (would stay stopped)
+[b5 alt] rule: unstable triplet = occupied at its nearest reading (comparison only)
+[b5 profile alt] observed span 235 mm; model allowance 82 mm; planning envelope 317 mm; evidence 0x5; clearance L/R 0/178 mm
+[b5 scan alt] 24 samples (angle_dd:range_mm, x = no valid echo)
+[b5 scan alt] -550:896 -495:912 -440:850 -385:4000 -330:272 -275:267 -220:267 -165:258
+[b5 scan alt] -110:258 -55:250 0:254 55:254 110:267 165:272 179:268 186:272
+[b5 scan alt] 193:4000 220:799 275:821 330:791 385:789 440:4000 495:778 550:4000
+[b5 decision alt] side NONE (stay stopped); found 1; confidence 100%; closest 250 mm at -55 dd; edges L/R -330/186 dd; at arc limit L/R 0/0; need 255 mm; lateral 0 mm; forward 690 mm
+[b5 alt]  obstacle 235 mm wide at 250 mm, go nowhere (would stay stopped)
+[b5 raw] pings per angle (mm, -1 = no response; (n) responses):
+[b5 raw] -550:898/4000/896(3)  -495:971/912/4000(3)  -440:850/4000/4000(3)  -385:4000/4000/4000(3)  -330:285/272/4000(3)  -275:275/267/267(3)
+[b5 raw] -220:258/267/267(3)  -165:258/254/258(3)  -110:258/258/258(3)  -55:250/250/254(3)  0:254/254/254(3)  55:254/254/254(3)
+[b5 raw] 110:267/267/267(3)  165:268/272/272(3)  220:799/808/799(3)  275:4000/4000/821(3)  330:4000/4000/791(3)  385:4000/4000/789(3)
+[b5 raw] 440:4000/4000/4000(3)  495:4000/778/4000(3)  550:4000/4000/4000(3)  193:4000/4000/4000(3)  179:272/268/268(3)  186:268/272/272(3)
+[bench] scan took 4894 ms
+[bench] remove the obstacle; re-arms after 1 s clear
+[b5]  Guard (re-armed)
+[b5]  Confirm (range 239 mm)
+[b5]  Halting (range 244 mm)
+[bench] scan 3: settle 40 ms, servo centre 1450 us
+[b5 profile] observed span 195 mm; model allowance 86 mm; planning envelope 286 mm; evidence 0xb; clearance L/R 527/0 mm
+[b5 scan] 24 samples (angle_dd:range_mm, x = no valid echo)
+[b5 scan] -550:4000 -495:4000 -440:4000 -385:4000 -330:4000 -316:4000 -309:4000 -302:286
+[b5 scan] -275:265 -220:257 -165:261 -110:257 -55:257 0:257 55:257 110:265
+[b5 scan] 165:270x 220:811x 275:794 330:803x 385:789x 440:912x 495:917x 550:925x
+[b5 decision] side LEFT; found 1; confidence 70%; closest 257 mm at -220 dd; edges L/R -302/110 dd; at arc limit L/R 0/0; need 255 mm; lateral 316 mm; forward 697 mm
+[b5]  obstacle 195 mm wide at 257 mm, go left
+[b5 alt] rule: unstable triplet = occupied at its nearest reading (comparison only)
+[b5 profile alt] observed span 220 mm; model allowance 86 mm; planning envelope 306 mm; evidence 0xf; clearance L/R 529/116 mm
+[b5 scan alt] 24 samples (angle_dd:range_mm, x = no valid echo)
+[b5 scan alt] -550:4000 -495:4000 -440:4000 -385:4000 -330:4000 -316:4000 -309:4000 -302:286
+[b5 scan alt] -275:265 -220:257 -165:261 -110:257 -55:257 0:257 55:257 110:265
+[b5 scan alt] 165:266 220:804 275:794 330:773 385:764 440:898 495:772 550:924
+[b5 decision alt] side LEFT; found 1; confidence 100%; closest 257 mm at -220 dd; edges L/R -302/165 dd; at arc limit L/R 0/0; need 255 mm; lateral 314 mm; forward 697 mm
+[b5 alt]  obstacle 220 mm wide at 257 mm, go left
+[b5 raw] pings per angle (mm, -1 = no response; (n) responses):
+[b5 raw] -550:4000/4000/4000(3)  -495:4000/4000/4000(3)  -440:4000/4000/4000(3)  -385:4000/4000/4000(3)  -330:4000/4000/4000(3)  -275:269/265/265(3)
+[b5 raw] -220:265/256/257(3)  -165:257/261/261(3)  -110:257/257/256(3)  -55:257/257/257(3)  0:257/256/257(3)  55:257/257/257(3)
+[b5 raw] 110:265/269/265(3)  165:266/270/810(3)  220:804/811/828(3)  275:793/805/794(3)  330:803/812/773(3)  385:789/764/840(3)
+[b5 raw] 440:898/912/951(3)  495:917/772/4000(3)  550:925/924/4000(3)  -302:269/286/286(3)  -316:4000/4000/4000(3)  -309:4000/4000/4000(3)
+[bench] scan took 5056 ms
+[bench] remove the obstacle; re-arms after 1 s clear
+[b5]  Guard (re-armed)
+[b5]  Confirm (range 272 mm)
+[b5]  Halting (range 280 mm)
+[bench] scan 4: settle 40 ms, servo centre 1450 us
+[b5 profile] observed span 175 mm; model allowance 82 mm; planning envelope 282 mm; evidence 0x1; clearance L/R 0/0 mm
+[b5 scan] 21 samples (angle_dd:range_mm, x = no valid echo)
+[b5 scan] -550:4000 -495:4000 -440:4000 -385:4000 -330:1063 -275:1037x -220:268 -165:255
+[b5 scan] -110:255 -55:251 0:255 55:255 110:256 165:264 220:365x 275:641x
+[b5 scan] 330:624 385:687 440:696x 495:686x 550:852x
+[b5 decision] side NONE (stay stopped); found 1; confidence 71%; closest 251 mm at -55 dd; edges L/R -220/165 dd; at arc limit L/R 0/0; need 255 mm; lateral 0 mm; forward 691 mm
+[b5]  obstacle 175 mm wide at 251 mm, go nowhere (would stay stopped)
+[b5 alt] rule: unstable triplet = occupied at its nearest reading (comparison only)
+[b5 profile alt] observed span 235 mm; model allowance 86 mm; planning envelope 321 mm; evidence 0xb; clearance L/R 534/0 mm
+[b5 scan alt] 21 samples (angle_dd:range_mm, x = no valid echo)
+[b5 scan alt] -550:4000 -495:4000 -440:4000 -385:4000 -330:1063 -275:285 -220:268 -165:255
+[b5 scan alt] -110:255 -55:251 0:255 55:255 110:256 165:264 220:274 275:610
+[b5 scan alt] 330:624 385:687 440:685 495:672 550:698
+[b5 decision alt] side LEFT; found 1; confidence 100%; closest 251 mm at -55 dd; edges L/R -275/220 dd; at arc limit L/R 0/0; need 255 mm; lateral 302 mm; forward 691 mm
+[b5 alt]  obstacle 235 mm wide at 251 mm, go left
+[b5 raw] pings per angle (mm, -1 = no response; (n) responses):
+[b5 raw] -550:4000/4000/4000(3)  -495:4000/4000/4000(3)  -440:4000/4000/4000(3)  -385:4000/4000/4000(3)  -330:1067/1054/1063(3)  -275:1059/1037/285(3)
+[b5 raw] -220:268/259/268(3)  -165:255/255/255(3)  -110:255/255/255(3)  -55:251/251/251(3)  0:255/255/255(3)  55:255/259/255(3)
+[b5 raw] 110:260/256/256(3)  165:260/264/264(3)  220:274/623/365(3)  275:698/610/641(3)  330:624/613/628(3)  385:686/688/687(3)
+[b5 raw] 440:685/696/718(3)  495:672/686/702(3)  550:852/858/698(3)
+[bench] scan took 4217 ms
+[bench] remove the obstacle; re-arms after 1 s clear
+[b5]  Guard (re-armed)
+[b5]  Confirm (range 273 mm)
+[b5]  Halting (range 271 mm)
+[bench] scan 5: settle 40 ms, servo centre 1450 us
+[b5 profile] observed span 177 mm; model allowance 82 mm; planning envelope 282 mm; evidence 0x1; clearance L/R 0/0 mm
+[b5 scan] 21 samples (angle_dd:range_mm, x = no valid echo)
+[b5 scan] -550:4000 -495:4000 -440:4000 -385:4000 -330:4000x -275:1042x -220:266 -165:257
+[b5 scan] -110:253 -55:253 0:253 55:257 110:258 165:271 220:862x 275:871x
+[b5 scan] 330:913x 385:822x 440:847x 495:864x 550:4000x
+[b5 decision] side NONE (stay stopped); found 1; confidence 57%; closest 253 mm at -110 dd; edges L/R -220/165 dd; at arc limit L/R 0/0; need 255 mm; lateral 0 mm; forward 693 mm
+[b5]  obstacle 177 mm wide at 253 mm, go nowhere (would stay stopped)
+[b5 alt] rule: unstable triplet = occupied at its nearest reading (comparison only)
+[b5 profile alt] observed span 208 mm; model allowance 86 mm; planning envelope 294 mm; evidence 0xf; clearance L/R 537/187 mm
+[b5 scan alt] 21 samples (angle_dd:range_mm, x = no valid echo)
+[b5 scan alt] -550:4000 -495:4000 -440:4000 -385:4000 -330:1055 -275:283 -220:266 -165:257
+[b5 scan alt] -110:253 -55:253 0:253 55:257 110:258 165:271 220:836 275:815
+[b5 scan alt] 330:801 385:813 440:821 495:842 550:843
+[b5 decision alt] side LEFT; found 1; confidence 100%; closest 253 mm at -110 dd; edges L/R -275/165 dd; at arc limit L/R 0/0; need 255 mm; lateral 301 mm; forward 693 mm
+[b5 alt]  obstacle 208 mm wide at 253 mm, go left
+[b5 raw] pings per angle (mm, -1 = no response; (n) responses):
+[b5 raw] -550:4000/4000/4000(3)  -495:4000/4000/4000(3)  -440:4000/4000/4000(3)  -385:4000/4000/4000(3)  -330:4000/1055/4000(3)  -275:1071/1042/283(3)
+[b5 raw] -220:266/266/266(3)  -165:257/257/257(3)  -110:253/253/253(3)  -55:253/253/253(3)  0:253/253/253(3)  55:257/257/257(3)
+[b5 raw] 110:254/258/258(3)  165:267/271/271(3)  220:862/836/4000(3)  275:4000/871/815(3)  330:801/957/913(3)  385:4000/822/813(3)
+[b5 raw] 440:847/849/821(3)  495:842/864/4000(3)  550:4000/4000/843(3)
+[bench] scan took 4330 ms
+[bench] remove the obstacle; re-arms after 1 s clear
+[b5]  Guard (re-armed)
+[b5]  Confirm (range 296 mm)
+[b5]  Halting (range 273 mm)
+[bench] scan 6: settle 40 ms, servo centre 1450 us
+[b5 profile] observed span 155 mm; model allowance 84 mm; planning envelope 284 mm; evidence 0x1; clearance L/R 0/0 mm
+[b5 scan] 21 samples (angle_dd:range_mm, x = no valid echo)
+[b5 scan] -550:4000 -495:4000 -440:4000 -385:4000 -330:1067x -275:1050x -220:287x -165:270
+[b5 scan] -110:254 -55:258 0:258 55:267 110:275 165:276 220:907x 275:870x
+[b5 scan] 330:840x 385:882x 440:829x 495:841x 550:4000x
+[b5 decision] side NONE (stay stopped); found 1; confidence 52%; closest 254 mm at -110 dd; edges L/R -165/165 dd; at arc limit L/R 0/0; need 255 mm; lateral 0 mm; forward 694 mm
+[b5]  obstacle 155 mm wide at 254 mm, go nowhere (would stay stopped)
+[b5 alt] rule: unstable triplet = occupied at its nearest reading (comparison only)
+[b5 profile alt] observed span 183 mm; model allowance 84 mm; planning envelope 284 mm; evidence 0xf; clearance L/R 557/105 mm
+[b5 scan alt] 21 samples (angle_dd:range_mm, x = no valid echo)
+[b5 scan alt] -550:4000 -495:4000 -440:4000 -385:4000 -330:1050 -275:1042 -220:279 -165:270
+[b5 scan alt] -110:254 -55:258 0:258 55:267 110:275 165:276 220:871 275:862
+[b5 scan alt] 330:748 385:839 440:828 495:675 550:823
+[b5 decision alt] side LEFT; found 1; confidence 100%; closest 254 mm at -110 dd; edges L/R -220/165 dd; at arc limit L/R 0/0; need 255 mm; lateral 282 mm; forward 694 mm
+[b5 alt]  obstacle 183 mm wide at 254 mm, go left
+[b5 raw] pings per angle (mm, -1 = no response; (n) responses):
+[b5 raw] -550:4000/4000/4000(3)  -495:4000/4000/4000(3)  -440:4000/4000/4000(3)  -385:4000/4000/4000(3)  -330:1067/4000/1050(3)  -275:1042/1050/1067(3)
+[b5 raw] -220:300/279/287(3)  -165:270/258/270(3)  -110:254/258/254(3)  -55:258/258/258(3)  0:258/258/267(3)  55:258/267/267(3)
+[b5 raw] 110:271/275/280(3)  165:272/276/276(3)  220:1086/871/907(3)  275:870/862/905(3)  330:994/748/840(3)  385:4000/882/839(3)
+[b5 raw] 440:828/829/872(3)  495:675/4000/841(3)  550:4000/823/4000(3)
+[bench] scan took 4267 ms
+[bench] remove the obstacle; re-arms after 1 s clear

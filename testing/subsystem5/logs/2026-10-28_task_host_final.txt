@@ -1,0 +1,60 @@
+Initial scenarios6/8 failed harness assumptions: Idle intentionally releases ownership; Blocked may remain stopped waiting. Production behaviour was safe. Expectations corrected, no production relaxation.
+scenario 1
+[b5 profile] observed span 168 mm; model allowance 86 mm; planning envelope 286 mm; evidence 0xf; clearance L/R 275/275 mm
+scenario 1 (6.3 s simulated)
+  states: Idle -> Guard -> Confirm -> Halting -> Coarse Sweep -> Edge Refinement -> Planning -> Bypassing -> Recovering -> Guard -> Idle
+  fault reported: 0 (expected 0), shared fault mask 0x00, bad frames 0
+  PASS
+
+EXIT 0
+scenario 2
+scenario 2 (0.3 s simulated)
+  states: Idle -> Guard -> Fault
+  fault reported: 1 (expected 1), shared fault mask 0x08, bad frames 0
+  PASS
+
+EXIT 0
+scenario 3
+[b5 profile] observed span 801 mm; model allowance 134 mm; planning envelope 935 mm; evidence 0x1; clearance L/R 0/0 mm
+[b5 profile] observed span 801 mm; model allowance 134 mm; planning envelope 935 mm; evidence 0x1; clearance L/R 0/0 mm
+[b5 profile] observed span 801 mm; model allowance 134 mm; planning envelope 935 mm; evidence 0x1; clearance L/R 0/0 mm
+scenario 3 (13.9 s simulated)
+  states: Idle -> Guard -> Confirm -> Halting -> Coarse Sweep -> Edge Refinement -> Planning -> Blocked -> Halting -> Coarse Sweep -> Edge Refinement -> Planning -> Blocked -> Halting -> Coarse Sweep -> Edge Refinement -> Planning -> Blocked -> Fault
+  fault reported: 4 (expected 4), shared fault mask 0x80, bad frames 0
+  PASS
+  reverses: 2 (expected 2)
+
+EXIT 0
+scenario 4
+[b5 profile] observed span 168 mm; model allowance 86 mm; planning envelope 286 mm; evidence 0xf; clearance L/R 275/275 mm
+scenario 4 (6.3 s simulated)
+  states: Idle -> Guard -> Confirm -> Halting -> Coarse Sweep -> Edge Refinement -> Planning -> Bypassing -> Recovering -> Fault
+  fault reported: 3 (expected 3), shared fault mask 0x80, bad frames 0
+  PASS
+
+EXIT 0
+scenario 5
+[b5 profile] observed span 168 mm; model allowance 86 mm; planning envelope 286 mm; evidence 0xf; clearance L/R 275/275 mm
+scenario 5 (6.4 s simulated)
+  states: Idle -> Guard -> Confirm -> Halting -> Coarse Sweep -> Edge Refinement -> Planning -> Bypassing -> Recovering -> Guard -> Idle
+  fault reported: 0 (expected 0), shared fault mask 0x00, bad frames 0
+  PASS
+
+EXIT 0
+scenario 6
+[b5 profile] observed span 0 mm; model allowance 0 mm; planning envelope 0 mm; evidence 0x0; clearance L/R 0/0 mm
+scenario 6 (4.9 s simulated)
+unknown scan stays stopped: PASS
+
+EXIT 0
+scenario 7
+[b5 profile] observed span 168 mm; model allowance 86 mm; planning envelope 286 mm; evidence 0xf; clearance L/R 275/275 mm
+scenario 7 (6.3 s simulated)
+missing motion estimate prevents bypass: PASS
+
+EXIT 0
+scenario 8
+scenario 8 (6.2 s simulated)
+stop before planning prevents movement: PASS
+
+EXIT 0

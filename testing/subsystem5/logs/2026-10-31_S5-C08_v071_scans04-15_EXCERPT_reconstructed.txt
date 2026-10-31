@@ -1,0 +1,69 @@
+# RECONSTRUCTED EXCERPT, NOT THE RAW LOG.
+# Raw screen log of v0.7.1 scans 4-15 (2026-10-31 23:00-23:10) was not saved: screenlog.0 was cleared before the
+# blocker check. These [bench]/[b5 scan]/[b5 decision] lines were captured verbatim when the log was analysed live;
+# other lines (raw pings, evidence, sweep) are lost except where shown. Placements as stated by n1sh0:
+# scan 4 = bottle left, 5 = bottle right (after c + p with the bottle centred read 331-335 mm),
+# 6 = right (not detected), 7 = right (detected), 8-9 = round object left, 10-11 = right,
+# 12-15 = 100 mm box, left x2 / right x2, face square to the car (not angled to the sensor).
+[bench] scan 4: v0.7.1 rule B, sweep -550..440 dd; settle 40 ms, servo centre 1450 us, stop 150 mm, fall wait 100 ms
+[b5 scan] -550:4000w -495:4000w -440:4000w -385:4000w -330:1069 -275:1039u -220:1043 -165:1026u
+[b5 scan] -110:1029 -55:1025 0:1029 55:1019u 110:1037 165:1029 220:1020 275:1037
+[b5 scan] 330:1043 385:1039u 440:1056u
+[b5 decision] side NONE (stay stopped); found 0; confidence 78%; closest 0 mm at 0 dd; edges L/R 0/0 dd; at arc limit L/R 0/0; need 255 mm; lateral 0 mm; forward 0 mm
+[bench] scan 5: v0.7.1 rule B, sweep -550..440 dd; settle 40 ms, servo centre 1450 us, stop 150 mm, fall wait 100 ms
+[b5 scan] -550:627u -495:4000w -440:1319u -385:4000w -330:1056u -275:1043 -220:1035 -165:1030
+[b5 scan] -110:1025 -55:1025 0:1042 55:1029 110:1025 165:1025u 220:1025 275:1038
+[b5 scan] 330:1038 385:1043u 440:4000w
+[b5 decision] side NONE (stay stopped); found 0; confidence 84%; closest 0 mm at 0 dd; edges L/R 0/0 dd; at arc limit L/R 0/0; need 255 mm; lateral 0 mm; forward 0 mm
+[bench] scan 6: v0.7.1 rule B, sweep -550..440 dd; settle 40 ms, servo centre 1450 us, stop 150 mm, fall wait 100 ms
+[b5 scan] -550:4000w -495:1324u -440:1319 -385:4000w -330:1057u -275:1035u -220:1030u -165:1035
+[b5 scan] -110:1035 -55:1021 0:1021 55:1029 110:1020u 165:1025 220:1030 275:1025u
+[b5 scan] 330:1025 385:1035u 440:1057u
+[b5 decision] side NONE (stay stopped); found 0; confidence 89%; closest 0 mm at 0 dd; edges L/R 0/0 dd; at arc limit L/R 0/0; need 255 mm; lateral 0 mm; forward 0 mm
+[bench] scan 7: v0.7.1 rule B, sweep -550..440 dd; settle 40 ms, servo centre 1450 us, stop 150 mm, fall wait 100 ms
+[b5 scan] -550:4000w -495:4000w -440:4000w -385:4000w -330:1057 -275:1035u -220:1035 -165:1030u
+[b5 scan] -110:1035 -55:1025 0:1030 28:1025 42:1025 49:1030 55:369u 83:365u
+[b5 scan] 97:361 104:361 110:1025 117:365u 124:357 138:357 165:361u 220:361
+[b5 scan] 275:361 303:361 310:1035u 317:1026u 330:1036 385:1078u 440:4000w
+[b5 decision] side NONE (stay stopped); found 1; confidence 83%; closest 357 mm at 124 dd; edges L/R 55/303 dd; at arc limit L/R 0/0; need 255 mm; lateral 0 mm; forward 797 mm
+[bench] scan 8: (header line not captured)
+[b5 scan] -550:631u -495:4000w -440:4000w -385:4000w -330:1053u -275:1035 -220:1035 -165:1031
+[b5 scan] -110:1026 -55:1026 0:1030 55:1021 110:1021 165:1030 220:1026 275:1026u
+[b5 scan] 330:1035 385:1041u 440:1058u
+[b5 decision] side NONE (stay stopped); found 0; confidence 84%; closest 0 mm at 0 dd; edges L/R 0/0 dd; at arc limit L/R 0/0; need 255 mm; lateral 0 mm; forward 0 mm
+[bench] scan 9: v0.7.1 rule B, sweep -550..440 dd; settle 40 ms, servo centre 1450 us, stop 150 mm, fall wait 100 ms
+[b5 scan] -550:4000w -495:4000w -440:4000w -385:4000w -330:1057u -275:1045u -220:1036 -165:1031
+[b5 scan] -110:1027 -55:1027 0:1026 55:1026 110:1026 165:1027 220:1026 275:1031
+[b5 scan] 330:1031 385:1045u 440:4000w
+[b5 decision] side NONE (stay stopped); found 0; confidence 73%; closest 0 mm at 0 dd; edges L/R 0/0 dd; at arc limit L/R 0/0; need 255 mm; lateral 0 mm; forward 0 mm
+[bench] scan 10: v0.7.1 rule B, sweep -550..440 dd; settle 40 ms, servo centre 1450 us, stop 150 mm, fall wait 100 ms
+[b5 scan] -550:4000w -495:4000w -440:4000w -385:4000w -330:1045u -275:1045 -220:1039 -165:1031
+[b5 scan] -110:1027 -55:1026 0:1031 55:1026 110:1026 117:361 124:365u 138:356u
+[b5 scan] 165:365u 220:361 275:365u 289:373u 296:365u 303:1035 330:1027u 385:1041u
+[b5 scan] 440:4000w
+[b5 decision] side NONE (stay stopped); found 1; confidence 80%; closest 356 mm at 138 dd; edges L/R 117/296 dd; at arc limit L/R 0/0; need 255 mm; lateral 0 mm; forward 796 mm
+[bench] scan 11: v0.7.1 rule B, sweep -550..440 dd; settle 40 ms, servo centre 1450 us, stop 150 mm, fall wait 100 ms
+[b5 scan] -550:624u -495:4000w -440:4000w -385:4000w -330:1053u -275:1045 -220:1036 -165:1031
+[b5 scan] -110:1031 -55:1026 0:1031 28:1035 42:1030 49:1035 55:369u 110:365u
+[b5 scan] 165:361u 220:356u 275:361u 303:361u 310:1044 317:1035 330:1040u 385:1049
+[b5 scan] 440:4000w
+[b5 decision] side NONE (stay stopped); found 1; confidence 84%; closest 356 mm at 220 dd; edges L/R 55/303 dd; at arc limit L/R 0/0; need 255 mm; lateral 0 mm; forward 796 mm
+[bench] scan 12: (only the tail was captured)
+[b5 scan] -110:1031 -55:1031 0:1027 55:1027 110:1022 165:1031 220:1026 275:1031
+[b5 scan] 330:1044 385:1045 440:1050u
+[b5 decision] side NONE (stay stopped); found 0; confidence 84%; closest 0 mm at 0 dd; edges L/R 0/0 dd; at arc limit L/R 0/0; need 255 mm; lateral 0 mm; forward 0 mm
+[bench] scan 13: v0.7.1 rule B, sweep -550..440 dd; settle 40 ms, servo centre 1450 us, stop 150 mm, fall wait 100 ms
+[b5 scan] -550:620u -495:4000w -440:4000w -385:4000w -330:1050 -275:1045 -220:1036 -165:1027
+[b5 scan] -110:1027 -55:1030 0:1022 55:1021 110:1026 165:1021 220:1022u 275:1027
+[b5 scan] 330:1040 385:1036u 440:1067u
+[b5 decision] side NONE (stay stopped); found 0; confidence 84%; closest 0 mm at 0 dd; edges L/R 0/0 dd; at arc limit L/R 0/0; need 255 mm; lateral 0 mm; forward 0 mm
+[bench] scan 14: v0.7.1 rule B, sweep -550..440 dd; settle 40 ms, servo centre 1450 us, stop 150 mm, fall wait 100 ms
+[b5 scan] -550:632u -495:4000w -440:4000w -385:4000w -330:1096u -275:1044 -220:1031 -165:1035
+[b5 scan] -110:1026u -55:1034u 0:1026 55:1021 110:1026u 165:1034 220:1021u 275:1035u
+[b5 scan] 330:1052u 385:4000w 440:4000w
+[b5 decision] side NONE (stay stopped); found 0; confidence 73%; closest 0 mm at 0 dd; edges L/R 0/0 dd; at arc limit L/R 0/0; need 255 mm; lateral 0 mm; forward 0 mm
+[bench] scan 15: v0.7.1 rule B, sweep -550..440 dd; settle 40 ms, servo centre 1450 us, stop 150 mm, fall wait 100 ms
+[b5 scan] -550:608u -495:4000w -440:4000w -385:4000w -330:1100u -275:1040 -220:1036 -165:1027
+[b5 scan] -110:1027 -55:1031 0:1031 55:1026 110:1021 165:1021u 220:1031u 275:1027u
+[b5 scan] 330:4000w 385:4000w 440:4000w
+[b5 decision] side NONE (stay stopped); found 0; confidence 68%; closest 0 mm at 0 dd; edges L/R 0/0 dd; at arc limit L/R 0/0; need 255 mm; lateral 0 mm; forward 0 mm

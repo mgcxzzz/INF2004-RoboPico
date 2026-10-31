@@ -113,7 +113,7 @@ typedef struct
     uint32_t lateral_mm : 12;   /**< sideways shift off the line         */
     uint32_t forward_mm : 12;   /**< travel along the line to pass it    */
     uint32_t closest_mm : 12;   /**< obstacle range when planned         */
-    uint32_t width_mm   : 12;   /**< corrected obstacle width            */
+    uint32_t width_mm   : 12;   /**< conservative planning envelope            */
 } b5_plan_t;
 
 /** Line-rejoin request sent to Navigation Coordinator (FR-USO-06). */

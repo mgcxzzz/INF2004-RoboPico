@@ -307,3 +307,7 @@ For each test, in `TEST_LOG.md` → *Results*, add a row:
 | the scan keeps restarting | the box is still in front during `Bypassing` | take it away when `Bypassing` appears |
 | `go nowhere`, `[b5] Blocked` | something else within reach on both sides | clear the desk around the car |
 | the sensor hits the casing at the sweep ends | horn seated off-centre | re-seat at centre; the sweep is ±55° |
+
+## Lecturer clarification and new span policy (2026-10-28)
+
+Read [STATUS.md](STATUS.md) before repeating width tests. Historical exact-width and fixed-beam tests remain diagnostic records; the production outcome is conservative span/clearance and safe bypass with uncertainty reported. New physical matrix is specified there and has NOT been run. A host test of the old7.5-degree cone is not evidence that this car has that cone.

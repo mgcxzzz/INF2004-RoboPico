@@ -1,0 +1,16 @@
+cmake_minimum_required(VERSION 3.13)
+set(PICO_BOARD pico_w CACHE STRING "Board type")
+include($ENV{PICO_SDK_PATH}/external/pico_sdk_import.cmake)
+project(b5_profile_bench C CXX ASM)
+set(CMAKE_C_STANDARD 11)
+pico_sdk_init()
+# The real Buddy 5 planner and configuration from this repository.
+set(B5_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../../app_program/subsystem5" CACHE PATH
+    "path to app_program/subsystem5")
+add_executable(b5_profile_bench b5_profile_bench.c ${B5_DIR}/obstacle_profile.c)
+target_include_directories(b5_profile_bench PRIVATE ${B5_DIR})
+target_compile_options(b5_profile_bench PRIVATE -Wall -Wextra -Werror)
+target_link_libraries(b5_profile_bench pico_stdlib hardware_pwm)
+pico_enable_stdio_usb(b5_profile_bench 1)
+pico_enable_stdio_uart(b5_profile_bench 0)
+pico_add_extra_outputs(b5_profile_bench)

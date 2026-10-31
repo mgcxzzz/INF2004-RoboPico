@@ -21,6 +21,7 @@
  */
 
 #include <tk/tkernel.h>
+#include <tm/tmonitor.h>
 
 #include "b5_config.h"
 #include "../system/sys_hal.h"
@@ -29,6 +30,8 @@
 #include "drv_servo.h"
 #include "drv_ultrasonic.h"
 #include "../system/sys_fault.h"
+
+_Static_assert(B5_MAX_SAMPLES >= ((B5_SCAN_END_DD-B5_SCAN_START_DD)/B5_SCAN_STEP_DD)+1+B5_MAX_REFINE_SAMPLES, "scan capacity must hold all coarse and refinement samples");
 
 /* Everything the task remembers between states. Only the task touches it. */
 typedef struct
@@ -209,20 +212,28 @@ to_fault (b5_fault_t fault)
 }
 
 /*
- * One ping, with fault counting. Returns false if there was no reading;
- * *p_fault is set once B5_ECHO_FAIL_LIMIT pings in a row got no reply.
+ * One classified ping (rule B), with fault counting: an ECHO or a
+ * completed NO_RETURN resets the run; a FAULT (ECHO stuck high before
+ * TRIG, no rise, rise without fall, noise only) counts towards
+ * B5_ECHO_FAIL_LIMIT. Returns false for a fault; *p_fault is set once
+ * B5_ECHO_FAIL_LIMIT faults came in a row.
  */
 static bool
-range_once (int32_t * p_mm, bool * p_fault)
+ping_once (b5_ping_t * p_ping, bool * p_fault)
 {
-    ER er = b5_us_ping(p_mm);
+    ER er = b5_us_ping_ex(p_ping);
 
     g_ctx.status.pings++;               /* 16-bit, wraps by design      */
 
-    if (er == E_OK)
+    if ((er == E_OK) && (p_ping->cls != (uint32_t)B5_PING_FAULT))
     {
         g_ctx.no_echo_run = 0U;
         return true;
+    }
+
+    if (er != E_OK)
+    {
+        p_ping->cls = (uint32_t)B5_PING_FAULT;
     }
 
     g_ctx.status.no_echo++;
@@ -238,16 +249,36 @@ range_once (int32_t * p_mm, bool * p_fault)
 }
 
 /*
- * Point the servo and take a median of n pings.
+ * Forward watch (Guard, Confirm, Bypassing, release check): one ping as a
+ * range. A completed no-return reads as B5_RANGE_FAR_MM (nothing within
+ * the stop distance); a fault is no reading. Forward watch is an extra
+ * precaution only: it sees ahead, not the sides or rear during turns.
+ */
+static bool
+range_once (int32_t * p_mm, bool * p_fault)
+{
+    b5_ping_t p;
+
+    if (!ping_once(&p, p_fault))
+    {
+        return false;
+    }
+    *p_mm = (int32_t)p.range_mm;        /* FAR for a no-return */
+    return true;
+}
+
+/*
+ * Point the servo and classify n pings into one sample (rule B,
+ * b5_combine_pings): any echo = occupied at the nearest echo; clean
+ * no-returns only = weak clear; faults / incomplete = unknown.
  * Returns the fault to raise, or B5_FAULT_NONE.
  */
 static b5_fault_t
 sample_at (int16_t angle_dd, uint8_t n_pings, b5_sample_t * p_out)
 {
-    int32_t reading[B5_SAMPLES_PER_ANGLE];
-    uint8_t got = 0U;
-    uint8_t i;
-    bool    b_fault = false;
+    b5_ping_t ping[B5_SAMPLES_PER_ANGLE];
+    uint8_t   i;
+    bool      b_fault = false;
 
     if (n_pings > B5_SAMPLES_PER_ANGLE)
     {
@@ -261,58 +292,34 @@ sample_at (int16_t angle_dd, uint8_t n_pings, b5_sample_t * p_out)
 
     for (i = 0U; i < n_pings; i++)
     {
-        int32_t mm;
-
-        if (range_once(&mm, &b_fault))
+        (void)ping_once(&ping[i], &b_fault);
+        if (b_fault)
         {
-            reading[got] = mm;
-            got++;
-        }
-        else if (b_fault)
-        {
-            return B5_FAULT_ECHO_TIMEOUT;
+            return B5_FAULT_ECHO_TIMEOUT;   /* faults in a row: sensor */
         }
     }
 
-    {
-        int32_t mm;
-
-        if (got >= 3U)
-        {
-            mm = b5_median3(reading[0], reading[1], reading[2]);
-        }
-        else if (got == 2U)
-        {
-            mm = (reading[0] < reading[1]) ? reading[0] : reading[1];
-        }
-        else
-        {
-            mm = (got == 1U) ? reading[0] : B5_RANGE_FAR_MM;
-        }
-
-        p_out->angle_dd = angle_dd;
-        p_out->range_mm = mm_u12(mm);
-        p_out->b_valid  = ((got > 0U) && ((got * 2U) > n_pings)) ? 1U : 0U;
-    }
+    b5_combine_pings(angle_dd, ping, n_pings, p_out, NULL);
 
     return B5_FAULT_NONE;
 }
 
 /* --- dead reckoning in the frame of the line the car left ---------- */
 
-static void
+static bool
 pose_reset (void)
 {
     b5_motion_est_t est;
 
-    (void)b5_motion_get_estimate(&est);
+    if (!b5_motion_get_estimate(&est)) return false;
     g_ctx.est_ref      = est;
     g_ctx.last_dist_mm = est.distance_mm;
     g_ctx.along_mm     = 0;
     g_ctx.lateral_mm   = 0;
+    return true;
 }
 
-static void
+static bool
 pose_update (void)
 {
     b5_motion_est_t est;
@@ -321,7 +328,7 @@ pose_update (void)
 
     if (!b5_motion_get_estimate(&est))
     {
-        return;
+        return false;
     }
 
     /* Buddy 2's values are 16-bit and may wrap: only differences are
@@ -335,6 +342,7 @@ pose_update (void)
                                 ((step * b5_cos_q15(rel_heading)) / 32768));
     g_ctx.lateral_mm = pose_s14(g_ctx.lateral_mm +
                                 ((step * b5_sin_q15(rel_heading)) / 32768));
+    return true;
 }
 
 /* Reversing is safe if the car has just driven that stretch of line. */
@@ -480,6 +488,7 @@ st_confirm (void)
 
         if (!range_once(&mm, &b_fault))
         {
+            g_ctx.confirm = 0U; /* unknown breaks consecutive evidence */
             if (b_fault)
             {
                 return to_fault(B5_FAULT_ECHO_TIMEOUT);
@@ -534,7 +543,7 @@ st_halting (void)
     return B5_ST_COARSE_SWEEP;              /* stop accepted */
 }
 
-/* Coarse Sweep: do / -55..+55 deg in 27.5 deg steps (B5_SCAN_*). */
+/* Coarse Sweep: do / -55..+55 deg in 5.5 deg steps (B5_SCAN_*). */
 static b5_state_t
 st_coarse_sweep (void)
 {
@@ -560,8 +569,10 @@ st_coarse_sweep (void)
             return to_fault(fault);         /* servo or echo timeout */
         }
 
-        (void)b5_scan_add(&g_ctx.scan, (int16_t)s.angle_dd,
-                          (int32_t)s.range_mm, (s.b_valid != 0U));
+        if (!b5_scan_add_sample(&g_ctx.scan, &s))
+            return to_fault(B5_FAULT_BLOCKED);
+        g_ctx.status.range_mm = mm_u12((int32_t)s.range_mm);
+        publish(false);
     }
 
     return b5_scan_has_near(&g_ctx.scan, B5_NEAR_MM)
@@ -599,8 +610,10 @@ st_edge_refine (void)
             return to_fault(fault);
         }
 
-        (void)b5_scan_add(&g_ctx.scan, (int16_t)s.angle_dd,
-                          (int32_t)s.range_mm, (s.b_valid != 0U));
+        if (!b5_scan_add_sample(&g_ctx.scan, &s))
+            return to_fault(B5_FAULT_BLOCKED);
+        g_ctx.status.range_mm = mm_u12((int32_t)s.range_mm);
+        publish(false);
     }
 
     /* Scan complete: back to straight ahead, so the sensor faces the way
@@ -614,21 +627,106 @@ st_edge_refine (void)
     return B5_ST_PLANNING;
 }
 
+#if B5_SCAN_DUMP
+static void
+print_sweep (char const * p_side, b5_sweep_report_t const * p_r)
+{
+    static char const * const res[4] = { "not run (gap too small)", "FAIL",
+                                         "PASS_ASSUMED", "PASS" };
+    static char const * const why[6] = { "-", "planning envelope",
+                                         "measured return inside footprint",
+                                         "behind a side return",
+                                         "scanned but unknown", "policy" };
+
+    tm_printf((UB*)"[b5 sweep] %s: %s; weak %d; outline points %d (assumed %d, weak %d)",
+              p_side, res[p_r->result & 3U], (INT)p_r->b_weak,
+              (INT)p_r->n_points, (INT)p_r->n_assumed, (INT)p_r->n_weak);
+    if (p_r->result == (uint8_t)B5_SWEEP_FAIL)
+    {
+        tm_printf((UB*)"; why %s at leg %d (%d, %d) mm",
+                  why[(p_r->why < 6U) ? p_r->why : 0U], (INT)p_r->fail_leg,
+                  (INT)p_r->fail_x_mm, (INT)p_r->fail_y_mm);
+    }
+    tm_printf((UB*)"\n");
+}
+#endif
+
 /* Planning: entry / profile, correct width, score both sides. */
 static b5_state_t
 st_planning (void)
 {
     b5_params_t   par  = profile_params();
     b5_profile_t * p_p = &g_ctx.status.profile;
+    b5_sweep_report_t rep_l;
+    b5_sweep_report_t rep_r;
 
-    b5_build_profile(&g_ctx.scan, &par, p_p);
+    if (mission_stopped()) return B5_ST_IDLE;
+    b5_build_navigation_profile_ex(&g_ctx.scan, &par, p_p, &rep_l, &rep_r);
+    (void)rep_l;
+    (void)rep_r;
     publish(true);
+    tm_printf((UB*)"[b5 profile] observed span %d mm; model allowance %d mm; "
+                    "planning envelope %d mm; evidence 0x%x; clearance L/R %d/%d mm\n",
+              (INT)p_p->width_mm, (INT)p_p->span_uncertainty_mm,
+              (INT)p_p->planning_width_mm, (UINT)p_p->evidence_flags,
+              (INT)p_p->clear_left_mm, (INT)p_p->clear_right_mm);
+#if B5_SCAN_DUMP
+    {   /* Test evidence: every scan sample (angle 0.1 deg, range mm, valid)
+         * and the decision inputs, so profiling and side choice can be
+         * checked offline against the physical setup. Console only. */
+        uint8_t i;
+        tm_printf((UB*)"[b5 scan] %d samples (angle_dd:range_mm; suffix u = unstable echo, "
+                        "p = echo+1 fault, b = echo+faults (block only), w = weak no-return clear, x = unknown)\n",
+                  (INT)g_ctx.scan.count);
+        for (i = 0U; i < g_ctx.scan.count; i++) {
+            b5_sample_t const * p_s = &g_ctx.scan.sample[i];
+            tm_printf((UB*)"%s%d:%d%s", ((i % 8U) == 0U) ? "[b5 scan] " : " ",
+                      (INT)p_s->angle_dd, (INT)p_s->range_mm,
+                      (p_s->b_valid == 0U) ? "x" : ((p_s->b_weak != 0U) ? "w" :
+                      ((p_s->b_block_only != 0U) ? "b" : ((p_s->b_partial != 0U) ? "p" :
+                      ((p_s->b_stable != 0U) ? "" : "u")))));
+            if (((i % 8U) == 7U) || (i + 1U == g_ctx.scan.count)) tm_printf((UB*)"\n");
+        }
+        tm_printf((UB*)"[b5 decision] side %s; found %d; confidence %d%%; closest %d mm at %d dd; "
+                        "edges L/R %d/%d dd; at arc limit L/R %d/%d; need %d mm; lateral %d mm; forward %d mm\n",
+                  (p_p->side == (uint32_t)B5_SIDE_RIGHT) ? "RIGHT" :
+                  ((p_p->side == (uint32_t)B5_SIDE_LEFT) ? "LEFT" : "NONE (stay stopped)"),
+                  (INT)p_p->b_found, (INT)p_p->confidence_pct,
+                  (INT)p_p->closest_mm, (INT)p_p->closest_dd,
+                  (INT)p_p->left_edge_dd, (INT)p_p->right_edge_dd,
+                  (INT)p_p->b_left_at_limit, (INT)p_p->b_right_at_limit,
+                  (INT)(par.car_width_mm + (2 * par.margin_mm)),
+                  (INT)p_p->lateral_mm, (INT)p_p->forward_mm);
+        tm_printf((UB*)"[b5 evidence] measured %d%%; coverage %d%%; stable-return span %d mm "
+                        "(provisional, not planning width); weak clearance %s\n",
+                  (INT)p_p->confidence_pct, (INT)p_p->coverage_pct,
+                  (INT)p_p->stable_span_mm,
+                  ((p_p->evidence_flags & B5_PROFILE_EVIDENCE_WEAK_CLEAR) != 0U) ?
+                  "YES (tentative, no-return rays)" : "no");
+        print_sweep("L", &rep_l);
+        print_sweep("R", &rep_r);
+        tm_printf((UB*)"[b5 sweep] forward watch during the bypass sees ahead only; "
+                        "sides and rear during turns are not monitored\n");
+    }
+#endif
 
-    if ((p_p->b_found == 0U) ||
-        (p_p->confidence_pct < B5_MIN_CONFIDENCE_PCT))
-    {
-        /* No obstacle, or confidence < 50 %: a false stop costs a second,
-         * a wrong bypass costs the run. Resume line following. */
+    /* Gate on coverage (usable samples). Measured confidence is reported
+     * separately and is not inflated by weak no-return clears. */
+    if (p_p->coverage_pct < B5_MIN_CONFIDENCE_PCT)
+        return B5_ST_BLOCKED; /* uncertain never means clear */
+    if (p_p->b_found == 0U) {
+        uint8_t i;
+        /* An absent profile can mean a sparse/noisy hit. Release only after
+         * a fully usable empty sweep AND repeated fresh forward clearance. */
+        if (p_p->coverage_pct != 100U ||
+            b5_scan_has_near(&g_ctx.scan, B5_NEAR_MM)) return B5_ST_BLOCKED;
+        if (b5_servo_move(B5_AHEAD_DD) != E_OK) return to_fault(B5_FAULT_SERVO);
+        for (i = 0U; i < B5_CONFIRM_COUNT; i++) {
+            int32_t mm; bool bad = false;
+            if (mission_stopped()) return B5_ST_IDLE;
+            if (!range_once(&mm, &bad) || mm < B5_D_STOP_MM+B5_SLOW_HYST_MM)
+                return bad ? to_fault(B5_FAULT_ECHO_TIMEOUT) : B5_ST_BLOCKED;
+        }
         b5_nav_release_motion();
         return B5_ST_GUARD;
     }
@@ -642,7 +740,7 @@ st_planning (void)
     g_ctx.plan.lateral_mm = p_p->lateral_mm;
     g_ctx.plan.forward_mm = p_p->forward_mm;
     g_ctx.plan.closest_mm = p_p->closest_mm;
-    g_ctx.plan.width_mm   = p_p->width_mm;
+    g_ctx.plan.width_mm   = p_p->planning_width_mm;
 
     return B5_ST_BYPASSING;                 /* a side passable */
 }
@@ -660,13 +758,14 @@ st_bypassing (void)
 
     if (!g_ctx.b_off_line)
     {
-        pose_reset();                       /* where the car left the line */
+        if (!pose_reset()) return to_fault(B5_FAULT_MOTION);
         g_ctx.b_off_line = true;
     }
 
     g_ctx.confirm = 0U;
     clear_events(B5_EV_PLAN_ACCEPTED | B5_EV_PLAN_REJECTED |
                  B5_EV_MOTION_DONE | B5_EV_MOTION_FAILED);
+    if (mission_stopped()) return B5_ST_IDLE;
     b5_nav_send_plan(&g_ctx.plan);
 
     for (;;)
@@ -694,7 +793,10 @@ st_bypassing (void)
             return to_fault(B5_FAULT_MOTION);
         }
 
-        pose_update();
+        if (!pose_update()) {
+            b5_nav_request_stop();
+            return to_fault(B5_FAULT_MOTION);
+        }
 
         if ((ev & B5_EV_MOTION_DONE) != 0U)
         {
@@ -777,7 +879,10 @@ st_recovering (void)
             return to_fault(B5_FAULT_MOTION);
         }
 
-        pose_update();
+        if (!pose_update()) {
+            b5_nav_request_stop();
+            return to_fault(B5_FAULT_MOTION);
+        }
 
         if (b5_line_detected())
         {

@@ -1,0 +1,89 @@
+$ test_b5_pack 
+record sizes
+  sample 4, profile 32, plan 8, rejoin 8, status 44 bytes
+masks, shifts and sign extension
+scan samples clamp instead of wrapping
+16-bit net distance wraps safely (agreed with Buddy 2)
+echo result word (single writer: the ISR)
+binary telemetry frame (3-byte common header + 16-byte payload)
+
+43 passed, 0 failed
+
+EXIT 0
+$ test_b5_profile 
+trig and median
+no obstacle -> Planning returns to Guard
+width accuracy, refinement stops at alpha (Week 6 text)
+  worst width error 2.0 %, max refinement samples 12 (for comparison only)
+width accuracy, refinement stops at B5_REFINE_STOP_DD
+  worst width error 8.0 %, max refinement samples 6
+side choice (NFR-USO-03)
+obstacle wider than the scan arc -> blocked
+dead sensor -> low confidence
+
+95 passed, 0 failed
+
+EXIT 0
+$ test_b5_navigation 
+navigation profiler checks passed
+
+EXIT 0
+$ test_b5_task 1
+[b5 profile] observed span 168 mm; model allowance 86 mm; planning envelope 286 mm; evidence 0xf; clearance L/R 275/275 mm
+scenario 1 (6.3 s simulated)
+  states: Idle -> Guard -> Confirm -> Halting -> Coarse Sweep -> Edge Refinement -> Planning -> Bypassing -> Recovering -> Guard -> Idle
+  fault reported: 0 (expected 0), shared fault mask 0x00, bad frames 0
+  PASS
+
+EXIT 0
+$ test_b5_task 2
+scenario 2 (0.3 s simulated)
+  states: Idle -> Guard -> Fault
+  fault reported: 1 (expected 1), shared fault mask 0x08, bad frames 0
+  PASS
+
+EXIT 0
+$ test_b5_task 3
+[b5 profile] observed span 801 mm; model allowance 134 mm; planning envelope 935 mm; evidence 0x1; clearance L/R 0/0 mm
+[b5 profile] observed span 801 mm; model allowance 134 mm; planning envelope 935 mm; evidence 0x1; clearance L/R 0/0 mm
+[b5 profile] observed span 801 mm; model allowance 134 mm; planning envelope 935 mm; evidence 0x1; clearance L/R 0/0 mm
+scenario 3 (13.9 s simulated)
+  states: Idle -> Guard -> Confirm -> Halting -> Coarse Sweep -> Edge Refinement -> Planning -> Blocked -> Halting -> Coarse Sweep -> Edge Refinement -> Planning -> Blocked -> Halting -> Coarse Sweep -> Edge Refinement -> Planning -> Blocked -> Fault
+  fault reported: 4 (expected 4), shared fault mask 0x80, bad frames 0
+  PASS
+  reverses: 2 (expected 2)
+
+EXIT 0
+$ test_b5_task 4
+[b5 profile] observed span 168 mm; model allowance 86 mm; planning envelope 286 mm; evidence 0xf; clearance L/R 275/275 mm
+scenario 4 (6.3 s simulated)
+  states: Idle -> Guard -> Confirm -> Halting -> Coarse Sweep -> Edge Refinement -> Planning -> Bypassing -> Recovering -> Fault
+  fault reported: 3 (expected 3), shared fault mask 0x80, bad frames 0
+  PASS
+
+EXIT 0
+$ test_b5_task 5
+[b5 profile] observed span 168 mm; model allowance 86 mm; planning envelope 286 mm; evidence 0xf; clearance L/R 275/275 mm
+scenario 5 (6.4 s simulated)
+  states: Idle -> Guard -> Confirm -> Halting -> Coarse Sweep -> Edge Refinement -> Planning -> Bypassing -> Recovering -> Guard -> Idle
+  fault reported: 0 (expected 0), shared fault mask 0x00, bad frames 0
+  PASS
+
+EXIT 0
+$ test_b5_task 6
+[b5 profile] observed span 0 mm; model allowance 0 mm; planning envelope 0 mm; evidence 0x0; clearance L/R 0/0 mm
+scenario 6 (4.9 s simulated)
+unknown scan stays stopped: FAIL
+
+EXIT 1
+$ test_b5_task 7
+[b5 profile] observed span 168 mm; model allowance 86 mm; planning envelope 286 mm; evidence 0xf; clearance L/R 275/275 mm
+scenario 7 (6.3 s simulated)
+missing motion estimate prevents bypass: PASS
+
+EXIT 0
+$ test_b5_task 8
+scenario 8 (6.2 s simulated)
+stop before planning prevents movement: FAIL
+
+EXIT 1

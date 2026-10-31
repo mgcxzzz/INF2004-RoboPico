@@ -46,6 +46,9 @@ static int        g_line_now;
 static int32_t    g_odometer_mm;
 static int32_t    g_odo_step = 20;
 static int        g_reverses;
+static int g_scenario, g_confirm_missed, g_confirm_valid, g_scan_triplet;
+static int g_releases, g_plans, g_stop_injected, g_bypass_odo_reads;
+
 
 static b5_state_t g_trace[MAX_TRACE];
 static int        g_trace_len;
@@ -124,8 +127,8 @@ b5_servo_move (int16_t angle_dd)
     return E_OK;
 }
 
-ER
-b5_us_ping (int32_t * p_mm)
+static ER
+sim_ping (int32_t * p_mm)
 {
     /* Signed servo angle (+ = right) -> angle from the right-hand x axis. */
     double a    = ((900 - g_servo_dd) / 10.0) * PI / 180.0;
@@ -136,6 +139,13 @@ b5_us_ping (int32_t * p_mm)
     g_now_us += B5_PING_PERIOD_MS * 1000U;
     g_ping_count++;
 
+    if (g_scenario == 5 && g_trace_len && g_trace[g_trace_len-1] == B5_ST_CONFIRM) {
+        if (!g_confirm_missed) { g_confirm_missed=1; g_confirm_valid=0; return E_TMOUT; }
+        g_confirm_valid++;
+    }
+    if (g_scenario == 6 && g_trace_len && g_trace[g_trace_len-1] == B5_ST_COARSE_SWEEP) {
+        if ((g_scan_triplet++ % 3) < 2) return E_TMOUT;
+    }
     if (g_dead_sensor)
     {
         return E_TMOUT;
@@ -163,16 +173,63 @@ b5_us_ping (int32_t * p_mm)
     return E_OK;
 }
 
+/* Rule B driver view: what the simulated sensor's ECHO line did.
+ *   g_stuck_high : ECHO already high before TRIG and never low (fault)
+ *   E_TMOUT      : silent / disconnected sensor, no rise (fault)
+ *   FAR          : completed no-return (pulse longer than ECHO_MAX, fell)
+ *   otherwise    : echo of that width */
+static int g_stuck_high, g_stuck_from_sweep, g_unplug_from_sweep;
+
+ER
+b5_us_ping_ex (b5_ping_t * p)
+{
+    int32_t mm = 0;
+    ER      er = sim_ping(&mm);
+    int     in_scan = g_trace_len &&
+        ((g_trace[g_trace_len-1] == B5_ST_COARSE_SWEEP) ||
+         (g_trace[g_trace_len-1] == B5_ST_EDGE_REFINE));
+
+    if (g_stuck_high || (g_stuck_from_sweep && in_scan))
+    {
+        *p = b5_classify_ping(false, false, false, false, 0U);
+        return E_OK;
+    }
+    if ((er != E_OK) || (g_unplug_from_sweep && in_scan))
+    {
+        *p = b5_classify_ping(true, false, false, false, 0U);
+        return E_OK;
+    }
+    if (mm >= B5_RANGE_FAR_MM)
+    {
+        *p = b5_classify_ping(true, true, true, false, B5_ECHO_MAX_US + 5000U);
+        return E_OK;
+    }
+    *p = b5_classify_ping(true, true, true, false,
+                          (uint32_t)(((mm * 2000) + 342) / 343));
+    return E_OK;
+}
+
+ER
+b5_us_ping (int32_t * p_mm)
+{
+    b5_ping_t p;
+    (void)b5_us_ping_ex(&p);
+    if (p.cls == (uint32_t)B5_PING_FAULT) { return E_TMOUT; }
+    *p_mm = (int32_t)p.range_mm;
+    return E_OK;
+}
+
 /* ---------------------------------------------------------------------
  * The rest of the car, answering instantly
  * ------------------------------------------------------------------ */
 void b5_nav_request_slow (bool b) { (void)b; }
-void b5_nav_release_motion (void) { }
+void b5_nav_release_motion (void) { g_releases++; }
 void b5_nav_blocked_route (b5_profile_t const * p) { (void)p; }
 
 void
 b5_nav_request_stop (void)
 {
+    if (g_scenario == 5 && g_confirm_valid < 3) abort();
     (void)b5_post_event(B5_EV_STOP_ACCEPTED);
 }
 
@@ -180,6 +237,7 @@ void
 b5_nav_send_plan (b5_plan_t const * p)
 {
     (void)p;
+    g_plans++;
     g_faces = 0;                        /* drove round it */
     (void)b5_post_event(B5_EV_PLAN_ACCEPTED | B5_EV_MOTION_DONE);
 }
@@ -194,7 +252,9 @@ b5_nav_request_rejoin (b5_rejoin_t const * p)
 void
 b5_nav_request_reverse (int32_t mm)
 {
-    (void)mm;
+    int f;
+    /* Rule B sim: backing up moves every face away from the sensor. */
+    for (f = 0; f < g_faces; f++) { g_face[f].y += (double)(mm < 0 ? -mm : mm); }
     g_reverses++;
     (void)b5_post_event(B5_EV_MOTION_DONE);
 }
@@ -202,6 +262,8 @@ b5_nav_request_reverse (int32_t mm)
 bool
 b5_motion_get_estimate (b5_motion_est_t * p)
 {
+    if (g_scenario == 7 && g_trace_len && g_trace[g_trace_len-1] == B5_ST_BYPASSING) return false;
+    if (g_scenario == 9 && g_trace_len && g_trace[g_trace_len-1] == B5_ST_BYPASSING && ++g_bypass_odo_reads >= 2) return false;
     /* 16-bit and wrapping, like Buddy 2's real estimate. The odometer
      * starts near the wrap point so every scenario crosses it. */
     p->distance_mm = (int16_t)(uint16_t)(uint32_t)g_odometer_mm;
@@ -238,6 +300,9 @@ b5_telemetry_publish (uint8_t const * p_frame, uint32_t len)
     }
 
     state = (b5_state_t)t.state;
+    if (g_scenario == 8 && state == B5_ST_PLANNING && !g_stop_injected) {
+        g_stop_injected=1; (void)b5_post_event(B5_EV_MISSION_STOP);
+    }
 
     if ((g_trace_len == 0) || (g_trace[g_trace_len - 1] != state))
     {
@@ -289,12 +354,19 @@ int
 main (int argc, char ** argv)
 {
     int scenario = (argc > 1) ? atoi(argv[1]) : 1;
+    g_scenario = scenario;
 
     g_odometer_mm          = 32000;     /* crosses the 16-bit wrap */
     g_line_found_leg       = 0;
     g_pings_until_obstacle = 5;
     g_faces                = 1;
-    g_face[0]              = (face_t){ -50.0, 50.0, 280.0 };
+    /* Face inside D_stop (was 280 with D_stop 300). Rule B swept-footprint
+     * check: from a ~130 mm stop the 45 deg spin and diagonal of the grown
+     * car (assumed pivot, 50 mm margin) meet the >= 200 mm planning
+     * envelope, so every bypass first goes Blocked -> reverse -> rescan.
+     * The reverse moves the simulated faces away (b5_nav_request_reverse). */
+    g_face[0]              = (face_t){ -50.0, 50.0, (double)(B5_D_STOP_MM - 20) };
+    g_odo_step             = 500;       /* line behind: a reverse is allowed */
 
     switch (scenario)
     {
@@ -309,6 +381,23 @@ main (int argc, char ** argv)
             break;
         case 4:         /* line never found: 3 legs, then LINE_LOST */
             g_line_found_leg = 99;
+            break;
+        case 6:         /* 2 of 3 pings fault per angle: no line behind, so
+                         * Blocked stays put (no reverse) as before */
+            g_odo_step = 20;
+            break;
+        case 10:        /* rule B: ECHO stuck high from the start */
+            g_stuck_high = 1;
+            break;
+        case 11:        /* rule B: ECHO sticks high once the sweep starts */
+            g_stuck_from_sweep = 1;
+            break;
+        case 12:        /* rule B: sensor unplugged once the sweep starts */
+            g_unplug_from_sweep = 1;
+            break;
+        case 13:        /* rule B: same run, counting it: the first plan from the
+                         * ~130 mm stop fails the footprint check, exactly one
+                         * reverse, one rescan, exactly one plan sent */
             break;
         default:
             break;
@@ -331,11 +420,46 @@ main (int argc, char ** argv)
 
     switch (scenario)
     {
+        case 6: {
+            int ok=g_releases==1 && g_plans==0 && g_trace[g_trace_len-1]==B5_ST_BLOCKED;
+            printf("unknown scan stays stopped: %s\n",ok?"PASS":"FAIL");
+            return ok?EXIT_SUCCESS:EXIT_FAILURE;
+        }
+        case 7: {
+            int ok=g_plans==0 && g_fault_reported==B5_FAULT_MOTION;
+            printf("missing motion estimate prevents bypass: %s\n",ok?"PASS":"FAIL");
+            return ok?EXIT_SUCCESS:EXIT_FAILURE;
+        }
+        case 9: {
+            int ok=g_plans==1 && g_fault_reported==B5_FAULT_MOTION;
+            printf("lost bypass odometry stops/faults: %s\n",ok?"PASS":"FAIL");
+            return ok?EXIT_SUCCESS:EXIT_FAILURE;
+        }
+        case 8: {
+            int ok=g_stop_injected && g_plans==0 && g_releases==2 && g_trace[g_trace_len-1]==B5_ST_IDLE;
+            printf("stop before planning prevents movement: %s\n",ok?"PASS":"FAIL");
+            return ok?EXIT_SUCCESS:EXIT_FAILURE;
+        }
+
         case 2:
+        case 10:
         {
             static b5_state_t const want[] =
             { B5_ST_IDLE, B5_ST_GUARD, B5_ST_FAULT };
-            return expect(want, 3, B5_FAULT_ECHO_TIMEOUT, SYS_FAULT_NO_ECHO);
+            int r = expect(want, 3, B5_FAULT_ECHO_TIMEOUT, SYS_FAULT_NO_ECHO);
+            printf("  plans sent: %d (expected 0)\n", g_plans);
+            return ((r == EXIT_SUCCESS) && (g_plans == 0)) ? EXIT_SUCCESS : EXIT_FAILURE;
+        }
+        case 11:
+        case 12:
+        {   /* three faulted pings at the first angle: sensor fault, never
+             * read as open space, nothing planned */
+            static b5_state_t const want[] =
+            { B5_ST_IDLE, B5_ST_GUARD, B5_ST_CONFIRM, B5_ST_HALTING,
+              B5_ST_COARSE_SWEEP, B5_ST_FAULT };
+            int r = expect(want, 6, B5_FAULT_ECHO_TIMEOUT, SYS_FAULT_NO_ECHO);
+            printf("  plans sent: %d (expected 0)\n", g_plans);
+            return ((r == EXIT_SUCCESS) && (g_plans == 0)) ? EXIT_SUCCESS : EXIT_FAILURE;
         }
         case 3:
         {
@@ -353,22 +477,40 @@ main (int argc, char ** argv)
                     (g_reverses == (int)B5_BLOCKED_RETRIES))
                    ? EXIT_SUCCESS : EXIT_FAILURE;
         }
+        case 13:
+        {
+            static b5_state_t const want[] =
+            { B5_ST_IDLE, B5_ST_GUARD, B5_ST_CONFIRM, B5_ST_HALTING,
+              B5_ST_COARSE_SWEEP, B5_ST_EDGE_REFINE, B5_ST_PLANNING,
+              B5_ST_BLOCKED, B5_ST_HALTING, B5_ST_COARSE_SWEEP,
+              B5_ST_EDGE_REFINE, B5_ST_PLANNING, B5_ST_BYPASSING,
+              B5_ST_RECOVERING, B5_ST_GUARD, B5_ST_IDLE };
+            int r = expect(want, 16, B5_FAULT_NONE, 0U);
+            printf("  reverses: %d (expected 1), plans: %d (expected 1)\n",
+                   g_reverses, g_plans);
+            return ((r == EXIT_SUCCESS) && (g_reverses == 1) && (g_plans == 1))
+                   ? EXIT_SUCCESS : EXIT_FAILURE;
+        }
         case 4:
         {
             static b5_state_t const want[] =
             { B5_ST_IDLE, B5_ST_GUARD, B5_ST_CONFIRM, B5_ST_HALTING,
               B5_ST_COARSE_SWEEP, B5_ST_EDGE_REFINE, B5_ST_PLANNING,
+              B5_ST_BLOCKED, B5_ST_HALTING, B5_ST_COARSE_SWEEP,
+              B5_ST_EDGE_REFINE, B5_ST_PLANNING,
               B5_ST_BYPASSING, B5_ST_RECOVERING, B5_ST_FAULT };
-            return expect(want, 10, B5_FAULT_LINE_LOST, SYS_FAULT_OBSTACLE);
+            return expect(want, 15, B5_FAULT_LINE_LOST, SYS_FAULT_OBSTACLE);
         }
         default:
         {
             static b5_state_t const want[] =
             { B5_ST_IDLE, B5_ST_GUARD, B5_ST_CONFIRM, B5_ST_HALTING,
               B5_ST_COARSE_SWEEP, B5_ST_EDGE_REFINE, B5_ST_PLANNING,
+              B5_ST_BLOCKED, B5_ST_HALTING, B5_ST_COARSE_SWEEP,
+              B5_ST_EDGE_REFINE, B5_ST_PLANNING,
               B5_ST_BYPASSING, B5_ST_RECOVERING, B5_ST_GUARD,
               B5_ST_IDLE };
-            return expect(want, 11, B5_FAULT_NONE, 0U);
+            return expect(want, 16, B5_FAULT_NONE, 0U);
         }
     }
 }

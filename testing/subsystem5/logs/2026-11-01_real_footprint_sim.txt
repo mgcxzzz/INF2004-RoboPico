@@ -1,0 +1,12 @@
+stop 150 100 centred  min clearance real car to real box (100 deep): right 49 mm, left 49 mm
+stop 150 180 centred  min clearance real car to real box (100 deep): right 21 mm, left 21 mm
+stop 150 180 off L60  min clearance real car to real box (100 deep): right 63 mm, left 0 mm
+stop 150 180 off R60  min clearance real car to real box (100 deep): right 0 mm, left 63 mm
+stop 200 100 centred  min clearance real car to real box (100 deep): right 85 mm, left 85 mm
+stop 200 180 centred  min clearance real car to real box (100 deep): right 56 mm, left 56 mm
+stop 200 180 off L60  min clearance real car to real box (100 deep): right 99 mm, left 14 mm
+stop 200 180 off R60  min clearance real car to real box (100 deep): right 14 mm, left 99 mm
+stop 250 100 centred  min clearance real car to real box (100 deep): right 120 mm, left 120 mm
+stop 250 180 centred  min clearance real car to real box (100 deep): right 92 mm, left 92 mm
+stop 250 180 off L60  min clearance real car to real box (100 deep): right 134 mm, left 49 mm
+stop 250 180 off R60  min clearance real car to real box (100 deep): right 49 mm, left 134 mm

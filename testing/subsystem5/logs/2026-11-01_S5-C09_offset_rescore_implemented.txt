@@ -1,0 +1,31 @@
+== implemented planner (symmetric compare), recorded -55..+44 samples
+185 C         clr 175/213 gap-choice NONE       edges -240.. 172
+185 C         clr 170/212 gap-choice NONE       edges -247.. 172
+185 C         clr 168/206 gap-choice NONE       edges -247.. 172
+185 L60       clr 217/280 gap-choice RIGHT      edges -185.. 138
+185 L60       clr 212/372 gap-choice RIGHT      edges -185.. 138
+185 L60       clr 210/266 gap-choice RIGHT      edges -185.. 138
+185 R60       clr 286/164 gap-choice LEFT       edges -192.. 248
+185 R60       clr 286/168 gap-choice LEFT       edges -192.. 248
+185 R60       clr 286/162 gap-choice LEFT       edges -192.. 248
+100 C         clr 265/261 gap-choice RIGHT(tie) edges -247.. 241
+100 C         clr 268/258 gap-choice RIGHT(tie) edges -247.. 275
+100 C         clr 264/264 gap-choice RIGHT(tie) edges -247.. 241
+100 L40       clr 257/271 gap-choice RIGHT(tie) edges -275.. 227
+100 L40       clr 259/269 gap-choice RIGHT(tie) edges -275.. 227
+100 L40       clr 257/271 gap-choice RIGHT(tie) edges -275.. 227
+100 R40       clr 285/259 gap-choice RIGHT(tie) edges -110.. 207
+100 R40       clr 285/257 gap-choice RIGHT(tie) edges -110.. 207
+100 R40       clr 287/255 gap-choice RIGHT(tie) edges -110.. 227
+250 185? L60  clr 139/310 gap-choice RIGHT      edges -302.. 207
+250 185? L60  clr   0/321 gap-choice RIGHT      edges -302.. 193
+250 185? L60  clr 306/350 gap-choice RIGHT(tie) edges -281.. 193
+250 R60       clr 360/346 gap-choice RIGHT(tie) edges -158.. 193
+250 R60       clr 335/277 gap-choice LEFT       edges -178.. 165
+250 R60       clr 360/344 gap-choice RIGHT(tie) edges -158.. 193
+150 L60       clr   0/323 gap-choice RIGHT      edges -550.. 138
+150 L60       clr   0/303 gap-choice RIGHT      edges -550.. 138
+150 L60       clr  30/311 gap-choice RIGHT      edges -247..  97
+150 R60       clr 307/245 gap-choice LEFT       edges  -82.. 193
+150 R60       clr 322/230 gap-choice LEFT       edges  -82.. 241
+150 R60       clr 305/243 gap-choice LEFT       edges  -82.. 186
