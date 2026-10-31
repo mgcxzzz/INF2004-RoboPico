@@ -71,6 +71,10 @@ slew, one-shot start assistance and physical output limits are unchanged.
    tests. After testing press `p`, `n` and `z`, then send that log, the timing
    capture files and a short wheel-test video. We will review before Step2.
 
+On macOS/Linux, use `python3` in place of `py -3` and enter the displayed
+`/dev/cu.usbmodem...` or `/dev/ttyACM...` port. The Python timing helper works
+without the Windows CMD launcher.
+
 Do not run this image on the circuit: it has no optical navigation. Wi-Fi
 configuration and the dashboard are unnecessary for this checkpoint. Reflashing
 the reference UF2 restores the previous application, without changing its saved
