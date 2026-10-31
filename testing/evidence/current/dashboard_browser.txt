@@ -1,0 +1,18 @@
+PASS P01 before any decode the B3 letter shows no frames
+PASS P02 Last decoded letter (B3) updates from the real SDK decode (sources 10/11)
+PASS P03 mapped movement from the confirmed mapping readback
+PASS P04 progress card: latest letter and pending action
+PASS P05 peak decoder card shows the queued letter
+PASS P06 ramp-assist card decodes the interleaved ramp frames
+PASS P07 combined build identified (peak bit7 + ramp detector/estimator)
+PASS P08 SDK profile selected
+PASS P09 timeline has the peak read and the run-start announce
+PASS P10 connectivity test counts ramp and peak source-15 streams separately, 0 missing each
+PASS P14 ramp requested/effective targets are visible
+PASS P15 provisional status and missing Buddy5 are explicit
+PASS P11 unknown source-15 layout is rejected
+PASS P12 car restart: mapping unknown again, build/peak cards cleared
+PASS P16 restart clears previous ramp target data
+PASS P13 no page or console errors
+
+16 passed, 0 failed (simulated MQTT; frames from the real C packers)

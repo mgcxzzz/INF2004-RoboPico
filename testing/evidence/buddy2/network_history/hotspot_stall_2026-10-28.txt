@@ -1,0 +1,10 @@
+User-supplied PuTTY output; V2 physical failure report, 2026-10-28.
+
+WIFI_LINK: sdk=3 ip=10.236.162.13 mqtt_attempts=1 mqtt_result=-32768
+WIFI_PROGRESS: polls=5411 last_ms=11835 phase=1 broker=10.236.162.47
+WIFI_MQTT: stage=tcp_connect sdk_state=1 api=0 callback=-32768 subscribe=-32768 error=0 init=0 port=1883 age_ms=311480
+WIFI_SETUP: last_code=8 reason=network_lockout_failed active=0 settling=0 GP20_released=1 GP21_released=1
+
+Assessment: IP-ready, no MQTT callback received. Network progress is stale relative to stage age; phase=1 locates the stalled operation inside SDK polling. Firmware connect deadlines cannot execute while that poll fails to return. Setup code8 means the new settings save was rejected because network-core flash lockout could not be established; do not assume settings changed. Broker host reachability, stack exhaustion and exact stalled callback remain unproven.
+
+Next available diagnostic: V1.3 DIAG from upstream cac9a74, with dedicated8KiB network stack and WIFI_POLL callback breadcrumbs. This does not establish the stall cause or a validated fix. Capture n twice20s apart after boot, robot stopped.

@@ -1,0 +1,1 @@
+C-generated telemetry vectors decode in the dashboard schema

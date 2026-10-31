@@ -24,3 +24,16 @@ config/wifi_secrets.h
 
 # macOS
 .DS_Store
+
+# Provisional SDK integration: keep generated/local data out of Git.
+**/build-host/
+**/build-*/
+**/__pycache__/
+*.pyc
+*.obj
+dashboard_session/
+**/wifi_config.local.h
+**/wifi_settings.local.json
+
+# Only the reviewed public integration UF2 is a committed binary artifact.
+!/firmware/integration/buddy1_4/artifacts/robopico_buddy1_4_integration_v0_1.uf2

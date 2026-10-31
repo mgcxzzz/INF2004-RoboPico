@@ -1,0 +1,91 @@
+{
+  "baseline": "ac161d3bd9e0a7361419747755e6834c4fc98744",
+  "formatter": "clang-format18.1.8",
+  "checks": [
+    {
+      "original": "continuous_steering.h",
+      "current": "src/line_following/continuous_steering.h",
+      "c_tokens_equal_except_includes_comments_format": true
+    },
+    {
+      "original": "continuous_follow.h",
+      "current": "src/line_following/continuous_follow.h",
+      "c_tokens_equal_except_includes_comments_format": true
+    },
+    {
+      "original": "continuous_drive.h",
+      "current": "src/motion/continuous_drive.h",
+      "c_tokens_equal_except_includes_comments_format": true
+    },
+    {
+      "original": "ramp_assist.h",
+      "current": "src/motion/ramp_assist.h",
+      "c_tokens_equal_except_includes_comments_format": true
+    },
+    {
+      "original": "barcode_peak.h",
+      "current": "src/barcode/barcode_peak.h",
+      "c_tokens_equal_except_includes_comments_format": true
+    },
+    {
+      "original": "v12_2/baseline/testing/subsystem2/analog_line_follow/line_logic.h",
+      "current": "src/line_following/line_logic.h",
+      "c_tokens_equal_except_includes_comments_format": true
+    },
+    {
+      "original": "v12_2/baseline/testing/subsystem2/analog_line_follow/symmetric_logic.h",
+      "current": "src/line_following/symmetric_logic.h",
+      "c_tokens_equal_except_includes_comments_format": true
+    },
+    {
+      "original": "v12_2/baseline/testing/subsystem2/circuit_left_test/circuit_logic.h",
+      "current": "src/line_following/circuit_logic.h",
+      "c_tokens_equal_except_includes_comments_format": true
+    },
+    {
+      "original": "v12_2/baseline/testing/subsystem2/circuit_left_test/circuit_recovery.h",
+      "current": "src/line_following/circuit_recovery.h",
+      "c_tokens_equal_except_includes_comments_format": true
+    },
+    {
+      "original": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/line_search.h",
+      "current": "src/line_following/line_search.h",
+      "c_tokens_equal_except_includes_comments_format": true
+    },
+    {
+      "original": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/barcode_scan.h",
+      "current": "src/barcode/barcode_scan.h",
+      "c_tokens_equal_except_includes_comments_format": true
+    },
+    {
+      "original": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/barcode_analog.h",
+      "current": "src/barcode/barcode_analog.h",
+      "c_tokens_equal_except_includes_comments_format": true
+    },
+    {
+      "original": "v12_2/baseline/testing/subsystem2/circuit_with_barcode/uturn_logic.h",
+      "current": "src/barcode/uturn_logic.h",
+      "c_tokens_equal_except_includes_comments_format": true
+    },
+    {
+      "original": "v12_2/baseline/testing/subsystem2/junction_left_test/junction_logic.h",
+      "current": "src/navigation/junction_logic.h",
+      "c_tokens_equal_except_includes_comments_format": true
+    },
+    {
+      "original": "motion_executor.c",
+      "current": "src/motion/motion_executor.c",
+      "c_tokens_equal_except_includes_comments_format": true
+    },
+    {
+      "original": "buddy4/subsystem4/imu_proc.c",
+      "current": "src/imu/imu_proc.c",
+      "c_tokens_equal_except_includes_comments_format": true
+    },
+    {
+      "original": "wifi_transport.c",
+      "current": "src/network/wifi_transport.c",
+      "c_tokens_equal_except_includes_comments_format": true
+    }
+  ]
+}

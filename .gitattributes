@@ -1,0 +1,20 @@
+/firmware/integration/** text=auto eol=lf
+/dashboard/** text=auto eol=lf
+/dashboard/vendor/** -text
+/dashboard/test/reference/** -text
+/dashboard/test/fixtures/** -text
+/dashboard/test/compat/** -text
+/docs/** text=auto eol=lf
+/tools/dashboard/** text=auto eol=lf
+/tools/provisioning/** text=auto eol=lf
+/tools/telemetry/** text=auto eol=lf
+/tools/firmware/** text=auto eol=lf
+/*.md text eol=lf
+/*.cmd text eol=lf
+/.gitignore text eol=lf
+/.gitattributes text eol=lf
+/.clang-format text eol=lf
+# Preserve imported evidence bytes and their original SHA-256 exactly.
+/testing/evidence/** -text
+*.uf2 binary
+*.zip binary

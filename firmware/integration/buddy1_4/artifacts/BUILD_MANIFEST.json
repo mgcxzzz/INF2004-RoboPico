@@ -1,0 +1,272 @@
+{
+  "name": "robopico_buddy1_4_integration_v0_1",
+  "status": "PROVISIONAL integration; hardware acceptance pending",
+  "implemented_buddies": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "buddy5_integrated": false,
+  "source_baseline": "ac161d3bd9e0a7361419747755e6834c4fc98744",
+  "pico_sdk_commit": "98a542c1a62fb549ffb5d66a3e5892b06276b670",
+  "compiler": "ARM GNU 14.2.1",
+  "modes": {
+    "ramp_assist_active": true,
+    "barcode_peak_active": true,
+    "coordinated_physical_barcode": true
+  },
+  "embedded_credentials": false,
+  "calibration": {
+    "record": 28,
+    "builtin_white": [
+      163,
+      160
+    ],
+    "builtin_black": [
+      3457,
+      3700
+    ],
+    "saved_record28_preserved": true,
+    "tilted_front_capture_is_default": false
+  },
+  "artifact": "robopico_buddy1_4_integration_v0_1.uf2",
+  "sha256": "b5e3a537ae419857f228d61645169298bb5f5e5af8081803d9b6e4530e01c68f",
+  "bytes": 1078784,
+  "blocks": 2107,
+  "bin_bytes": 539204,
+  "bin_sha256": "7b747a6b3343f924eec29cdac78c0a712c6733e5be57f7f77db17a4d7e34d516",
+  "elf_sha256": "fd3875aed84992623eb510dbe3fb67fd7010689f99b5532f5d992370e8a3ef49",
+  "source_ledger_sha256": "a8b59d273319feb8894a33e175850c882452c4e2d9f99e5ebb3f5639ca40c61e",
+  "symbols": {
+    "__StackTop": 537133056,
+    "__StackBottom": 537124864,
+    "__StackOneTop": 537124864,
+    "__StackOneBottom": 537116672,
+    "__bss_end__": 537070932,
+    "__HeapLimit": 537116672,
+    "__StackLimit": 537116672,
+    "__flash_binary_end": 268974660
+  },
+  "compiler_frame_sizes": [
+    {
+      "function": "calibration_valid",
+      "bytes": 12
+    },
+    {
+      "function": "barcode_raw_valid",
+      "bytes": 20
+    },
+    {
+      "function": "interface_leave",
+      "bytes": 0
+    },
+    {
+      "function": "capture_cutoff",
+      "bytes": 32
+    },
+    {
+      "function": "reason_name",
+      "bytes": 0
+    },
+    {
+      "function": "reset_log",
+      "bytes": 16
+    },
+    {
+      "function": "interface_now",
+      "bytes": 8
+    },
+    {
+      "function": "read_adc",
+      "bytes": 32
+    },
+    {
+      "function": "interface_off",
+      "bytes": 24
+    },
+    {
+      "function": "interface_enter",
+      "bytes": 0
+    },
+    {
+      "function": "adc_gpio_init",
+      "bytes": 8
+    },
+    {
+      "function": "bp_window",
+      "bytes": 264
+    },
+    {
+      "function": "interface_reset_controllers",
+      "bytes": 8
+    },
+    {
+      "function": "wifi_settings_valid",
+      "bytes": 24
+    },
+    {
+      "function": "continuous_drive_step",
+      "bytes": 72
+    },
+    {
+      "function": "barcode_nav_action.constprop",
+      "bytes": 8
+    },
+    {
+      "function": "safety_tick",
+      "bytes": 24
+    },
+    {
+      "function": "encoder_irq",
+      "bytes": 28
+    },
+    {
+      "function": "ramp_assist_step.constprop",
+      "bytes": 64
+    },
+    {
+      "function": "circuit_wheel_step",
+      "bytes": 64
+    },
+    {
+      "function": "wifi_level",
+      "bytes": 16
+    },
+    {
+      "function": "report_start_block",
+      "bytes": 40
+    },
+    {
+      "function": "print_summary",
+      "bytes": 120
+    },
+    {
+      "function": "dump_events.part.0",
+      "bytes": 112
+    },
+    {
+      "function": "dump",
+      "bytes": 208
+    },
+    {
+      "function": "diag_bank_valid.constprop",
+      "bytes": 720
+    },
+    {
+      "function": "start_block",
+      "bytes": 20
+    },
+    {
+      "function": "current_tracker",
+      "bytes": 16
+    },
+    {
+      "function": "help",
+      "bytes": 48
+    },
+    {
+      "function": "buddy4_send",
+      "bytes": 88
+    },
+    {
+      "function": "wifi_console_byte",
+      "bytes": 488
+    },
+    {
+      "function": "trace_state",
+      "bytes": 40
+    },
+    {
+      "function": "add_trace",
+      "bytes": 96
+    },
+    {
+      "function": "interface_commit_outputs",
+      "bytes": 64
+    },
+    {
+      "function": "bp_send",
+      "bytes": 136
+    },
+    {
+      "function": "circuit_line_demand",
+      "bytes": 72
+    },
+    {
+      "function": "wifi_event_id",
+      "bytes": 192
+    },
+    {
+      "function": "ra_report",
+      "bytes": 280
+    },
+    {
+      "function": "interface_save_nav_log",
+      "bytes": 896
+    },
+    {
+      "function": "barcode_peak_sample",
+      "bytes": 608
+    },
+    {
+      "function": "save_drive_diag",
+      "bytes": 1000
+    },
+    {
+      "function": "junction_step.constprop",
+      "bytes": 128
+    },
+    {
+      "function": "save_log",
+      "bytes": 64
+    },
+    {
+      "function": "barcode_record_valid.constprop",
+      "bytes": 20
+    },
+    {
+      "function": "load_log",
+      "bytes": 32
+    },
+    {
+      "function": "barcode_analog_sample.constprop",
+      "bytes": 528
+    },
+    {
+      "function": "barcode_circuit_step.constprop",
+      "bytes": 336
+    },
+    {
+      "function": "interface_navigation_step",
+      "bytes": 472
+    },
+    {
+      "function": "start_run.part.0",
+      "bytes": 280
+    },
+    {
+      "function": "start_run",
+      "bytes": 24
+    },
+    {
+      "function": "wifi_harness_poll",
+      "bytes": 720
+    },
+    {
+      "function": "control_step",
+      "bytes": 1208
+    },
+    {
+      "function": "main",
+      "bytes": 2392
+    }
+  ],
+  "stack_analysis_limit": "Frame measurements and layout checks are not a complete worst-case call-chain bound.",
+  "bundle": "robopico_buddy1_4_integration_v0_1_bundle.zip",
+  "bundle_scope": "SDK integration source, tests, dashboard, setup tools/docs, selected evidence and UF2; separate RTOS project excluded",
+  "checks": {
+    "host_tests": "testing/evidence/current/host_tests.txt",
+    "hardware_tested_this_image": false
+  }
+}

@@ -1,0 +1,276 @@
+PASS: raw ADC A/F both sizes/directions/ratios; changing speed; reduced narrow-bar amplitude; missing-bars/malformed-stop/noise rejection; unsupported code; conflicting votes; distance-qualified cross;4 alternating turns/profile.
+CAPTURE V1 REPLAY: DECODE A/LEFT at36.315s; patterns094,109,094; span262.10mm
+CAPTURE V1 REPLAY: following16.27mm cross confirmed after4mm white; dispatched A/LEFT once.
+CAPTURE V2 REPLAY: DECODE A/LEFT at33.061s; patterns094,109,094; span258.95mm
+CAPTURE V2 REPLAY: following15.75mm cross confirmed after4mm white; dispatched A/LEFT once.
+record_bytes=64848 trace=56 summary=40
+PASS: PDF A/Z measured fixtures; A/F both sizes and directions; speed/jitter/framing rejection; D0 debounce/overflow; queued A/F;12 alternating turns/profile; mirrored acquisition; no-command straight; CRC/flash ABI.
+PASS: raw bytes=49408; bounded/no-overwrite capture; CRC/header/torn-data rejection; timestamp order; signed path; full flag; max gap; metadata.
+PASS: measured215..221 bars/203..206 gaps decode complete A/F/Z both ways; missing narrow bars reject; original thresholds retained; fine grid sorted; legacy log threshold mapping.
+PASS: minimum=50; actual references; observed white/black noise; normalized start gate; balanced follower; saved-record CRC; below-limit/incomplete/reversed rejection.
+PASS: five widening stages/both directions; zero-tick timeout/travel bound; brief gap/flash handling; opposite-sensor acquisition; visible-line parity; invalid-cal rejection; maneuver60%/bounded75% effort; off-wheel zero; pending command preserved/no junction while lost.
+PASS: physical60%/bounded75% effort;180ms ISR expiry;no repeated stalled kick;early moving cutoff;overspeed coast;zero OFF;signed pin mapping;reverse disallowed for search;normal-controller parity.
+PASS: independent underspeed effort;650 boost after40ms;1500ms ISR expiry;stall cannot renew;recovery re-arm;intentional slow/off wheel;overspeed coast;loss/junction bypass;profile1 parity;physical PWM mapping.
+target variation: old=7990 smooth=8
+PASS: reduced alternating target variation; mirrored steering; sustained bends converge; urgent/stop/search/junction bypass; weak400 boundary slew; all speed profiles retained.
+PASS:192 non-optical start combinations; reason11 removed; all start modes; no-history recovery remains bounded.
+U geometry: x=45.7 y=0.7 angle=177.9 travel=541.2 turn_ms=5320
+U geometry: x=45.7 y=0.7 angle=177.9 travel=541.2 turn_ms=5320
+U geometry: x=45.7 y=0.7 angle=177.9 travel=682.3 turn_ms=5320
+U geometry: x=45.7 y=0.7 angle=177.9 travel=682.3 turn_ms=5320
+U geometry: x=48.8 y=2.1 angle=178.3 travel=542.6 turn_ms=5560
+PASS: complete analogue Z both sizes/directions; queued crossing; 90deg arm ignored; reverse quarter and settled forward rejoin; original-line geometry; missing-return/time/drift rejection; signed PWM; next junction after reverse; V1..V12 record integrity.
+small-error target variation V12=774 V12.2=0
+PASS V12.2:60mm/s gradual cruise;45mm/s scan;reduced small-error variation; persistent/mirrored steering; immediate strong departure after scan entry; real optical loss; generic A/F/Z both directions and cross dispatch priority.
+representation: request<=8 bytes wheels=4 bytes audit=31 bytes status=32 event_ram=40 request_working=24 command_status=16
+PASS shared coordinator ownership, stop atomicity, finite reverse/turn completion, route/terrain/fault APIs, interrupted junction resume, stale commands/leases, rejection/timeout, compact binary roundtrips and bounded audit.
+representation: request<=8 bytes wheels=4 bytes audit=31 bytes status=64 event_ram=72 request_working=24 command_status=20
+PASS shared coordinator ownership, stop atomicity, finite reverse/turn completion, route/terrain/fault APIs, interrupted junction resume, stale commands/leases, rejection/timeout, compact binary roundtrips and bounded audit.
+PASS real clock ordering:1..5000us newer requests remain AUTO for14000 ticks; stale100ms heartbeat and2s settling still fault; delayed takeover/resume never underflow.
+PASS real clock ordering:1..5000us newer requests remain AUTO for14000 ticks; stale100ms heartbeat and2s settling still fault; delayed takeover/resume never underflow.
+PASS separate coordinator flash layout: full/empty bank, data/header corruption, erased/partial header and event padding rejection.
+PASS minimum-width diagnostic codec: all field extrema, sign extension, quantisation and clipping flag.
+PASS triggered pre/post ring, latest-window fallback, whole-run timing after freeze, interrupted/corrupt flash rejection, reboot restore and short-run storage.
+DIAG row=58 bits=464 RAM=14936 flash=16384
+PASS diagnostic taps preserve V1.1 optical targets/state bit-for-bit across12000 ticks, all profiles, diag_filtered_count7164 diag_urgent_count3471 diag_bypass_count1365; no control overrides.
+CAPTURED EXIT oldPWM=103/110 H1=168/181 I=53.44/58.80 (recorded speed held; not a physical prediction)
+CAPTURED EXIT oldPWM=108/140 H1=155/166 I=38.67/21.54 (recorded speed held; not a physical prediction)
+PASS cruise handover scope: 1076 exact legacy bypass states; large overspeed/invalid speed/low target/turn state rejection; unchanged zero/coast/overspeed authority.
+PASS 12 simple load models:55->50mm/s settles without restart pulses after the selected handover. Physical validation remains required.
+continuous drive tests passed (software input/plant models only)
+continuous steering v2 tests passed
+continuous follow wrapper regression passed
+continuous integration test passed (coordinator ownership, STOP/off, stale commit rejection, controller reset, and profile routing)
+PASS opt-in Buddy5 example: takeover -> measured stop -> reverse -> right turn -> explicit clear/visible-line resume; no blocking hooks.
+wifi protocol tests passed
+wifi packet tests passed
+PASS runtime settings CRC, bounds, IPv4 validation and open-network password
+PASS TCP/IP readiness query: joined/no-IP do not authorize MQTT; DHCP-ready does; auth failure preserved.
+PASS record26 bytes=30360, latest384 rows, CRC, V25 calibration-only import, RAW2 capacity2048
+WIFI: n=network status. Settings via provision_wifi.py over USB while stopped; no password is printed. No boot barcode assignments.
+WIFI_SETUP_REJECTED: code=2 reason=run_active
+WIFI_SETUP_REJECTED: code=3 reason=run_settling
+WIFI_SETUP_REJECTED: code=4 reason=GP20_held
+WIFI_SETUP_REJECTED: code=5 reason=GP21_held
+WIFI_SETUP_REJECTED: code=6 reason=flash_overlap
+PASS actual Wi-Fi harness integration with coordinator, packets and fake transport
+PASS calibration preset, legacy override, saved-custom restore, CRC rejection and immutable restore source.
+PASS all26 Code39 letters both directions; four mapped actions; queued revision stable; straight consumed once; A-Z coordinator API
+PASS V12.2 routing parity: 9000 optical/PI ticks across all profiles, both departure directions, white loss/recovery; 0 model resets. No external takeover changes normal targets/PWM.
+PASS real wifi_transport.c host harness: API-vs-CONNACK result, CONNACK/SUBACK callbacks, setup failures, TCP/CONNACK/SUBACK timeout paths, init-failure delay
+capture z_original       decoded Z (rev) groups 1 bars 15 unit 2.95 mm narrow-space max 1.17 u, wide-space min 3.01 u, narrow rise min 38
+capture z_fine_v02_run3  decoded Z (rev) groups 1 bars 15 unit 2.94 mm narrow-space max 1.50 u, wide-space min 3.05 u, narrow rise min 34
+capture z_fine_v03_run1  decoded Z (fwd) groups 1 bars 15 unit 2.97 mm narrow-space max 1.15 u, wide-space min 3.08 u, narrow rise min 34
+capture y_original       decoded Y (rev) groups 1 bars 15 unit 3.01 mm narrow-space max 1.19 u, wide-space min 3.06 u, narrow rise min 38
+  synthetic miss D rev=1: k=0 reason=3 bars=18 sigma=1.65 u=3.18 noise=3.7
+  synthetic miss E rev=0: k=0 reason=3 bars=18 sigma=1.50 u=3.16 noise=3.8
+  synthetic miss G rev=0: k=0 reason=3 bars=18 sigma=1.53 u=3.16 noise=3.6
+synthetic: 931/936 decoded, 0 misreads
+harsh: 825/2000 decoded, 0 misreads
+random bar patterns: 0 frames accepted out of 300 (only exact *X* patterns can pass)
+latency: decoded at most 11.0 mm after the label's last edge (junction stripe 30 mm behind)
+f2185a04030201b1135a000f00af00ce00ef081f193d9687050700
+PASS barcode peak decoder v0.1 host tests: 47 checks (4 captured car failures, synthetic A-Z/0-9 both directions, harsh no-misread, negatives, telemetry)
+PASS combined peak integration (BARCODE_PEAK_ACTIVE=1): 28 checks (real original decoder + runtime mapping + peak harness: apply, duplicate, both conflict orders, unmapped, junction, no-barcode identity, busy reset, mixed source-15)
+PASS combined peak integration (BARCODE_PEAK_ACTIVE=0): 19 checks (real original decoder + runtime mapping + peak harness: apply, duplicate, both conflict orders, unmapped, junction, no-barcode identity, busy reset, mixed source-15)
+replay v0.1: end 2 after 220 ms; v0.2: end 5 after 2490 ms, alpha 2 s into assist 200
+run20-like crest: v0.2 5 activations, 4 INVALID ends; v0.3 1 activation(s), 0 INVALID ends, end reason 2
+stall push: pushes 1, push max 60.0 PWM, push 800 ms, assist 1740 ms, end reason 0
+01:21 stall reproduced: without assist 295/165 PWM (car: 295/165); with +20% assist + push 385/235 PWM
+speed hold: level max 1.00, on until 2.42 s (|h| <= 2 mm from 2.22 s), hold-end events 1
+descent stall (steer target 2 mm/s, 250 PWM load): without hold v 0.0 mm/s, out max 32; with hold v(held, min) 32.5 mm/s, out max 390, |I| max 250
+climb with hold: v max while loaded 44.9 mm/s (60 PWM load), 46.5 (no load); overall peak 56.4 vs no-hold 54.9 (abrupt load removal); v0.5 floor 300 = 90 mm/s unloaded left wheel
+climb: mean speed deficit off 7.65 on 4.18 mm/s; peak |I| off 40.0 on 27.0
+after release: integral excess vs no-assist 0.000; from +500 ms output on-off max -1.00 (|max| 10.00), at end 2.00 PWM; overshoot on 11.17 off 8.48 mm/s
+f21c5a04030201022b0203c8001e002400fb0909fe18010c643707d2042400
+PASS ramp-assist v0.6 host tests: 360906 checks (boost-0 identity vs 8d7f3aa, logic, captured-climb replay, v0.3 ACCEL/SPREAD hold, v0.4 stall push, v0.6 speed hold, controller limits/residual, telemetry)
+PASS coordinator assist: wire bounds, owner preserved, expiry, search/stop/takeover clearing, barcode approval and audit
+PASS barcode handback lifecycle: 5 checks
+boot: state=2 fault=0 n4=7 n2=7 bad=0
+tilt view: valid=1 height=9 mm seq+1 per period
+ramp: humps=1 max_h=10 rejected=0 side_h=0
+after reset: state=2 fault=0
+max tick (host) 0 us; frames: src4 35, src2 29
+PASS buddy4 v2.3 service: calibrate, start/stop/resume/reset mapping, 10 mm ramp accepted, unclean odometry gated, fault+reset recovery, frames unpack
+powered acceptance: 24 checks, 0 failures
+......................
+Started Mosquitto and confirmed local listeners on ports 1883 and 9001; remote Pico reachability is not tested.
+----------------------------------------------------------------------
+Ran 22 tests in 0.015s
+
+OK
+TAP version 13
+# Subtest: decoder accepts exact current source payload lengths and rejects malformed frames
+ok 1 - decoder accepts exact current source payload lengths and rejects malformed frames
+  ---
+  duration_ms: 2.4491
+  type: 'test'
+  ...
+# Subtest: motion frame decodes signed speed, calibrated levels, distance, and timing
+ok 2 - motion frame decodes signed speed, calibrated levels, distance, and timing
+  ---
+  duration_ms: 0.8138
+  type: 'test'
+  ...
+# Subtest: line event preserves decoded, pending, executing actions and their revisions
+ok 3 - line event preserves decoded, pending, executing actions and their revisions
+  ---
+  duration_ms: 0.1791
+  type: 'test'
+  ...
+# Subtest: coordinator event distinguishes dispatch and completion identifiers
+ok 4 - coordinator event distinguishes dispatch and completion identifiers
+  ---
+  duration_ms: 0.1615
+  type: 'test'
+  ...
+# Subtest: barcode map builder covers every A-Z letter in each distinct slot
+ok 5 - barcode map builder covers every A-Z letter in each distinct slot
+  ---
+  duration_ms: 1.0574
+  type: 'test'
+  ...
+# Subtest: map readback validates configured bits and exposes revision and letters
+ok 6 - map readback validates configured bits and exposes revision and letters
+  ---
+  duration_ms: 0.1848
+  type: 'test'
+  ...
+# Subtest: map status distinguishes confirmed, empty, mismatch, and rejected readback data
+ok 7 - map status distinguishes confirmed, empty, mismatch, and rejected readback data
+  ---
+  duration_ms: 0.3931
+  type: 'test'
+  ...
+# Subtest: map confirmation times out at its explicit five-second deadline
+ok 8 - map confirmation times out at its explicit five-second deadline
+  ---
+  duration_ms: 0.1297
+  type: 'test'
+  ...
+# Subtest: source-13 log chunks validate identity, reserved bytes, status, and chunk lengths
+ok 9 - source-13 log chunks validate identity, reserved bytes, status, and chunk lengths
+  ---
+  duration_ms: 0.6204
+  type: 'test'
+  ...
+# Subtest: source-14 diagnostics decodes counters, flags, and gaps, and rejects invalid status values
+ok 10 - source-14 diagnostics decodes counters, flags, and gaps, and rejects invalid status values
+  ---
+  duration_ms: 0.4928
+  type: 'test'
+  ...
+# SDK segment {"total":1801,"decoded":1762,"perSrc":{"1":54,"2":72,"4":75,"8":3,"9":719,"10":717,"11":79,"12":1,"14":42},"topics":{"is28/hb":54,"is28/tlm":1708,"is28/cmd":20,"is28/ack":19}}
+# RTOS segment {"total":1500,"decoded":1498,"perSrc":{"1":305,"2":596,"4":596,"8":1}}
+# Subtest: differential: RTOS sources 1-8 decode exactly as the RTOS dashboard decoder
+ok 11 - differential: RTOS sources 1-8 decode exactly as the RTOS dashboard decoder
+  ---
+  duration_ms: 36.4924
+  type: 'test'
+  ...
+# Subtest: differential: SDK sources 1, 8, 9-14 decode exactly as the v2.3 dashboard decoder
+ok 12 - differential: SDK sources 1, 8, 9-14 decode exactly as the v2.3 dashboard decoder
+  ---
+  duration_ms: 21.4503
+  type: 'test'
+  ...
+# Subtest: SDK frames reach 64 bytes and are not truncated; RTOS 40-byte frame accepted
+ok 13 - SDK frames reach 64 bytes and are not truncated; RTOS 40-byte frame accepted
+  ---
+  duration_ms: 0.3498
+  type: 'test'
+  ...
+# Subtest: units, signs and unavailable markers are preserved
+ok 14 - units, signs and unavailable markers are preserved
+  ---
+  duration_ms: 0.311
+  type: 'test'
+  ...
+# Subtest: profile detection: observed packet types, inference and manual override
+ok 15 - profile detection: observed packet types, inference and manual override
+  ---
+  duration_ms: 0.3384
+  type: 'test'
+  ...
+# Subtest: existing name contracts kept for both dashboards
+ok 16 - existing name contracts kept for both dashboards
+  ---
+  duration_ms: 0.5472
+  type: 'test'
+  ...
+# Subtest: real capture: SDK v2.3 + Buddy4 add-on segment decodes completely and is detected as SDK
+ok 17 - real capture: SDK v2.3 + Buddy4 add-on segment decodes completely and is detected as SDK
+  ---
+  duration_ms: 19.33
+  type: 'test'
+  ...
+# Subtest: real capture: RTOS Buddy4 v0.9 segment decodes completely and is inferred as RTOS
+ok 18 - real capture: RTOS Buddy4 v0.9 segment decodes completely and is inferred as RTOS
+  ---
+  duration_ms: 16.5584
+  type: 'test'
+  ...
+# Subtest: real capture: last-will segment contains broker offline messages
+ok 19 - real capture: last-will segment contains broker offline messages
+  ---
+  duration_ms: 1.101
+  type: 'test'
+  ...
+# Subtest: fine barcode bank63 is valid, bank64 and reserved flags are rejected
+ok 20 - fine barcode bank63 is valid, bank64 and reserved flags are rejected
+  ---
+  duration_ms: 0.3947
+  type: 'test'
+  ...
+# Subtest: ramp constraint remains distinct from the requested target
+ok 21 - ramp constraint remains distinct from the requested target
+  ---
+  duration_ms: 1.8262
+  type: 'test'
+  ...
+# Subtest: out-of-bounds or unknown ramp target layouts are rejected
+ok 22 - out-of-bounds or unknown ramp target layouts are rejected
+  ---
+  duration_ms: 0.4218
+  type: 'test'
+  ...
+# Subtest: every C-packed frame of the combined build decodes without error
+ok 23 - every C-packed frame of the combined build decodes without error
+  ---
+  duration_ms: 0.9602
+  type: 'test'
+  ...
+# Subtest: source 15: ramp-assist and barcode-peak layouts interleave and dispatch by length/subtype
+ok 24 - source 15: ramp-assist and barcode-peak layouts interleave and dispatch by length/subtype
+  ---
+  duration_ms: 1.2474
+  type: 'test'
+  ...
+# Subtest: real SDK decode reaches source 10/11 and the mapping gives the movement
+ok 25 - real SDK decode reaches source 10/11 and the mapping gives the movement
+  ---
+  duration_ms: 0.3571
+  type: 'test'
+  ...
+# Subtest: malformed and foreign source-15 frames are rejected, never guessed
+ok 26 - malformed and foreign source-15 frames are rejected, never guessed
+  ---
+  duration_ms: 0.4547
+  type: 'test'
+  ...
+# Subtest: profile detection: source 15 is SDK-only
+ok 27 - profile detection: source 15 is SDK-only
+  ---
+  duration_ms: 0.2225
+  type: 'test'
+  ...
+1..27
+# tests 27
+# suites 0
+# pass 27
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 190.4016
+ALL OFFLINE CHECKS PASSED; C executables: 43

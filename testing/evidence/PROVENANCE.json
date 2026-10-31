@@ -1,0 +1,209 @@
+[
+  {
+    "file": "buddy2/hardware/v4_wheel_response_2026-10-21.txt",
+    "source_branch": "codex/buddy2-left-motor-test",
+    "source_commit": "99d1f503d7989f1282c9e0162b9d6183ab3459d9",
+    "source_path": "testing/subsystem2/analog_line_follow/logs/v4_wheel_response_2026-10-21.txt",
+    "sha256": "50131aea5f8ff9e566e6257ab7be9cc96523ace01e10b6c6c64155115256b065",
+    "evidence_type": "historical hardware log",
+    "reason": "Early wheel response and asymmetry"
+  },
+  {
+    "file": "buddy2/hardware/v10_successful_run_2026-10-21.txt",
+    "source_branch": "codex/buddy2-left-motor-test",
+    "source_commit": "99d1f503d7989f1282c9e0162b9d6183ab3459d9",
+    "source_path": "testing/subsystem2/analog_line_follow/logs/v10_successful_run_2026-10-21.txt",
+    "sha256": "2c26e25ec9eabb49ebd92f8f971fa2948b8d7da1f3315baf0cc1ff87dbb585c1",
+    "evidence_type": "historical hardware log",
+    "reason": "Historical successful line-following trace; predates Continuous V2"
+  },
+  {
+    "file": "buddy2/barcode/a_v1_capture_events.csv",
+    "source_branch": "codex/buddy2-left-motor-test",
+    "source_commit": "99d1f503d7989f1282c9e0162b9d6183ab3459d9",
+    "source_path": "testing/subsystem2/circuit_with_barcode/logs/a_v1_capture_events.csv",
+    "sha256": "4b36e7808de77a22f3279bc35cfc9036b1bf12f9aff8013c80ef1f62a028d55f",
+    "evidence_type": "historical hardware capture",
+    "reason": "Original barcode event captures; useful regression context, not current-build acceptance"
+  },
+  {
+    "file": "buddy2/barcode/a_v2_capture_events.csv",
+    "source_branch": "codex/buddy2-left-motor-test",
+    "source_commit": "99d1f503d7989f1282c9e0162b9d6183ab3459d9",
+    "source_path": "testing/subsystem2/circuit_with_barcode/logs/a_v2_capture_events.csv",
+    "sha256": "9a3eabe0ceaf66b9f618564d935b164be914c7f6c9b85dac56cb2cba7c2909d3",
+    "evidence_type": "historical hardware capture",
+    "reason": "Original barcode event captures; useful regression context, not current-build acceptance"
+  },
+  {
+    "file": "buddy2/v23_baseline/host_tests.txt",
+    "source_branch": "codex/buddy2-left-motor-test",
+    "source_commit": "99d1f503d7989f1282c9e0162b9d6183ab3459d9",
+    "source_path": "testing/subsystem2/interface_wifi_v2_3/logs/host_tests.txt",
+    "sha256": "2526916e715e5dc0dcc8610e2d1317523021da136400503e1042c24148021861",
+    "evidence_type": "software/build check",
+    "reason": "Original V2.3 validation reference"
+  },
+  {
+    "file": "buddy2/v23_baseline/lwip_timeouts.txt",
+    "source_branch": "codex/buddy2-left-motor-test",
+    "source_commit": "99d1f503d7989f1282c9e0162b9d6183ab3459d9",
+    "source_path": "testing/subsystem2/interface_wifi_v2_3/logs/lwip_timeouts.txt",
+    "sha256": "7c8cef89c40e42a4da09181d892d7305384a09ba7a555b57570dd3014478df9b",
+    "evidence_type": "software/build check",
+    "reason": "Original V2.3 validation reference"
+  },
+  {
+    "file": "buddy2/v23_baseline/stack_layout.txt",
+    "source_branch": "codex/buddy2-left-motor-test",
+    "source_commit": "99d1f503d7989f1282c9e0162b9d6183ab3459d9",
+    "source_path": "testing/subsystem2/interface_wifi_v2_3/logs/stack_layout.txt",
+    "sha256": "9687da08658d3775d80e27705eb1552d2d1254df43969132dc6889d4abb53b43",
+    "evidence_type": "software/build check",
+    "reason": "Original V2.3 validation reference"
+  },
+  {
+    "file": "buddy2/v23_baseline/arm_stack_usage.txt",
+    "source_branch": "codex/buddy2-left-motor-test",
+    "source_commit": "99d1f503d7989f1282c9e0162b9d6183ab3459d9",
+    "source_path": "testing/subsystem2/interface_wifi_v2_3/logs/arm_stack_usage.txt",
+    "sha256": "edc951d651a6530be0bbfa9ca36d9a373ce171e7d6c28d468b728c4235d4b02a",
+    "evidence_type": "software/build check",
+    "reason": "Original V2.3 validation reference"
+  },
+  {
+    "file": "buddy2/network_history/timeout_pool_panic_2026-10-28.txt",
+    "source_branch": "codex/buddy2-left-motor-test",
+    "source_commit": "99d1f503d7989f1282c9e0162b9d6183ab3459d9",
+    "source_path": "testing/subsystem2/interface_wifi_v2/logs/timeout_pool_panic_2026-10-28.txt",
+    "sha256": "8756bc0956418d35c3bf696617306f78011d3767fe9a86704e256b5b35fb911d",
+    "evidence_type": "historical diagnosis/regression",
+    "reason": "Documents why the timer-pool fix is retained"
+  },
+  {
+    "file": "buddy2/network_history/hotspot_stall_2026-10-28.txt",
+    "source_branch": "codex/buddy2-left-motor-test",
+    "source_commit": "99d1f503d7989f1282c9e0162b9d6183ab3459d9",
+    "source_path": "testing/subsystem2/interface_wifi_v2/logs/hotspot_stall_2026-10-28.txt",
+    "sha256": "753b22eff9a445185a55bd110963556d3b832358d6346fae569dbabc754801a8",
+    "evidence_type": "historical diagnosis/regression",
+    "reason": "Documents why the timer-pool fix is retained"
+  },
+  {
+    "file": "buddy2/network_history/lwip_timeout_pool_regression.txt",
+    "source_branch": "codex/buddy2-left-motor-test",
+    "source_commit": "99d1f503d7989f1282c9e0162b9d6183ab3459d9",
+    "source_path": "testing/subsystem2/interface_wifi_v2/logs/lwip_timeout_pool_regression.txt",
+    "sha256": "35cb767c7337ebe99c1710caae5b894338ffdd11dea155be07c213330ed1155a",
+    "evidence_type": "historical diagnosis/regression",
+    "reason": "Documents why the timer-pool fix is retained"
+  },
+  {
+    "file": "buddy4/standalone/2026-10-20_host_tests.txt",
+    "source_branch": "buddy4",
+    "source_commit": "e6b19b04ec75c38a032608eb51021750e11f7555",
+    "source_path": "testing/subsystem4/logs/2026-10-20_S4-H01_host_tests.txt",
+    "sha256": "a77c2b5c36fde969cb1c2b3518fad16f2c2cf2d07e0238304d93c156e5bff9f0",
+    "evidence_type": "software test",
+    "reason": "Original standalone IMU validation; not combined firmware"
+  },
+  {
+    "file": "buddy4/standalone/TEST_LOG.md",
+    "source_branch": "buddy4",
+    "source_commit": "e6b19b04ec75c38a032608eb51021750e11f7555",
+    "source_path": "testing/subsystem4/TEST_LOG.md",
+    "sha256": "1fd41b19db32099533bdc4fbd7e1516c9f64a60e79be8824c8649b139ab38f47",
+    "evidence_type": "test ledger",
+    "reason": "Buddy4 branch test history"
+  },
+  {
+    "file": "combined_baseline/2026-10-31_combined_v0_5_speed_hold_runs_native_excerpt.txt",
+    "source_branch": "integration/v23-buddy4-review",
+    "source_commit": "ac161d3bd9e0a7361419747755e6834c4fc98744",
+    "source_path": "testing/integration/logs/2026-10-31_combined_v0_5_speed_hold_runs_native_excerpt.txt",
+    "sha256": "fb9908ed57c088af81b9d354896ce167cc48d149a9184cf65675bb029c4af7cf",
+    "evidence_type": "hardware record",
+    "reason": "Working combined baseline, preceding failure, calibration or barcode-replay evidence; predates restructuring"
+  },
+  {
+    "file": "combined_baseline/2026-10-31_combined_v0_4_tilt_floor_runs_native_excerpt.txt",
+    "source_branch": "integration/v23-buddy4-review",
+    "source_commit": "ac161d3bd9e0a7361419747755e6834c4fc98744",
+    "source_path": "testing/integration/logs/2026-10-31_combined_v0_4_tilt_floor_runs_native_excerpt.txt",
+    "sha256": "fa8e5091fefd565eaa4c06460406678fa35f0bab7bcd069f218648b06e8a6e40",
+    "evidence_type": "hardware record",
+    "reason": "Working combined baseline, preceding failure, calibration or barcode-replay evidence; predates restructuring"
+  },
+  {
+    "file": "combined_baseline/2026-10-31_front_calibration_readback.txt",
+    "source_branch": "integration/v23-buddy4-review",
+    "source_commit": "ac161d3bd9e0a7361419747755e6834c4fc98744",
+    "source_path": "testing/integration/logs/2026-10-31_front_calibration_readback.txt",
+    "sha256": "e437ae09e297fa299922ec0da27c0a700f19dc8cdff9e88ca8617432a125dd8a",
+    "evidence_type": "hardware record",
+    "reason": "Working combined baseline, preceding failure, calibration or barcode-replay evidence; predates restructuring"
+  },
+  {
+    "file": "combined_baseline/2026-10-31_tilt_front_flat_repeat_review.json",
+    "source_branch": "integration/v23-buddy4-review",
+    "source_commit": "ac161d3bd9e0a7361419747755e6834c4fc98744",
+    "source_path": "testing/integration/logs/2026-10-31_tilt_front_flat_repeat_review.json",
+    "sha256": "2c3730030c99e1faed0375c64b748d27885241a1a54ea75175867f9adac7f9da",
+    "evidence_type": "analysis/replay record",
+    "reason": "Working combined baseline, preceding failure, calibration or barcode-replay evidence; predates restructuring"
+  },
+  {
+    "file": "combined_baseline/2026-10-31_tilt_front_flat_usb_dump.txt",
+    "source_branch": "integration/v23-buddy4-review",
+    "source_commit": "ac161d3bd9e0a7361419747755e6834c4fc98744",
+    "source_path": "testing/integration/logs/2026-10-31_tilt_front_flat_usb_dump.txt",
+    "sha256": "8b1989389e1d1b7a0be8f0851fff5edf5de906d3f679bb7b4895ab4aa65a0b5a",
+    "evidence_type": "hardware record",
+    "reason": "Working combined baseline, preceding failure, calibration or barcode-replay evidence; predates restructuring"
+  },
+  {
+    "file": "combined_baseline/2026-10-31_tilt_front_white_applied_ram.txt",
+    "source_branch": "integration/v23-buddy4-review",
+    "source_commit": "ac161d3bd9e0a7361419747755e6834c4fc98744",
+    "source_path": "testing/integration/logs/2026-10-31_tilt_front_white_applied_ram.txt",
+    "sha256": "4052de9a8a101792fc8727a03a8750d24b9325ab78392b4d77cda2b1d8ba6157",
+    "evidence_type": "hardware record",
+    "reason": "Working combined baseline, preceding failure, calibration or barcode-replay evidence; predates restructuring"
+  },
+  {
+    "file": "combined_baseline/2026-10-31_tilt_front_left_black_applied_ram.txt",
+    "source_branch": "integration/v23-buddy4-review",
+    "source_commit": "ac161d3bd9e0a7361419747755e6834c4fc98744",
+    "source_path": "testing/integration/logs/2026-10-31_tilt_front_left_black_applied_ram.txt",
+    "sha256": "d2a04bf41a3f1b90a70d1623de2a9399d017d010bec21aabb4e793dedbce350e",
+    "evidence_type": "hardware record",
+    "reason": "Working combined baseline, preceding failure, calibration or barcode-replay evidence; predates restructuring"
+  },
+  {
+    "file": "combined_baseline/2026-10-31_tilt_front_right_black_applied_ram.txt",
+    "source_branch": "integration/v23-buddy4-review",
+    "source_commit": "ac161d3bd9e0a7361419747755e6834c4fc98744",
+    "source_path": "testing/integration/logs/2026-10-31_tilt_front_right_black_applied_ram.txt",
+    "sha256": "689817e464e0913a848ced87b56fe5b6e8237e3a47a47423895ab24f757ee82a",
+    "evidence_type": "hardware record",
+    "reason": "Working combined baseline, preceding failure, calibration or barcode-replay evidence; predates restructuring"
+  },
+  {
+    "file": "combined_baseline/2026-10-30_barcode_peak_replay.txt",
+    "source_branch": "integration/v23-buddy4-review",
+    "source_commit": "ac161d3bd9e0a7361419747755e6834c4fc98744",
+    "source_path": "testing/integration/logs/2026-10-30_barcode_peak_replay.txt",
+    "sha256": "3d7d48b6f6bd62d97324f3f09fb71a12f6f4f30bc5e195e3a6a47b98db990565",
+    "evidence_type": "analysis/replay record",
+    "reason": "Working combined baseline, preceding failure, calibration or barcode-replay evidence; predates restructuring"
+  },
+  {
+    "file": "combined_baseline/TEST_RESULTS.md",
+    "source_branch": "integration/v23-buddy4-review",
+    "source_commit": "ac161d3bd9e0a7361419747755e6834c4fc98744",
+    "source_path": "testing/integration/V23_BUDDY4_V0_1_TEST_RESULTS.md",
+    "sha256": "c301fd69f29e82c46145e581cfba80475b7a64cc3457ca83d771686d23fdb46c",
+    "evidence_type": "test ledger",
+    "reason": "Context and limitations for the teammate hardware records"
+  }
+]

@@ -1,0 +1,32 @@
+{
+  "purpose": "Pinned copies used by the merged-dashboard tests. Reference schemas are byte-identical copies of the two original decoders; fixtures are line ranges of native mosquitto_sub captures (format: ISO-time topic hex).",
+  "reference": {
+    "reference/rtos_is28_schema.js": {
+      "origin": "INF2004-RoboPico (branch buddy4, working tree) tools/dashboard/is28_schema.js",
+      "copied": "2026-10-29",
+      "sha256": "e194e8aacb41f38cc40fc66f99d2ae67ba8cce90f03dca1ddbc72fc39817773e"
+    },
+    "reference/v23_is28_schema.js": {
+      "origin": "commit 8d7f3aa4935565636bba013c74e563f5e8135bcb testing/subsystem2/interface_wifi_v2_3/dashboard/is28_schema.js",
+      "copied": "2026-10-29",
+      "sha256": "ae24305ebe4e35d57719435cd536604387eb8f2b5af704383930ebfb28c320bf"
+    }
+  },
+  "fixtures": {
+    "fixtures/sdk_v23_b4_segment.txt": {
+      "origin": "testing/integration/logs/2026-10-29_buddy4_drive_v1_1_codex1_capture.txt lines 49400-51200",
+      "firmware": "buddy123_interface_wifi_v2_3_b4_v0_1 (SDK v2.3 + Buddy4 add-on); includes RESET, START, run, STOP, run summary, map readbacks",
+      "sha256": "786fbad5efedf0dc69b7af8aa52d1f0ddd5672ec1169e33226406420bdfcbd97"
+    },
+    "fixtures/sdk_v23_b4_lwt_segment.txt": {
+      "origin": "same capture, lines 103200-103262 (broker last-will messages)",
+      "sha256": "6f2f7210c22fe81281257603389b61393c4e5d6b2869cc909c28a69c9915cc4c"
+    },
+    "fixtures/rtos_v0_9_head1500.txt": {
+      "origin": "testing/integration/logs/2026-10-29_buddy4_v0_9_timing_shocks_capture.txt lines 1-1500",
+      "firmware": "RTOS Buddy4 v0.9 passive build (sources 1, 2, 4, 8 only)",
+      "sha256": "849644de7cd7357600043fbefde4e543ac7c6826111eb7446c516c4e599ef65c"
+    }
+  },
+  "note": "The codex1 capture was still being appended by the native recorder when the segment was copied; the line ranges above are fixed history."
+}

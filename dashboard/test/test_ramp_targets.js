@@ -1,0 +1,5 @@
+'use strict';
+const test=require('node:test');const assert=require('node:assert/strict');const M=require('../is28_schema.js');
+function frame(){const b=Buffer.alloc(24);b[0]=0xf2;b[1]=21;b[7]=0xc1;b[8]=9;b[9]=200;b.writeUInt16LE(1234,10);b.writeUInt16LE(1000,12);b.writeInt16LE(0,14);b.writeInt16LE(450,16);b.writeInt16LE(350,18);b.writeInt16LE(450,20);b[22]=3;b[23]=50;return b;}
+test('ramp constraint remains distinct from the requested target',()=>{const f=M.decodeFrame(frame());assert.equal(f.error,undefined);assert.equal(f.data.kind,'ramp-targets');assert.deepEqual(f.data.requested,[0,45]);assert.deepEqual(f.data.effective,[35,45]);assert.equal(f.data.holdActive,true);assert.equal(f.data.provisional,true);assert.equal(f.data.pushPwm,12.34);assert.equal(f.data.owner,3);});
+test('out-of-bounds or unknown ramp target layouts are rejected',()=>{let b=frame();b.writeUInt16LE(1001,12);assert.ok(M.decodeFrame(b).error);b=frame();b[7]=0xc2;assert.ok(M.decodeFrame(b).error);b=frame();b[8]=0x80;assert.ok(M.decodeFrame(b).error);});

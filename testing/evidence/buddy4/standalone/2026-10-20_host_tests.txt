@@ -1,0 +1,77 @@
+gcc -std=c11 -D_DEFAULT_SOURCE -Wall -Wextra -Werror -O2 -I../../../app_program/subsystem4 -o test_imu test_imu.c ../../../app_program/subsystem4/imu_proc.c ../../../app_program/subsystem4/b4_pack.c -lm
+./test_imu
+Buddy 4 host tests (wheelbase 120 mm, shock 1200 mg)
+
+PASS  H-01     asin table within 0.2 deg up to 60 deg (worst 1 dd)
+PASS  H-02     asin sign and saturation
+PASS  H-03     integer square root
+PASS  H-04     NFR-IMU-02 bound = max(5 mm, 10 %), threshold 50 mm
+PASS  P-01     frame = 3-byte header (version 2, source 4, length 16) + 16
+PASS  P-02     normal values round trip
+PASS  P-03     minimum (all zero) round trip
+PASS  P-04     maximum and negative values round trip
+PASS  P-05     out-of-range values are clamped, never wrapped (R4/R5)
+PASS  P-06     wrapping counter wraps (6 bits)
+PASS  P-07     wrong source or length rejected
+PASS  P-08     imu_event_t is 8 bytes (40 bits of data)
+PASS  C-01     sensor not answering: Fault, reported to Safety
+PASS  C-02     no self-recovery: mission start leaves it in Fault
+PASS  C-03     authorised reset: back to Initialising
+PASS  C-04     sensor answers: Calibrating, fault bit cleared
+PASS  C-05     still calibrating before 2.0 s
+PASS  C-06     2.0 s still: baseline taken, Idle (|g| = 999 mg)
+PASS  C-07     not still: no baseline yet
+PASS  C-08     calibration deadline (10 s) expired: Fault
+PASS  C-09     [stationary] guard: no baseline while Buddy 2 reports motion
+PASS  C-10     stopped: calibrates
+PASS  C-11     gravity not on the UP axis (mounting settings wrong): Fault
+
+  NFR-IMU-02 sweep (allowed error max(5 mm, 10 %)):
+PASS  U-01     trapez 10 mm hump (ramp  30, top  60) at 150 mm/s, noise  5 mg: measured 10 mm
+PASS  U-02     trapez 20 mm hump (ramp  40, top  80) at 150 mm/s, noise  5 mg: measured 20 mm
+PASS  U-03     trapez 20 mm hump (ramp  40, top  80) at 100 mm/s, noise  5 mg: measured 20 mm
+PASS  U-04     trapez 20 mm hump (ramp  40, top  80) at 250 mm/s, noise  5 mg: measured 20 mm
+PASS  U-05     trapez 30 mm hump (ramp  60, top 100) at 150 mm/s, noise 10 mg: measured 30 mm
+PASS  U-06     trapez 50 mm hump (ramp 100, top 150) at 150 mm/s, noise 10 mg: measured 50 mm
+PASS  U-07     trapez 80 mm hump (ramp 160, top 150) at 150 mm/s, noise 10 mg: measured 80 mm
+PASS  U-08     trapez 20 mm hump (ramp  30, top  20) at 150 mm/s, noise  5 mg: measured 20 mm
+PASS  U-09     cosine 15 mm hump (ramp   0, top 150) at 150 mm/s, noise  5 mg: measured 15 mm
+PASS  U-10     cosine 25 mm hump (ramp   0, top 200) at 150 mm/s, noise 10 mg: measured 25 mm
+PASS  U-11     cosine 40 mm hump (ramp   0, top 300) at 200 mm/s, noise 10 mg: measured 40 mm
+PASS  U-12     200 random humps (10-80 mm, 100-300 mm/s, noise 2-20 mg): 200 within NFR-IMU-02, 0 rejected, worst error 4 mm, mean +0.5 mm
+PASS  R-11     30 s flat with 20 mg noise and 0.4 g vibration spikes: no hump, no impact
+PASS  R-01     ramp that stays up: rejected (no descent), nothing published
+PASS  R-02     hard acceleration and braking on the flat: no hump
+PASS  R-03     no Buddy 2 distance: hump detected (FR-IMU-01) but its height is rejected, not guessed
+PASS  R-04     shock mid-hump: Impact in the same period, partial hump rejected, motion = impact
+PASS  R-05     worst case detect time 12500 us (sample age) + one period < 50 ms
+PASS  R-06     no false peak kept after the shock; back to Motion Tracking
+PASS  R-07     stop mid-hump: rejected, Idle
+PASS  R-08     two humps, highest kept over a pause; run summary 30 mm
+PASS  R-09     new run resets the maximum
+PASS  R-10     hump across the 16-bit distance wrap: 20 mm
+PASS  M-01     stopped: stationary
+PASS  M-02     speeding up: accelerating (accelerating)
+PASS  M-03     constant 180 mm/s: steady (steady)
+PASS  M-04     60 deg/s: turning
+PASS  M-05     braked to a stop
+PASS  M-06     each change published once as a motion event (5)
+PASS  M-07     nose up 11 deg: climbing (climbing, pitch 115 dd)
+PASS  M-08     nose down: descending (descending, pitch -66 dd)
+PASS  M-09     no estimate, IMU quiet: stationary
+PASS  M-10     no estimate, vibrating: unknown (turning is never guessed without Buddy 2)
+PASS  M-11     short blip does not flood motion events
+PASS  M-12     10.0 deg tilt reads 10.0 deg
+PASS  F-01     two failed reads: still sampling
+PASS  F-02     third failed read in a row (60 ms): Fault, I2C
+PASS  F-03     stays in Fault although the bus works again (no self-recovery)
+PASS  F-04     no new sample for 3 periods: Fault, stale data
+PASS  F-05     identical data < 1 s: OK
+PASS  F-06     identical data for 1 s: Fault, invalid
+PASS  F-07     a 60 ms period counts 2 missed frames (NFR-IMU-01 evidence): 2
+PASS  F-08     shock in Idle (newest sample): Impact
+PASS  F-09     latched for 200 ms
+PASS  F-10     cleared: back to Idle (no mission)
+PASS  F-11     a 0.8 g bump is not a shock
+
+69 passed, 0 failed

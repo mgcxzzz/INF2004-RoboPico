@@ -1,0 +1,23 @@
+{
+  "operator_report": "reasonable line following",
+  "result": "provisional pass on short flat section only",
+  "duration_s": 4.041,
+  "distance_mm": 152.8,
+  "stop_reason": "serial s deliberately sent by agent before closing console",
+  "invalid_encoders": [
+    0,
+    0
+  ],
+  "calibration": {
+    "white": [
+      122,
+      138
+    ],
+    "black": [
+      246,
+      267
+    ]
+  },
+  "profile": 1,
+  "limitations": "Not a full-course or ramp validation. Calibration is shared; firmware auto-saves run/calibration after stopping."
+}
