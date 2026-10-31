@@ -18,3 +18,8 @@
 /testing/evidence/** -text
 *.uf2 binary
 *.zip binary
+/app_program/rtos_bringup/** text=auto eol=lf
+/tools/rtos_migration/** text=auto eol=lf
+/testing/rtos_migration/** text=auto eol=lf
+/firmware/migration/** text=auto eol=lf
+/etc/linker/pico_rp2040/tkernel_map.ld text eol=lf

@@ -1,0 +1,12 @@
+PASS: clock disagreement/freeze, start gates, urgent-stop output gates, wraparound and encoder decoding
+continuous drive tests passed (software input/plant models only)
+representation: request<=8 bytes wheels=4 bytes audit=31 bytes status=32 event_ram=40 request_working=24 command_status=16
+PASS shared coordinator ownership, stop atomicity, finite reverse/turn completion, route/terrain/fault APIs, interrupted junction resume, stale commands/leases, rejection/timeout, compact binary roundtrips and bounded audit.
+PASS real clock ordering:1..5000us newer requests remain AUTO for14000 ticks; stale100ms heartbeat and2s settling still fault; delayed takeover/resume never underflow.
+PASS coordinator assist: wire bounds, owner preserved, expiry, search/stop/takeover clearing, barcode approval and audit
+..........
+----------------------------------------------------------------------
+Ran 10 tests in 0.001s
+
+OK
+PASS: 5 production-C regression programs and 10 capture-analyzer checks. Hardware test is still required.

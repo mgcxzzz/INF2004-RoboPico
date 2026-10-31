@@ -62,6 +62,14 @@ void tm_tusb_discard_input(void)
     while (tud_cdc_available()) (void)tud_cdc_read_char();
 }
 
+#if APP_RTOS_BRINGUP
+/* Called only by the kernel USB service, never by an application task. */
+int tm_tusb_read_char(void)
+{
+    return tud_cdc_available() ? (int)tud_cdc_read_char() : -1;
+}
+#endif
+
 /*
  * Diagnostics.  The console cannot report on the console, so these are read
  * out over GPIO when USB fails to enumerate.

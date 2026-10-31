@@ -78,9 +78,9 @@ endif
 # All EXE_FILE
 all: $(EXE_FILE).elf
 
-$(EXE_FILE).elf: $(OBJS)
+$(EXE_FILE).elf: $(OBJS) $(subst ",,$(LNKFILE))
 	@echo 'Linker: $@'
-	$(LINK)  $(LFLAGS) -T $(LNKFILE) -Wl,-Map,"$(EXE_FILE).map" -o "$(EXE_FILE).elf" $(OBJS)
+	$(LINK)  $(LFLAGS) -T $(LNKFILE) -Wl,-Map,"$(EXE_FILE).map" -o "$(EXE_FILE).elf" $(OBJS) $(LDLIBS)
 	@echo 'Finished building target: $@'
 ifneq ($(SIZE),)
 	$(SIZE) $(EXE_FILE).elf
@@ -89,6 +89,11 @@ ifneq ($(E2U),)
 	$(E2U) $(EXE_FILE).elf $(EXE_FILE).uf2
 endif
 	@echo ' '
+
+# Makefile flag changes must not silently reuse incompatible objects.
+ifeq ($(TARGET), _PICO_RP2040_)
+$(OBJS): pico_rp2040.mk makefile
+endif
 
 # Other EXE_FILEs
 clean:

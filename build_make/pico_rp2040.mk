@@ -18,6 +18,12 @@
 
 SMP ?= 1
 
+# Explicit migration profile; the default template build remains available.
+APP ?= example
+ifneq ($(filter $(APP),example rtos_bringup),$(APP))
+$(error Unknown APP '$(APP)'; use example or rtos_bringup)
+endif
+
 ifneq ($(SMP),0)
 ifneq ($(SMP),1)
 $(error Unknown SMP '$(SMP)'; use 0 or 1)
@@ -117,6 +123,12 @@ endif
 # only the banner in the log revealed it.
 #
 EXE_FILE := mtk3pico_smp$(SMP)_$(CONSOLE)$(WIFI_SUFFIX)$(NET_SUFFIX)$(MQTT_SUFFIX)$(CRASH_SUFFIX)$(TEST_SUFFIX)
+ifeq ($(APP),rtos_bringup)
+ifneq ($(SMP)-$(CONSOLE)-$(WIFI)-$(NET)-$(MQTT)-$(CRASH_REPORT)-$(TEST),1-usb_cdc-none-none-0-0-0)
+$(error rtos_bringup requires SMP=1 CONSOLE=usb_cdc WIFI=none NET=none MQTT=0 CRASH_REPORT=0 TEST=0)
+endif
+EXE_FILE := robopico_rtos_motor_bringup_v0_1
+endif
 
 GCC := arm-none-eabi-gcc
 AS := arm-none-eabi-gcc
@@ -177,6 +189,12 @@ CFLAGS  += -DCNF_SMP=1
 ASFLAGS += -DCNF_SMP=1
 endif
 CFLAGS  += -DAPP_TEST=$(TEST)
+ifeq ($(APP),rtos_bringup)
+CFLAGS += -DAPP_RTOS_BRINGUP=1 -DCNF_TIMER_PERIOD=1 -DUSE_SDEV_DRV=0 -ffunction-sections -fdata-sections
+INCPATH += -I../firmware/integration/buddy1_4
+LFLAGS += -Wl,--gc-sections -Wl,--defsym=__migration_flash_limit=0x10100000
+LDLIBS += -lm
+endif
 CFLAGS  += -DTM_CONSOLE_UART=$(CRASH_REPORT)
 ifeq ($(CRASH_REPORT),0)
 CFLAGS  += -DBOARD_UART0_FREE=1
@@ -209,7 +227,7 @@ endif
 # before any recipe executes.
 ################################################################################
 
-PROFILE_ID := smp$(SMP)-$(CONSOLE)-wifi$(WIFI)-net$(NET)-mqtt$(MQTT)-crash$(CRASH_REPORT)-test$(TEST)
+PROFILE_ID := $(APP)-smp$(SMP)-$(CONSOLE)-wifi$(WIFI)-net$(NET)-mqtt$(MQTT)-crash$(CRASH_REPORT)-test$(TEST)
 PROFILE_FILE := .build_profile
 
 ifneq ($(strip $(shell cat $(PROFILE_FILE) 2>/dev/null)),$(PROFILE_ID))

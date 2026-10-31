@@ -38,7 +38,9 @@
 
 #define	CNF_MAX_TSKPRI		32	/* Task Max priority */
 
+#ifndef CNF_TIMER_PERIOD
 #define CNF_TIMER_PERIOD	10	/* System timer period */
+#endif
 
 /* Maximum number of kernel objects (raised for a 5-subsystem team project) */
 #define CNF_MAX_TSKID		32	/* Task */
@@ -168,7 +170,9 @@
 /* Use Sample device driver.
  *  1: Valid  0: Invalid
  */
+#ifndef USE_SDEV_DRV
 #define USE_SDEV_DRV		(1)	/* Use Sample device driver */
+#endif
 
 /*---------------------------------------------------------------------- */
 /*

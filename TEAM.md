@@ -1,5 +1,14 @@
 # Team and subsystems
 
+> **Migration checkpoint override:** `APP=rtos_bringup` excludes all example
+> subsystem tasks listed below. The actual task priorities, pin ownership and
+> interfaces for this experimental profile are recorded in
+> [RTOS Step1](firmware/migration/micro_tkernel/step_01_motor_bringup/README.md).
+> GP0/1 and GP4/5 belong to its encoder owner, GP8–11 to Motion Control,
+> GP20/21 to its safety inputs; UART mirroring, Wi-Fi and Buddy5 are disabled.
+> The USB task sends5-byte copied commands through one256-byte kernel message
+> buffer, with TMO_POL on send. No task waits for USB/network output.
+
 The tables are pre-filled with the **example** in `app_program/` (marked
 *example*). Replace those rows with your own as you replace the example code.
 

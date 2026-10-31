@@ -79,6 +79,46 @@ LOCAL void tx_lock_leave(UINT intsts)
    that a run produced no loss rather than assuming it. */
 EXPORT volatile UW	tm_usb_dropped;
 
+#if APP_RTOS_BRINGUP
+/* The application polls this copied ring; TinyUSB stays on its owning task.
+ * Reuse the existing short SMP lock for head/tail and never wait for space. */
+IMPORT INT tm_tusb_read_char(void);
+LOCAL UB rx_buffer[128];
+LOCAL UINT rx_head, rx_tail;
+EXPORT volatile UW tm_usb_rx_dropped;
+
+EXPORT INT tm_usb_console_get(void)
+{
+    UINT saved;
+    INT value = -1;
+    tx_lock_enter(&saved);
+    if (rx_head != rx_tail) {
+        value = rx_buffer[rx_tail];
+        rx_tail = (rx_tail + 1U) & 127U;
+    }
+    tx_lock_leave(saved);
+    return value;
+}
+
+LOCAL void copy_usb_input(void)
+{
+    for (UINT i = 0; i < 64U; ++i) {
+        INT value = tm_tusb_read_char();
+        UINT saved, next;
+        if (value < 0) break;
+        tx_lock_enter(&saved);
+        next = (rx_head + 1U) & 127U;
+        if (next == rx_tail) {
+            tm_usb_rx_dropped++;
+        } else {
+            rx_buffer[rx_head] = (UB)value;
+            rx_head = next;
+        }
+        tx_lock_leave(saved);
+    }
+}
+#endif
+
 /*
  * Link state, for diagnostics that cannot rely on the console itself:
  *	0  service task not started
@@ -195,7 +235,11 @@ LOCAL void usb_service_task(INT stacd, void *exinf)
 			}
 			tm_tusb_write_flush();
 		}
+#if APP_RTOS_BRINGUP
+        copy_usb_input();
+#else
 		tm_tusb_discard_input();
+#endif
 
 		/* Sleep until the controller interrupts, with a periodic
 		   fallback so the ring still drains when the link is idle. */

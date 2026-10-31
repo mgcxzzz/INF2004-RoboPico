@@ -48,6 +48,9 @@ LOCAL const UW module_tbl[] = {
 	RESETS_RESET_IO_BANK0,		/* IO_BANK0 */
 	RESETS_RESET_PADS_BANK0,	/* PADS_BANK0 */
 	RESETS_RESET_UART0,		/* UART0 */
+#if APP_RTOS_BRINGUP
+	RESETS_RESET_TIMER,		/* Release before USB and application tasks. */
+#endif
 
 #if TM_WIFI_CYW43
 	/* The Pico W radio transport runs a PIO state machine with two DMA
@@ -196,6 +199,19 @@ EXPORT void knl_startup_hw(void)
 	for(p = pinfnc_tbl; p->addr != 0; p++) {
 		out_w(p->addr, p->data);
 	}
+
+#if APP_RTOS_BRINGUP
+	/* Before C runtime initialization: MMIO and constants only.
+	 * Establish a known TIMER tick even after a warm BOOTSEL boot. */
+	out_w(0x4005802cU, 0x200U | 12U);
+	out_w(0x40054030U, 0U); /* TIMER.PAUSE */
+	out_w(GPIO_OUT_CLR, 0xF00U);
+	out_w(GPIO_OE_SET, 0xF00U);
+	for (UINT pin = 8U; pin <= 11U; ++pin) {
+		clr_w(GPIO(pin), GPIO_OD);
+		out_w(GPIO_CTRL(pin), GPIO_CTRL_FUNCSEL_SIO);
+	}
+#endif
 
 #if BOARD_DIAG_GPIO_SCAN
 	knl_diag_attention();		/* start of ladder */

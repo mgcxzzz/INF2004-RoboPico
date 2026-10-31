@@ -8,6 +8,7 @@ Release
 *.o
 *.d
 build_make/tools/elf2uf2
+build_make/tools/elf2uf2.exe
 tools/elf2uf2/elf2uf2
 build_make/.build_profile
 
@@ -37,3 +38,5 @@ dashboard_session/
 
 # Only the reviewed public integration UF2 is a committed binary artifact.
 !/firmware/integration/buddy1_4/artifacts/robopico_buddy1_4_integration_v0_1.uf2
+!/firmware/migration/micro_tkernel/step_01_motor_bringup/firmware/robopico_rtos_motor_bringup_v0_1.uf2
+**/rtos_test_session/

@@ -58,6 +58,8 @@ SECTIONS {
 		. = ALIGN(4);
 		__data_end = .;
 	} >RAM
+	ASSERT(__data_org + SIZEOF(.data) <= (DEFINED(__migration_flash_limit) ? __migration_flash_limit : ORIGIN(ROM) + LENGTH(ROM)),
+		"ERROR: firmware overlaps the migration profile's reserved flash boundary")
 	.bss ALIGN(4) (NOLOAD) : {
 		__bss_start = .;
 		PROVIDE (__noinit_start = .);
