@@ -24,4 +24,4 @@ for source, extra in checks:
                     source, *extra, "-lm", "-o", exe], check=True)
     subprocess.run([exe], check=True)
 subprocess.run([sys.executable, ROOT / "testing/rtos_migration/test_capture_bringup.py"], check=True)
-print("PASS: 5 production-C regression programs and 10 capture-analyzer checks. Hardware test is still required.")
+print("PASS: 5 production-C regression programs and 15 capture-analyzer checks. Hardware test is still required.")

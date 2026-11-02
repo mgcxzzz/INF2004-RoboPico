@@ -38,6 +38,14 @@ enum {
     BR_REASON_API
 };
 
+enum { BR_GAP_NONE, BR_GAP_REVALIDATE, BR_GAP_STOP };
+
+static inline unsigned br_control_gap_action(uint16_t flags, uint32_t elapsed_us) {
+    if (elapsed_us < BR_LATE_US)
+        return BR_GAP_NONE;
+    return (flags & BR_ACTIVE) != 0U ? BR_GAP_STOP : BR_GAP_REVALIDATE;
+}
+
 static inline bool br_clock_elapsed_ok(uint32_t timer_us, uint32_t kernel_ms) {
     if (kernel_ms < 900U || kernel_ms > 1200U)
         return false;

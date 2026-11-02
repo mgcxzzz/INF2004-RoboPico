@@ -24,7 +24,7 @@ def parse_line(line: str) -> tuple[str, dict]:
 
 
 def analyze(rows: list[dict]) -> dict:
-    clocks, controls = [], []
+    clocks, controls, wheels = [], [], []
     for row in rows:
         if row["kind"] == "CLOCK" and "timer_us" in row:
             # A p/n query can repeat the same stored sample; do not count it
@@ -33,6 +33,8 @@ def analyze(rows: list[dict]) -> dict:
                 clocks.append(row)
         elif row["kind"] == "CONTROL" and "count" in row:
             controls.append(row)
+        elif row["kind"] == "WHEELS":
+            wheels.append(row)
     if len(clocks) < 2 or len(controls) < 2:
         return {"result": "INCONCLUSIVE", "reason": "Not enough CLOCK/CONTROL samples; check the UF2 and COM port."}
     first, last = clocks[0], clocks[-1]
@@ -59,12 +61,42 @@ def analyze(rows: list[dict]) -> dict:
         issues.append("USB diagnostics were dropped during capture; recapture before interpreting timing.")
     if any(row.get("active", 0) for row in controls):
         issues.append("This idle clock check included an active motor test; repeat it idle first.")
-    return {"result": "FAIL" if issues else "PASS", "issues": issues,
+    # Stable clocks are only one prerequisite. Inspect the current inhibit
+    # state independently, including faults raised before this capture.
+    blockers = []
+    last_control = controls[-1]
+    flags = last_control.get("flags")
+    if not isinstance(flags, int) or not 0 <= flags <= 127:
+        blockers.append("Motor readiness unavailable: missing/invalid flags.")
+    else:
+        for mask, name in [(2, "emergency stop"), (16, "stall"),
+                           (32, "late control loop"), (64, "encoder initialization")]:
+            if flags & mask:
+                blockers.append(f"Latched fault: {name}; motor requests remain inhibited.")
+        if (flags & 12) != 12:
+            blockers.append("Motor/encoder startup or clock validation is not ready.")
+        if flags & 1:
+            blockers.append("Motor test is already active.")
+    if last_control.get("usb") != 3:
+        blockers.append("USB terminal DTR is not asserted.")
+    if last["wall_s"] - last_control["wall_s"] > 2.5:
+        blockers.append("Latest control status is stale.")
+    if not wheels or last["wall_s"] - wheels[-1]["wall_s"] > 2.5:
+        blockers.append("Motor readiness unavailable: missing/stale button and IRQ status.")
+    else:
+        for key in ("gp20", "gp21", "irq_stop"):
+            if wheels[-1].get(key) != 0:
+                blockers.append(f"{key} is asserted or unavailable.")
+    timing_result = "FAIL" if issues else "PASS"
+    result = "FAIL" if issues else "BLOCKED" if blockers else "PASS"
+    return {"result": result, "timing_result": timing_result,
+            "motor_readiness": "BLOCKED" if blockers else "READY",
+            "motor_blockers": blockers, "last_flags": flags, "issues": issues + blockers,
             "wall_seconds": round(wall, 6), "kernel_seconds": round(kernel, 6),
             "timer_seconds": round(timer, 6), "control_hz": round(hz, 3),
             "new_late_intervals": new_late, "samples": len(clocks),
             "limits": "Both clocks within 3% of laptop time; 97..103Hz; no new >15ms intervals or USB drops.",
-            "scope": "USB software timing observation; not a physical stop-latency or motor-performance measurement."}
+            "scope": "USB timing and idle start-prerequisite observation; rest-time eligibility and physical stop/motor performance still require the bench tests."}
 
 
 def main() -> int:

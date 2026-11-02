@@ -127,7 +127,7 @@ ifeq ($(APP),rtos_bringup)
 ifneq ($(SMP)-$(CONSOLE)-$(WIFI)-$(NET)-$(MQTT)-$(CRASH_REPORT)-$(TEST),1-usb_cdc-none-none-0-0-0)
 $(error rtos_bringup requires SMP=1 CONSOLE=usb_cdc WIFI=none NET=none MQTT=0 CRASH_REPORT=0 TEST=0)
 endif
-EXE_FILE := robopico_rtos_motor_bringup_v0_1
+EXE_FILE := robopico_rtos_motor_bringup_v0_1_1
 endif
 
 GCC := arm-none-eabi-gcc

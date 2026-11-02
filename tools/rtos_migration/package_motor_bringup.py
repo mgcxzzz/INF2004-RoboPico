@@ -10,7 +10,7 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[2]
 CHECKPOINT = ROOT / "firmware/migration/micro_tkernel/step_01_motor_bringup"
 ART = CHECKPOINT / "firmware"
-NAME = "robopico_rtos_motor_bringup_v0_1"
+NAME = "robopico_rtos_motor_bringup_v0_1_1"
 BASE = "7843f45fbe45d5a774bc18c93be9bb11084d1b64"
 SHARED = ROOT / "firmware/integration/buddy1_4"
 EXCLUDED = {"__pycache__", ".git", "build-host", "node_modules", "rtos_test_session"}
@@ -106,7 +106,7 @@ def main():
         "elf_sha256": digest(elf), "uf2_layout": info,
         "source_file_count": len(paths), "unchanged_shared_files_verified": len(preserved),
         "linked_symbol_check": "Five application tasks, coordinator API and commit present; Wi-Fi, sample ADC/UART, Buddy5 and flash programming absent.",
-        "software_checks": ["5 strict production-C regression executables", "10 Python capture-analysis tests",
+        "software_checks": ["5 strict production-C regression executables", "15 Python capture-analysis tests",
                             "Strict ARM build of new application", "UF2 block/family/bounds and source parity checks"],
         "hardware_checks": "Not run: laptop-vs-kernel/TIMER timing, wheels, encoders and emergency stop require the user test.",
         "calibration": "Not read or written in Step1; saved reference sectors outside this image remain untouched.",

@@ -7,8 +7,8 @@ Development is isolated on `codex/micro-tkernel-migration`. Buddy5 is not integr
 
 | Step | Port and hardware check before progressing | Status |
 |---|---|---|
-| 0 | Establish and measure hardware TIMER, kernel clock and actual task cadence against laptop wall time. | Included in Step1; hardware acceptance pending. |
-| 1 | 10ms motion task, motor/encoder port, navigation API, safety stop, GP20/21 and USB console. Motors off at boot; verify each wheel, encoder sign, stops and automatic timeout. | [Current test package](step_01_motor_bringup/README.md); hardware acceptance pending. |
+| 0 | Establish and measure hardware TIMER, kernel clock and actual task cadence against laptop wall time. | v0.1 user capture passed at100.002Hz; v0.1.1 cold-start retest pending. |
+| 1 | 10ms motion task, motor/encoder port, navigation API, safety stop, GP20/21 and USB console. Motors off at boot; verify each wheel, encoder sign, stops and automatic timeout. | v0.1 wheel/encoder/stop checks passed. [v0.1.1 startup/readiness correction](step_01_motor_bringup/UPDATE_V0_1_1.md) awaits the brief retest. |
 | 2 | Continuous V2 steering/drive, front IR calibration storage, line recovery and junction turns. Compare a straight and bend with the SDK reference at profile1 speed. | Not ported. |
 | 3 | Kernel-owned Wi-Fi/lwIP/MQTT, bounded TX/RX message buffers and dashboard. Verify heartbeat and supervisory controls during driving, then broker/AP reconnect. | Not ported. |
 | 4 | Original plus peak barcode decoders, distance/sampling schedule, runtime mappings and separate-junction action. Test mapped letters in both directions. | Not ported. |

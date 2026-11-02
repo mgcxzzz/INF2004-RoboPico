@@ -1,8 +1,11 @@
 # Step 1: RTOS motor, encoder and stop bring-up
 
-**EXPERIMENTAL — hardware acceptance pending. This is not line-following firmware.**
+**EXPERIMENTAL — v0.1.1 cold-start acceptance pending. This is not line-following firmware.**
 
-Download `firmware/robopico_rtos_motor_bringup_v0_1.uf2` or the complete bundle in
+The v0.1 clock, wheel, encoder and manual-stop checks passed the user's bench
+tests. Start with the [v0.1.1 correction and brief retest](UPDATE_V0_1_1.md).
+
+Download `firmware/robopico_rtos_motor_bringup_v0_1_1.uf2` or the complete bundle in
 the same folder. This checkpoint follows the motor-first migration sequence.
 Wi-Fi/MQTT/dashboard start at Step3; line/barcode/IMU and Buddy5 tasks are not
 running in this image. Existing saved calibration and network sectors are not
@@ -51,7 +54,10 @@ slew, one-shot start assistance and physical output limits are unchanged.
    allowing2s for buffered startup output to drain, and sends
    **no robot commands**. It creates raw text, CSV and a JSON summary under
    `rtos_test_session`. Wait for completion and require `result: PASS` before
-   trying a powered wheel test. Send all three files for review, even if it fails.
+   trying a powered wheel test. It must also report `timing_result: PASS` and
+   `motor_readiness: READY`. Overall BLOCKED means the clocks can be correct
+   while a latch, button, IRQ, USB or initialization condition prevents starts.
+   Send all three files for review, even if it fails.
 3. Open PuTTY on the same port,115200. Press `h`, then `p`. Three consecutive
    one-second clock comparisons are required for firmware `CLOCK ... status=PASS`.
    This internal PASS compares the two robot clocks; the laptop timing check is
@@ -97,6 +103,11 @@ The normal circuit startup sequence and old profile-selection keys do not apply.
 This image does not preload or replace any front-sensor calibration.
 
 ## Reading failures
+
+An idle control gap >=50ms requires three fresh valid clock windows; it does
+not create a permanent motion fault. Existing fault latches remain latched.
+An active-run gap still stops and latches as before. The historical maximum
+and late counter are preserved even after idle timing has recovered.
 
 `CLOCK CHECK/PENDING` means the gate is not yet satisfied. Repeated CHECK,
 stopped counters, or laptop capture FAIL must be investigated; do not adjust

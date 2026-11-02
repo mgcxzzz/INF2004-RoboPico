@@ -1,14 +1,17 @@
 # Step1 software verification
 
-Date:2026-10-31. Reference main:`7843f45fbe45d5a774bc18c93be9bb11084d1b64`.
+Updated:2026-11-02 for v0.1.1. Reference main:`7843f45fbe45d5a774bc18c93be9bb11084d1b64`.
 
-**Hardware acceptance has not been performed.** All results here are offline
-software/build evidence, not a claim of successful robot motion or stop latency.
+**v0.1.1 cold-start acceptance is pending.** The user confirmed the v0.1 clocks,
+wheels, encoders and manual stops; see UPDATE_V0_1_1.md. The checks below are
+software/build evidence and do not establish the corrected cold-start behaviour.
 
 - Production policy regression: independently rejects the previous~42.7x slow
   hardware TIMER and~1.525x clock disagreement, frozen clocks, incomplete startup,
   unreleased buttons, USB disconnect, stop latches and stale input; exercises
   wraparound and the same encoder transition table used by the real port.
+  Added production-policy cases distinguish idle revalidation from active-run
+  latching at the50ms threshold, including an existing emergency latch.
 - Existing ContinuousDrive tests pass: feedforward/PI, bounded startup aid,
   physical PWM envelope and slew. No algorithm source was changed.
 - Existing shared-interface tests pass: ownership, stop invalidation of stale
@@ -17,16 +20,22 @@ software/build evidence, not a claim of successful robot motion or stop latency.
   stale100ms targets and2s settling timeout remain enforced.
 - Existing coordinated-assist tests pass. These establish reuse of the API;
   the IMU/ramp application is not running in Step1.
-- Ten Python analyzer tests pass: normal timing, both clocks slow together,
+- Fifteen Python analyzer tests pass: normal timing, both clocks slow together,
   timer/kernel disagreement, wrap, missing/short captures, new late intervals,
   dropped USB output, internal validation failure, active motor capture and
   duplicate status queries.
+  Added cases cover pre-existing latches despite stable timing, retained old
+  delay counters without a latch, missing/invalid/stale readiness, buttons,
+  IRQ latching and USB DTR. Replaying the original user capture now yields
+  timing_result PASS and overall BLOCKED with the exact late-loop fault.
 - Full Arm GCC image builds; new application files use `-Wall -Wextra -Werror`.
   The linker enforces a1MiB code ceiling, below the reference's saved sectors.
 - Packaging checks UF2 family/block indices/flash bounds, required/forbidden
   ELF symbols, source hashes, ZIP integrity, and byte parity of the preserved
   shared integration source/config/interface files against main.
 
-See `logs/host_tests.txt`, `logs/arm_build.txt` and `firmware/BUILD_MANIFEST.json`.
-The next evidence must be the user's read-only40s USB timing capture and
-lifted-wheel encoder/stop tests described in the checkpoint README.
+See `logs/host_tests_v0_1_1.txt`, `logs/arm_build_v0_1_1.txt`,
+`logs/replay_original_capture_v0_1_1.json` and `firmware/BUILD_MANIFEST.json`.
+The original v0.1 build/test logs remain alongside them.
+The next evidence is the brief v0.1.1 cold-power-up capture and pulse/GP20 retest
+in UPDATE_V0_1_1.md. No shared main controller/config/interface source changed.

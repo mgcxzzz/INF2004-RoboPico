@@ -1,0 +1,20 @@
+{
+  "result": "BLOCKED",
+  "timing_result": "PASS",
+  "motor_readiness": "BLOCKED",
+  "motor_blockers": [
+    "Latched fault: late control loop; motor requests remain inhibited."
+  ],
+  "last_flags": 44,
+  "issues": [
+    "Latched fault: late control loop; motor requests remain inhibited."
+  ],
+  "wall_seconds": 40.008623,
+  "kernel_seconds": 40.01,
+  "timer_seconds": 40.010002,
+  "control_hz": 100.002,
+  "new_late_intervals": 0,
+  "samples": 41,
+  "limits": "Both clocks within 3% of laptop time; 97..103Hz; no new >15ms intervals or USB drops.",
+  "scope": "USB timing and idle start-prerequisite observation; rest-time eligibility and physical stop/motor performance still require the bench tests."
+}

@@ -106,6 +106,28 @@ void bringup_control_task(INT code, void *exinf) {
             speed[w] += 0.25f * (raw_to_mm(w, delta[w]) / dt - speed[w]);
         }
 
+        /* A gap while stopped cannot strand the first bench request. Keep
+         * its timing evidence and require three NEW valid clock windows.
+         * Never clear an existing stop latch or forgive an active-run gap. */
+        key = status_enter();
+        unsigned gap_action = br_control_gap_action(status.flags, dt_us);
+        if (gap_action == BR_GAP_REVALIDATE) {
+            status.flags &= (uint16_t)~BR_CLOCK_OK;
+            status.clock_good = 0U;
+            if ((status.flags & BR_LATCHED) == 0U)
+                status.reason = BR_REASON_LATE;
+        }
+        status_leave(key);
+        if (gap_action == BR_GAP_STOP) {
+            bringup_stop(BR_REASON_LATE, BR_LATE);
+        } else if (gap_action == BR_GAP_REVALIDATE) {
+            clock_start = (uint32_t)now;
+            kernel_start = board_kernel_ms();
+            tm_printf(
+                (UB *)"IDLE_CONTROL_GAP dt_us=%u; motor start inhibited pending 3 fresh clock windows; stop latches preserved.\n",
+                dt_us);
+        }
+
         if ((uint32_t)now - clock_start >= BR_CLOCK_WINDOW_US) {
             uint32_t kernel_now = board_kernel_ms();
             uint32_t kernel_delta = kernel_now - kernel_start;
@@ -132,8 +154,6 @@ void bringup_control_task(INT code, void *exinf) {
             kernel_start = kernel_now;
         }
 
-        if (dt_us >= BR_LATE_US)
-            bringup_stop(BR_REASON_LATE, BR_LATE);
         MotionFeedback feedback = {.now_us = now,
                                    .wheel_mm = {raw_to_mm(0U, totals[0]), raw_to_mm(1U, totals[1])},
                                    .speed_mm_s = {speed[0], speed[1]}};

@@ -4,6 +4,13 @@
 #include "src/motion/encoder_and_guard.h"
 
 int main(void) {
+    assert(br_control_gap_action(BR_READY, 132256U) == BR_GAP_REVALIDATE);
+    assert(br_control_gap_action(BR_READY | BR_CLOCK_OK, 50000U) == BR_GAP_REVALIDATE);
+    assert(br_control_gap_action(BR_READY | BR_ESTOP, 132256U) == BR_GAP_REVALIDATE);
+    assert(br_control_gap_action(BR_ACTIVE | BR_CLOCK_OK, 50000U) == BR_GAP_STOP);
+    assert(br_control_gap_action(BR_ACTIVE, 132256U) == BR_GAP_STOP);
+    assert(br_control_gap_action(BR_ACTIVE | BR_CLOCK_OK, 49999U) == BR_GAP_NONE);
+    assert(!br_can_start(BR_READY, 2000000U, 0U, 3U, true));
     assert(br_clock_elapsed_ok(1000000U, 1000U));
     assert(br_clock_elapsed_ok(1002000U, 1000U));
     assert(!br_clock_elapsed_ok(1531474U, 1000U)); /* V1.1 disagreement. */

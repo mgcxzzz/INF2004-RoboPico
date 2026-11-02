@@ -26,7 +26,7 @@ static ER start(FP entry, PRI priority, UW processor, const char *name) {
 }
 
 void bringup_help(void) {
-    tm_printf((UB *)"\nROBOPICO RTOS MOTOR BRINGUP v0.1 | Step 1 only | micro T-Kernel SMP\n");
+    tm_printf((UB *)"\nROBOPICO RTOS MOTOR BRINGUP v0.1.1 | Step 1 only | micro T-Kernel SMP\n");
     tm_printf(
         (UB *)"Motors OFF on boot. USB bench only; Wi-Fi, line/barcode/IMU/Buddy5 not running.\n");
     tm_printf(
