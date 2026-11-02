@@ -121,6 +121,7 @@ def main():
             archive.write(path, path.relative_to(ROOT).as_posix())
         archive.write(copied, "firmware/" + copied.name)
         archive.writestr("START_HERE.md", (CHECKPOINT / "README.md").read_text(encoding="utf-8"))
+        archive.writestr("UPDATE_V0_1_1.md", (CHECKPOINT / "UPDATE_V0_1_1.md").read_text(encoding="utf-8"))
         archive.writestr("Run timing check.cmd", '@echo off\r\ncd /d "%~dp0"\r\npy -3 tools\\rtos_migration\\capture_bringup.py\r\npause\r\n')
     with zipfile.ZipFile(bundle) as archive:
         assert archive.testzip() is None
