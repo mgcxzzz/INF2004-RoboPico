@@ -20,8 +20,8 @@ SMP ?= 1
 
 # Explicit migration profile; the default template build remains available.
 APP ?= example
-ifneq ($(filter $(APP),example rtos_bringup),$(APP))
-$(error Unknown APP '$(APP)'; use example or rtos_bringup)
+ifneq ($(filter $(APP),example rtos_bringup rtos_line),$(APP))
+$(error Unknown APP '$(APP)'; use example, rtos_bringup or rtos_line)
 endif
 
 ifneq ($(SMP),0)
@@ -123,11 +123,14 @@ endif
 # only the banner in the log revealed it.
 #
 EXE_FILE := mtk3pico_smp$(SMP)_$(CONSOLE)$(WIFI_SUFFIX)$(NET_SUFFIX)$(MQTT_SUFFIX)$(CRASH_SUFFIX)$(TEST_SUFFIX)
-ifeq ($(APP),rtos_bringup)
+ifneq ($(filter $(APP),rtos_bringup rtos_line),)
 ifneq ($(SMP)-$(CONSOLE)-$(WIFI)-$(NET)-$(MQTT)-$(CRASH_REPORT)-$(TEST),1-usb_cdc-none-none-0-0-0)
 $(error rtos_bringup requires SMP=1 CONSOLE=usb_cdc WIFI=none NET=none MQTT=0 CRASH_REPORT=0 TEST=0)
 endif
 EXE_FILE := robopico_rtos_motor_bringup_v0_1_1
+ifeq ($(APP),rtos_line)
+EXE_FILE := robopico_rtos_line_following_v0_1
+endif
 endif
 
 GCC := arm-none-eabi-gcc
@@ -189,11 +192,14 @@ CFLAGS  += -DCNF_SMP=1
 ASFLAGS += -DCNF_SMP=1
 endif
 CFLAGS  += -DAPP_TEST=$(TEST)
-ifeq ($(APP),rtos_bringup)
+ifneq ($(filter $(APP),rtos_bringup rtos_line),)
 CFLAGS += -DAPP_RTOS_BRINGUP=1 -DCNF_TIMER_PERIOD=1 -DUSE_SDEV_DRV=0 -ffunction-sections -fdata-sections
 INCPATH += -I../firmware/integration/buddy1_4
 LFLAGS += -Wl,--gc-sections -Wl,--defsym=__migration_flash_limit=0x10100000
 LDLIBS += -lm
+endif
+ifeq ($(APP),rtos_line)
+CFLAGS += -DAPP_RTOS_LINE=1 -DBUDDY_WIFI_LOGGING=1 -DLINE_CAL_MIN_SPAN=50 -DCIRCUIT_SWEEP_SEARCH=1 -fstack-usage
 endif
 CFLAGS  += -DTM_CONSOLE_UART=$(CRASH_REPORT)
 ifeq ($(CRASH_REPORT),0)

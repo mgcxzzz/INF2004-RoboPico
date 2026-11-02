@@ -36,6 +36,14 @@ int main(void) {
     assert(br_can_start(ready, 2000000U, UINT32_MAX - 1000000U, 3U, true));
     assert(br_command_fresh(20U, UINT32_MAX - 20U));
     assert(!br_command_fresh(500001U, 0U));
+    assert(!br_command_after_stop(1000U, 899U, 900U, true));
+    assert(!br_command_after_stop(1000U, 900U, 900U, true));
+    assert(br_command_after_stop(1000U, 901U, 900U, true));
+    assert(br_command_after_stop(1000U, 899U, 900U, false));
+    assert(br_command_after_stop(20U, 5U, UINT32_MAX - 10U, true));
+    assert(!br_command_after_stop(20U, UINT32_MAX - 20U, UINT32_MAX - 10U, true));
+    assert(br_command_after_stop(3000000000U, 2999999990U, 1000U, true));
+    assert(!br_command_after_stop(600000U, 1U, 1000U, true));
     assert(br_outputs_allowed(ready | BR_ACTIVE, false, 3U, true));
     assert(!br_outputs_allowed(ready | BR_ACTIVE, true, 3U, true));
     assert(!br_outputs_allowed(ready | BR_ACTIVE, false, 2U, true));

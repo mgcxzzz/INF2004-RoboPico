@@ -1,4 +1,7 @@
 #include "bringup.h"
+#ifdef APP_RTOS_LINE
+#include "../line_navigation/line_service.h"
+#endif
 
 static uint64_t port_now(void *user) {
     (void)user;
@@ -26,6 +29,25 @@ static ER start(FP entry, PRI priority, UW processor, const char *name) {
 }
 
 void bringup_help(void) {
+#ifdef APP_RTOS_LINE
+    tm_printf(
+        (UB *)"\nROBOPICO RTOS LINE FOLLOWING v0.1 | Step2 EXPERIMENTAL | micro T-Kernel SMP\n");
+    tm_printf(
+        (UB *)"Continuous V2 profile1 only. Motors OFF on boot. USB connected while running.\n");
+    tm_printf((UB *)"g=follow after2s; s/GP21=stop; e/GP20=latched stop; x=clear latch.\n");
+    tm_printf(
+        (UB *)"L/R/U=queue left/right/U-turn during a run; separate bare cross triggers it.\n");
+    tm_printf((
+        UB *)"w=both white; l=left black; r=right black; k=save; c=restore original preset to RAM.\n");
+    tm_printf(
+        (UB *)"Calibration priority: RTOS saved page, valid SDK record28, original preset.\n");
+    tm_printf(
+        (UB *)"p/n=status+calibration; z=nav audit; d=export stopped RAM drive log; h=help.\n");
+    tm_printf(
+        (UB *)"No Wi-Fi/MQTT, barcode decoding, IMU/ramp assist or Buddy5 in this checkpoint.\n");
+    tm_printf((
+        UB *)"Keep sensors at current low/tilted mounting. Test straight, bend, then junction separately.\n");
+#else
     tm_printf((UB *)"\nROBOPICO RTOS MOTOR BRINGUP v0.1.1 | Step 1 only | micro T-Kernel SMP\n");
     tm_printf(
         (UB *)"Motors OFF on boot. USB bench only; Wi-Fi, line/barcode/IMU/Buddy5 not running.\n");
@@ -39,6 +61,7 @@ void bringup_help(void) {
         (UB *)"First test timing and encoders with wheels lifted; do not use on a circuit yet.\n");
     tm_printf((
         UB *)"No calibration or Wi-Fi settings are read/written. CLOCK requires 3 good windows.\n");
+#endif
 }
 
 void bringup_report(void) {
@@ -59,6 +82,9 @@ void bringup_report(void) {
         s.ticks[0], s.ticks[1], s.edges[0], s.edges[1], s.invalid[0], s.invalid[1], s.speed_x10[0],
         s.speed_x10[1], s.target[0], s.target[1], s.pwm[0], s.pwm[1], board_button_pressed(20U),
         board_button_pressed(21U), bringup_irq_stop);
+#ifdef APP_RTOS_LINE
+    rtos_line_report();
+#endif
 }
 
 void bringup_status_task(INT code, void *exinf) {
@@ -67,6 +93,9 @@ void bringup_status_task(INT code, void *exinf) {
     uint32_t next = board_kernel_ms();
     unsigned reports = 0U;
     for (;;) {
+#ifdef APP_RTOS_LINE
+        rtos_line_dump_if_requested();
+#endif
         uint32_t now = board_kernel_ms();
         if ((int32_t)(now - next) >= 0) {
             bringup_report();
@@ -93,6 +122,10 @@ EXPORT INT usermain(void) {
                              .now_us = port_now};
     motion_init(&port);
     ER result = bringup_create_objects();
+#ifdef APP_RTOS_LINE
+    if (result == E_OK)
+        result = start((FP)rtos_line_flash_task, 5, TP_PRC1, "flash-park");
+#endif
     if (result == E_OK)
         result = start((FP)bringup_control_task, 14, TP_PRC2, "motion");
     if (result == E_OK)

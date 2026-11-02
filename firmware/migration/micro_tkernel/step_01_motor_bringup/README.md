@@ -1,9 +1,10 @@
 # Step 1: RTOS motor, encoder and stop bring-up
 
-**EXPERIMENTAL — v0.1.1 cold-start acceptance pending. This is not line-following firmware.**
+**EXPERIMENTAL — v0.1.1 user bench acceptance passed. This is not line-following firmware.**
 
-The v0.1 clock, wheel, encoder and manual-stop checks passed the user's bench
-tests. Start with the [v0.1.1 correction and brief retest](UPDATE_V0_1_1.md).
+The v0.1.1 clock/readiness, wheel, encoder and stop checks passed the user's
+bench tests on 2026-11-02. See [hardware acceptance and scope](HARDWARE_ACCEPTANCE.md).
+The [startup correction](UPDATE_V0_1_1.md) documents the preceding change.
 
 Download `firmware/robopico_rtos_motor_bringup_v0_1_1.uf2` or the complete bundle in
 the same folder. This checkpoint follows the motor-first migration sequence.

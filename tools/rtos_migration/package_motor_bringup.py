@@ -57,7 +57,7 @@ def sources():
             relative = path.relative_to(ROOT)
             if any(part in EXCLUDED or part.startswith("build-") for part in relative.parts):
                 continue
-            if path.suffix.lower() in {".o", ".obj", ".d", ".elf", ".map", ".uf2", ".exe", ".pyc", ".zip"}:
+            if path.suffix.lower() in {".o", ".obj", ".d", ".su", ".elf", ".map", ".uf2", ".exe", ".pyc", ".zip"}:
                 continue
             if path.name in {"wifi_secrets.h", ".build_profile"} or ".local." in path.name:
                 continue

@@ -65,6 +65,12 @@ static inline bool br_command_fresh(uint32_t now, uint32_t received) {
     return now - received <= 500000U;
 }
 
+static inline bool br_command_after_stop(uint32_t now, uint32_t received, uint32_t stopped,
+                                         bool stop_seen) {
+    return br_command_fresh(now, received) &&
+           (!stop_seen || now - stopped > 500000U || (int32_t)(received - stopped) > 0);
+}
+
 static inline bool br_outputs_allowed(uint16_t flags, bool irq_latched, unsigned usb,
                                       bool buttons_released) {
     return (flags & (BR_ACTIVE | BR_CLOCK_OK | BR_LATCHED)) == (BR_ACTIVE | BR_CLOCK_OK) &&

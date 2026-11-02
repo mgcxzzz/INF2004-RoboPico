@@ -2,9 +2,10 @@
 
 Updated:2026-11-02 for v0.1.1. Reference main:`7843f45fbe45d5a774bc18c93be9bb11084d1b64`.
 
-**v0.1.1 cold-start acceptance is pending.** The user confirmed the v0.1 clocks,
-wheels, encoders and manual stops; see UPDATE_V0_1_1.md. The checks below are
-software/build evidence and do not establish the corrected cold-start behaviour.
+**v0.1.1 user hardware acceptance passed on 2026-11-02.** See
+[acceptance measurements and scope](HARDWARE_ACCEPTANCE.md). The checks below
+record the preceding software/build verification; the acceptance note records
+the subsequent cold-start, both-wheel, encoder and stop evidence.
 
 - Production policy regression: independently rejects the previous~42.7x slow
   hardware TIMER and~1.525x clock disagreement, frozen clocks, incomplete startup,
@@ -37,5 +38,5 @@ software/build evidence and do not establish the corrected cold-start behaviour.
 See `logs/host_tests_v0_1_1.txt`, `logs/arm_build_v0_1_1.txt`,
 `logs/replay_original_capture_v0_1_1.json` and `firmware/BUILD_MANIFEST.json`.
 The original v0.1 build/test logs remain alongside them.
-The next evidence is the brief v0.1.1 cold-power-up capture and pulse/GP20 retest
-in UPDATE_V0_1_1.md. No shared main controller/config/interface source changed.
+The v0.1.1 cold-power-up capture and pulse/GP20 retest requested in UPDATE_V0_1_1.md
+were subsequently accepted. No shared main controller/config/interface source changed.

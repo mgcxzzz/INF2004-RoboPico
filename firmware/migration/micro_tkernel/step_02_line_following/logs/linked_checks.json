@@ -1,0 +1,247 @@
+{
+  "flash_ram_addresses": {
+    "rl_flash_park": "0x200000e4",
+    "rl_flash_write": "0x2000011c"
+  },
+  "static_ram_end": "0x2001e340",
+  "ram_remaining_before_dynamic_kernel_stacks": 138432,
+  "application_stack_frames": {
+    "port_now": {
+      "bytes": 8,
+      "kind": "static"
+    },
+    "port_off": {
+      "bytes": 8,
+      "kind": "static"
+    },
+    "start": {
+      "bytes": 64,
+      "kind": "static"
+    },
+    "bringup_help": {
+      "bytes": 8,
+      "kind": "static"
+    },
+    "bringup_report": {
+      "bytes": 200,
+      "kind": "static"
+    },
+    "bringup_status_task": {
+      "bytes": 24,
+      "kind": "static"
+    },
+    "usermain": {
+      "bytes": 64,
+      "kind": "static"
+    },
+    "gpio_dispatch": {
+      "bytes": 16,
+      "kind": "static"
+    },
+    "board_motion_lock": {
+      "bytes": 16,
+      "kind": "static"
+    },
+    "board_motion_unlock": {
+      "bytes": 8,
+      "kind": "static"
+    },
+    "board_time_us": {
+      "bytes": 8,
+      "kind": "static"
+    },
+    "board_kernel_ms": {
+      "bytes": 16,
+      "kind": "static"
+    },
+    "board_button_pressed": {
+      "bytes": 0,
+      "kind": "static"
+    },
+    "board_motor_off": {
+      "bytes": 0,
+      "kind": "static"
+    },
+    "board_motor_init": {
+      "bytes": 12,
+      "kind": "static"
+    },
+    "board_motor_write": {
+      "bytes": 0,
+      "kind": "static"
+    },
+    "board_gpio_init": {
+      "bytes": 56,
+      "kind": "static"
+    },
+    "board_encoder_drain": {
+      "bytes": 16,
+      "kind": "static"
+    },
+    "board_clock_registers_ok": {
+      "bytes": 0,
+      "kind": "static"
+    },
+    "board_clock_report": {
+      "bytes": 56,
+      "kind": "static"
+    },
+    "rl_levels": {
+      "bytes": 32,
+      "kind": "static"
+    },
+    "apply_outputs": {
+      "bytes": 40,
+      "kind": "static"
+    },
+    "bringup_get_status": {
+      "bytes": 24,
+      "kind": "static"
+    },
+    "bringup_stop": {
+      "bytes": 48,
+      "kind": "static"
+    },
+    "bringup_create_objects": {
+      "bytes": 32,
+      "kind": "static"
+    },
+    "bringup_control_task": {
+      "bytes": 568,
+      "kind": "static"
+    },
+    "bringup_safety_task": {
+      "bytes": 88,
+      "kind": "static"
+    },
+    "bringup_nav_task": {
+      "bytes": 152,
+      "kind": "static"
+    },
+    "bringup_console_task": {
+      "bytes": 56,
+      "kind": "static"
+    },
+    "rl_flash_park": {
+      "bytes": 0,
+      "kind": "static"
+    },
+    "rl_flash_write": {
+      "bytes": 16,
+      "kind": "static"
+    },
+    "adc_once": {
+      "bytes": 24,
+      "kind": "static"
+    },
+    "board_motor_levels": {
+      "bytes": 8,
+      "kind": "static"
+    },
+    "board_motor_current": {
+      "bytes": 8,
+      "kind": "static"
+    },
+    "board_line_adc_init": {
+      "bytes": 24,
+      "kind": "static"
+    },
+    "board_line_adc_read": {
+      "bytes": 56,
+      "kind": "static"
+    },
+    "board_line_flash_worker": {
+      "bytes": 8,
+      "kind": "static"
+    },
+    "board_line_save": {
+      "bytes": 120,
+      "kind": "static"
+    },
+    "junction_wheel_step": {
+      "bytes": 56,
+      "kind": "static"
+    },
+    "symmetric_demand.constprop": {
+      "bytes": 32,
+      "kind": "static"
+    },
+    "j_acquire.constprop": {
+      "bytes": 104,
+      "kind": "static"
+    },
+    "junction_step.constprop": {
+      "bytes": 112,
+      "kind": "static"
+    },
+    "circuit_line_demand": {
+      "bytes": 72,
+      "kind": "static"
+    },
+    "rtos_line_init": {
+      "bytes": 112,
+      "kind": "static"
+    },
+    "rtos_line_command": {
+      "bytes": 16,
+      "kind": "static"
+    },
+    "rtos_line_cancel": {
+      "bytes": 24,
+      "kind": "static"
+    },
+    "rtos_line_start_valid": {
+      "bytes": 24,
+      "kind": "static"
+    },
+    "rtos_line_side_poll": {
+      "bytes": 72,
+      "kind": "static"
+    },
+    "rtos_line_ready": {
+      "bytes": 12,
+      "kind": "static"
+    },
+    "rtos_line_prepare": {
+      "bytes": 376,
+      "kind": "static"
+    },
+    "rtos_line_begin": {
+      "bytes": 56,
+      "kind": "static"
+    },
+    "rtos_line_follow": {
+      "bytes": 296,
+      "kind": "static"
+    },
+    "rtos_line_feedback": {
+      "bytes": 16,
+      "kind": "static"
+    },
+    "rtos_line_power": {
+      "bytes": 208,
+      "kind": "static"
+    },
+    "rtos_line_actual_output": {
+      "bytes": 0,
+      "kind": "static"
+    },
+    "rtos_line_record": {
+      "bytes": 208,
+      "kind": "static"
+    },
+    "rtos_line_report": {
+      "bytes": 136,
+      "kind": "static"
+    },
+    "rtos_line_dump_if_requested": {
+      "bytes": 368,
+      "kind": "static"
+    },
+    "rtos_line_flash_task": {
+      "bytes": 8,
+      "kind": "static"
+    }
+  },
+  "note": "Static stack frames are not a measured call-chain high-water mark; hardware checks remain required."
+}

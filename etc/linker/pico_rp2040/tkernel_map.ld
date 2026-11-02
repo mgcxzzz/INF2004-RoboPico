@@ -55,6 +55,9 @@ SECTIONS {
 		__data_start = .;
 		*(.data)
 		*(.data.*)
+		/* Calibration writer and other-core parking loop must execute in RAM. */
+		. = ALIGN(4);
+		*(.rtos_ramfunc*)
 		. = ALIGN(4);
 		__data_end = .;
 	} >RAM
