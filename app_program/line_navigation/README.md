@@ -3,11 +3,18 @@
 This folder ports the SDK integration's profile 1 execution boundary. It does
 not replace the reference tracker, Continuous V2 steering, PI controllers,
 turn geometry or line-search algorithms. The reference feature source,
-interfaces and calibration configuration remain byte-identical to main
-`7843f45fbe45d5a774bc18c93be9bb11084d1b64`.
+interfaces and calibration configuration retain the main baseline
+`7843f45fbe45d5a774bc18c93be9bb11084d1b64`, with two explicitly reviewed opt-in
+departure-guard edits in junction_logic.h/uturn_logic.h. Packaging checks every
+other shared source byte and exactly reconstructs these two permitted changes.
 
-Current Step 2 version is **v0.1.1**. Its ADC correction and stopped-first test
-are documented in `firmware/migration/micro_tkernel/step_02_line_following/UPDATE_V0_1_1.md`.
+Current Step 2 version is **v0.1.2**, the angle-only junction experiment. See
+`firmware/migration/micro_tkernel/step_02_line_following/UPDATE_V0_1_2.md`.
+Only APP=rtos_line defines JUNCTION_ANGLE_GATE_ONLY=1; default0 retains the old
+white prerequisite for reference builds. Original steering/calibration, branch
+threshold/dwell, angle limits, acquisition and stops remain. White is separately
+observed, never used to manufacture a sensor reading. The ADC correction from
+v0.1.1 is retained.
 
 ## Ownership and update order
 
@@ -112,6 +119,8 @@ blocks motion while a run is active.
 | Three raw ADC and two filtered ADC readings | 12 bits each in packed words. |
 | Two normalized optical levels | 10 bits each, 0–1000. |
 | Steering gain/damping quantized to 0–1000 | 10 bits each. |
+| Junction white-now/white-qualified/gate/accepted/without-white/event | One bit each in spare aux bits; copied under the same snapshot lock. |
+| Encoder turn angle x10 | Signed13 bits, saturating -4096..4095; remaining spare bit unused. |
 | Navigation phase | 4 bits, values 1–10. |
 | Optical decision/reason | 6 bits each, preserving existing code ranges. |
 | Side black, busy, white, active-search | One bit each. |

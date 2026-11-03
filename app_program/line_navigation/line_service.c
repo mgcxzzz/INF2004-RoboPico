@@ -29,6 +29,7 @@ static struct {
     uint16_t adc[3], level[2];
     uint32_t cal_origin, rows, overwritten, sequence, cost;
     unsigned phase, decision, reason, pending, action, flags;
+    uint32_t junction_aux;
     RlAdcDiagnostics adc_diag;
     uint32_t adc_retries, adc_recoveries, adc_frames;
     unsigned adc_state : 2, adc_good : 2;
@@ -321,6 +322,7 @@ void rtos_line_record(const BringupStatus *s, const AnalogDemand *d, uint32_t co
     rl_pack_optics(&row, raw, d, planner.circuit.phase);
     rl_pack_steering(&row, input.adc, (unsigned)(planner.steering.gain * 1000 + .5f),
                      (unsigned)(planner.steering.damp_weight * 1000 + .5f));
+    rl_pack_junction(&row, &planner);
     row.optical_target[0] = planner.optical.target[0];
     row.optical_target[1] = planner.optical.target[1];
     const CircuitTracker *tracker =
@@ -345,6 +347,7 @@ void rtos_line_record(const BringupStatus *s, const AnalogDemand *d, uint32_t co
     view.cost = cost;
     view.flags =
         (adc_ok ? 1U : 0U) | (calibration_valid(&calibration) ? 2U : 0U) | (countdown ? 4U : 0U);
+    view.junction_aux = row.aux[1];
     board_line_adc_diagnostics(&view.adc_diag);
     view.adc_state = adc_health.state;
     view.adc_good = adc_health.good;
@@ -382,6 +385,7 @@ void rtos_line_report(void) {
     RlAdcDiagnostics diag = view.adc_diag;
     unsigned health = view.adc_state, good = view.adc_good;
     uint32_t retries = view.adc_retries, recoveries = view.adc_recoveries, frames = view.adc_frames;
+    LineLogRow junction = {.aux = {0, view.junction_aux}};
     leave(key);
     tm_printf(
         (UB *)"LINE profile=1 phase=%u decision=%u reason=%u pending=%u action=%u flags=0x%x raw=%u,%u,%u level=%u,%u rows=%u overwritten=%u\n",
@@ -391,6 +395,11 @@ void rtos_line_report(void) {
         (UB *)"CAL_FRONT white=%u,%u black=%u,%u mask=%u valid=%u origin=%u (0=preset 1=SDK28 2=RTOS_saved 3=RAM)\n",
         cal.white[0], cal.white[1], cal.black[0], cal.black[1], cal.mask, calibration_valid(&cal),
         origin);
+    unsigned jf = (junction.aux[1] >> 12) & 63U;
+    tm_printf(
+        (UB *)"JUNCTION policy=angle_only angle_x10=%d both_white=%u prior_white=%u departure_ready=%u branch_accepted=%u accepted_without_white=%u\n",
+        rl_log_angle(&junction), jf & 1U, (jf >> 1) & 1U, (jf >> 2) & 1U, (jf >> 3) & 1U,
+        (jf >> 4) & 1U);
     tm_printf(
         (UB *)"ADC state=%u good=%u frames=%u conversions=%u avoided_timeout=%u timeouts=%u errors=%u init_errors=%u bad_arguments=%u retries=%u recoveries=%u ch0=%u ch1=%u ch2=%u fail0=%u fail1=%u fail2=%u\n",
         health, good, frames, diag.conversions, diag.avoided_timeout, diag.timeouts, diag.errors,
@@ -424,12 +433,14 @@ void rtos_line_dump_if_requested(void) {
     if (status.flags & BR_ACTIVE)
         goto done;
     rtos_line_report();
-    tm_printf((UB *)"LINE_LOG_BEGIN version=1 rows=%u overwritten=%u\n", count, overwritten);
+    tm_printf((UB *)"LINE_LOG_BEGIN version=2 rows=%u overwritten=%u\n", count, overwritten);
     tm_printf((UB *)"LINE_LOG_CAL white=%u,%u black=%u,%u origin=%u\n", run_calibration.white[0],
               run_calibration.white[1], run_calibration.black[0], run_calibration.black[1],
               run_cal_origin);
     tm_printf((
-        UB *)"sequence,ms,ticks_l,ticks_r,speed_l_x10,speed_r_x10,target_l,target_r,pwm_l,pwm_r,adc_l,adc_r,adc_side,level_l,level_r,phase,decision,reason,side_black,busy,white,search,pending,action,dt_us,cost_us,filtered_l,filtered_r,optical_target_l,optical_target_r,steer_gain_milli,damping_milli,stop_reason,control_flags\n");
+        UB *)"LINE_LOG_POLICY name=angle_only departure_deg_gt=10 departure_us=30000 branch_us=30000\n");
+    tm_printf((
+        UB *)"sequence,ms,ticks_l,ticks_r,speed_l_x10,speed_r_x10,target_l,target_r,pwm_l,pwm_r,adc_l,adc_r,adc_side,level_l,level_r,phase,decision,reason,side_black,busy,white,search,pending,action,dt_us,cost_us,filtered_l,filtered_r,optical_target_l,optical_target_r,steer_gain_milli,damping_milli,stop_reason,control_flags,turn_degrees_x10,junction_both_white,junction_prior_white,junction_departure_ready,junction_branch_accepted,junction_accepted_without_white,junction_accept_event\n");
     for (unsigned n = 0; n < count; ++n) {
         while (tm_usb_pending() > 1024 && tm_usb_state() == 3)
             (void)tk_dly_tsk(2);
@@ -438,7 +449,7 @@ void rtos_line_dump_if_requested(void) {
         /* Starts are blocked while exporting, so rows remain frozen. */
         LineLogRow r = rows[(head + RL_LOG_ROWS - count + n) % RL_LOG_ROWS];
         tm_printf(
-            (UB *)"LINE_ROW %u,%u,%d,%d,%d,%d,%d,%d,%d,%d,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%d,%d,%u,%u,%u,%u\n",
+            (UB *)"LINE_ROW %u,%u,%d,%d,%d,%d,%d,%d,%d,%d,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%d,%d,%u,%u,%u,%u,%d,%u,%u,%u,%u,%u,%u\n",
             r.sequence, r.ms, r.ticks[0], r.ticks[1], r.speed[0], r.speed[1], r.target[0],
             r.target[1], r.pwm[0], r.pwm[1], r.optics[0] & 4095U, (r.optics[0] >> 12) & 4095U,
             (r.optics[0] >> 24) | ((r.optics[1] & 15U) << 8), (r.optics[1] >> 4) & 1023U,
@@ -448,7 +459,9 @@ void rtos_line_dump_if_requested(void) {
             rl_route_ascii((r.meta >> 18) & 3U), r.dt_us, r.cost_us, r.aux[0] & 4095U,
             (r.aux[0] >> 12) & 4095U, r.optical_target[0], r.optical_target[1],
             (r.aux[0] >> 24) | ((r.aux[1] & 3U) << 8), (r.aux[1] >> 2) & 1023U,
-            (r.meta >> 20) & 15U, (r.meta >> 24) & 127U);
+            (r.meta >> 20) & 15U, (r.meta >> 24) & 127U, rl_log_angle(&r), (r.aux[1] >> 12) & 1U,
+            (r.aux[1] >> 13) & 1U, (r.aux[1] >> 14) & 1U, (r.aux[1] >> 15) & 1U,
+            (r.aux[1] >> 16) & 1U, (r.aux[1] >> 17) & 1U);
     }
     tm_printf((UB *)"LINE_LOG_END rows=%u\n", count);
 done:

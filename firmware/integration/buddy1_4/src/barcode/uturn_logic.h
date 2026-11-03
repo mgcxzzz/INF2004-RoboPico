@@ -57,7 +57,7 @@ static inline AnalogDemand barcode_uturn_step(BarcodeUTurn *u, Junction *j,
             j_fail(j, J_TURN_TIMEOUT);
         float left = i->wheel[0] - j->turn_origin[0], right = i->wheel[1] - j->turn_origin[1];
         bool white = d.level[0] < 200 && d.level[1] < 200;
-        if (white && j->turn_degrees > 10) {
+        if ((white || JUNCTION_ANGLE_GATE_ONLY) && j->turn_degrees > 10) {
             if (!j->off_timing) {
                 j->off_timing = true;
                 j->off_us = i->now;

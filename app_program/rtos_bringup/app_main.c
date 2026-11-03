@@ -31,9 +31,11 @@ static ER start(FP entry, PRI priority, UW processor, const char *name) {
 void bringup_help(void) {
 #ifdef APP_RTOS_LINE
     tm_printf((
-        UB *)"\nROBOPICO RTOS LINE FOLLOWING v0.1.1 | ADC diagnostics/recovery | Step2 EXPERIMENTAL | micro T-Kernel SMP\n");
+        UB *)"\nROBOPICO RTOS LINE FOLLOWING v0.1.2 | ANGLE-ONLY JUNCTION EXPERIMENT | Step2 | micro T-Kernel SMP\n");
     tm_printf(
         (UB *)"Continuous V2 profile1 only. Motors OFF on boot. USB connected while running.\n");
+    tm_printf((
+        UB *)"Junction: >10deg for30ms arms; prior both-white NOT required. Branch angles/30ms/acquisition/stops retained.\n");
     tm_printf((UB *)"g=follow after2s; s/GP21=stop; e/GP20=latched stop; x=clear latch.\n");
     tm_printf(
         (UB *)"L/R/U=queue left/right/U-turn during a run; separate bare cross triggers it.\n");

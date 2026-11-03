@@ -25,6 +25,37 @@ def command(*args):
     return subprocess.check_output(list(map(str, args)), cwd=ROOT, text=True, encoding="utf-8").strip()
 
 
+def verify_shared_sources(hashes):
+    """Fail on any unreviewed baseline drift, including in the two opt-in edits."""
+    preserved, reviewed = [], {}
+    prefix = "firmware/integration/buddy1_4/"
+    baseline_files = command("git", "ls-tree", "-r", "--name-only", BASE, prefix).splitlines()
+    for relative in baseline_files:
+        if not any(relative.startswith(prefix + part + "/") for part in ("src", "include", "config")):
+            continue
+        original = subprocess.check_output(["git", "show", f"{BASE}:{relative}"], cwd=ROOT)
+        if hashlib.sha256(original).hexdigest() == hashes[relative]:
+            preserved.append(relative)
+            continue
+        expected = original.decode("utf-8")
+        if relative == prefix + "src/navigation/junction_logic.h":
+            anchor = '#include "src/motion/dual_logic.h"\n'
+            assert expected.count(anchor) == 1
+            expected = expected.replace(anchor, anchor +
+                '\n/* Opt-in Step 2 experiment. Reference/SDK builds retain optical departure. */\n'
+                '#ifndef JUNCTION_ANGLE_GATE_ONLY\n#define JUNCTION_ANGLE_GATE_ONLY 0\n#endif\n')
+        elif relative != prefix + "src/barcode/uturn_logic.h":
+            raise AssertionError("Unreviewed shared source change: " + relative)
+        old = "if (white && j->turn_degrees > 10) {"
+        assert expected.count(old) == 1
+        expected = expected.replace(old, "if ((white || JUNCTION_ANGLE_GATE_ONLY) && j->turn_degrees > 10) {")
+        assert (ROOT / relative).read_bytes() == expected.encode("utf-8"), relative
+        reviewed[relative] = {"baseline_sha256": hashlib.sha256(original).hexdigest(),
+                              "current_sha256": hashes[relative],
+                              "change": "Only opt-in departure guard; default0 retains reference white requirement."}
+    return preserved, reviewed
+
+
 def validate_uf2(data):
     if not data or len(data) % 512:
         raise ValueError("Invalid UF2 length")
@@ -77,14 +108,7 @@ def main():
     shutil.copyfile(firmware, copied)
     paths = sorted(set(sources()))
     hashes = {path.relative_to(ROOT).as_posix(): digest(path) for path in paths}
-    # Shared algorithm and calibration sources must remain byte-identical to main.
-    baseline_files = command("git", "ls-tree", "-r", "--name-only", BASE, "firmware/integration/buddy1_4").splitlines()
-    preserved = []
-    for relative in baseline_files:
-        if any(relative.startswith("firmware/integration/buddy1_4/" + part + "/") for part in ("src", "include", "config")):
-            original = subprocess.check_output(["git", "show", f"{BASE}:{relative}"], cwd=ROOT)
-            assert hashlib.sha256(original).hexdigest() == hashes[relative], relative
-            preserved.append(relative)
+    preserved, reviewed = verify_shared_sources(hashes)
     source_hashes = ART / "SOURCE_SHA256.json"
     source_hashes.write_text(json.dumps(hashes, indent=2) + "\n", encoding="utf-8")
     tool = ROOT.parent / ".buddy2-tools/arm-gcc/bin/arm-none-eabi-gcc.exe"
@@ -106,6 +130,7 @@ def main():
         "uf2_sha256": digest(copied), "uf2_bytes": copied.stat().st_size,
         "elf_sha256": digest(elf), "uf2_layout": info,
         "source_file_count": len(paths), "unchanged_shared_files_verified": len(preserved),
+        "reviewed_shared_changes": reviewed,
         "linked_symbol_check": "Five application tasks, coordinator API and commit present; Wi-Fi, sample ADC/UART, Buddy5 and flash programming absent.",
         "software_checks": ["5 strict production-C regression executables", "15 Python capture-analysis tests",
                             "Strict ARM build of new application", "UF2 block/family/bounds and source parity checks"],

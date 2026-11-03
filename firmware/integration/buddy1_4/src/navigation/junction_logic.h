@@ -3,6 +3,11 @@
 #include "src/line_following/symmetric_logic.h"
 #include "src/motion/dual_logic.h"
 
+/* Opt-in Step 2 experiment. Reference/SDK builds retain optical departure. */
+#ifndef JUNCTION_ANGLE_GATE_ONLY
+#define JUNCTION_ANGLE_GATE_ONLY 0
+#endif
+
 enum {
     J_APPROACH = 1,
     J_CENTRE,
@@ -267,7 +272,7 @@ static inline AnalogDemand junction_step(Junction *j, const LineCalibration *c,
             break;
         }
         bool white = d.level[0] < 200 && d.level[1] < 200;
-        if (white && j->turn_degrees > 10) {
+        if ((white || JUNCTION_ANGLE_GATE_ONLY) && j->turn_degrees > 10) {
             if (!j->off_timing) {
                 j->off_timing = true;
                 j->off_us = i->now;

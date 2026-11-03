@@ -1,8 +1,11 @@
-# Step 2 — RTOS line following v0.1.1 (experimental)
+# Step 2 — RTOS line following v0.1.2 (experimental)
 
-**Current update:** [ADC correction and exact first test](UPDATE_V0_1_1.md).
-Start with the stopped 70-second ADC check before another driving attempt.
-The old v0.1 image became ADC-unavailable during the user’s idle test.
+**Current update:** [Angle-only junction experiment and exact tests](UPDATE_V0_1_2.md).
+Calibration and straight steering remain unchanged. Prior both-white is no longer
+required for branch acceptance in this experimental image; angle windows, black
+confirmation, acquisition and stops remain. The original behaviour is retained
+in the archived v0.1.1 firmware. The earlier [ADC correction](UPDATE_V0_1_1.md)
+is included and the user's stopped readiness test has passed.
 
 This is the second **micro T-Kernel SMP** migration checkpoint, on
 `codex/micro-tkernel-migration`. It is not the final Buddy1–5 build.
@@ -37,12 +40,12 @@ must still supply the motors, as in the successful Step 1 test.
 
 ## Download and flash
 
-Use `firmware/robopico_rtos_line_following_v0_1_1_bundle.zip` for the complete
+Use `firmware/robopico_rtos_line_following_v0_1_2_bundle.zip` for the complete
 source, UF2, export helper and these instructions. Extract the bundle first.
 Its top-level `firmware` folder contains the UF2.
 
 1. Stop the robot. Enter BOOTSEL and copy
-   `robopico_rtos_line_following_v0_1_1.uf2` to RPI-RP2.
+   `robopico_rtos_line_following_v0_1_2.uf2` to RPI-RP2.
 2. Open the Pico COM port in PuTTY at **115200**, with flow control **None**.
    Motors stay off at boot. Do not start a dashboard/broker for this test.
 3. Wait for `CLOCK ... status=PASS` and a released-button, fault-free status.
@@ -160,5 +163,5 @@ motor, encoder, stop and clock foundation is in `app_program/rtos_bringup`.
 See [architecture and data representation](../../../../app_program/line_navigation/README.md)
 and [software checks](TEST_RESULTS.md).
 
-**Hardware acceptance is pending.** These tests deliberately leave the known
-SDK sharp-bend and post-junction issues visible before changing their tuning.
+**v0.1.2 hardware acceptance is pending.** Follow the current update's separate
+left/right/U-turn test and export sequence first. Sharp-bend tuning is unchanged.

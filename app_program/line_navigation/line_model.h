@@ -19,6 +19,20 @@ enum {
     RL_LOG_ROWS = 1536
 };
 
+enum {
+    RL_J_WHITE_NOW = 1,
+    RL_J_WHITE_QUALIFIED = 2,
+    RL_J_DEPARTURE_READY = 4,
+    RL_J_BRANCH_ACCEPTED = 8,
+    RL_J_ACCEPTED_WITHOUT_WHITE = 16,
+    RL_J_ACCEPT_EVENT = 32,
+    RL_J_WHITE_TIMING = 64
+};
+typedef struct {
+    uint64_t white_us;
+    uint8_t flags;
+} LineJunctionDiagnostic;
+
 typedef struct {
     Circuit circuit;
     BarcodeNav nav;
@@ -29,7 +43,43 @@ typedef struct {
     uint64_t candidate_us;
     double candidate_wheel[2];
     bool black, candidate;
+    LineJunctionDiagnostic junction;
 } LinePlanner;
+
+/* Observation only: never modifies the planner's acceptance or motor targets.
+ * White qualification reproduces the former <200, >10deg, 30ms condition.
+ * For U-turns, acceptance is stage2 -> stage3, before the second settle. */
+static inline void rl_junction_observe(LinePlanner *p, const LineCalibration *cal,
+                                       const CircuitInput *i, unsigned before, unsigned stage) {
+    LineJunctionDiagnostic *q = &p->junction;
+    const Junction *j = &p->circuit.turn;
+    if (before == J_CENTRE && p->circuit.phase == J_TURN)
+        *q = (LineJunctionDiagnostic){0};
+    q->flags &= (uint8_t) ~(RL_J_WHITE_NOW | RL_J_ACCEPT_EVENT);
+    bool white = line_level(i->adc[0], cal->white[0], cal->black[0]) < 200 &&
+                 line_level(i->adc[1], cal->white[1], cal->black[1]) < 200;
+    if (white)
+        q->flags |= RL_J_WHITE_NOW;
+    if (before == J_TURN && j->turn_degrees > 10 && white) {
+        if (!(q->flags & RL_J_WHITE_TIMING)) {
+            q->white_us = i->now;
+            q->flags |= RL_J_WHITE_TIMING;
+        }
+        if (i->now - q->white_us >= 30000)
+            q->flags |= RL_J_WHITE_QUALIFIED;
+    } else
+        q->flags &= (uint8_t)~RL_J_WHITE_TIMING;
+    if (j->off_line)
+        q->flags |= RL_J_DEPARTURE_READY;
+    bool uturn = barcode_nav_action(&p->nav, p->nav.action) == 'U';
+    bool accepted = before == J_TURN &&
+                    (uturn ? stage == 2 && p->nav.uturn.stage == 3 : p->circuit.phase == J_ACQUIRE);
+    if (accepted) {
+        q->flags |= RL_J_BRANCH_ACCEPTED | RL_J_ACCEPT_EVENT;
+        if (!(q->flags & RL_J_WHITE_QUALIFIED))
+            q->flags |= RL_J_ACCEPTED_WITHOUT_WHITE;
+    }
+}
 
 static inline void rl_begin(LinePlanner *p, const CircuitInput *i, uint16_t side_adc) {
     *p = (LinePlanner){.baseline = side_adc,
@@ -83,7 +133,9 @@ static inline void rl_side(LinePlanner *p, uint16_t adc, uint64_t now, const dou
  * decoder banks. Host tests compare it against the unchanged full wrapper. */
 static inline AnalogDemand rl_follow(LinePlanner *p, const LineCalibration *cal,
                                      const CircuitInput *i, float dt) {
+    unsigned before = p->circuit.phase, stage = p->nav.uturn.stage;
     AnalogDemand d = barcode_circuit_step(&p->circuit, &p->nav, cal, i, RL_PROFILE);
+    rl_junction_observe(p, cal, i, before, stage);
     p->optical = d;
     bool activity = p->nav.pending || p->side_adc >= (unsigned)p->baseline + 16;
     if (activity)
@@ -273,6 +325,21 @@ static inline void rl_pack_steering(LineLogRow *r, const uint16_t filtered[2], u
     r->aux[0] = (filtered[0] & 4095U) | ((uint32_t)(filtered[1] & 4095U) << 12) |
                 ((gain_milli & 255U) << 24);
     r->aux[1] = ((gain_milli >> 8) & 3U) | ((damping_milli & 1023U) << 2);
+}
+
+/* Use spare bits: six one-bit observations and signed13-bit angle x10.
+ * The 56-byte row and existing steering fields retain their layout. */
+static inline void rl_pack_junction(LineLogRow *r, const LinePlanner *p) {
+    float degrees = p->circuit.turn.turn_degrees;
+    int angle = degrees <= -409.6f  ? -4096
+                : degrees >= 409.5f ? 4095
+                                    : (int)(degrees * 10 + (degrees < 0 ? -.5f : .5f));
+    r->aux[1] = (r->aux[1] & 4095U) | ((uint32_t)(p->junction.flags & 63U) << 12) |
+                ((uint32_t)(angle & 8191) << 18);
+}
+static inline int rl_log_angle(const LineLogRow *r) {
+    unsigned value = (r->aux[1] >> 18) & 8191U;
+    return value & 4096U ? (int)value - 8192 : (int)value;
 }
 
 static inline unsigned rl_route_bits(char route) {

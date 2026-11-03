@@ -129,7 +129,7 @@ $(error rtos_bringup requires SMP=1 CONSOLE=usb_cdc WIFI=none NET=none MQTT=0 CR
 endif
 EXE_FILE := robopico_rtos_motor_bringup_v0_1_1
 ifeq ($(APP),rtos_line)
-EXE_FILE := robopico_rtos_line_following_v0_1_1
+EXE_FILE := robopico_rtos_line_following_v0_1_2
 endif
 endif
 
@@ -199,7 +199,7 @@ LFLAGS += -Wl,--gc-sections -Wl,--defsym=__migration_flash_limit=0x10100000
 LDLIBS += -lm
 endif
 ifeq ($(APP),rtos_line)
-CFLAGS += -DAPP_RTOS_LINE=1 -DBUDDY_WIFI_LOGGING=1 -DLINE_CAL_MIN_SPAN=50 -DCIRCUIT_SWEEP_SEARCH=1 -fstack-usage
+CFLAGS += -DAPP_RTOS_LINE=1 -DBUDDY_WIFI_LOGGING=1 -DLINE_CAL_MIN_SPAN=50 -DCIRCUIT_SWEEP_SEARCH=1 -DJUNCTION_ANGLE_GATE_ONLY=1 -fstack-usage
 endif
 CFLAGS  += -DTM_CONSOLE_UART=$(CRASH_REPORT)
 ifeq ($(CRASH_REPORT),0)

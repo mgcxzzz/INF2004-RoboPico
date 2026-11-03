@@ -10,10 +10,13 @@ from pathlib import Path
 import re
 import time
 
-COLUMNS = ("sequence,ms,ticks_l,ticks_r,speed_l_x10,speed_r_x10,target_l,target_r,pwm_l,pwm_r,"
+COLUMNS_V1 = ("sequence,ms,ticks_l,ticks_r,speed_l_x10,speed_r_x10,target_l,target_r,pwm_l,pwm_r,"
            "adc_l,adc_r,adc_side,level_l,level_r,phase,decision,reason,side_black,busy,white,search,"
            "pending,action,dt_us,cost_us,filtered_l,filtered_r,optical_target_l,optical_target_r,"
            "steer_gain_milli,damping_milli,stop_reason,control_flags").split(",")
+COLUMNS = COLUMNS_V1 + ("turn_degrees_x10,junction_both_white,junction_prior_white,"
+                        "junction_departure_ready,junction_branch_accepted,"
+                        "junction_accepted_without_white,junction_accept_event").split(",")
 
 
 def parse_capture(lines: list[str]) -> tuple[list[dict], dict]:
@@ -21,30 +24,39 @@ def parse_capture(lines: list[str]) -> tuple[list[dict], dict]:
     expected = overwritten = end_count = None
     collecting = ended = False
     calibration = None
+    version, policy = None, None
     for line in lines:
         if line.startswith("LINE_LOG_BEGIN "):
-            found = re.fullmatch(r"LINE_LOG_BEGIN version=1 rows=(\d+) overwritten=(\d+)", line)
+            found = re.fullmatch(r"LINE_LOG_BEGIN version=([12]) rows=(\d+) overwritten=(\d+)", line)
             if not found:
                 errors.append("Unrecognized log header.")
                 continue
             if collecting or ended:
                 errors.append("Multiple dumps in one capture.")
-            expected, overwritten = map(int, found.groups())
+            version, expected, overwritten = map(int, found.groups())
             collecting = True
         elif line.startswith("LINE_LOG_CAL ") and collecting:
             calibration = line
+        elif line.startswith("LINE_LOG_POLICY ") and collecting:
+            policy = line
         elif line.startswith("LINE_ROW ") and collecting:
             cells = next(csv.reader(io.StringIO(line[len("LINE_ROW "):])))
             try:
-                if len(cells) != len(COLUMNS):
+                columns = COLUMNS if version == 2 else COLUMNS_V1
+                if len(cells) != len(columns):
                     raise ValueError("wrong column count")
-                row = dict(zip(COLUMNS, map(int, cells)))
+                row = dict(zip(columns, map(int, cells)))
                 if any(not 0 <= row[k] <= 4095 for k in
                        ("adc_l", "adc_r", "adc_side", "filtered_l", "filtered_r")):
                     raise ValueError("ADC outside 12-bit range")
                 if any(not 0 <= row[k] <= 1000 for k in
                        ("level_l", "level_r", "steer_gain_milli", "damping_milli")):
                     raise ValueError("normalized field outside range")
+                if version == 2:
+                    if not -4096 <= row["turn_degrees_x10"] <= 4095:
+                        raise ValueError("junction angle outside range")
+                    if any(row[k] not in (0, 1) for k in COLUMNS[len(COLUMNS_V1) + 1:]):
+                        raise ValueError("junction flag outside one-bit range")
                 if rows and row["sequence"] != rows[-1]["sequence"] + 1:
                     errors.append("Missing/duplicate/reordered sample sequence.")
                 if rows and row["ms"] < rows[-1]["ms"]:
@@ -65,8 +77,11 @@ def parse_capture(lines: list[str]) -> tuple[list[dict], dict]:
         errors.append("Row count does not match the firmware header/end marker.")
     if calibration is None:
         errors.append("Run calibration metadata missing.")
+    if version == 2 and policy is None:
+        errors.append("Junction policy metadata missing.")
     info = {"result": "COMPLETE" if not errors else "INCOMPLETE", "issues": errors,
             "rows": len(rows), "overwritten": overwritten, "run_calibration": calibration,
+            "log_version": version, "junction_policy": policy,
             "scope": "Copied diagnostic history; COMPLETE means export integrity, not driving acceptance."}
     if rows:
         info.update(first_ms=rows[0]["ms"], last_ms=rows[-1]["ms"],
@@ -75,6 +90,13 @@ def parse_capture(lines: list[str]) -> tuple[list[dict], dict]:
                     late_over_15ms=sum(r["dt_us"] > 15000 for r in rows),
                     search_rows=sum(r["search"] for r in rows),
                     phases=sorted(set(r["phase"] for r in rows)))
+        if version == 2:
+            info["junction_acceptances"] = [
+                {"ms": r["ms"], "route_ascii": r["action"],
+                 "turn_degrees": r["turn_degrees_x10"] / 10,
+                 "prior_white": r["junction_prior_white"],
+                 "accepted_without_white": r["junction_accepted_without_white"]}
+                for r in rows if r["junction_accept_event"]]
     return rows, info
 
 

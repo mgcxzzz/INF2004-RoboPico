@@ -4,13 +4,12 @@ import hashlib
 import json
 import re
 import shutil
-import subprocess
 import zipfile
 
 import package_motor_bringup as common
 
 ROOT = common.ROOT
-NAME = "robopico_rtos_line_following_v0_1_1"
+NAME = "robopico_rtos_line_following_v0_1_2"
 CHECKPOINT = ROOT / "firmware/migration/micro_tkernel/step_02_line_following"
 ART = CHECKPOINT / "firmware"
 common.ART = ART
@@ -67,14 +66,7 @@ def main():
     shutil.copyfile(firmware, copied)
     paths = sorted(set(common.sources()))
     hashes = {p.relative_to(ROOT).as_posix(): common.digest(p) for p in paths}
-    preserved = []
-    for relative in common.command("git", "ls-tree", "-r", "--name-only", common.BASE,
-                                    "firmware/integration/buddy1_4").splitlines():
-        if any(relative.startswith("firmware/integration/buddy1_4/" + part + "/")
-               for part in ("src", "include", "config")):
-            original = subprocess.check_output(["git", "show", f"{common.BASE}:{relative}"], cwd=ROOT)
-            assert hashlib.sha256(original).hexdigest() == hashes[relative], relative
-            preserved.append(relative)
+    preserved, reviewed = common.verify_shared_sources(hashes)
     manifest = {
         "name": NAME, "status": "EXPERIMENTAL Step2; hardware acceptance pending; not final Buddy1-5",
         "branch": common.command("git", "branch", "--show-current"),
@@ -86,14 +78,16 @@ def main():
         "uf2_sha256": common.digest(copied), "uf2_bytes": copied.stat().st_size,
         "elf_sha256": common.digest(elf), "uf2_layout": layout,
         "source_file_count": len(paths), "unchanged_shared_files_verified": len(preserved),
+        "reviewed_shared_changes": reviewed,
+        "junction_policy": "JUNCTION_ANGLE_GATE_ONLY=1: >10deg for30ms; no prior white prerequisite; existing branch30ms/windows/acquisition/faults retained.",
         "calibration_priority": ["CRC-valid own RTOS calibration at 0x1a9000", "CRC-valid SDK record28 at 0x1d0000",
                                  "preset white163,160 black3457,3700"],
         "live_features": ["profile1 Continuous V2 steering/drive", "IR tracking/recovery", "USB-queued physical-cross junction turns",
                           "shared navigation API/coordinator", "calibration import/capture/save", "stopped RAM diagnostic export"],
         "not_active": ["Wi-Fi/MQTT/dashboard", "physical barcode decoders", "IMU/ramp assistance", "Buddy5"],
-        "software_checks": ["12 strict production-C regression executables", "34 Python analyzer/export tests",
+        "software_checks": ["15 strict production-C regression executables", "38 Python analyzer/export tests",
                             "Step1 and Step2 ARM builds", "source parity, UF2 bounds, RAM flash-code and stack-frame checks"],
-        "hardware_checks": "Step1 v0.1.1 user acceptance passed; Step2 v0.1 idle ADC failure reproduced in user logs; corrected v0.1.1 hardware acceptance pending.",
+        "hardware_checks": "Step1 accepted; Step2 v0.1.1 ADC/initial straight/stops user-tested; old white prerequisite blocked junction tests. v0.1.2 angle-only experiment NOT physically tested.",
         "adc_correction": "Recheck READY at original100us deadline; classify and retain first/last failure; stopped-only100ms reset/retry and3 fresh all-channel qualification frames; runtime failure latches STOP; no auto-resume.",
         "linked_checks": linked,
     }
@@ -108,12 +102,13 @@ def main():
         for path in (copied, source_hashes, manifest_path):
             archive.write(path, path.relative_to(ROOT).as_posix())
         archive.write(copied, "firmware/" + copied.name)
-        archive.writestr("START_HERE.md", "# Step 2 v0.1.1 - test ADC readiness first\n\n"
+        archive.writestr("START_HERE.md", "# Step 2 v0.1.2 - angle-only junction experiment\n\n"
                          "Flash firmware/" + NAME + ".uf2.\n\n"
-                         "Follow [the stopped USB-only ADC test](TEST_ADC_FIRST.md) before driving.\n\n"
+                         "Follow [the exact junction tests and log export steps](TEST_JUNCTIONS.md).\n\n"
                          "The complete [Step 2 setup and driving guide](firmware/migration/"
                          "micro_tkernel/step_02_line_following/README.md) is also included.\n")
         archive.writestr("TEST_ADC_FIRST.md", (CHECKPOINT / "UPDATE_V0_1_1.md").read_text(encoding="utf-8"))
+        archive.writestr("TEST_JUNCTIONS.md", (CHECKPOINT / "UPDATE_V0_1_2.md").read_text(encoding="utf-8"))
         for name, script in (("Run timing check.cmd", "capture_bringup.py"),
                              ("Check ADC readiness.cmd", "capture_adc_readiness.py"),
                              ("Export line log.cmd", "export_line_log.py")):
