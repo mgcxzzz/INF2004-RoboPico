@@ -1,23 +1,36 @@
 {
-  "name": "robopico_rtos_line_following_v0_1_1",
+  "name": "robopico_rtos_line_following_v0_1_2",
   "status": "EXPERIMENTAL Step2; hardware acceptance pending; not final Buddy1-5",
   "branch": "codex/micro-tkernel-migration",
-  "source_commit": "858aa2846039a99e25e7fe7243c14cc058674a6f",
+  "source_commit": "4c607decd4b9edcc1676dfe0b7d7a2ca1482acd5",
   "reference_main_commit": "7843f45fbe45d5a774bc18c93be9bb11084d1b64",
   "build_profile": "APP=rtos_line SMP=1 CONSOLE=usb_cdc WIFI=none NET=none MQTT=0 CRASH_REPORT=0 TEST=0",
   "compiler": "arm-none-eabi-gcc.exe (Arm GNU Toolchain 14.2.Rel1 (Build arm-14.52)) 14.2.1 20241119",
   "sdk_commit": "a1438dff1d38bd9c65dbd693f0e5db4b9ae91779",
-  "uf2_sha256": "5af6a164929344b87cc0f511c93843bc9e3d4e2a297b31841840c9dd8c6fdea1",
-  "uf2_bytes": 214016,
-  "elf_sha256": "98c4ac95e9b25cdc0606e4aecd16396f0c557770220264ae6e8ea6e394df357d",
+  "uf2_sha256": "f862c75df22c6687ca84425fdfa94fdea58848361fcd788dbdbcec176658b745",
+  "uf2_bytes": 217088,
+  "elf_sha256": "8ec505788f618ca995be774e3a910d0ffa2b347d11ca66c81c629ca99100e6bb",
   "uf2_layout": {
-    "blocks": 418,
+    "blocks": 424,
     "first_xip": "0x10000000",
-    "end_xip_exclusive": "0x1001a200",
+    "end_xip_exclusive": "0x1001a800",
     "flash_ceiling": "0x10100000"
   },
-  "source_file_count": 833,
-  "unchanged_shared_files_verified": 103,
+  "source_file_count": 841,
+  "unchanged_shared_files_verified": 101,
+  "reviewed_shared_changes": {
+    "firmware/integration/buddy1_4/src/barcode/uturn_logic.h": {
+      "baseline_sha256": "a73bae1ed4de0be2114420a24dcbb5714bd90dd4ae2fbdbf40ffb151a1cc87f2",
+      "current_sha256": "ff7073f9cb37f3c8abb77346cf7490d1cffd32d158eec714a2ce846aee2f641f",
+      "change": "Only opt-in departure guard; default0 retains reference white requirement."
+    },
+    "firmware/integration/buddy1_4/src/navigation/junction_logic.h": {
+      "baseline_sha256": "0e25df230522ed50be542b7f48429a7469d95a19cd7e5cd3d8b41b7b58f28597",
+      "current_sha256": "34849cca1c713c61171365ece66fd472fd3a821d99e5de0a6742bbfd0bffafa8",
+      "change": "Only opt-in departure guard; default0 retains reference white requirement."
+    }
+  },
+  "junction_policy": "JUNCTION_ANGLE_GATE_ONLY=1: >10deg for30ms; no prior white prerequisite; existing branch30ms/windows/acquisition/faults retained.",
   "calibration_priority": [
     "CRC-valid own RTOS calibration at 0x1a9000",
     "CRC-valid SDK record28 at 0x1d0000",
@@ -38,20 +51,20 @@
     "Buddy5"
   ],
   "software_checks": [
-    "12 strict production-C regression executables",
-    "34 Python analyzer/export tests",
+    "15 strict production-C regression executables",
+    "38 Python analyzer/export tests",
     "Step1 and Step2 ARM builds",
     "source parity, UF2 bounds, RAM flash-code and stack-frame checks"
   ],
-  "hardware_checks": "Step1 v0.1.1 user acceptance passed; Step2 v0.1 idle ADC failure reproduced in user logs; corrected v0.1.1 hardware acceptance pending.",
+  "hardware_checks": "Step1 accepted; Step2 v0.1.1 ADC/initial straight/stops user-tested; old white prerequisite blocked junction tests. v0.1.2 angle-only experiment NOT physically tested.",
   "adc_correction": "Recheck READY at original100us deadline; classify and retain first/last failure; stopped-only100ms reset/retry and3 fresh all-channel qualification frames; runtime failure latches STOP; no auto-resume.",
   "linked_checks": {
     "flash_ram_addresses": {
       "rl_flash_park": "0x200000e4",
       "rl_flash_write": "0x2000011c"
     },
-    "static_ram_end": "0x2001e450",
-    "ram_remaining_before_dynamic_kernel_stacks": 138160,
+    "static_ram_end": "0x2001e468",
+    "ram_remaining_before_dynamic_kernel_stacks": 138136,
     "application_stack_frames": {
       "port_now": {
         "bytes": 8,
@@ -234,7 +247,7 @@
         "kind": "static"
       },
       "junction_step.constprop": {
-        "bytes": 112,
+        "bytes": 120,
         "kind": "static"
       },
       "circuit_line_demand": {
@@ -274,7 +287,7 @@
         "kind": "static"
       },
       "rtos_line_follow": {
-        "bytes": 296,
+        "bytes": 312,
         "kind": "static"
       },
       "rtos_line_feedback": {
@@ -298,7 +311,7 @@
         "kind": "static"
       },
       "rtos_line_dump_if_requested": {
-        "bytes": 368,
+        "bytes": 416,
         "kind": "static"
       },
       "rtos_line_flash_task": {
