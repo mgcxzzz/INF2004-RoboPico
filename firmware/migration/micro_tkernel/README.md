@@ -1,7 +1,7 @@
-# micro T-Kernel migration — experimental checkpoints
+# micro T-Kernel migration â€” experimental checkpoints
 
 The course project requires C, the Pico C SDK **and micro T-Kernel RTOS**.
-The working Buddy1–4 SDK-only integration on main at `7843f45fbe45d5a774bc18c93be9bb11084d1b64`
+The working Buddy1â€“4 SDK-only integration on main at `7843f45fbe45d5a774bc18c93be9bb11084d1b64`
 is the reference for driving behaviour; it is not the completed RTOS migration.
 Development is isolated on `codex/micro-tkernel-migration`. Buddy5 is not integrated.
 
@@ -9,7 +9,7 @@ Development is isolated on `codex/micro-tkernel-migration`. Buddy5 is not integr
 |---|---|---|
 | 0 | Establish and measure hardware TIMER, kernel clock and actual task cadence against laptop wall time. | v0.1.1 user capture PASS: 99.978Hz, both clocks match laptop time; READY. |
 | 1 | 10ms motion task, motor/encoder port, navigation API, safety stop, GP20/21 and USB console. Motors off at boot; verify each wheel, encoder sign, stops and automatic timeout. | [v0.1.1 user hardware acceptance passed](step_01_motor_bringup/HARDWARE_ACCEPTANCE.md). |
-| 2 | Continuous V2 steering/drive, front IR calibration storage, line recovery and junction turns. Compare a straight and bend with the SDK reference at profile1 speed. | [v0.1 test package](step_02_line_following/README.md); software checks complete, hardware acceptance pending. |
+| 2 | Continuous V2 steering/drive, front IR calibration storage, line recovery and junction turns. Compare a straight and bend with the SDK reference at profile1 speed. | [v0.1.1 ADC correction/test package](step_02_line_following/UPDATE_V0_1_1.md); v0.1 idle ADC failure observed; corrected hardware acceptance pending. |
 | 3 | Kernel-owned Wi-Fi/lwIP/MQTT, bounded TX/RX message buffers and dashboard. Verify heartbeat and supervisory controls during driving, then broker/AP reconnect. | Not ported. |
 | 4 | Original plus peak barcode decoders, distance/sampling schedule, runtime mappings and separate-junction action. Test mapped letters in both directions. | Not ported. |
 | 5 | Buddy4 IMU detector6 and coordinated ramp assist. Test hump acceptance and crossing against the reference. | Not ported. |

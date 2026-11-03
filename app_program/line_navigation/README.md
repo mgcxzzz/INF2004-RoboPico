@@ -6,6 +6,9 @@ turn geometry or line-search algorithms. The reference feature source,
 interfaces and calibration configuration remain byte-identical to main
 `7843f45fbe45d5a774bc18c93be9bb11084d1b64`.
 
+Current Step 2 version is **v0.1.1**. Its ADC correction and stopped-first test
+are documented in `firmware/migration/micro_tkernel/step_02_line_following/UPDATE_V0_1_1.md`.
+
 ## Ownership and update order
 
 | Owner | Core / priority | Work |
@@ -35,6 +38,16 @@ same owner. Between encoder drains, side-edge wheel positions are interpolated
 using the last measured velocity. This is a port difference from SDK GPIO
 encoder peeks; side sampling gaps/edge placement require a physical cross test.
 No catch-up burst of PWM is issued after a delayed control cycle.
+
+The portable `adc_reader.h` rechecks READY at the original 100 us deadline;
+preemption cannot turn a completed conversion into a false timeout. Genuine
+timeout/ERR failures retain first/last channel, stage, sample, CS, elapsed and
+clock/reset snapshots. Only the control owner touches the ADC; the diagnostic
+task sees copies under the existing snapshot lock. A failed front pair is not
+partially published. A runtime failure calls the shared stop path with reason11
+and an emergency latch. Stopped-only reset/retry is bounded to 100 ms spacing;
+three consecutive complete all-channel frames are required before ADC readiness
+returns. Recovery does not clear the emergency latch or restart motion.
 
 `line_model.h` is hardware-free. Its profile 1 wrapper omits allocation of the
 63 inactive barcode banks. The parity test feeds the same front samples,

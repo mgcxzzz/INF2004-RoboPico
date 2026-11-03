@@ -1,4 +1,4 @@
-# Step 2 v0.1 — software verification
+# Step 2 v0.1 â€” software verification
 
 Date: 2026-11-02. **Hardware acceptance pending.** This is an experimental
 checkpoint, not a final integrated release. Step 1 hardware acceptance is

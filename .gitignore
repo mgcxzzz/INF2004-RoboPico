@@ -42,5 +42,7 @@ dashboard_session/
 !/firmware/migration/micro_tkernel/step_01_motor_bringup/firmware/robopico_rtos_motor_bringup_v0_1_1.uf2
 **/rtos_test_session/
 **/rtos_line_session/
+**/rtos_adc_session/
 *.su
 !/firmware/migration/micro_tkernel/step_02_line_following/firmware/robopico_rtos_line_following_v0_1.uf2
+!/firmware/migration/micro_tkernel/step_02_line_following/firmware/robopico_rtos_line_following_v0_1_1.uf2

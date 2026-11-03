@@ -10,6 +10,9 @@ static float filtered[2];
 static uint16_t adc[3];
 static uint32_t cal_origin; /* 0 preset, 1 SDK record28, 2 own saved page, 3 RAM capture. */
 static bool adc_ok, filter_ready, was_active;
+static RlAdcHealth adc_health;
+static bool adc_recovering;
+static uint32_t adc_retries, adc_recoveries, adc_frames;
 static uint64_t side_due, countdown, run_start;
 static LineCalibration run_calibration;
 static unsigned run_cal_origin;
@@ -26,6 +29,9 @@ static struct {
     uint16_t adc[3], level[2];
     uint32_t cal_origin, rows, overwritten, sequence, cost;
     unsigned phase, decision, reason, pending, action, flags;
+    RlAdcDiagnostics adc_diag;
+    uint32_t adc_retries, adc_recoveries, adc_frames;
+    unsigned adc_state : 2, adc_good : 2;
 } view;
 
 static UINT enter(void) {
@@ -35,6 +41,36 @@ static UINT enter(void) {
 }
 static void leave(UINT key) {
     (void)ISpinUnlock(&copy_lock, key);
+}
+
+static void acquisition_failed(uint64_t now) {
+    adc_ok = false;
+    filter_ready = false;
+    adc_recovering = true;
+    countdown = 0;
+    rl_adc_failed(&adc_health, now);
+    /* Cancellation is out of queue and invalidates any armed Start. */
+    BringupStatus status;
+    bringup_get_status(&status);
+    if (status.flags & BR_ACTIVE)
+        bringup_stop(BR_REASON_ADC, BR_ESTOP);
+    else
+        rtos_line_cancel();
+}
+
+/* A failed front pair is never half-published. During qualification, all
+ * three channels must be freshly read in three consecutive control frames. */
+static bool acquire_frame(bool include_side) {
+    uint16_t next[3] = {adc[0], adc[1], adc[2]};
+    if (!board_line_adc_read(0, 32, true, &next[0]) ||
+        !board_line_adc_read(2, 32, true, &next[2]) ||
+        (include_side && !board_line_adc_read(1, 4, false, &next[1]))) {
+        acquisition_failed(board_time_us());
+        return false;
+    }
+    memcpy(adc, next, sizeof(adc));
+    ++adc_frames;
+    return true;
 }
 
 ER rtos_line_init(void) {
@@ -48,10 +84,13 @@ ER rtos_line_init(void) {
     const BarcodeSaved *saved = (const BarcodeSaved *)(uintptr_t)(0x10000000U + RL_MAIN_OFFSET);
     calibration =
         rl_boot_cal((const uint8_t *)(uintptr_t)(0x10000000U + RL_CAL_OFFSET), saved, &cal_origin);
-    adc_ok = board_line_adc_init();
-    for (unsigned channel = 0; channel < 3 && adc_ok; ++channel)
-        adc_ok = board_line_adc_read(channel, 32, true, &adc[channel]);
-    return adc_ok ? E_OK : E_IO;
+    if (board_line_adc_init())
+        adc_health = (RlAdcHealth){.state = RL_ADC_QUALIFYING};
+    else
+        acquisition_failed(board_time_us());
+    /* A peripheral fault gates line readiness, not motor/encoder init. It
+     * can recover while stopped; object-creation failure above is still fatal. */
+    return E_OK;
 }
 
 bool rtos_line_command(unsigned command, uint32_t received_us) {
@@ -79,7 +118,7 @@ void rtos_line_side_poll(uint64_t now) {
         return;
     side_due = now + 2000;
     if (!board_line_adc_read(1, 4, false, &adc[1])) {
-        adc_ok = false;
+        acquisition_failed(board_time_us());
         return;
     }
     if (was_active) {
@@ -98,6 +137,10 @@ bool rtos_line_ready(void) {
 }
 
 static void calibration_command(unsigned command) {
+    if (command != 'c' && !adc_ok) {
+        tm_printf((UB *)"CAL rejected: ADC not ready; existing calibration retained.\n");
+        return;
+    }
     if (command == 'c') {
         calibration = successful_calibration();
         cal_origin = 0;
@@ -131,8 +174,28 @@ static void calibration_command(unsigned command) {
 
 bool rtos_line_prepare(const MotionFeedback *f, double path, float dt, bool active) {
     (void)dt;
-    for (unsigned w = 0; w < 2 && adc_ok; ++w)
-        adc_ok = board_line_adc_read(w == 0 ? 0 : 2, 32, true, &adc[w == 0 ? 0 : 2]);
+    if (adc_ok) {
+        (void)acquire_frame(false);
+    } else {
+        countdown = 0;
+        if (rl_adc_can_retry(&adc_health, f->now_us, active)) {
+            ++adc_retries;
+            if (board_line_adc_init())
+                adc_health = (RlAdcHealth){.state = RL_ADC_QUALIFYING};
+            else
+                acquisition_failed(board_time_us());
+        }
+        if (!active && adc_health.state == RL_ADC_QUALIFYING && acquire_frame(true)) {
+            adc_ok = rl_adc_good_frame(&adc_health);
+            if (adc_ok) {
+                if (adc_recovering)
+                    ++adc_recoveries;
+                adc_recovering = false;
+                filter_ready = false;
+                side_due = board_time_us() + 2000;
+            }
+        }
+    }
     input = (CircuitInput){.now = f->now_us,
                            .wheel = {f->wheel_mm[0], f->wheel_mm[1]},
                            .speed = {f->speed_mm_s[0], f->speed_mm_s[1]},
@@ -178,8 +241,13 @@ bool rtos_line_prepare(const MotionFeedback *f, double path, float dt, bool acti
                 start_serial = serial;
                 countdown = f->now_us + 2000000;
                 tm_printf((UB *)"LINE start requested; 2s countdown; buttons/s cancel.\n");
-            } else
-                tm_printf((UB *)"LINE start rejected: finish export and check ADC/calibration.\n");
+            } else if (exporting)
+                tm_printf((UB *)"LINE start rejected: log export still pending/active.\n");
+            else if (!adc_ok)
+                tm_printf(
+                    (UB *)"LINE start rejected: ADC not ready; see ADC/ADC_FIRST/ADC_LAST.\n");
+            else
+                tm_printf((UB *)"LINE start rejected: calibration invalid.\n");
         } else {
             countdown = 0;
             calibration_command(command);
@@ -277,6 +345,12 @@ void rtos_line_record(const BringupStatus *s, const AnalogDemand *d, uint32_t co
     view.cost = cost;
     view.flags =
         (adc_ok ? 1U : 0U) | (calibration_valid(&calibration) ? 2U : 0U) | (countdown ? 4U : 0U);
+    board_line_adc_diagnostics(&view.adc_diag);
+    view.adc_state = adc_health.state;
+    view.adc_good = adc_health.good;
+    view.adc_retries = adc_retries;
+    view.adc_recoveries = adc_recoveries;
+    view.adc_frames = adc_frames;
     if (recording) {
         row.sequence = ++row_sequence;
         rows[row_head] = row;
@@ -305,6 +379,9 @@ void rtos_line_report(void) {
     unsigned phase = view.phase, decision = view.decision, reason = view.reason;
     unsigned pending = view.pending, action = view.action;
     unsigned count = view.rows, overwritten = view.overwritten;
+    RlAdcDiagnostics diag = view.adc_diag;
+    unsigned health = view.adc_state, good = view.adc_good;
+    uint32_t retries = view.adc_retries, recoveries = view.adc_recoveries, frames = view.adc_frames;
     leave(key);
     tm_printf(
         (UB *)"LINE profile=1 phase=%u decision=%u reason=%u pending=%u action=%u flags=0x%x raw=%u,%u,%u level=%u,%u rows=%u overwritten=%u\n",
@@ -314,6 +391,22 @@ void rtos_line_report(void) {
         (UB *)"CAL_FRONT white=%u,%u black=%u,%u mask=%u valid=%u origin=%u (0=preset 1=SDK28 2=RTOS_saved 3=RAM)\n",
         cal.white[0], cal.white[1], cal.black[0], cal.black[1], cal.mask, calibration_valid(&cal),
         origin);
+    tm_printf(
+        (UB *)"ADC state=%u good=%u frames=%u conversions=%u avoided_timeout=%u timeouts=%u errors=%u init_errors=%u bad_arguments=%u retries=%u recoveries=%u ch0=%u ch1=%u ch2=%u fail0=%u fail1=%u fail2=%u\n",
+        health, good, frames, diag.conversions, diag.avoided_timeout, diag.timeouts, diag.errors,
+        diag.init_errors, diag.bad_arguments, retries, recoveries, diag.read_ok[0], diag.read_ok[1],
+        diag.read_ok[2], diag.read_fail[0], diag.read_fail[1], diag.read_fail[2]);
+    const RlAdcFailure failures[2] = {diag.first, diag.last};
+    for (unsigned n = 0; n < 2; ++n) {
+        const RlAdcFailure *f = &failures[n];
+        static const char *const names[] = {"none",          "ready_timeout", "conversion_err",
+                                            "reset_timeout", "bad_argument",  "init_ready_timeout"};
+        tm_printf(
+            (UB *)"ADC_%s reason=%s code=%u channel=%u stage=%u sample=%u cs=0x%x elapsed_us=%u timer_us=%u clk_ctrl=0x%x clk_div=0x%x adc_div=0x%x reset_done=0x%x\n",
+            n == 0 ? "FIRST" : "LAST", f->reason < 6 ? names[f->reason] : "unknown", f->reason,
+            f->channel, f->stage, f->sample, f->cs, f->elapsed_us, f->timer_us, f->clk_ctrl,
+            f->clk_div, f->adc_div, f->resets_done);
+    }
 }
 
 void rtos_line_dump_if_requested(void) {

@@ -2,6 +2,7 @@
 #define RTOS_LINE_SERVICE_H
 #include "../rtos_bringup/bringup.h"
 #include "line_model.h"
+#include "adc_reader.h"
 
 ER rtos_line_init(void);
 bool rtos_line_command(unsigned command, uint32_t received_us);
@@ -21,6 +22,7 @@ void rtos_line_dump_if_requested(void);
 void rtos_line_flash_task(INT code, void *exinf);
 bool board_line_adc_init(void);
 bool board_line_adc_read(unsigned channel, unsigned count, bool spaced, uint16_t *value);
+void board_line_adc_diagnostics(RlAdcDiagnostics *out);
 bool board_line_save(const uint8_t page[256]);
 void board_line_flash_worker(void);
 void board_motor_levels(unsigned wheel, uint16_t a, uint16_t b);

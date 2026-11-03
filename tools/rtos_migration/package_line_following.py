@@ -10,7 +10,7 @@ import zipfile
 import package_motor_bringup as common
 
 ROOT = common.ROOT
-NAME = "robopico_rtos_line_following_v0_1"
+NAME = "robopico_rtos_line_following_v0_1_1"
 CHECKPOINT = ROOT / "firmware/migration/micro_tkernel/step_02_line_following"
 ART = CHECKPOINT / "firmware"
 common.ART = ART
@@ -91,9 +91,10 @@ def main():
         "live_features": ["profile1 Continuous V2 steering/drive", "IR tracking/recovery", "USB-queued physical-cross junction turns",
                           "shared navigation API/coordinator", "calibration import/capture/save", "stopped RAM diagnostic export"],
         "not_active": ["Wi-Fi/MQTT/dashboard", "physical barcode decoders", "IMU/ramp assistance", "Buddy5"],
-        "software_checks": ["11 strict production-C regression executables", "24 Python analyzer/export tests",
+        "software_checks": ["12 strict production-C regression executables", "34 Python analyzer/export tests",
                             "Step1 and Step2 ARM builds", "source parity, UF2 bounds, RAM flash-code and stack-frame checks"],
-        "hardware_checks": "Step1 v0.1.1 user acceptance passed; Step2 timing/ADC/flash/straight/bend/junction tests are pending.",
+        "hardware_checks": "Step1 v0.1.1 user acceptance passed; Step2 v0.1 idle ADC failure reproduced in user logs; corrected v0.1.1 hardware acceptance pending.",
+        "adc_correction": "Recheck READY at original100us deadline; classify and retain first/last failure; stopped-only100ms reset/retry and3 fresh all-channel qualification frames; runtime failure latches STOP; no auto-resume.",
         "linked_checks": linked,
     }
     source_hashes = ART / "SOURCE_SHA256.json"
@@ -108,7 +109,9 @@ def main():
             archive.write(path, path.relative_to(ROOT).as_posix())
         archive.write(copied, "firmware/" + copied.name)
         archive.writestr("START_HERE.md", (CHECKPOINT / "README.md").read_text(encoding="utf-8"))
+        archive.writestr("TEST_ADC_FIRST.md", (CHECKPOINT / "UPDATE_V0_1_1.md").read_text(encoding="utf-8"))
         for name, script in (("Run timing check.cmd", "capture_bringup.py"),
+                             ("Check ADC readiness.cmd", "capture_adc_readiness.py"),
                              ("Export line log.cmd", "export_line_log.py")):
             archive.writestr(name, '@echo off\r\ncd /d "%~dp0"\r\npy -3 tools\\rtos_migration\\' + script + '\r\npause\r\n')
     with zipfile.ZipFile(bundle) as archive:

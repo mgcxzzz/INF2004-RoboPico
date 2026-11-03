@@ -204,7 +204,10 @@ void bringup_control_task(INT code, void *exinf) {
 #ifdef APP_RTOS_LINE
         bool start_line = rtos_line_prepare(&feedback, path, dt, active);
         if (!rtos_line_ready() && active) {
-            bringup_stop(BR_REASON_API, BR_ESTOP);
+            BringupStatus current;
+            bringup_get_status(&current);
+            if (current.flags & BR_ACTIVE)
+                bringup_stop(BR_REASON_ADC, BR_ESTOP);
             active = false;
         }
         if (start_line && rtos_line_ready()) {

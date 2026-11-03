@@ -129,7 +129,7 @@ $(error rtos_bringup requires SMP=1 CONSOLE=usb_cdc WIFI=none NET=none MQTT=0 CR
 endif
 EXE_FILE := robopico_rtos_motor_bringup_v0_1_1
 ifeq ($(APP),rtos_line)
-EXE_FILE := robopico_rtos_line_following_v0_1
+EXE_FILE := robopico_rtos_line_following_v0_1_1
 endif
 endif
 

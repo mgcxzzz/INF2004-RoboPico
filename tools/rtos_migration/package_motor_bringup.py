@@ -13,7 +13,8 @@ ART = CHECKPOINT / "firmware"
 NAME = "robopico_rtos_motor_bringup_v0_1_1"
 BASE = "7843f45fbe45d5a774bc18c93be9bb11084d1b64"
 SHARED = ROOT / "firmware/integration/buddy1_4"
-EXCLUDED = {"__pycache__", ".git", "build-host", "node_modules", "rtos_test_session"}
+EXCLUDED = {"__pycache__", ".git", "build-host", "node_modules", "rtos_test_session",
+            "rtos_adc_session", "rtos_line_session"}
 
 
 def digest(path):
