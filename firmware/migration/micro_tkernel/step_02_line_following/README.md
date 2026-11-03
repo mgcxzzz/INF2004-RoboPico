@@ -1,7 +1,11 @@
-# Step 2 â€” RTOS line following v0.1 (experimental)
+# Step 2 — RTOS line following v0.1.1 (experimental)
+
+**Current update:** [ADC correction and exact first test](UPDATE_V0_1_1.md).
+Start with the stopped 70-second ADC check before another driving attempt.
+The old v0.1 image became ADC-unavailable during the user’s idle test.
 
 This is the second **micro T-Kernel SMP** migration checkpoint, on
-`codex/micro-tkernel-migration`. It is not the final Buddy1â€“5 build.
+`codex/micro-tkernel-migration`. It is not the final Buddy1–5 build.
 `main` and its SDK integration remain the behaviour reference.
 
 The preceding Step 1 v0.1.1 hardware test passed: both clocks matched laptop
@@ -24,7 +28,7 @@ the serial/button emergency and normal stops. See
 - Saved calibration import, optional new calibration and a stopped RAM run log.
 
 Wi-Fi/MQTT/dashboard are **not running** until Step 3. Physical barcode decoding
-and runtime Aâ€“Z mapping return in Step 4. IMU/ramp assistance returns in Step 5.
+and runtime A–Z mapping return in Step 4. IMU/ramp assistance returns in Step 5.
 Buddy 5 remains unintegrated. Do not use this image as a ramp/obstacle test.
 
 The USB cable and an open serial connection are required during motion in
@@ -91,7 +95,7 @@ This is continuous following, not the Step 1 three-second wheel pulse.
 2. **One bend:** repeat for a gentle bend, then the sharp bend that previously
    lost the line. Stop/export immediately if it loses the line. Existing
    recovery may search; a missed bend is evidence to review, not a migration pass.
-3. **Junction, when 1â€“2 are acceptable:** start on the approach straight with
+3. **Junction, when 1–2 are acceptable:** start on the approach straight with
    **g**, then press capital **L**, **R** or **U** to queue the next junction
    action through Buddy 3's API. Lowercase `l/r` are calibration commands and
    are rejected while moving. The queued turn still waits for a **separate
@@ -100,7 +104,7 @@ This is continuous following, not the Step 1 three-second wheel pulse.
    clears a latch while stopped, buttons released and clock valid.
 
 The side GP27 channel is junction-only for now: the original preview threshold
-212, hysteresis 3 ADC, 2 ms debounce, black width 11â€“30 mm measured by encoders,
+212, hysteresis 3 ADC, 2 ms debounce, black width 11–30 mm measured by encoders,
 and 4 mm white confirmation. This is not the adaptive barcode/peak decoder.
 **Remove barcode sheets for Step 2 junction tests.** Optical contrast still
 affects cross detection, so raw GP27 and its state are logged. A route acceptance

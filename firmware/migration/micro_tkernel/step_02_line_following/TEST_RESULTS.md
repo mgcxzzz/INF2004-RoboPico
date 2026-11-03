@@ -1,4 +1,8 @@
-# Step 2 v0.1 â€” software verification
+# Step 2 v0.1 — original software verification
+
+For the corrected v0.1.1 build, see [ADC correction and tests](UPDATE_V0_1_1.md).
+The original v0.1 image subsequently failed the user’s idle ADC-readiness test.
+The results below describe that original build, not hardware acceptance.
 
 Date: 2026-11-02. **Hardware acceptance pending.** This is an experimental
 checkpoint, not a final integrated release. Step 1 hardware acceptance is

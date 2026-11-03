@@ -1,7 +1,7 @@
-# micro T-Kernel migration â€” experimental checkpoints
+# micro T-Kernel migration — experimental checkpoints
 
 The course project requires C, the Pico C SDK **and micro T-Kernel RTOS**.
-The working Buddy1â€“4 SDK-only integration on main at `7843f45fbe45d5a774bc18c93be9bb11084d1b64`
+The working Buddy1–4 SDK-only integration on main at `7843f45fbe45d5a774bc18c93be9bb11084d1b64`
 is the reference for driving behaviour; it is not the completed RTOS migration.
 Development is isolated on `codex/micro-tkernel-migration`. Buddy5 is not integrated.
 
