@@ -1,0 +1,44 @@
+{
+  "name": "robopico_rtos_network_bench_v0_1",
+  "status": "EXPERIMENTAL Step3A motor-disabled network bench; physical acceptance pending",
+  "branch": "codex/micro-tkernel-migration",
+  "source_commit": "1016dcf5709c15bf2c5c644ae07b7c890d859235",
+  "reference_main_commit": "7843f45fbe45d5a774bc18c93be9bb11084d1b64",
+  "previous_step2_commit": "49244d256b80cf64c10fbec750c8531a0a58907c",
+  "build_profile": "APP=rtos_network SMP=1 CONSOLE=usb_cdc WIFI=cyw43 NET=lwip MQTT=1 CRASH_REPORT=0 TEST=0",
+  "compiler": "arm-none-eabi-gcc.exe (Arm GNU Toolchain 14.2.Rel1 (Build arm-14.52)) 14.2.1 20241119",
+  "uf2_sha256": "93e2be079f6e3b85d1f1940d311a49abddbc7d91d9f5bbfec3ee6afa89a8fb31",
+  "uf2_bytes": 723968,
+  "uf2_layout": {
+    "blocks": 1414,
+    "first_xip": "0x10000000",
+    "end_xip_exclusive": "0x10058600",
+    "flash_ceiling": "0x10100000"
+  },
+  "elf_sha256": "d5b3874e7a0c6cc95a994523ecc9ca3af840131bfcba1019d93bbd40c35250d1",
+  "source_files": 891,
+  "unchanged_shared_files_verified": 101,
+  "reviewed_shared_changes": {
+    "firmware/integration/buddy1_4/src/barcode/uturn_logic.h": {
+      "baseline_sha256": "a73bae1ed4de0be2114420a24dcbb5714bd90dd4ae2fbdbf40ffb151a1cc87f2",
+      "current_sha256": "ff7073f9cb37f3c8abb77346cf7490d1cffd32d158eec714a2ce846aee2f641f",
+      "change": "Only opt-in departure guard; default0 retains reference white requirement."
+    },
+    "firmware/integration/buddy1_4/src/navigation/junction_logic.h": {
+      "baseline_sha256": "0e25df230522ed50be542b7f48429a7469d95a19cd7e5cd3d8b41b7b58f28597",
+      "current_sha256": "34849cca1c713c61171365ece66fd472fd3a821d99e5de0a6742bbfd0bffafa8",
+      "change": "Only opt-in departure guard; default0 retains reference white requirement."
+    }
+  },
+  "static_ram_end": "0x20015cd4",
+  "ram_remaining_before_dynamic_kernel_stacks": 172844,
+  "motor_gate": "apply_outputs linked only to board_motor_off; USB starts rejected; MQTT Start/Resume unsupported",
+  "settings": "WCF1 at0x1aa000, BOOTSEL settings-only4KiB sector; no live calibration/flash writes",
+  "software_checks": [
+    "19 strict C programs",
+    "47 Python checks",
+    "Step1/Step2/Step3A ARM builds",
+    "UF2 family/bounds, source audit, required/forbidden symbols and output-gate disassembly"
+  ],
+  "hardware_checks": "No hardware claim; user must verify clock and actual received heartbeat timing, commands and broker reconnect."
+}
