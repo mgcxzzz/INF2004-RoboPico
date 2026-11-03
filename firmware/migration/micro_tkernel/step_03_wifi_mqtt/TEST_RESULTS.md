@@ -1,7 +1,9 @@
 # Step 3A network bench — software checks
 
-Date:2026-11-04. **Physical acceptance pending.** No live Pico, broker or car
-commands were issued while preparing this checkpoint.
+Date:2026-11-04. These are the original pre-hardware software checks. Subsequent
+[stopped baseline and functional broker-reconnect results](HARDWARE_ACCEPTANCE.md)
+are recorded separately. No live Pico, broker or car commands were issued while
+preparing the software checkpoint.
 
 - 19 strict production-C programs pass, covering existing clock/start/stop gates,
  coordinator ownership and stale commits, line/ADC/junction regression tests,

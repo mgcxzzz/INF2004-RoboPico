@@ -1,5 +1,9 @@
 # Step 3A — RTOS network bench v0.1
 
+**User test update:** [Steady baseline and functional broker reconnect passed](HARDWARE_ACCEPTANCE.md).
+Moving integration remains Step3B; status encoding and recovery timing observations
+are recorded with the hardware results. The existing UF2/bundle is unchanged.
+
 **Experimental, motors disabled. No mat is needed.** This is the first half of
 Step3, testing the kernel network service alongside the verified100Hz timing
 foundation. Step3B will connect it to Step2 line motion after this bench passes.
