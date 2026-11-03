@@ -33,6 +33,10 @@ void bringup_get_status(BringupStatus *out) {
 }
 
 void bringup_stop(uint8_t reason, uint16_t latch) {
+    bringup_stop_from(reason, latch, MOTION_BUDDY2);
+}
+
+void bringup_stop_from(uint8_t reason, uint16_t latch, MotionOwner requester) {
     UINT key = status_enter();
     bool active = (status.flags & BR_ACTIVE) != 0U;
     bool new_latch = (status.flags & latch) != latch;
@@ -46,7 +50,7 @@ void bringup_stop(uint8_t reason, uint16_t latch) {
 #ifdef APP_RTOS_LINE
     rtos_line_cancel(); /* Out-of-queue cancellation survives a full command buffer. */
 #endif
-    (void)motion_stop(MOTION_BUDDY2);
+    (void)motion_stop(requester);
     motion_session_end(reason);
     if (active || new_latch)
         tm_printf((UB *)"STOP timer_us=%u reason=%u latch=0x%x\n", (uint32_t)board_time_us(),
@@ -63,6 +67,11 @@ ER bringup_create_objects(void) {
 }
 
 static void apply_outputs(void *raw) {
+#ifdef APP_RTOS_NET_BENCH
+    (void)raw;
+    board_motor_off(); /* Hardware output gate, independent of command parsing. */
+    return;
+#endif
 #ifdef APP_RTOS_LINE
     const LineEnvelope *envelope = raw;
 #else
@@ -378,6 +387,11 @@ void bringup_safety_task(INT code, void *exinf) {
 }
 
 static void start_pulse(unsigned selected) {
+#ifdef APP_RTOS_NET_BENCH
+    (void)selected;
+    tm_printf((UB *)"NETWORK BENCH: motor starts disabled; use Step2 firmware for driving.\n");
+    return;
+#endif
     BringupStatus snapshot;
     UINT key = status_enter();
     snapshot = status;

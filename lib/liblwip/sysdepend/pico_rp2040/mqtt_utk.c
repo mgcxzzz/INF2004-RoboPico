@@ -1,3 +1,6 @@
+#ifdef APP_RTOS_NET_BENCH
+#include "mqtt_robot_bridge.inc"
+#else
 /*
  *	mqtt_utk.c
  *	MQTT client wiring for micro T-Kernel (RP2040, NO_SYS=1)
@@ -218,3 +221,5 @@ void mqtt_utk_start(void)
 		connecting = 0;
 	}
 }
+
+#endif

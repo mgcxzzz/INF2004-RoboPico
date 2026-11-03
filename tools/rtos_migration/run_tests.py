@@ -28,6 +28,11 @@ for name, extra in [("test_continuous_drive", []), ("test_interface", sources),
                     ("test_continuous_integration", sources), ("test_line_search", []),
                     ("test_uturn", [])]:
     checks.append((CORE / "tests/unit" / (name + ".c"), extra))
+checks.extend([
+    (ROOT / "testing/rtos_migration/test_network_bench.c", [CORE / "src/network/wifi_protocol.c"]),
+    (CORE / "tests/unit/test_wifi_packets.c", [CORE / "src/network/wifi_packets.c"]),
+    (CORE / "tests/unit/test_wifi_protocol.c", [CORE / "src/network/wifi_protocol.c"]),
+    (CORE / "tests/unit/test_wifi_settings.c", [])])
 for source, extra in checks:
     exe = OUT / (source.stem + (".exe" if os.name == "nt" else ""))
     subprocess.run([*cc, *host_float, "-std=c11", "-Wall", "-Wextra", "-Werror", "-O2", "-UNDEBUG",
@@ -37,4 +42,6 @@ for source, extra in checks:
 subprocess.run([sys.executable, ROOT / "testing/rtos_migration/test_capture_bringup.py"], check=True)
 subprocess.run([sys.executable, ROOT / "testing/rtos_migration/test_export_line_log.py"], check=True)
 subprocess.run([sys.executable, ROOT / "testing/rtos_migration/test_capture_adc_readiness.py"], check=True)
-print(f"PASS: {len(checks)} production-C regression programs and 38 capture/export-analyzer checks. Hardware test is still required.")
+subprocess.run([sys.executable, ROOT / "testing/rtos_migration/test_provision_network.py"], check=True)
+subprocess.run([sys.executable, ROOT / "testing/rtos_migration/test_capture_network_bench.py"], check=True)
+print(f"PASS: {len(checks)} production-C regression programs and 47 capture/export/provisioning checks. Hardware test is still required.")

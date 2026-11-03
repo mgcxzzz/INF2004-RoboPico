@@ -15,7 +15,11 @@
 #include "lwip/init.h"
 #include "lwip/timeouts.h"
 #include "lwip/netif.h"
+#ifdef APP_RTOS_NET_BENCH
+#include "network_settings.h"
+#else
 #include "wifi_secrets.h"
+#endif
 #if TM_MQTT
 #include "mqtt_utk.h"
 #endif
@@ -67,6 +71,38 @@ static T_CYW43_UTK_STATUS radio_status = {
     .init_result = -5,
     .strongest_rssi = -32768,
 };
+
+#ifdef APP_RTOS_NET_BENCH
+/* USB provisioning writes WCF1 at flash offset 0x1aa000 (XIP 0x101aa000).
+ * This service only reads it; no CYW43/MQTT path uses build-time placeholders. */
+#define WIFI_SETTINGS_XIP_ADDRESS ((uintptr_t)0x101aa000u)
+static NetworkSettings runtime_settings;
+static uint32_t runtime_settings_valid;
+
+bool utk_network_settings_load(void)
+{
+    __atomic_store_n(&runtime_settings_valid,0u,__ATOMIC_RELEASE);
+    memset(&runtime_settings,0,sizeof(runtime_settings));
+    if(!utk_network_settings_decode(&runtime_settings,(const uint8_t *)WIFI_SETTINGS_XIP_ADDRESS)) {
+        memset(&runtime_settings,0,sizeof(runtime_settings));
+        return false;
+    }
+    __atomic_store_n(&runtime_settings_valid,1u,__ATOMIC_RELEASE);
+    return true;
+}
+
+bool utk_network_settings_available(void)
+{return __atomic_load_n(&runtime_settings_valid,__ATOMIC_ACQUIRE)!=0u;}
+const char *utk_network_ssid(void)
+{return utk_network_settings_available()?runtime_settings.ssid:NULL;}
+const char *utk_network_password(void)
+{return utk_network_settings_available()?runtime_settings.password:NULL;}
+const char *utk_network_broker(void)
+{return utk_network_settings_available()?runtime_settings.broker:NULL;}
+const char *utk_network_client_id(void)
+{return utk_network_settings_available()?runtime_settings.client_id:NULL;}
+
+#endif
 
 #if TM_NET_LWIP
 static const char *link_status_str(int32_t status)
@@ -172,12 +208,24 @@ static int32_t wifi_try_join(void)
 {
     int32_t err;
 
+#ifdef APP_RTOS_NET_BENCH
+    tm_printf((UB*)"wifi: joining configured access point ...\n");
+#else
     tm_printf((UB*)"wifi: joining \"%s\" ...\n", WIFI_SSID);
+#endif
 
+#ifdef APP_RTOS_NET_BENCH
+    const char *ssid = utk_network_ssid(), *password = utk_network_password();
+    if (!ssid || !password) return -1;
+    err = cyw43_wifi_join(&cyw43_state, strlen(ssid), (const uint8_t *)ssid,
+                         strlen(password), (const uint8_t *)password,
+                         *password ? WIFI_AUTH_MODE : CYW43_AUTH_OPEN, NULL, CYW43_CHANNEL_NONE);
+#else
     err = cyw43_wifi_join(&cyw43_state,
                           strlen(WIFI_SSID), (const uint8_t*)WIFI_SSID,
                           strlen(WIFI_PASSWORD), (const uint8_t*)WIFI_PASSWORD,
                           WIFI_AUTH_MODE, NULL, CYW43_CHANNEL_NONE);
+#endif
     if(err != 0) {
         tm_printf((UB*)"wifi: cyw43_wifi_join() request rejected, err=%d\n",
                   (int)err);
@@ -211,6 +259,9 @@ void cyw43_utk_task(int32_t stacd, void *exinf)
     (void)stacd;
     (void)exinf;
     radio_status.owner_prc = (uint32_t)tk_get_prc();
+#ifdef APP_RTOS_NET_BENCH
+    (void)utk_network_settings_load();
+#endif
 
     tm_printf((UB*)"wifi: cyw43_utk_task starting (proc %d)\n",
               (int)radio_status.owner_prc);
@@ -338,9 +389,13 @@ void cyw43_utk_task(int32_t stacd, void *exinf)
          * guard), so calling it on every poll iteration once the link is up
          * is fine -- it only actually does anything on the first call, or
          * again after connection_cb() schedules a retry. */
+#ifdef APP_RTOS_NET_BENCH
+        mqtt_utk_start(); /* Also copies link-down status and services retry state. */
+#else
         if(radio_status.link_status == CYW43_LINK_UP) {
             mqtt_utk_start();
         }
+#endif
 #endif
 #endif
         (void)tk_dly_tsk(CYW43_POLL_MS);

@@ -45,6 +45,7 @@ void bringup_nav_task(INT code, void *exinf);
 void bringup_console_task(INT code, void *exinf);
 void bringup_status_task(INT code, void *exinf);
 void bringup_stop(uint8_t reason, uint16_t latch);
+void bringup_stop_from(uint8_t reason, uint16_t latch, MotionOwner requester);
 void bringup_get_status(BringupStatus *out);
 void bringup_report(void);
 void bringup_help(void);

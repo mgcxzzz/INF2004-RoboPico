@@ -1,4 +1,7 @@
 #include "bringup.h"
+#ifdef APP_RTOS_NET_BENCH
+#include "../network_bridge/network_bridge.h"
+#endif
 #ifdef APP_RTOS_LINE
 #include "../line_navigation/line_service.h"
 #endif
@@ -29,7 +32,14 @@ static ER start(FP entry, PRI priority, UW processor, const char *name) {
 }
 
 void bringup_help(void) {
-#ifdef APP_RTOS_LINE
+#ifdef APP_RTOS_NET_BENCH
+    tm_printf((UB *)"\nROBOPICO RTOS NETWORK BENCH v0.1 | Step3A | micro T-Kernel SMP\n");
+    tm_printf((UB *)"MOTORS DISABLED. 100Hz clock/encoder/stop foundation + kernel-owned MQTT.\n");
+    tm_printf((
+        UB *)"Dashboard: heartbeat, Ping, RAM mapping, Stop/E-stop only. Start/Resume unsupported.\n");
+    tm_printf((
+        UB *)"p/n=status; x=clear local E-stop; h=help. No ADC/line/barcode/IMU or calibration writes.\n");
+#elif defined(APP_RTOS_LINE)
     tm_printf((
         UB *)"\nROBOPICO RTOS LINE FOLLOWING v0.1.2 | ANGLE-ONLY JUNCTION EXPERIMENT | Step2 | micro T-Kernel SMP\n");
     tm_printf(
@@ -87,6 +97,9 @@ void bringup_report(void) {
 #ifdef APP_RTOS_LINE
     rtos_line_report();
 #endif
+#ifdef APP_RTOS_NET_BENCH
+    rn_report();
+#endif
 }
 
 void bringup_status_task(INT code, void *exinf) {
@@ -124,6 +137,12 @@ EXPORT INT usermain(void) {
                              .now_us = port_now};
     motion_init(&port);
     ER result = bringup_create_objects();
+#ifdef APP_RTOS_NET_BENCH
+    if (result == E_OK)
+        result = rn_init();
+    if (result == E_OK)
+        result = start((FP)rn_app_task, 16, TP_PRC1, "network-bridge");
+#endif
 #ifdef APP_RTOS_LINE
     if (result == E_OK)
         result = start((FP)rtos_line_flash_task, 5, TP_PRC1, "flash-park");

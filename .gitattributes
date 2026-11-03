@@ -20,6 +20,7 @@
 *.zip binary
 /app_program/rtos_bringup/** text=auto eol=lf
 /app_program/line_navigation/** text=auto eol=lf
+/app_program/network_bridge/** text=auto eol=lf
 /tools/rtos_migration/** text=auto eol=lf
 /testing/rtos_migration/** text=auto eol=lf
 /firmware/migration/** text=auto eol=lf

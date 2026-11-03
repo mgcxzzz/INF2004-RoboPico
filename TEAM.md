@@ -1,5 +1,17 @@
 # Team and subsystems
 
+> **Step3A override:** `APP=rtos_network` is the stopped network checkpoint.
+> USB/core0 priority3, kernel CYW43/lwIP/MQTT/core0 priority4, copied application
+> network bridge/core0 priority16. Core1 retains the100Hz clock/encoder/stop
+> foundation, but motor starts and the output callback are inhibited. The
+> bridge owns three bounded kernel message buffers(TX1024,ACK256,RX256bytes);
+> application commands/status pass through copied messages, all TMO_POL.
+> Buddy1 Stop/E-stop reaches the shared coordinator through `bringup_stop_from`.
+> GP23–25/29 remain kernel radio pins; existing encoder/motor/stop pin ownership
+> is unchanged. Calibration/ADC/barcode/IMU/Buddy5 are not active in this bench.
+> Kernel-library changes implement the user's explicit professor-style migration
+> request. See app_program/network_bridge/README.md and the Step3 checkpoint guide.
+
 > **Migration checkpoint override:** `APP=rtos_bringup` excludes all example
 > subsystem tasks listed below. The actual task priorities, pin ownership and
 > interfaces for this experimental profile are recorded in
