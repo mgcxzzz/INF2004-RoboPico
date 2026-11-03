@@ -1,22 +1,22 @@
 {
-  "name": "robopico_rtos_line_following_v0_1",
+  "name": "robopico_rtos_line_following_v0_1_1",
   "status": "EXPERIMENTAL Step2; hardware acceptance pending; not final Buddy1-5",
   "branch": "codex/micro-tkernel-migration",
-  "source_commit": "9a1e9d4e0ebac61a4c7770c6b95d77f8d1efc01d",
+  "source_commit": "858aa2846039a99e25e7fe7243c14cc058674a6f",
   "reference_main_commit": "7843f45fbe45d5a774bc18c93be9bb11084d1b64",
   "build_profile": "APP=rtos_line SMP=1 CONSOLE=usb_cdc WIFI=none NET=none MQTT=0 CRASH_REPORT=0 TEST=0",
   "compiler": "arm-none-eabi-gcc.exe (Arm GNU Toolchain 14.2.Rel1 (Build arm-14.52)) 14.2.1 20241119",
   "sdk_commit": "a1438dff1d38bd9c65dbd693f0e5db4b9ae91779",
-  "uf2_sha256": "1a7920a9726ccf3d3eeda839922d7dfe8b1042450d3c5149477b99f67c322b7e",
-  "uf2_bytes": 209408,
-  "elf_sha256": "a44b58d707e9b35688f278ccbf989d939d2cbb0318ff33cee4bbc1d5652f3250",
+  "uf2_sha256": "5af6a164929344b87cc0f511c93843bc9e3d4e2a297b31841840c9dd8c6fdea1",
+  "uf2_bytes": 214016,
+  "elf_sha256": "98c4ac95e9b25cdc0606e4aecd16396f0c557770220264ae6e8ea6e394df357d",
   "uf2_layout": {
-    "blocks": 409,
+    "blocks": 418,
     "first_xip": "0x10000000",
-    "end_xip_exclusive": "0x10019900",
+    "end_xip_exclusive": "0x1001a200",
     "flash_ceiling": "0x10100000"
   },
-  "source_file_count": 823,
+  "source_file_count": 833,
   "unchanged_shared_files_verified": 103,
   "calibration_priority": [
     "CRC-valid own RTOS calibration at 0x1a9000",
@@ -38,19 +38,20 @@
     "Buddy5"
   ],
   "software_checks": [
-    "11 strict production-C regression executables",
-    "24 Python analyzer/export tests",
+    "12 strict production-C regression executables",
+    "34 Python analyzer/export tests",
     "Step1 and Step2 ARM builds",
     "source parity, UF2 bounds, RAM flash-code and stack-frame checks"
   ],
-  "hardware_checks": "Step1 v0.1.1 user acceptance passed; Step2 timing/ADC/flash/straight/bend/junction tests are pending.",
+  "hardware_checks": "Step1 v0.1.1 user acceptance passed; Step2 v0.1 idle ADC failure reproduced in user logs; corrected v0.1.1 hardware acceptance pending.",
+  "adc_correction": "Recheck READY at original100us deadline; classify and retain first/last failure; stopped-only100ms reset/retry and3 fresh all-channel qualification frames; runtime failure latches STOP; no auto-resume.",
   "linked_checks": {
     "flash_ram_addresses": {
       "rl_flash_park": "0x200000e4",
       "rl_flash_write": "0x2000011c"
     },
-    "static_ram_end": "0x2001e340",
-    "ram_remaining_before_dynamic_kernel_stacks": 138432,
+    "static_ram_end": "0x2001e450",
+    "ram_remaining_before_dynamic_kernel_stacks": 138160,
     "application_stack_frames": {
       "port_now": {
         "bytes": 8,
@@ -176,8 +177,16 @@
         "bytes": 16,
         "kind": "static"
       },
+      "adc_failure": {
+        "bytes": 56,
+        "kind": "static"
+      },
       "adc_once": {
-        "bytes": 24,
+        "bytes": 56,
+        "kind": "static"
+      },
+      "board_line_adc_diagnostics": {
+        "bytes": 8,
         "kind": "static"
       },
       "board_motor_levels": {
@@ -189,11 +198,11 @@
         "kind": "static"
       },
       "board_line_adc_init": {
-        "bytes": 24,
+        "bytes": 48,
         "kind": "static"
       },
       "board_line_adc_read": {
-        "bytes": 56,
+        "bytes": 64,
         "kind": "static"
       },
       "board_line_flash_worker": {
@@ -206,6 +215,14 @@
       },
       "junction_wheel_step": {
         "bytes": 56,
+        "kind": "static"
+      },
+      "acquisition_failed": {
+        "bytes": 112,
+        "kind": "static"
+      },
+      "acquire_frame": {
+        "bytes": 32,
         "kind": "static"
       },
       "symmetric_demand.constprop": {
@@ -277,7 +294,7 @@
         "kind": "static"
       },
       "rtos_line_report": {
-        "bytes": 136,
+        "bytes": 400,
         "kind": "static"
       },
       "rtos_line_dump_if_requested": {
