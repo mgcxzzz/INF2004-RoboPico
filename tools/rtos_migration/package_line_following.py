@@ -108,7 +108,11 @@ def main():
         for path in (copied, source_hashes, manifest_path):
             archive.write(path, path.relative_to(ROOT).as_posix())
         archive.write(copied, "firmware/" + copied.name)
-        archive.writestr("START_HERE.md", (CHECKPOINT / "README.md").read_text(encoding="utf-8"))
+        archive.writestr("START_HERE.md", "# Step 2 v0.1.1 - test ADC readiness first\n\n"
+                         "Flash firmware/" + NAME + ".uf2.\n\n"
+                         "Follow [the stopped USB-only ADC test](TEST_ADC_FIRST.md) before driving.\n\n"
+                         "The complete [Step 2 setup and driving guide](firmware/migration/"
+                         "micro_tkernel/step_02_line_following/README.md) is also included.\n")
         archive.writestr("TEST_ADC_FIRST.md", (CHECKPOINT / "UPDATE_V0_1_1.md").read_text(encoding="utf-8"))
         for name, script in (("Run timing check.cmd", "capture_bringup.py"),
                              ("Check ADC readiness.cmd", "capture_adc_readiness.py"),
