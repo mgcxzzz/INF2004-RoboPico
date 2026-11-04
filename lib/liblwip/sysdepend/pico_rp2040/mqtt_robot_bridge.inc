@@ -8,6 +8,7 @@
 #include "lwip/apps/mqtt_priv.h"
 #include "lwip/ip_addr.h"
 #include "lwip/altcp.h"
+#include "lwip/stats.h"
 #include "lwip/sys.h"
 #include "mqtt_utk.h"
 #include "../../../libwifi/sysdepend/pico_rp2040/cyw43_utk.h"
@@ -31,6 +32,10 @@ static uint32_t robot_total, robot_received, robot_packet_ms;
 static uint8_t robot_topic, robot_length;
 static uint32_t robot_mem, robot_errors, robot_deferred, robot_admit_ms, robot_complete_ms;
 static int8_t robot_publish_result;
+
+#if !defined(RN_BRIDGE_DEPENDENCIES_PROVIDED) && TCP_OVERSIZE != 0
+#error "Small-message network profile requires exact-size TCP allocations"
+#endif
 
 static void robot_increment(uint32_t *value) {
     if (*value != UINT32_MAX)
@@ -237,6 +242,15 @@ void mqtt_utk_start(void) {
                        .request_free = robot_free_requests(),
                        .ring_used = robot_ring_used(),
                        .tcp_free = connected && robot_client->conn ? altcp_sndbuf(robot_client->conn) : 0,
+                       .heap_used = lwip_stats.mem.used,
+                       .heap_max = lwip_stats.mem.max,
+                       .heap_capacity = lwip_stats.mem.avail,
+                       .heap_errors = lwip_stats.mem.err,
+#if !LWIP_ALTCP
+                       .tcp_queue = connected && robot_client->conn ? robot_client->conn->snd_queuelen : 0,
+                       .tcp_retries = connected && robot_client->conn ? robot_client->conn->nrtx : 0,
+                       .tcp_rto_ms = connected && robot_client->conn ? robot_client->conn->rto * 500U : 0,
+#endif
                        .nagle_off = connected && robot_client->conn && altcp_nagle_disabled(robot_client->conn),
                        .mqtt_result = robot_result,
                        .link = (int8_t)radio.link_status,

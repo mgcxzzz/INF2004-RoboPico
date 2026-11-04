@@ -60,6 +60,11 @@
  * 256 output bytes). The kernel bridge reserves capacity for ACK/HB too. */
 #define MQTT_REQ_MAX_IN_FLIGHT       16
 #define MQTT_OUTPUT_RINGBUF_SIZE     1024
+/* SINGLE_PBUF + default TCP_OVERSIZE reserves an entire MSS even for a
+ * 15-byte heartbeat. With a16KiB arena and16 requests that can exhaust heap
+ * while TCP sndbuf still appears mostly free. Allow exact-size pbuf chains:
+ * cyw43_ll_send_ethernet already flattens them with pbuf_copy_partial(). */
+#define TCP_OVERSIZE                 0
 #endif
 
 #define LWIP_ARP                    1
@@ -75,7 +80,11 @@
 #define LWIP_NETIF_STATUS_CALLBACK  1
 #define LWIP_NETIF_LINK_CALLBACK    1
 #define LWIP_NETIF_HOSTNAME         1
+#ifdef APP_RTOS_NETWORK
+#define LWIP_NETIF_TX_SINGLE_PBUF   0
+#else
 #define LWIP_NETIF_TX_SINGLE_PBUF   1
+#endif
 
 #define LWIP_CHKSUM_ALGORITHM       3
 
@@ -89,11 +98,16 @@
 #define LWIP_DNS                    1
 #define LWIP_TCP_KEEPALIVE          1
 
+#ifdef APP_RTOS_NETWORK
+#define MEM_STATS                   1
+#define LWIP_STATS                  1
+#else
 #define MEM_STATS                   0
+#define LWIP_STATS                  0
+#endif
 #define SYS_STATS                   0
 #define MEMP_STATS                  0
 #define LINK_STATS                  0
-#define LWIP_STATS                  0
 #define LWIP_STATS_DISPLAY          0
 
 #define LWIP_DEBUG                  0

@@ -88,6 +88,10 @@ def sources():
             if not path.is_file() or ART in path.parents:
                 continue
             relative = path.relative_to(ROOT)
+            # Other releases are artifacts, not source inputs. Excluding their
+            # manifests avoids recursive/circular source hashes across bundles.
+            if relative.parts[:2] == ("firmware", "migration") and "firmware" in relative.parts[2:-1]:
+                continue
             if any(part in EXCLUDED or part.startswith("build-") for part in relative.parts):
                 continue
             if path.suffix.lower() in {".o", ".obj", ".d", ".su", ".elf", ".map", ".uf2", ".exe", ".pyc", ".zip"}:
