@@ -1,4 +1,11 @@
 #include "line_service.h"
+#ifdef APP_RTOS_NETWORK
+#include "../network_bridge/network_bridge.h"
+static WifiMotionPacket telemetry;
+static uint16_t run_id;
+static uint32_t run_elapsed_ms;
+static double run_path;
+#endif
 
 static ID commands;
 static T_SPLOCK copy_lock;
@@ -9,7 +16,7 @@ static CircuitInput input;
 static float filtered[2];
 static uint16_t adc[3];
 static uint32_t cal_origin; /* 0 preset, 1 SDK record28, 2 own saved page, 3 RAM capture. */
-static bool adc_ok, filter_ready, was_active;
+static bool adc_ok, filter_ready, was_active, start_offered;
 static RlAdcHealth adc_health;
 static bool adc_recovering;
 static uint32_t adc_retries, adc_recoveries, adc_frames;
@@ -122,7 +129,11 @@ void rtos_line_side_poll(uint64_t now) {
         acquisition_failed(board_time_us());
         return;
     }
-    if (was_active) {
+    if (was_active
+#ifdef APP_RTOS_NETWORK
+        && !rn_drive_paused()
+#endif
+    ) {
         /* Between 10 ms encoder drains, interpolate at the last measured
          * velocity, as a bounded-distance edge estimate, never a PWM change. */
         double wheel[2];
@@ -137,6 +148,58 @@ bool rtos_line_ready(void) {
     return adc_ok && calibration_valid(&calibration);
 }
 
+bool rtos_line_pending(void) {
+    UINT key = enter();
+    bool pending = (view.flags & 4U) && start_serial == cancel_serial;
+    leave(key);
+    return pending;
+}
+bool rtos_line_request_fresh(uint32_t received_us) {
+    UINT key = enter();
+    bool valid = br_command_after_stop((uint32_t)board_time_us(), received_us, last_cancel_us,
+                                       cancel_serial != 0);
+    leave(key);
+    return valid;
+}
+bool rtos_line_request_start(uint32_t received_us) {
+    UINT key = enter();
+    bool allowed = !dumping && !dump_requested && !countdown && !start_offered &&
+                   br_command_after_stop((uint32_t)board_time_us(), received_us, last_cancel_us,
+                                         cancel_serial != 0);
+    uint32_t serial = cancel_serial;
+    leave(key);
+    if (!allowed || !rtos_line_ready())
+        return false;
+#ifdef APP_RTOS_NETWORK
+    if (!rn_drive_online() || !bringup_can_start())
+        return false;
+#endif
+    key = enter();
+    if (serial != cancel_serial) {
+        leave(key);
+        return false;
+    }
+    start_serial = serial;
+    countdown = input.now + 2000000;
+    view.flags |= 4U;
+    leave(key);
+    return true;
+}
+#ifdef APP_RTOS_NETWORK
+void rtos_line_resume(void) {
+    char pending = planner.nav.pending;
+    rl_begin(&planner, &input, adc[1]);
+    if (pending)
+        (void)barcode_set_pending(&planner.nav, pending);
+    power = (LinePower){0};
+    last_noted_phase = UINT32_MAX;
+}
+void rtos_line_telemetry(WifiMotionPacket *out) {
+    UINT key = enter();
+    *out = telemetry;
+    leave(key);
+}
+#endif
 static void calibration_command(unsigned command) {
     if (command != 'c' && !adc_ok) {
         tm_printf((UB *)"CAL rejected: ADC not ready; existing calibration retained.\n");
@@ -175,6 +238,7 @@ static void calibration_command(unsigned command) {
 
 bool rtos_line_prepare(const MotionFeedback *f, double path, float dt, bool active) {
     (void)dt;
+    start_offered = false;
     if (adc_ok) {
         (void)acquire_frame(false);
     } else {
@@ -214,6 +278,12 @@ bool rtos_line_prepare(const MotionFeedback *f, double path, float dt, bool acti
     if (!active && was_active)
         countdown = 0;
     was_active = active;
+    if (countdown && !rtos_line_start_valid())
+        countdown = 0;
+#ifdef APP_RTOS_NETWORK
+    if (!rn_drive_online())
+        countdown = 0;
+#endif
     uint8_t msg[5];
     for (unsigned n = 0; n < 8 && tk_rcv_mbf(commands, msg, TMO_POL) == 5; ++n) {
         uint32_t received = (uint32_t)msg[1] | ((uint32_t)msg[2] << 8) | ((uint32_t)msg[3] << 16) |
@@ -238,9 +308,7 @@ bool rtos_line_prepare(const MotionFeedback *f, double path, float dt, bool acti
             UINT key = enter();
             bool exporting = dumping || dump_requested;
             leave(key);
-            if (!exporting && rtos_line_ready()) {
-                start_serial = serial;
-                countdown = f->now_us + 2000000;
+            if (!exporting && rtos_line_request_start(received)) {
                 tm_printf((UB *)"LINE start requested; 2s countdown; buttons/s cancel.\n");
             } else if (exporting)
                 tm_printf((UB *)"LINE start rejected: log export still pending/active.\n");
@@ -262,13 +330,20 @@ bool rtos_line_prepare(const MotionFeedback *f, double path, float dt, bool acti
     bool start = countdown && f->now_us >= countdown && !active;
     if (start)
         countdown = 0;
+    start_offered = start;
     return start;
 }
 
 void rtos_line_begin(void) {
+    start_offered = false;
     rl_begin(&planner, &input, adc[1]);
     power = (LinePower){0};
     run_start = input.now;
+#ifdef APP_RTOS_NETWORK
+    ++run_id;
+    run_elapsed_ms = 0;
+    run_path = input.path;
+#endif
     last_noted_phase = UINT32_MAX;
     run_calibration = calibration;
     run_cal_origin = cal_origin;
@@ -286,8 +361,10 @@ AnalogDemand rtos_line_follow(float dt) {
 }
 
 void rtos_line_feedback(MotionFeedback *f, const AnalogDemand *d) {
-    f->line_level[0] = d->level[0];
-    f->line_level[1] = d->level[1];
+    f->line_level[0] =
+        d ? d->level[0] : line_level(input.adc[0], calibration.white[0], calibration.black[0]);
+    f->line_level[1] =
+        d ? d->level[1] : line_level(input.adc[1], calibration.white[1], calibration.black[1]);
     f->navigation_busy = planner.circuit.busy;
     f->pending_route = planner.nav.pending;
     if (planner.circuit.phase != last_noted_phase) {
@@ -365,6 +442,41 @@ void rtos_line_record(const BringupStatus *s, const AnalogDemand *d, uint32_t co
         if (!(s->flags & BR_ACTIVE))
             recording = false; /* Preserve one terminal stopped/fault row. */
     }
+#ifdef APP_RTOS_NETWORK
+    if (recording)
+        run_elapsed_ms = (uint32_t)((input.now - run_start) / 1000);
+    telemetry = (WifiMotionPacket){
+        .uptime_ms = s->kernel_ms,
+        .elapsed_ms = run_elapsed_ms,
+        .run_id = run_id,
+        .phase = (uint8_t)planner.circuit.phase,
+        .profile = RL_PROFILE,
+        .flags = (s->flags & BR_ACTIVE ? 1U : 0U) | (calibration_valid(&calibration) ? 2U : 0U) |
+                 (s->flags & BR_ACTIVE && !rn_drive_paused() ? 4U : 0U) |
+                 (s->flags & BR_ESTOP ? 8U : 0U) | 0x40U,
+        .recovery_state = (uint8_t)(tracker->search.active ? 2
+                                    : tracker->core.white  ? 1
+                                                           : 0),
+        .distance_mm =
+            input.path - run_path < UINT32_MAX ? (uint32_t)(input.path - run_path) : UINT32_MAX,
+        .adc_left = raw[0],
+        .adc_right = raw[1],
+        .adc_barcode = raw[2],
+        .calibrated_level_left = calibration_valid(&calibration) ? view.level[0] : 0xffff,
+        .calibrated_level_right = calibration_valid(&calibration) ? view.level[1] : 0xffff,
+        .speed_left_0p1mm_s = s->speed_x10[0],
+        .speed_right_0p1mm_s = s->speed_x10[1],
+        .target_left_mm_s = s->target[0],
+        .target_right_mm_s = s->target[1],
+        .pwm_left = s->pwm[0],
+        .pwm_right = s->pwm[1],
+        .heading_cdeg =
+            (int16_t)lroundf(remainderf(heading_deg(input.wheel[0], input.wheel[1]), 360) * 100)};
+    telemetry.line_levels = calibration_valid(&calibration)
+                                ? (view.level[0] >= 400 ? 1U : 0U) |
+                                      (view.level[1] >= 400 ? 2U : 0U) | (planner.black ? 4U : 0U)
+                                : 0;
+#endif
     view.rows = row_count;
     view.overwritten = row_overwritten;
     view.sequence = row_sequence;

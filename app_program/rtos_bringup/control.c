@@ -3,6 +3,9 @@
  * API/coordinator. Only this task calculates normal motor output. */
 #include "bringup.h"
 #include "src/motion/continuous_drive.h"
+#ifdef APP_RTOS_NETWORK
+#include "../network_bridge/network_bridge.h"
+#endif
 #ifdef APP_RTOS_LINE
 #include "../line_navigation/line_service.h"
 static LineEnvelope committed_envelope;
@@ -32,6 +35,36 @@ void bringup_get_status(BringupStatus *out) {
     status_leave(key);
 }
 
+void bringup_zero_status(void) {
+    uintptr_t api_key = board_motion_lock(NULL);
+    UINT key = status_enter();
+    status.pwm[0] = status.pwm[1] = status.target[0] = status.target[1] = 0;
+#ifdef APP_RTOS_LINE
+    committed_envelope = (LineEnvelope){0};
+#endif
+    status_leave(key);
+    board_motion_unlock(NULL, api_key);
+}
+bool bringup_can_start(void) {
+    UINT key = status_enter();
+    bool ok = br_can_start(status.flags, (uint32_t)board_time_us(), stopped_us, tm_usb_state(),
+                           !board_button_pressed(20) && !board_button_pressed(21)) &&
+              !bringup_irq_stop;
+    status_leave(key);
+    return ok;
+}
+bool bringup_clear_latch(void) {
+    UINT key = status_enter();
+    bool ok = !(status.flags & BR_ACTIVE) && !board_button_pressed(20) &&
+              !board_button_pressed(21) && (status.flags & BR_CLOCK_OK);
+    if (ok) {
+        bringup_irq_stop = 0;
+        status.flags &= (uint16_t)~BR_LATCHED;
+        stopped_us = (uint32_t)board_time_us();
+    }
+    status_leave(key);
+    return ok;
+}
 void bringup_stop(uint8_t reason, uint16_t latch) {
     bringup_stop_from(reason, latch, MOTION_BUDDY2);
 }
@@ -50,8 +83,12 @@ void bringup_stop_from(uint8_t reason, uint16_t latch, MotionOwner requester) {
 #ifdef APP_RTOS_LINE
     rtos_line_cancel(); /* Out-of-queue cancellation survives a full command buffer. */
 #endif
+#if defined(APP_RTOS_LINE) && defined(APP_RTOS_NETWORK)
+    rn_drive_cancel();
+#endif
     (void)motion_stop(requester);
     motion_session_end(reason);
+    bringup_zero_status();
     if (active || new_latch)
         tm_printf((UB *)"STOP timer_us=%u reason=%u latch=0x%x\n", (uint32_t)board_time_us(),
                   reason, latch);
@@ -81,6 +118,9 @@ static void apply_outputs(void *raw) {
     bool allowed = urgent_stop == 0U &&
                    br_outputs_allowed(status.flags, bringup_irq_stop != 0U, tm_usb_state(),
                                       !board_button_pressed(20U) && !board_button_pressed(21U));
+#if defined(APP_RTOS_LINE) && defined(APP_RTOS_NETWORK)
+    allowed = allowed && !rn_drive_paused() && rn_drive_online();
+#endif
     for (unsigned w = 0U; w < 2U; ++w) {
 #ifdef APP_RTOS_LINE
         DualLevels levels = allowed ? rl_levels(envelope, w, board_time_us()) : (DualLevels){0};
@@ -219,12 +259,28 @@ void bringup_control_task(INT code, void *exinf) {
                 bringup_stop(BR_REASON_ADC, BR_ESTOP);
             active = false;
         }
+#ifdef APP_RTOS_NETWORK
+        rn_drive_process(&feedback);
+        if (!rn_drive_online()) {
+            if (active || rtos_line_pending())
+                bringup_stop_from(BR_REASON_NETWORK, 0, MOTION_BUDDY1);
+            start_line = false;
+        }
+        bringup_get_status(&snapshot);
+        active = !!(snapshot.flags & BR_ACTIVE);
+        bool paused = rn_drive_paused();
+#else
+        bool paused = false;
+#endif
         if (start_line && rtos_line_ready()) {
             start_pulse(3);
             bringup_get_status(&snapshot);
             active = (snapshot.flags & BR_ACTIVE) != 0U;
             if (active) {
                 rtos_line_begin();
+#ifdef APP_RTOS_NETWORK
+                rn_drive_begin();
+#endif
                 for (unsigned w = 0; w < 2; ++w) {
                     initial_invalid[w] = invalid[w];
                     bad_direction_us[w] = 0;
@@ -232,7 +288,9 @@ void bringup_control_task(INT code, void *exinf) {
             }
         }
         AnalogDemand optical = {0};
-        if (active) {
+        if (active && paused) {
+            rtos_line_feedback(&feedback, NULL);
+        } else if (active) {
             optical = rtos_line_follow(dt);
             rtos_line_feedback(&feedback, &optical);
             if (optical.stop) {
@@ -250,15 +308,21 @@ void bringup_control_task(INT code, void *exinf) {
             }
         }
         MotionOutput demand = motion_update(&feedback);
-        if (active && demand.external) {
+        if (active && demand.external && !paused) {
             BringupStatus current;
             bringup_get_status(&current);
             if (current.flags & BR_ACTIVE)
                 bringup_stop(BR_REASON_API, BR_ESTOP);
             active = false;
         }
+#ifdef APP_RTOS_NETWORK
+        if (active && paused && motion_get_status().mode == MOTION_FAULT) {
+            bringup_stop(BR_REASON_API, BR_ESTOP);
+            active = false;
+        }
+#endif
         LineEnvelope envelope = {0};
-        if (active) {
+        if (active && !paused) {
             uintptr_t api_key = board_motion_lock(NULL);
             LineEnvelope previous_envelope = committed_envelope;
             board_motion_unlock(NULL, api_key);
@@ -344,6 +408,16 @@ void bringup_safety_task(INT code, void *exinf) {
         status_leave(key);
         uint32_t now = (uint32_t)board_time_us();
         bool active = (snapshot.flags & BR_ACTIVE) != 0U;
+#ifdef APP_RTOS_NETWORK
+        unsigned net_urgent = rn_take_urgent();
+        if (net_urgent)
+            bringup_stop_from(BR_REASON_NETWORK, net_urgent & RN_URGENT_ESTOP ? BR_ESTOP : 0,
+                              MOTION_BUDDY1);
+#ifdef APP_RTOS_LINE
+        if (active && !rn_drive_online())
+            bringup_stop_from(BR_REASON_NETWORK, 0, MOTION_BUDDY1);
+#endif
+#endif
         if ((snapshot.flags & BR_READY) != 0U) {
             if ((bringup_irq_stop != 0U || board_button_pressed(20U) || urgent == 'e') &&
                 (active || (snapshot.flags & BR_ESTOP) == 0U))

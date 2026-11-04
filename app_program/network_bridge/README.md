@@ -1,5 +1,28 @@
 # Application-to-kernel network bridge
 
+**Step3B update:** `APP=rtos_line_wifi` adds the Step2 controller to this bridge;
+`APP=rtos_network` remains the motor-disabled Step3A bench. See the complete
+[connected execution/command specification](../../firmware/migration/micro_tkernel/step_03_connected_line/ARCHITECTURE.md)
+and [setup/test guide](../../firmware/migration/micro_tkernel/step_03_connected_line/README.md).
+`APP_RTOS_NETWORK` selects the kernel robot transport; `APP_RTOS_NET_BENCH`
+adds only the bench motor/start inhibition. Barcode/IMU are still deferred.
+
+Current buffers reserve TX1024bytes, ACK256, HB128, RX256 and (Step3B) owner
+commands256. Copied RX/control envelopes are25bytes; out-of-queue validated
+Stop/E-stop/Pause bits survive ordinary queue saturation. Full/malformed
+messages are counted. Telemetry expires250ms; ACK/heartbeat2s. All operations
+are non-blocking TMO_POL and all mutable packed snapshots have short locks.
+
+In Step3B the control owner executes Start/Pause/Resume/Reset through the shared
+API/coordinator before returning the actual decision ACK. USB supervision and
+detected network loss stop the session; reconnect never resumes it. Latest
+copied source9 motion is20Hz and source11 coordinator4Hz, with source1 heartbeat
+1Hz. CONFIG telemetry off/on leaves heartbeat/safety running. Source9 flag0x40
+identifies this RTOS runtime to the reused dashboard. Stored logs use USB d.
+
+The following describes the original Step3A scope; its published artifact is
+retained unchanged for rollback.
+
 Step3A is a **stopped network bench**, not the completed Wi-Fi driving port.
 `APP=rtos_network` runs the verified1ms kernel tick and100Hz clock/encoder/stop
 foundation. Both command rejection and the common output callback inhibit motor
@@ -15,8 +38,8 @@ execute junctions, read IMU or activate Buddy5.
 2. Core0 `rn_app_task` (priority16,4KiB stack) parses application commands,
    constructs the existing compact Buddy1 heartbeat and mapping/ACK frames, and
    exchanges copied messages with the owner. It never calls lwIP or MQTT.
-3. Two TX kernel message buffers separate ACKs(256bytes) from telemetry/heartbeat
-   (1024bytes). An RX buffer is256bytes. Every buffer operation uses TMO_POL.
+3. Separate TX kernel message buffers reserve ACKs, heartbeat and telemetry.
+   An RX buffer is256bytes. Every buffer operation uses TMO_POL.
    Oversized messages are rejected; full buffers increment copied drop counters.
    TX cleanup and owner publish work have bounded loops of four operations.
 4. MQTT callbacks classify the known topic and copy up to8payload bytes before

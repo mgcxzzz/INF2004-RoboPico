@@ -244,6 +244,22 @@ try {
   for (let i = 0; i < 8; i++) { await emit(i3, 'is28/tlm', b2(1)); await emit(i3, 'is28/tlm', imu(0, 0, 0, 0)); await sleep(450); }
   check('R06 RTOS Buddy4 build (shared sources only) inferred as RTOS', (await text(i3, 'profilePill')).includes('inferred'));
   check('R07 mobile layout has no horizontal overflow', await i3.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  const connected = await openPage();
+  const drive = sdkMotion(8000, 1); drive[15] |= 0x40;
+  await emit(connected, 'is28/hb', hbF(8, 0));
+  await emit(connected, 'is28/tlm', drive);
+  await emit(connected, 'is28/tlm', sdkNav(7, 0, 0, 8000));
+  check('C01 connected RTOS marker identifies runtime despite reusing source9/11',
+    (await text(connected, 'profilePill')).includes('RTOS connected line') &&
+    (await connected.locator('#logDownload').isDisabled()));
+  check('C02 idle ready heartbeat is not turned into Running by motion packets',
+    (await text(connected, 'opstate')) === 'Ready');
+  await emit(connected, 'is28/hb', hbF(9, 2));
+  check('C03 paused heartbeat remains Paused with source11 paused mode',
+    (await text(connected, 'opstate')) === 'Paused');
+  await emit(connected, 'is28/hb', hbF(10, 5));
+  check('C04 emergency-stop heartbeat remains Emergency Stop',
+    (await text(connected, 'opstate')) === 'Emergency Stop');
   check('R08 no page or console errors', errors.length === 0);
   console.log(`\n${count} passed, 0 failed (simulated MQTT; no broker, Pico or car)`);
 } catch (e) {

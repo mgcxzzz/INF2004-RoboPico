@@ -15,7 +15,7 @@ ART = CHECKPOINT / "firmware"
 common.ART = ART
 
 
-def linked_checks(elf: Path) -> dict:
+def linked_checks(elf: Path, network: bool = False) -> dict:
     tool = ROOT.parent / ".buddy2-tools/arm-gcc/bin/arm-none-eabi-nm.exe"
     output = common.command(tool, "-n", elf)
     symbols = {}
@@ -29,8 +29,11 @@ def linked_checks(elf: Path) -> dict:
                  "motion_submit_navigation", "motion_submit_barcode", "motion_commit",
                  "rl_flash_park", "rl_flash_write"):
         assert name in symbols, name
-    for name in ("cyw43_utk_task", "mqtt_client_connect", "subsystem5_start", "dev_init_adc",
-                 "dev_init_ser", "barcode_analog_sample", "barcode_peak_sample"):
+    if network:
+        for name in ("cyw43_utk_task", "mqtt_client_connect", "rn_app_task", "rn_drive_process", "rn_drive_telemetry"):
+            assert name in symbols, name
+    for name in ((() if network else ("cyw43_utk_task", "mqtt_client_connect")) + ("subsystem5_start", "dev_init_adc",
+                 "dev_init_ser", "barcode_analog_sample", "barcode_peak_sample")):
         assert name not in symbols, name
     for name in ("rl_flash_park", "rl_flash_write"):
         assert 0x20000000 <= symbols[name] < 0x20040000, name
@@ -42,7 +45,8 @@ def linked_checks(elf: Path) -> dict:
     assert symbols["__end"] <= 0x20030000, "Insufficient RAM left for kernel/task allocations"
     usage = {}
     for directory in (ROOT / "build_make/mtkernel_3/app_program/rtos_bringup",
-                      ROOT / "build_make/mtkernel_3/app_program/line_navigation"):
+                      ROOT / "build_make/mtkernel_3/app_program/line_navigation",
+                      *([ROOT / "build_make/mtkernel_3/app_program/network_bridge"] if network else [])):
         for path in directory.glob("*.su"):
             for line in path.read_text(encoding="utf-8").splitlines():
                 label, size, kind = line.rsplit("\t", 2)

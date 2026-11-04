@@ -10,11 +10,16 @@ other shared source byte and exactly reconstructs these two permitted changes.
 
 Current Step 2 version is **v0.1.2**, the angle-only junction experiment. See
 `firmware/migration/micro_tkernel/step_02_line_following/UPDATE_V0_1_2.md`.
-Only APP=rtos_line defines JUNCTION_ANGLE_GATE_ONLY=1; default0 retains the old
+APP=rtos_line and the Step3B APP=rtos_line_wifi define JUNCTION_ANGLE_GATE_ONLY=1; default0 retains the old
 white prerequisite for reference builds. Original steering/calibration, branch
 threshold/dwell, angle limits, acquisition and stops remain. White is separately
 observed, never used to manufacture a sensor reading. The ADC correction from
 v0.1.1 is retained.
+
+Step3B reuses this owner without retuning. It adds a locked copied live-motion
+snapshot, qualified Start acceptance and ordinary tracking reacquisition after
+a coordinator-approved Pause/Resume. The full-rate stored log remains USB d.
+See [the connected checkpoint](../../firmware/migration/micro_tkernel/step_03_connected_line/README.md).
 
 ## Ownership and update order
 

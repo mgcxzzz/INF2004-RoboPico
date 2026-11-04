@@ -1,4 +1,4 @@
-#ifdef APP_RTOS_NET_BENCH
+#ifdef APP_RTOS_NETWORK
 #include "mqtt_robot_bridge.inc"
 #else
 /*

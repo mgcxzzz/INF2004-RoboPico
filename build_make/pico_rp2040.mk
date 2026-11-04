@@ -20,8 +20,8 @@ SMP ?= 1
 
 # Explicit migration profile; the default template build remains available.
 APP ?= example
-ifneq ($(filter $(APP),example rtos_bringup rtos_line rtos_network),$(APP))
-$(error Unknown APP '$(APP)'; use example, rtos_bringup or rtos_line)
+ifneq ($(filter $(APP),example rtos_bringup rtos_line rtos_network rtos_line_wifi),$(APP))
+$(error Unknown APP '$(APP)'; use example, rtos_bringup, rtos_line, rtos_network or rtos_line_wifi)
 endif
 
 ifneq ($(SMP),0)
@@ -133,11 +133,14 @@ EXE_FILE := robopico_rtos_line_following_v0_1_2
 endif
 endif
 
-ifeq ($(APP),rtos_network)
+ifneq ($(filter $(APP),rtos_network rtos_line_wifi),)
 ifneq ($(SMP)-$(CONSOLE)-$(WIFI)-$(NET)-$(MQTT)-$(CRASH_REPORT)-$(TEST),1-usb_cdc-cyw43-lwip-1-0-0)
 $(error rtos_network requires SMP=1 CONSOLE=usb_cdc WIFI=cyw43 NET=lwip MQTT=1 CRASH_REPORT=0 TEST=0)
 endif
 EXE_FILE := robopico_rtos_network_bench_v0_1
+ifeq ($(APP),rtos_line_wifi)
+EXE_FILE := robopico_rtos_connected_line_v0_1
+endif
 endif
 
 GCC := arm-none-eabi-gcc
@@ -199,17 +202,20 @@ CFLAGS  += -DCNF_SMP=1
 ASFLAGS += -DCNF_SMP=1
 endif
 CFLAGS  += -DAPP_TEST=$(TEST)
-ifneq ($(filter $(APP),rtos_bringup rtos_line rtos_network),)
+ifneq ($(filter $(APP),rtos_bringup rtos_line rtos_network rtos_line_wifi),)
 CFLAGS += -DAPP_RTOS_BRINGUP=1 -DCNF_TIMER_PERIOD=1 -DUSE_SDEV_DRV=0 -ffunction-sections -fdata-sections
 INCPATH += -I../firmware/integration/buddy1_4
 LFLAGS += -Wl,--gc-sections -Wl,--defsym=__migration_flash_limit=0x10100000
 LDLIBS += -lm
 endif
-ifeq ($(APP),rtos_line)
+ifneq ($(filter $(APP),rtos_line rtos_line_wifi),)
 CFLAGS += -DAPP_RTOS_LINE=1 -DBUDDY_WIFI_LOGGING=1 -DLINE_CAL_MIN_SPAN=50 -DCIRCUIT_SWEEP_SEARCH=1 -DJUNCTION_ANGLE_GATE_ONLY=1 -fstack-usage
 endif
+ifneq ($(filter $(APP),rtos_network rtos_line_wifi),)
+CFLAGS += -DAPP_RTOS_NETWORK=1 -fstack-usage
 ifeq ($(APP),rtos_network)
-CFLAGS += -DAPP_RTOS_NET_BENCH=1 -fstack-usage
+CFLAGS += -DAPP_RTOS_NET_BENCH=1
+endif
 endif
 CFLAGS  += -DTM_CONSOLE_UART=$(CRASH_REPORT)
 ifeq ($(CRASH_REPORT),0)

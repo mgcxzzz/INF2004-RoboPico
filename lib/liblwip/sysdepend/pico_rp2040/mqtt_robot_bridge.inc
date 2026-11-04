@@ -139,7 +139,7 @@ void mqtt_utk_start(void) {
                 robot_packet_ms = now;
                 robot_pending = true;
             }
-            if (now - robot_packet_ms > 2000U) {
+            if (now - robot_packet_ms > (robot_topic == RN_TLM ? 250U : 2000U)) {
                 rn_publish_result(false);
                 robot_pending = false;
                 continue;

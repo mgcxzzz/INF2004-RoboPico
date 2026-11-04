@@ -15,7 +15,7 @@
 #include "lwip/init.h"
 #include "lwip/timeouts.h"
 #include "lwip/netif.h"
-#ifdef APP_RTOS_NET_BENCH
+#ifdef APP_RTOS_NETWORK
 #include "network_settings.h"
 #else
 #include "wifi_secrets.h"
@@ -72,7 +72,7 @@ static T_CYW43_UTK_STATUS radio_status = {
     .strongest_rssi = -32768,
 };
 
-#ifdef APP_RTOS_NET_BENCH
+#ifdef APP_RTOS_NETWORK
 /* USB provisioning writes WCF1 at flash offset 0x1aa000 (XIP 0x101aa000).
  * This service only reads it; no CYW43/MQTT path uses build-time placeholders. */
 #define WIFI_SETTINGS_XIP_ADDRESS ((uintptr_t)0x101aa000u)
@@ -208,13 +208,13 @@ static int32_t wifi_try_join(void)
 {
     int32_t err;
 
-#ifdef APP_RTOS_NET_BENCH
+#ifdef APP_RTOS_NETWORK
     tm_printf((UB*)"wifi: joining configured access point ...\n");
 #else
     tm_printf((UB*)"wifi: joining \"%s\" ...\n", WIFI_SSID);
 #endif
 
-#ifdef APP_RTOS_NET_BENCH
+#ifdef APP_RTOS_NETWORK
     const char *ssid = utk_network_ssid(), *password = utk_network_password();
     if (!ssid || !password) return -1;
     err = cyw43_wifi_join(&cyw43_state, strlen(ssid), (const uint8_t *)ssid,
@@ -259,7 +259,7 @@ void cyw43_utk_task(int32_t stacd, void *exinf)
     (void)stacd;
     (void)exinf;
     radio_status.owner_prc = (uint32_t)tk_get_prc();
-#ifdef APP_RTOS_NET_BENCH
+#ifdef APP_RTOS_NETWORK
     (void)utk_network_settings_load();
 #endif
 
@@ -284,6 +284,15 @@ void cyw43_utk_task(int32_t stacd, void *exinf)
                   "firmware load to the CYW43439 did not succeed)\n");
         result = -CYW43_EIO;
     } else {
+#if defined(APP_RTOS_NETWORK) && defined(APP_RTOS_LINE)
+        /* Same kernel owner as join/poll. Keep driving telemetry out of the
+         * radio's sleep batching; report acceptance and readback explicitly. */
+        uint32_t pm = UINT32_MAX;
+        int pm_set = cyw43_wifi_pm(&cyw43_state, CYW43_NONE_PM);
+        int pm_get = cyw43_wifi_get_pm(&cyw43_state, &pm);
+        tm_printf((UB*)"wifi: drive PM set=%d get=%d mode=%u (0=no powersave)\n",
+                  pm_set, pm_get, pm & 15U);
+#endif
         (void)cyw43_wifi_get_mac(&cyw43_state, CYW43_ITF_STA,
                                  radio_status.mac);
 #if TM_NET_LWIP
@@ -389,7 +398,7 @@ void cyw43_utk_task(int32_t stacd, void *exinf)
          * guard), so calling it on every poll iteration once the link is up
          * is fine -- it only actually does anything on the first call, or
          * again after connection_cb() schedules a retry. */
-#ifdef APP_RTOS_NET_BENCH
+#ifdef APP_RTOS_NETWORK
         mqtt_utk_start(); /* Also copies link-down status and services retry state. */
 #else
         if(radio_status.link_status == CYW43_LINK_UP) {

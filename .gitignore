@@ -49,3 +49,5 @@ dashboard_session/
 !/firmware/migration/micro_tkernel/step_02_line_following/firmware/robopico_rtos_line_following_v0_1_2.uf2
 !/firmware/migration/micro_tkernel/step_03_wifi_mqtt/firmware/robopico_rtos_network_bench_v0_1.uf2
 **/rtos_network_session/
+**/rtos_connected_session/
+!/firmware/migration/micro_tkernel/step_03_connected_line/firmware/robopico_rtos_connected_line_v0_1.uf2

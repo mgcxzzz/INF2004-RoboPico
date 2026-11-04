@@ -4,12 +4,15 @@
 
 `codex/micro-tkernel-migration` starts from the working main baseline and follows
 the [staged RTOS migration plan](firmware/migration/micro_tkernel/README.md).
-The current checkpoint is [Step1 motor/encoder/stop bring-up](firmware/migration/micro_tkernel/step_01_motor_bringup/README.md).
-Its hardware acceptance is pending. It does not run line following or Wi-Fi yet.
+The current checkpoint is [Step3B connected line following](firmware/migration/micro_tkernel/step_03_connected_line/README.md):
+Continuous V2 profile1 plus kernel-owned Wi-Fi/MQTT, live dashboard telemetry
+and supervisory controls. **USB supervision is required; Step3B hardware tests
+are pending.** Step1 passed, Step2 extended-mat L/R/bends remain pending, and
+Step3A stopped networking/reconnect passed. Barcode and IMU/ramp ports are later steps.
 The SDK integration below remains the behaviour reference; it does not fulfil
 the project's micro T-Kernel requirement by itself.
 
-## Current development build: PROVISIONAL Buddy1–4 integration
+## SDK behaviour reference: PROVISIONAL Buddy1–4 integration
 
 **Buddy5 obstacle avoidance is NOT integrated. This is not a confirmed final build.**
 

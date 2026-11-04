@@ -1,5 +1,5 @@
 #include "bringup.h"
-#ifdef APP_RTOS_NET_BENCH
+#ifdef APP_RTOS_NETWORK
 #include "../network_bridge/network_bridge.h"
 #endif
 #ifdef APP_RTOS_LINE
@@ -32,7 +32,19 @@ static ER start(FP entry, PRI priority, UW processor, const char *name) {
 }
 
 void bringup_help(void) {
-#ifdef APP_RTOS_NET_BENCH
+#if defined(APP_RTOS_LINE) && defined(APP_RTOS_NETWORK)
+    tm_printf((UB *)"\nROBOPICO RTOS CONNECTED LINE v0.1 | Step3B | micro T-Kernel SMP\n");
+    tm_printf((UB *)"Step2 v0.1.2 Continuous V2/profile1/calibration/junction policy retained.\n");
+    tm_printf(
+        (UB *)"USB DTR supervision REQUIRED. Dashboard Start2s/Stop/E-stop/Pause/Resume/Reset.\n");
+    tm_printf((
+        UB *)"Resume only on visible line after ordinary tracking pause; interrupted junction requires Stop/new Start.\n");
+    tm_printf((UB *)"g=Start; s/GP21=Stop; e/GP20=E-stop; x=clear; L/R/U=queue canonical route.\n");
+    tm_printf((
+        UB *)"w/l/r=RAM calibration; k=save stopped; c=preset; d=stopped USB log; n=status; z=nav.\n");
+    tm_printf((
+        UB *)"Network loss cancels Start/stops session; no automatic restart. Barcode/IMU/Buddy5 deferred.\n");
+#elif defined(APP_RTOS_NETWORK)
     tm_printf((UB *)"\nROBOPICO RTOS NETWORK BENCH v0.1 | Step3A | micro T-Kernel SMP\n");
     tm_printf((UB *)"MOTORS DISABLED. 100Hz clock/encoder/stop foundation + kernel-owned MQTT.\n");
     tm_printf((
@@ -97,7 +109,7 @@ void bringup_report(void) {
 #ifdef APP_RTOS_LINE
     rtos_line_report();
 #endif
-#ifdef APP_RTOS_NET_BENCH
+#ifdef APP_RTOS_NETWORK
     rn_report();
 #endif
 }
@@ -137,7 +149,7 @@ EXPORT INT usermain(void) {
                              .now_us = port_now};
     motion_init(&port);
     ER result = bringup_create_objects();
-#ifdef APP_RTOS_NET_BENCH
+#ifdef APP_RTOS_NETWORK
     if (result == E_OK)
         result = rn_init();
     if (result == E_OK)

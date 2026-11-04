@@ -54,7 +54,7 @@ def find_drives()->list[Path]:
 def main()->None:
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--drive',type=Path)
     args=parser.parse_args()
-    print('RTOS Step 3A network setup. Flash robopico_rtos_network_bench_v0_1.uf2 first. Motors remain disabled.')
+    print('RTOS network setup. Flash the intended Step3A bench or Step3B connected-line UF2 first. Keep the robot stopped.')
     ssid=input('2.4 GHz Wi-Fi / hotspot name: ')
     password=getpass.getpass('Wi-Fi password (hidden; Enter for open network): ')
     broker=input('Laptop broker LAN IPv4 address: ').strip()

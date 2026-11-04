@@ -4,6 +4,14 @@
 #include "line_model.h"
 #include "adc_reader.h"
 
+#ifdef APP_RTOS_NETWORK
+#include "src/network/wifi_packets.h"
+void rtos_line_telemetry(WifiMotionPacket *out);
+void rtos_line_resume(void);
+#endif
+bool rtos_line_request_fresh(uint32_t received_us);
+bool rtos_line_request_start(uint32_t received_us);
+bool rtos_line_pending(void);
 ER rtos_line_init(void);
 bool rtos_line_command(unsigned command, uint32_t received_us);
 void rtos_line_cancel(void);

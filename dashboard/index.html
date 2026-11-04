@@ -163,7 +163,7 @@
   </section>
 
   <section class="wide">
-    <h2>Live motion telemetry (Buddy 2 / Buddy 3 · SDK v2.3 source 9)</h2>
+    <h2>Live motion telemetry (Buddy 2 / Buddy 3)</h2>
     <div id="sdkMotionStatus" class="muted small">No SDK motion telemetry received.</div>
     <div id="sdkMotionGrid" class="metric-grid">
       <div class="metric"><label>Measured speed · left / right</label><strong id="speedMeasured">—</strong></div>
@@ -623,14 +623,19 @@ $('mapApply').onclick = () => {
 };
 
 /* ---------- firmware profile ---------- */
-function detectedProfile() { return IS28.detectProfile(seenSources.keys(), firstSeen, now()); }
-function currentProfile() { return IS28.effectiveProfile(detectedProfile(), 'auto'); }
+let connectedDriveSeen = false, sdkDriveSeen = false;
+function detectedProfile() {
+  if (connectedDriveSeen) return sdkDriveSeen ? 'mixed' : 'rtos-connected';
+  return IS28.detectProfile(seenSources.keys(), firstSeen, now());
+}
+function currentProfile() { const p = detectedProfile(); return p === 'rtos-connected' ? 'rtos' : IS28.effectiveProfile(p, 'auto'); }
 function profileText(p) {
-  return p === 'sdk' ? 'SDK v2.3' + (seenSources.has(SRC.IMU) || seenSources.has(SRC.MOTION) ? ' + Buddy4 add-on' : '') :
+  return p === 'rtos-connected' ? 'RTOS connected line (micro T-Kernel · Step3B)' :
+         p === 'sdk' ? 'SDK v2.3' + (seenSources.has(SRC.IMU) || seenSources.has(SRC.MOTION) ? ' + Buddy4 add-on' : '') :
          p === 'rtos' ? 'RTOS (micro T-Kernel)' : p === 'rtos-inferred' ? 'RTOS (inferred from Buddy 2/4 frames without SDK telemetry)' : p === 'mixed' ? 'MIXED (RTOS and SDK frames)' : 'unknown';
 }
 function noteSource(src) { const t = now(), isNew = !seenSources.has(src); seenSources.set(src, t); if (!firstSeen.has(src)) firstSeen.set(src, t); if (isNew) updateProfile(); }
-function clearSeen() { seenSources.clear(); firstSeen.clear(); }
+function clearSeen() { seenSources.clear(); firstSeen.clear(); connectedDriveSeen = sdkDriveSeen = false; }
 function updateProfile() {
   const det = detectedProfile(), eff = currentProfile();
   const t = now();
@@ -931,6 +936,10 @@ function summary(f) {
 
 function show(f) {
   const d = f.data;
+  if (f.src === SRC.SDK_MOTION && d) {
+    if (d.flags & 0x40) connectedDriveSeen = true; else sdkDriveSeen = true;
+    updateProfile();
+  }
   if (!d) { if (f.src === 2) $('s2').textContent = `frame #${f.seq} (layout not defined yet)`; noteSource(f.src); return; }
   switch (f.src) {
     case 1:
