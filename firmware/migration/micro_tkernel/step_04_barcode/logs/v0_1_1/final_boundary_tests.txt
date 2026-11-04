@@ -1,0 +1,6 @@
+PASS captured Y: decoder=212 junction=1181 hysteresis=94 width=13.78mm confirmed=1 offset=110mm
+PASS independent junction: relative contrast, white re-arm, stop/narrow bar rejection, short-gap cancellation, reset, gate preservation
+PASS RTOS barcode: real failed Z/Y captures, synthetic A-Z both directions, coordinator approval, mapping freeze, unmapped letters, partial Resume and raw ring
+PASS junction policy=reference_white: L/R/U windows, two dwells, faults and diagnostic packing.
+PASS combined peak integration (BARCODE_PEAK_ACTIVE=1): 28 checks (real original decoder + runtime mapping + peak harness: apply, duplicate, both conflict orders, unmapped, junction, no-barcode identity, busy reset, mixed source-15)
+PASS final boundary checks: four strict-C programs after external-cross planner guard.

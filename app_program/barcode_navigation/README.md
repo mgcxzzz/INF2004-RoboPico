@@ -14,6 +14,16 @@ frame, classifies the relative peaks/spaces and supports either direction.
 The shared decoder headers and their thresholds are unchanged. Replay
 fixtures live in `firmware/integration/buddy1_4/tests/barcode/`.
 
+v0.1.1 separates cross classification from the bank used by the decoder.
+`junction_sensor.h` learns the midpoint of verified-label white/strong-black
+levels with5% contrast hysteresis, then requires4mm fresh white before a
+leading edge. The ADC owner updates this state; packed diagnostic fields are
+copied under the existing lock before USB formatting. The63-bank sampler's
+optional `external_cross` flag disables only its old cross-edge producer;
+all candidate/consensus decoding remains active. SDK defaults preserve the
+old producer. Step4's measured forward offset is110mm; wheel track/55mm
+rolling offset are unchanged. Defaults outside Step4 remain92mm.
+
 When a decoder accepts a letter, `barcode_queue_code` calls the existing
 Buddy3 `nav_accept_barcode` API. The coordinator checks session/owner state.
 The planner then captures that letter's current mapped action AND revision.

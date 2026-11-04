@@ -213,7 +213,7 @@ static inline void barcode_analog_sample(BarcodeAnalog *a, BarcodeNav *n, uint16
     n->external_scanning = a->scanning;
     /* A cross is searched only after a verified command. The selecting edge
        is the final stop bar, and is never reused as the next junction. */
-    if (selected || !n->pending)
+    if (n->external_cross || selected || !n->pending)
         return;
     if (v->reader.frame) {
         n->cross_candidate = false;

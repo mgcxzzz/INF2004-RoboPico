@@ -31,6 +31,7 @@ for name, extra in [("test_continuous_drive", []), ("test_interface", sources),
                     ("test_uturn", [])]:
     checks.append((CORE / "tests/unit" / (name + ".c"), extra))
 checks.extend([
+    (ROOT / "testing/rtos_migration/test_junction_sensor.c", sources + [CORE / "src/network/wifi_protocol.c"]),
     (ROOT / "testing/rtos_migration/test_rtos_barcode.c", sources + [CORE / "src/network/wifi_protocol.c"]),
     (ROOT / "testing/rtos_migration/test_reference_peak.c", [CORE / "src/network/wifi_protocol.c"]),
     (CORE / "tests/barcode/test_barcode_peak.c", []),

@@ -26,7 +26,7 @@ def command(*args):
 
 
 def verify_shared_sources(hashes):
-    """Fail on any unreviewed baseline drift, including in the two opt-in edits."""
+    """Fail on unreviewed drift; allow only exact, opt-in migration boundaries."""
     preserved, reviewed = [], {}
     prefix = "firmware/integration/buddy1_4/"
     baseline_files = command("git", "ls-tree", "-r", "--name-only", BASE, prefix).splitlines()
@@ -38,21 +38,44 @@ def verify_shared_sources(hashes):
             preserved.append(relative)
             continue
         expected = original.decode("utf-8")
+        if relative == prefix + "src/barcode/barcode_nav.h":
+            assert expected.count("enum {\n") == 1
+            expected = expected.replace("enum {\n", "#ifndef BARCODE_SENSOR_AHEAD_MM\n"
+                "#define BARCODE_SENSOR_AHEAD_MM 92\n#endif\nenum {\n", 1)
+            assert expected.count("B_SIDE_AHEAD_MM = 92,") == 1
+            expected = expected.replace("B_SIDE_AHEAD_MM = 92,", "B_SIDE_AHEAD_MM = BARCODE_SENSOR_AHEAD_MM,")
+            anchor = "    bool external_reader, external_scanning;\n"
+            assert expected.count(anchor) == 1
+            expected = expected.replace(anchor, anchor +
+                "    bool external_cross; /* Optional independent junction sensor; reference defaults false. */\n")
+            anchor = "        barcode_cross_confirm(n, i->now, mean, !i->side_black);"
+            assert expected.count(anchor) == 1
+            expected = expected.replace(anchor, "        if (!n->external_cross)\n    " + anchor)
+            description = "Only opt-in sensor offset (SDK default92) and external-cross producer ownership (defaultfalse)."
+        elif relative == prefix + "src/barcode/barcode_analog.h":
+            anchor = "if (selected || !n->pending)"
+            assert expected.count(anchor) == 1
+            expected = expected.replace(anchor, "if (n->external_cross || selected || !n->pending)")
+            description = "Only external-cross opt-out; all63-bank decode thresholds and decisions unchanged."
+        else:
+            description = "Only opt-in departure guard; default0 retains reference white requirement."
         if relative == prefix + "src/navigation/junction_logic.h":
             anchor = '#include "src/motion/dual_logic.h"\n'
             assert expected.count(anchor) == 1
             expected = expected.replace(anchor, anchor +
                 '\n/* Opt-in Step 2 experiment. Reference/SDK builds retain optical departure. */\n'
                 '#ifndef JUNCTION_ANGLE_GATE_ONLY\n#define JUNCTION_ANGLE_GATE_ONLY 0\n#endif\n')
-        elif relative != prefix + "src/barcode/uturn_logic.h":
+        elif relative not in (prefix + "src/barcode/uturn_logic.h", prefix + "src/barcode/barcode_nav.h",
+                              prefix + "src/barcode/barcode_analog.h"):
             raise AssertionError("Unreviewed shared source change: " + relative)
-        old = "if (white && j->turn_degrees > 10) {"
-        assert expected.count(old) == 1
-        expected = expected.replace(old, "if ((white || JUNCTION_ANGLE_GATE_ONLY) && j->turn_degrees > 10) {")
+        if relative in (prefix + "src/navigation/junction_logic.h", prefix + "src/barcode/uturn_logic.h"):
+            old = "if (white && j->turn_degrees > 10) {"
+            assert expected.count(old) == 1
+            expected = expected.replace(old, "if ((white || JUNCTION_ANGLE_GATE_ONLY) && j->turn_degrees > 10) {")
         assert (ROOT / relative).read_bytes() == expected.encode("utf-8"), relative
         reviewed[relative] = {"baseline_sha256": hashlib.sha256(original).hexdigest(),
                               "current_sha256": hashes[relative],
-                              "change": "Only opt-in departure guard; default0 retains reference white requirement."}
+                              "change": description}
     return preserved, reviewed
 
 

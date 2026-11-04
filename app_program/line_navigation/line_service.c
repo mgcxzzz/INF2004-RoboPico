@@ -51,6 +51,8 @@ static struct {
 #ifdef APP_RTOS_BARCODE
     uint32_t decoded, peak_decodes, peak_applied, conflicts, gaps, max_gap, samples, max_sample;
     uint16_t barcode_min, barcode_max, barcode_adc, threshold;
+    unsigned cross_threshold : 12, cross_hysteresis : 12;
+    unsigned cross_valid : 1, cross_armed : 1, cross_black : 1;
     uint8_t bank, last_code, pending_action, pending_revision, executing_action, executing_revision;
     unsigned scanning : 1, raw_frozen : 1;
 #endif
@@ -501,6 +503,11 @@ void rtos_line_record(const BringupStatus *s, const AnalogDemand *d, uint32_t co
     view.barcode_max = barcode.analog.maximum;
     view.barcode_adc = adc[1];
     view.threshold = barcode_analog_threshold(barcode.analog.selected);
+    view.cross_threshold = barcode.junction.threshold;
+    view.cross_hysteresis = barcode.junction.hysteresis;
+    view.cross_valid = barcode.junction.valid;
+    view.cross_armed = barcode.junction.armed;
+    view.cross_black = barcode.junction.black;
     view.bank = barcode.analog.selected;
     view.last_code = planner.nav.last_code;
     view.pending_action = planner.nav.pending_action;
@@ -580,11 +587,17 @@ void rtos_line_report(void) {
     unsigned bank = view.bank, last = view.last_code, pa = view.pending_action,
              rev = view.pending_revision;
     bool frozen = view.raw_frozen;
+    unsigned cross_threshold = view.cross_threshold, cross_hysteresis = view.cross_hysteresis;
+    unsigned cross_valid = view.cross_valid, cross_armed = view.cross_armed,
+             cross_black = view.cross_black;
     leave(bk);
     tm_printf(
         (UB *)"BARCODE decoded=%u peak=%u applied=%u conflicts=%u last_ascii=%u pending_action=%u revision=%u min=%u max=%u threshold=%u bank=%u samples=%u max_gap_us=%u gaps_over10ms=%u max_sample_us=%u raw_frozen=%u\n",
         decoded, peak, applied, conflicts, last, pa, rev, minimum, maximum, threshold, bank,
         samples, maxgap, gaps, maxsample, frozen);
+    tm_printf(
+        (UB *)"JUNCTION_SENSOR offset_mm=%u threshold=%u hysteresis=%u valid=%u armed=%u black=%u\n",
+        B_SIDE_AHEAD_MM, cross_threshold, cross_hysteresis, cross_valid, cross_armed, cross_black);
 #endif
     UINT key = enter();
     /* No formatting while holding the shared packed-data lock. */

@@ -122,14 +122,16 @@ int main(void) {
             assert(!p.nav.busy && p.nav.pending == 0 && p.nav.straight_crosses == 1);
         else
             assert(p.nav.busy && p.nav.executing_action == actions[which]);
+        if (which != 0)
+            assert(fabs(p.circuit.turn.centre_mm - (p.nav.cross_width * .5 + 110 - 55)) < .01);
     }
     /* Runtime map revisions affect future labels, not a frozen pending turn. */
     begin(mapping());
     synthetic('A', false);
     assert(p.nav.pending_action == 'L' && p.nav.pending_revision == 1);
-    uint32_t changed_mapping=wp_map_replace(mapping(), ('Y' - 'A') | ('Z' - 'A') << 5 | ('F' - 'A') << 10 |
-                                                  ('A' - 'A') << 15);
-    p.nav.mapping=changed_mapping;
+    uint32_t changed_mapping = wp_map_replace(mapping(), ('Y' - 'A') | ('Z' - 'A') << 5 |
+                                                             ('F' - 'A') << 10 | ('A' - 'A') << 15);
+    p.nav.mapping = changed_mapping;
     assert(barcode_nav_action(&p.nav, 'A') == 'L');
     uint32_t old_events = p.nav.event_sequence;
     CircuitInput i = {.now = now, .wheel = {230, 230}, .adc = {240, 260}};
@@ -137,8 +139,10 @@ int main(void) {
     assert(p.nav.pending == 'A' && p.nav.pending_action == 'L' && p.nav.pending_revision == 1);
     assert(p.nav.event_sequence == old_events && p.nav.decoded_total == 1);
     assert(!d.peak.nbars && !p.nav.cross_candidate && !p.nav.cross_ready);
-    begin(changed_mapping);synthetic('A',false);
-    assert(p.nav.pending_action=='R'&&p.nav.pending_revision==2);
+    assert(d.junction.valid && !d.junction.armed && !p.black);
+    begin(changed_mapping);
+    synthetic('A', false);
+    assert(p.nav.pending_action == 'R' && p.nav.pending_revision == 2);
     begin(mapping());
     const BpCapture *c = &bp_captures[2];
     unsigned n = 0;

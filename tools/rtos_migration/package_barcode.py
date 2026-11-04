@@ -1,22 +1,17 @@
-"""Package Step4 plus its barcode-free network comparison image. No robot I/O."""
+"""Package Step4 junction fix, source/dashboard/test tools. No robot I/O."""
 import hashlib,json,shutil,zipfile
 from pathlib import Path
 import package_motor_bringup as common
 from package_line_following import linked_checks
 ROOT=common.ROOT
 CHECKPOINT=ROOT/'firmware/migration/micro_tkernel/step_04_barcode'
-ART=CHECKPOINT/'firmware'
-NAME='robopico_rtos_connected_barcode_v0_1'
-COMPARE='robopico_rtos_connected_line_v0_1_2'
+ART=CHECKPOINT/'firmware/v0_1_1'
+NAME='robopico_rtos_connected_barcode_v0_1_1'
 common.ART=ART
 def main():
     ART.mkdir(parents=True,exist_ok=True)
     source=ROOT/'build_make'/(NAME+'.uf2');elf=source.with_suffix('.elf')
     layout=common.validate_uf2(source.read_bytes());linked=linked_checks(elf,network=True,barcode=True)
-    comparison=ROOT/'firmware/migration/micro_tkernel/step_03_connected_line/firmware/v0_1_2'/(COMPARE+'.uf2')
-    comparison_manifest=json.loads((comparison.parent/'BUILD_MANIFEST.json').read_text(encoding='utf-8'))
-    assert common.digest(comparison)==comparison_manifest['uf2_sha256']
-    assert comparison_manifest['source_commit']==common.command('git','rev-parse','HEAD')
     paths=set(common.sources())
     for folder in ('dashboard','tools/dashboard','firmware/integration/buddy1_4/tests/barcode'):
         paths.update(p for p in (ROOT/folder).rglob('*') if p.is_file() and
@@ -31,11 +26,13 @@ def main():
         'uf2_sha256':common.digest(firmware),'uf2_bytes':firmware.stat().st_size,'uf2_layout':layout,
         'compiler':common.command(ROOT.parent/'.buddy2-tools/arm-gcc/bin/arm-none-eabi-gcc.exe','--version').splitlines()[0],
         'sdk_commit':common.command('git','-C',ROOT.parent/'.buddy2-tools/pico-sdk','rev-parse','HEAD'),
-        'elf_sha256':common.digest(elf),'comparison_uf2':comparison.name,'comparison_sha256':common.digest(comparison),
+        'elf_sha256':common.digest(elf),
         'source_files':len(paths),'unchanged_shared_files_verified':len(preserved),'reviewed_shared_changes':reviewed,
         'calibration_priority':['CRC-valid RTOS saved0x1a9000','CRC-valid SDK record28 at0x1d0000','original fallback'],
         'expected_current_car_calibration':'white122,138 black246,267 origin1; read back actual car; no forced overwrite',
-        'features':['unchanged reference63-bank + peak decoders, same2ms GP27 ADC owner/interpolated encoder distance',
+        'features':['unchanged reference63-bank + peak Code39 decisions; independent verified-frame midpoint junction classifier with5% hysteresis',
+            'fresh4mm white re-arm after decode/Resume;2ms debounce;11..30mm stripe and4mm trailing white; original straight gate',
+            'measured GP27 forward axle offset110mm; SDK/other steps keep92mm; track width/55mm rolling offset unchanged',
             'Buddy3 coordinator approval; frozen action/map revision at decode; next separate junction',
             'dashboard live A-Z mapping and decoded/queued/dispatch/completed events; separate source sequence ownership',
             'Continuous V2/profile1/line calibration/Step2 junction experiment retained',
@@ -43,10 +40,10 @@ def main():
             '640 copied100Hz line rows;2048 ten-byte raw rows frozen at first decode;192 reference barcode events',
             'stopped USB exports, mandatory USB DTR and network-loss stop/no automatic restart'],
         'deferred':['IMU/ramp Step5','Buddy5','untethered acceptance','dashboard stored-row downloads'],
-        'software_checks':['25 strict C regression programs including real fixture replay and A-Z bidirectional migration model',
+        'software_checks':['26 strict C regression programs including actual failed Step4 Y-to-junction replay and A-Z bidirectional migration model',
             'Python capture/export/provisioning checks plus pinned upstream TCP allocation experiment',
-            'dashboard protocol and browser simulations; ARM Step3B andStep4; source parity/UF2/stack/RAM gates'],
-        'hardware_checks':'Pending new network and physical barcode tests. User reports Step3B v0.1.1 safety checks passed; extended-mat L/R and sharp bends still pending.',
+            'ARM Step4; source parity/UF2/stack/RAM gates; dashboard/network logic unchanged from published Step4'],
+        'hardware_checks':'v0.1 decoded Y but retained212 junction threshold below all ADC readings. v0.1.1 replay confirms one13.78mm cross. Physical110mm alignment, extended-mat L/R, U-turn and sharp bends pending.',
         'linked_checks':linked}
     for name,data in [('BUILD_MANIFEST.json',manifest),('SOURCE_SHA256.json',hashes)]:
         (ART/name).write_text(json.dumps(data,indent=2)+'\n',encoding='utf-8',newline='\n')
@@ -54,9 +51,10 @@ def main():
     with zipfile.ZipFile(bundle,'w',zipfile.ZIP_DEFLATED,compresslevel=6) as z:
         for p in paths:z.write(p,p.relative_to(ROOT).as_posix())
         for p in (firmware,ART/'BUILD_MANIFEST.json',ART/'SOURCE_SHA256.json'):z.write(p,p.relative_to(ROOT).as_posix())
-        z.write(firmware,'firmware/'+firmware.name);z.write(comparison,'firmware/'+comparison.name)
-        z.writestr('START_HERE.md',(CHECKPOINT/'README.md').read_text(encoding='utf-8').replace('../../../../app_program/','app_program/'))
+        z.write(firmware,'firmware/'+firmware.name)
+        z.writestr('START_HERE.md',(CHECKPOINT/'README.md').read_text(encoding='utf-8').replace('../../../../app_program/','app_program/').replace('firmware/v0_1_1/','firmware/'))
         z.writestr('NETWORK_DELIVERY.md',(CHECKPOINT/'NETWORK_DELIVERY.md').read_text(encoding='utf-8'))
+        z.writestr('UPDATE_V0_1_1.md',(CHECKPOINT/'UPDATE_V0_1_1.md').read_text(encoding='utf-8'))
         for title,script in [('Start dashboard.cmd','tools/dashboard/run_dashboard.py'),
             ('Setup Wi-Fi.cmd','tools/rtos_migration/provision_network.py'),
             ('Capture connected test.cmd','tools/rtos_migration/capture_connected_line.py'),
@@ -66,7 +64,6 @@ def main():
     with zipfile.ZipFile(bundle) as z:
         assert z.testzip() is None
         assert z.read('firmware/'+firmware.name)==firmware.read_bytes()
-        assert z.read('firmware/'+comparison.name)==comparison.read_bytes()
         for name,digest in hashes.items():assert hashlib.sha256(z.read(name)).hexdigest()==digest,name
         assert not any(n.endswith('wifi_secrets.h') or '.local.' in n for n in z.namelist())
     (ART/'SHA256SUMS.txt').write_text(''.join(f'{common.digest(p)}  {p.name}\n' for p in [firmware,bundle]),encoding='utf-8',newline='\n')

@@ -1,10 +1,11 @@
 #ifndef RTOS_BARCODE_MODEL_H
 #define RTOS_BARCODE_MODEL_H
-/* Hardware-free migration adapter. Both decoders and their thresholds remain
- * the SDK reference code. Only lifecycle, diagnostics and copied transport
- * are adapted. Call on the ADC owner's 2ms GP27 samples, not a network task. */
+/* Hardware-free migration adapter. Both Code39 decoders retain reference
+ * thresholds; junction sensing uses independent verified-frame contrast.
+ * Call on the ADC owner's 2ms GP27 samples, not a network task. */
 #include "../line_navigation/line_model.h"
 #include "src/barcode/barcode_peak.h"
+#include "junction_sensor.h"
 
 enum { RB_RAW_ROWS = 2048, RB_RAW_BYTES = 10, RB_PEAK_RUN_START = 10 };
 typedef struct {
@@ -15,6 +16,7 @@ typedef struct {
     BarcodeAnalog analog;
     BarcodePeak peak;
     BpResult last_peak;
+    RbJunctionSensor junction;
     RbRaw raw[RB_RAW_ROWS];
     uint32_t event_seen, peak_serial, peak_decodes, peak_applied, peak_conflicts;
     uint32_t samples, raw_overwritten, max_sample_us;
@@ -55,6 +57,10 @@ static inline void rb_raw(RbDecoder *d, const BarcodeNav *n, uint16_t adc, uint6
 static inline void rb_partial_reset(RbDecoder *d, BarcodeNav *n, uint16_t adc, uint64_t now,
                                     const double wheel[2]) {
     barcode_analog_begin(&d->analog, n, adc, now, wheel);
+    n->external_cross = true;
+    rb_junction_reset(&d->junction, n, adc, now, (wheel[0] + wheel[1]) * .5);
+    if (d->junction.valid)
+        d->analog.black = d->junction.black;
     bp_reset(&d->peak);
     n->cross_candidate = n->cross_ready = n->allow_cross = false;
     n->leading_gate = n->cross_gate = false;
@@ -76,8 +82,13 @@ static inline void rb_sample(RbDecoder *d, BarcodeNav *n, uint16_t adc, uint64_t
     rb_raw(d, n, adc, now, mm);
     uint32_t before = n->decoded_total;
     barcode_analog_sample(&d->analog, n, adc, now, wheel);
-    if (n->decoded_total != before)
+    if (n->decoded_total != before) {
         d->raw_frozen = true;
+        rb_junction_learn(&d->junction, n, d->analog.minimum, d->analog.maximum, adc, now, mm);
+    }
+    rb_junction_sample(&d->junction, n, adc, now, wheel);
+    if (d->junction.valid)
+        d->analog.black = d->junction.black;
     if (n->busy) {
         bp_reset(&d->peak);
         return;
@@ -119,6 +130,9 @@ static inline void rb_sample(RbDecoder *d, BarcodeNav *n, uint16_t adc, uint64_t
         d->analog.accepted_end = r.end_mm;
         AnalogBank *v = &d->analog.bank[d->analog.selected];
         barcode_reader_reset(&v->reader, v->stable, now, mm);
+        rb_junction_learn(&d->junction, n, r.base, r.max_wide_peak, adc, now, mm);
+        if (d->junction.valid)
+            d->analog.black = d->junction.black;
         barcode_event(n, B_DECODE, now, mm, r.end_mm - r.start_mm, r.code,
                       barcode_decode_action(n, r.code), 0x40u | r.reverse, r.pattern);
         ++d->peak_applied;

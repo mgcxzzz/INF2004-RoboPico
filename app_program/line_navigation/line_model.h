@@ -3,6 +3,11 @@
 
 /* Hardware-free Step 2 adapter. The reference algorithms remain in main's
  * feature folders; only the RTOS acquisition/output boundary lives here. */
+#ifdef APP_RTOS_BARCODE
+/* Horizontal GP27 sensing point -> wheel axle, measured on the current car.
+ * Other migration steps and the SDK reference retain their 92mm geometry. */
+#define BARCODE_SENSOR_AHEAD_MM 110
+#endif
 #include "src/line_following/continuous_follow.h"
 #include "src/line_following/circuit_capture.h"
 #include "src/line_following/circuit_load.h"

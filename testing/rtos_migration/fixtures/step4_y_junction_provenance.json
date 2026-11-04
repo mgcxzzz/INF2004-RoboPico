@@ -1,0 +1,17 @@
+{
+  "run": "2026-11-04 17:17:40 Step4 v0.1 Y -> U-turn, no junction accepted",
+  "raw_freeze_ms": 5649,
+  "rows": 1772,
+  "inputs": [
+    {
+      "name": "2026-11-04_17-18-28_raw.csv",
+      "sha256": "70354ed1f64f732a6c3028759ad8359e659e7a03046c23bda69bbcc45e63b314"
+    },
+    {
+      "name": "2026-11-04_17-18-39_line.csv",
+      "sha256": "e99baad9fc76359eee9e7e179f57f28770b275b5841f37880a83f2bc58a03419"
+    }
+  ],
+  "derivation": "Use every raw GP27 row through first decode; append later 100Hz stored adc_side samples. Mean signed encoder distance: (-ticks_l*200/2524.05 + ticks_r*200/2528.30)/2, rounded to 0.01mm. Later junction waveform is downsampled, not a reconstructed 2ms trace.",
+  "scope": "Offline sensor replay; does not establish physical turn alignment or real control timing."
+}

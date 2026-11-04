@@ -10,11 +10,14 @@
 #include "src/network/wifi_protocol.h"
 #endif
 
+#ifndef BARCODE_SENSOR_AHEAD_MM
+#define BARCODE_SENSOR_AHEAD_MM 92
+#endif
 enum {
     B_CROSS_MIN_MM = 11,
     B_CROSS_MAX_MM = 30,
     B_CROSS_WHITE_MM = 4,
-    B_SIDE_AHEAD_MM = 92,
+    B_SIDE_AHEAD_MM = BARCODE_SENSOR_AHEAD_MM,
     B_EDGE_FAILURE = 46
 };
 typedef struct {
@@ -28,6 +31,7 @@ typedef struct {
     double leading_wheel[2], cross_wheel[2], cross_width, cross_trailing_mm;
     bool leading_gate, cross_gate, cross_ready, cross_candidate, busy, allow_cross;
     bool external_reader, external_scanning;
+    bool external_cross; /* Optional independent junction sensor; reference defaults false. */
     char pending, action, last_code;
     /* Routes capture the action and map revision at decode, not at dispatch. */
     uint32_t mapping, decoded_total;
@@ -264,7 +268,8 @@ static inline AnalogDemand barcode_circuit_step(Circuit *c, BarcodeNav *n,
     }
     double mean = (i->wheel[0] + i->wheel[1]) * .5;
     if (!c->busy) {
-        barcode_cross_confirm(n, i->now, mean, !i->side_black);
+        if (!n->external_cross)
+            barcode_cross_confirm(n, i->now, mean, !i->side_black);
         if (!n->external_reader && barcode_reader_expire(&n->reader, i->now, mean)) {
             ++n->rejected;
             barcode_event(n, B_BAD_FRAME, i->now, mean, mean - n->reader.start_mm, '?', 0,

@@ -1,16 +1,19 @@
-# Step4 v0.1 — connected barcode migration
+# Step4 v0.1.1 — connected barcode and junction sensing
+
+**Latest test image:** `firmware/v0_1_1/robopico_rtos_connected_barcode_v0_1_1.uf2`.
+Read [the exact junction retest and log instructions](UPDATE_V0_1_1.md) first.
+The original v0.1 UF2/bundle remain in `firmware/` for rollback.
 
 **EXPERIMENTAL. Hardware acceptance pending.** This is Buddy1–3 on micro
 T-Kernel with the tested Step3B motion baseline, physical barcode decoding and
 the network allocation correction. **Buddy4 IMU/ramp is Step5; Buddy5 is not
 integrated.** Main and its SDK reference remain unchanged.
 
-The bundle contains TWO clearly named application images:
+The latest bundle contains ONE application image:
 
 | Image in `firmware/` | Purpose |
 |---|---|
-| `robopico_rtos_connected_line_v0_1_2.uf2` | Network correction and heap diagnostics; barcode-free comparison;1536 line rows. |
-| `robopico_rtos_connected_barcode_v0_1.uf2` | Step4: same network correction plus original63-bank/peak decoders and live A–Z junction actions;640 line rows plus raw barcode history. |
+| `robopico_rtos_connected_barcode_v0_1_1.uf2` | Step4 junction fix: same decoders/network/motion, independent contrast junction sensor,110mm sensor offset;640 line rows plus raw barcode history. |
 
 Keep the accepted v0.1.1 bundle for rollback. Read
 [the network investigation](NETWORK_DELIVERY.md) and
@@ -25,8 +28,7 @@ alignment acceptance.
 1. Extract the complete bundle into a NEW folder. Close the previous
    dashboard/server terminal and all USB serial programs.
 2. Stop the robot/remove motor power. Enter BOOTSEL and copy the desired
-   application UF2 to RPI-RP2. To isolate the network fix first, use the
-   **connected_line_v0_1_2** image; otherwise use the Step4 barcode image.
+   **connected_barcode_v0_1_1** application UF2 to RPI-RP2.
 3. Run **Start dashboard.cmd** from this new folder; keep its terminal open.
    Browser http://localhost:8765/; connect ws://localhost:9001; hard-refresh.
 4. Saved Wi-Fi is retained if SSID/password/broker IPv4 are unchanged.
@@ -57,9 +59,10 @@ capture files AND `dashboard_session/broker.log`. Check CLOCK remains near
 and actual received heartbeat gaps are normally<=2seconds. Do not discard a
 failed capture or assume a connected MQTT flag guarantees timely delivery.
 
-If you used the comparison image, Stop and finish/save the capture, then flash
-the Step4 image using BOOTSEL. Wi-Fi/calibration sectors remain intact.
-Start a fresh capture. The dashboard firmware badge should say **Step4**.
+Wi-Fi/calibration sectors remain intact. The dashboard firmware badge should
+say **Step4**; the USB banner identifies **v0.1.1** specifically. The dashboard
+itself is unchanged. A new stationary network comparison is only necessary if
+delivery problems recur; the priority for this update is the junction retest.
 
 ## B — decode first, with no junction in the scan path
 
