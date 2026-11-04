@@ -1,0 +1,490 @@
+{
+  "name": "robopico_rtos_connected_barcode_v0_1",
+  "status": "EXPERIMENTAL Step4; barcode/network hardware acceptance pending; IMU/ramp and Buddy5 NOT migrated",
+  "branch": "codex/micro-tkernel-migration",
+  "source_commit": "f0dbf520f48b868a21da5f7d59ba73ab80d69a32",
+  "baseline_tested_step3b": "ba7cfe08ef26775d3305108a75bb5b05978c7f48",
+  "reference_main_commit": "7843f45fbe45d5a774bc18c93be9bb11084d1b64",
+  "build_profile": "APP=rtos_barcode_wifi SMP=1 CONSOLE=usb_cdc WIFI=cyw43 NET=lwip MQTT=1 CRASH_REPORT=0 TEST=0",
+  "uf2_sha256": "98cf377237f31c9b6e3b82ee216d4038d4e56fb0b6f562c872c4bf405d70bbfb",
+  "uf2_bytes": 884736,
+  "uf2_layout": {
+    "blocks": 1728,
+    "first_xip": "0x10000000",
+    "end_xip_exclusive": "0x1006c000",
+    "flash_ceiling": "0x10100000"
+  },
+  "compiler": "arm-none-eabi-gcc.exe (Arm GNU Toolchain 14.2.Rel1 (Build arm-14.52)) 14.2.1 20241119",
+  "sdk_commit": "a1438dff1d38bd9c65dbd693f0e5db4b9ae91779",
+  "elf_sha256": "6de1175c33135406f2ef3fe7f81add34bc97ec966749f9be500d96b98c0c6725",
+  "comparison_uf2": "robopico_rtos_connected_line_v0_1_2.uf2",
+  "comparison_sha256": "2831b8752d4175741b751a7efa4d67a51efbf320f45bbfd02bbcc74558d00420",
+  "source_files": 919,
+  "unchanged_shared_files_verified": 101,
+  "reviewed_shared_changes": {
+    "firmware/integration/buddy1_4/src/barcode/uturn_logic.h": {
+      "baseline_sha256": "a73bae1ed4de0be2114420a24dcbb5714bd90dd4ae2fbdbf40ffb151a1cc87f2",
+      "current_sha256": "ff7073f9cb37f3c8abb77346cf7490d1cffd32d158eec714a2ce846aee2f641f",
+      "change": "Only opt-in departure guard; default0 retains reference white requirement."
+    },
+    "firmware/integration/buddy1_4/src/navigation/junction_logic.h": {
+      "baseline_sha256": "0e25df230522ed50be542b7f48429a7469d95a19cd7e5cd3d8b41b7b58f28597",
+      "current_sha256": "34849cca1c713c61171365ece66fd472fd3a821d99e5de0a6742bbfd0bffafa8",
+      "change": "Only opt-in departure guard; default0 retains reference white requirement."
+    }
+  },
+  "calibration_priority": [
+    "CRC-valid RTOS saved0x1a9000",
+    "CRC-valid SDK record28 at0x1d0000",
+    "original fallback"
+  ],
+  "expected_current_car_calibration": "white122,138 black246,267 origin1; read back actual car; no forced overwrite",
+  "features": [
+    "unchanged reference63-bank + peak decoders, same2ms GP27 ADC owner/interpolated encoder distance",
+    "Buddy3 coordinator approval; frozen action/map revision at decode; next separate junction",
+    "dashboard live A-Z mapping and decoded/queued/dispatch/completed events; separate source sequence ownership",
+    "Continuous V2/profile1/line calibration/Step2 junction experiment retained",
+    "kernel-only networking; TCP_OVERSIZE=0 SINGLE_PBUF=0; heap/delivery diagnostics",
+    "640 copied100Hz line rows;2048 ten-byte raw rows frozen at first decode;192 reference barcode events",
+    "stopped USB exports, mandatory USB DTR and network-loss stop/no automatic restart"
+  ],
+  "deferred": [
+    "IMU/ramp Step5",
+    "Buddy5",
+    "untethered acceptance",
+    "dashboard stored-row downloads"
+  ],
+  "software_checks": [
+    "25 strict C regression programs including real fixture replay and A-Z bidirectional migration model",
+    "Python capture/export/provisioning checks plus pinned upstream TCP allocation experiment",
+    "dashboard protocol and browser simulations; ARM Step3B andStep4; source parity/UF2/stack/RAM gates"
+  ],
+  "hardware_checks": "Pending new network and physical barcode tests. User reports Step3B v0.1.1 safety checks passed; extended-mat L/R and sharp bends still pending.",
+  "linked_checks": {
+    "flash_ram_addresses": {
+      "rl_flash_park": "0x20000270",
+      "rl_flash_write": "0x200002a8"
+    },
+    "static_ram_end": "0x2002de88",
+    "ram_remaining_before_dynamic_kernel_stacks": 74104,
+    "application_stack_frames": {
+      "port_now": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "port_off": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "start": {
+        "bytes": 64,
+        "kind": "static"
+      },
+      "bringup_help": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "bringup_report": {
+        "bytes": 216,
+        "kind": "static"
+      },
+      "bringup_status_task": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "usermain": {
+        "bytes": 64,
+        "kind": "static"
+      },
+      "gpio_dispatch": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "board_motion_lock": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "board_motion_unlock": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "board_time_us": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "board_kernel_ms": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "board_button_pressed": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "board_motor_off": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "board_motor_init": {
+        "bytes": 12,
+        "kind": "static"
+      },
+      "board_motor_write": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "board_gpio_init": {
+        "bytes": 56,
+        "kind": "static"
+      },
+      "board_encoder_drain": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "board_clock_registers_ok": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "board_clock_report": {
+        "bytes": 56,
+        "kind": "static"
+      },
+      "rl_levels": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "apply_outputs": {
+        "bytes": 40,
+        "kind": "static"
+      },
+      "bringup_get_status": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "bringup_zero_status": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "bringup_can_start": {
+        "bytes": 40,
+        "kind": "static"
+      },
+      "bringup_clear_latch": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "bringup_stop_from": {
+        "bytes": 56,
+        "kind": "static"
+      },
+      "bringup_stop": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "bringup_create_objects": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "bringup_control_task": {
+        "bytes": 880,
+        "kind": "static"
+      },
+      "bringup_safety_task": {
+        "bytes": 88,
+        "kind": "static"
+      },
+      "bringup_nav_task": {
+        "bytes": 152,
+        "kind": "static"
+      },
+      "bringup_console_task": {
+        "bytes": 56,
+        "kind": "static"
+      },
+      "rl_flash_park": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "rl_flash_write": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "adc_failure": {
+        "bytes": 56,
+        "kind": "static"
+      },
+      "adc_once": {
+        "bytes": 56,
+        "kind": "static"
+      },
+      "board_line_adc_diagnostics": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "board_motor_levels": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "board_motor_current": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "board_line_adc_init": {
+        "bytes": 48,
+        "kind": "static"
+      },
+      "board_line_adc_read": {
+        "bytes": 64,
+        "kind": "static"
+      },
+      "board_line_flash_worker": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "board_line_save": {
+        "bytes": 136,
+        "kind": "static"
+      },
+      "barcode_event_packet": {
+        "bytes": 112,
+        "kind": "static"
+      },
+      "bp_window": {
+        "bytes": 248,
+        "kind": "static"
+      },
+      "barcode_line_packet": {
+        "bytes": 64,
+        "kind": "static"
+      },
+      "junction_wheel_step": {
+        "bytes": 56,
+        "kind": "static"
+      },
+      "acquisition_failed": {
+        "bytes": 128,
+        "kind": "static"
+      },
+      "acquire_frame": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "symmetric_demand.constprop": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "j_acquire.constprop": {
+        "bytes": 104,
+        "kind": "static"
+      },
+      "junction_step.constprop": {
+        "bytes": 120,
+        "kind": "static"
+      },
+      "circuit_line_demand": {
+        "bytes": 72,
+        "kind": "static"
+      },
+      "rtos_line_init": {
+        "bytes": 112,
+        "kind": "static"
+      },
+      "rtos_line_command": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "rtos_line_cancel": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "rtos_line_start_valid": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "rtos_line_side_poll": {
+        "bytes": 744,
+        "kind": "static"
+      },
+      "rtos_line_ready": {
+        "bytes": 12,
+        "kind": "static"
+      },
+      "rtos_line_pending": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "rtos_line_request_fresh": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "rtos_line_request_start": {
+        "bytes": 40,
+        "kind": "static"
+      },
+      "rtos_line_resume": {
+        "bytes": 64,
+        "kind": "static"
+      },
+      "rtos_line_telemetry": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "rtos_line_prepare": {
+        "bytes": 376,
+        "kind": "static"
+      },
+      "rtos_line_begin": {
+        "bytes": 72,
+        "kind": "static"
+      },
+      "rtos_line_follow": {
+        "bytes": 296,
+        "kind": "static"
+      },
+      "rtos_line_feedback": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "rtos_line_power": {
+        "bytes": 208,
+        "kind": "static"
+      },
+      "rtos_line_actual_output": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "rtos_line_record": {
+        "bytes": 248,
+        "kind": "static"
+      },
+      "rtos_line_report": {
+        "bytes": 400,
+        "kind": "static"
+      },
+      "rtos_line_dump_if_requested": {
+        "bytes": 432,
+        "kind": "static"
+      },
+      "rtos_line_flash_task": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "pause_line": {
+        "bytes": 112,
+        "kind": "static"
+      },
+      "rn_drive_set_telemetry": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "rn_drive_telemetry_enabled": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "rn_drive_init": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "rn_drive_enqueue": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "rn_drive_online": {
+        "bytes": 104,
+        "kind": "static"
+      },
+      "rn_drive_paused": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "rn_drive_cancel": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "rn_drive_begin": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "rn_drive_process": {
+        "bytes": 424,
+        "kind": "static"
+      },
+      "rn_drive_telemetry": {
+        "bytes": 136,
+        "kind": "static"
+      },
+      "rn_app_last_ms": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "rn_mapping_snapshot": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "rn_next_sequence": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "rn_init": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "rn_ready": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "rn_tx_push": {
+        "bytes": 120,
+        "kind": "static"
+      },
+      "rn_tx_take_budget": {
+        "bytes": 136,
+        "kind": "static"
+      },
+      "rn_tx_take": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "rn_rx_push": {
+        "bytes": 88,
+        "kind": "static"
+      },
+      "rn_command_result": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "rn_barrier": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "rn_take_urgent": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "rn_take_pause": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "rn_status_update": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "rn_status": {
+        "bytes": 48,
+        "kind": "static"
+      },
+      "rn_publish_result": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "rn_report": {
+        "bytes": 160,
+        "kind": "static"
+      },
+      "rn_app_task": {
+        "bytes": 400,
+        "kind": "static"
+      }
+    },
+    "note": "Static stack frames are not a measured call-chain high-water mark; hardware checks remain required."
+  }
+}
