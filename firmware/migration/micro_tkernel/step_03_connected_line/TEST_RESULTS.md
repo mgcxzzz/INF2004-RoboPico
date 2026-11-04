@@ -7,7 +7,7 @@ Hardware acceptance is **pending**. No car was driven by these checks.
 | Strict host C regression programs |20passed, with warnings as errors. Real shared coordinator/API/executor and production bridge/controller dispatch are used with deterministic kernel/hardware stubs. |
 | Python capture/export/provisioning checks |49passed. New capture cannot automatically certify a physical driving test. |
 | Dashboard protocol/compatibility tests |27passed, including original SDK/RTOS layouts and optional source15/ramp payloads. |
-| Dashboard headless Chrome checks |48passed with simulated MQTT. Includes connected RTOS identification and Ready/Paused/E-stop display, preserved SDK/RTOS behaviour, exports and mobile overflow checks. |
+| Dashboard headless Chrome checks |50passed with simulated MQTT. Includes connected RTOS identification, Ready/Paused/E-stop display, the Step3B Busy result label/USB hint, preserved older SDK/RTOS behaviour, exports and mobile overflow checks. |
 | Arm builds |Step2 `rtos_line`, Step3A `rtos_network`, Step3B `rtos_line_wifi` all compile/link sequentially. Existing published Step2/3A binaries are not overwritten. |
 | Linked RAM |Static end0x2002d2ec;77076bytes remain before dynamic kernel/task allocation. Largest individual application stack frame600bytes; these are static frames, not measured call-chain stack high-water marks. |
 | Flash transaction routines |RAM0x20000270/0x200002a8; no direct flash-fetch calls in copied RAM code. |

@@ -445,6 +445,12 @@ function linkLost(reason) {
 
 /* ---------- commands ---------- */
 function ackName(a) {
+  /* Connected Step3B uses the preserved wifi_protocol codec despite running
+     micro T-Kernel. Result4 is broad BUSY, not the older RTOS queue-full code. */
+  if (detectedProfile() === 'rtos-connected') {
+    if (a.result === 4) return 'rejected: busy (check open USB console/capture, readiness, buttons or pending Start)';
+    if (a.result === 5) return 'rejected: unsupported command or setting';
+  }
   /* SDK v2.3 reuses the result codes with different causes (wifi_protocol.h). */
   if (currentProfile() === 'sdk') {
     if (a.result === 4) return 'rejected: busy (car running, settling or a button held)';
@@ -701,6 +707,9 @@ function onMessage(topic, payload, packet) {
       if (a.code === IS28.CMD.RESET) lastResetAccepted = { at: now(), iso };
       refreshOpState();
     }
+    if (a.code === IS28.CMD.START && a.result === 4 && detectedProfile() === 'rtos-connected') {
+      $('cmdNote').textContent = 'Step3B requires an OPEN USB serial connection. Leave PuTTY or the capture actively reading; a finished capture window does not hold supervision open. Check USB usb=3 and CLOCK PASS with n.';
+    }
     handleLogAck(a);
     if (own && mapPending && mapPending.id === a.id && !a.accepted) {
       mapPending = null; $('mapStatus').textContent = name; $('mapStatus').className = 'bad';
@@ -948,7 +957,7 @@ function show(f) {
       if (!mappingQueried) requestMapping();
       $('net').textContent = d.netName;
       $('pub').textContent = `${d.published} / ${d.lost}`;
-      $('cmds').textContent = `${d.accepted} / ${d.rejected} (last: ${d.lastCmdName}, ${d.lastResultName})`;
+      $('cmds').textContent = `${d.accepted} / ${d.rejected} (last: ${d.lastCmdName}, ${ackName({result:d.lastResult,resultName:d.lastResultName})})`;
       $('connects').textContent = d.connects;
       $('fill').textContent = d.fillPct + ' %';
       $('uptime').textContent = `${Math.floor(d.uptimeS / 60)} min ${d.uptimeS % 60} s`;

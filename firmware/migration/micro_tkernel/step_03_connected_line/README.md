@@ -1,7 +1,7 @@
 # Step 3B — connected line following v0.1
 
 **Experimental, hardware validation pending. Keep USB connected and its serial
-capture open while driving.** This joins Step2 v0.1.2 to the professor-style
+capture actively reading while driving.** This joins Step2 v0.1.2 to the professor-style
 kernel-owned Wi-Fi/MQTT bridge. It is not the complete Buddy1–4 migration.
 
 Continuous V2 profile1 (nominal45mm/s), motor controller, front filtering,
@@ -46,13 +46,34 @@ at a separate bare cross. L/R and sharp bends still need the extended-mat test.
    with Ctrl+F5 if the old dashboard is cached. Use only one robot and one
    dashboard client on this broker during testing.
 
+## If Start is rejected as Busy or the car returns to Safe Stop
+
+The original dashboard mislabeled Step3B response4 as **queue full**. This
+response means **Busy/start conditions unmet**, which includes a closed USB
+serial session. The refreshed dashboard uses the correct label; firmware is
+unchanged. A visible command window showing the completed summary or
+"Press any key" is **not** an open serial session. Browser MQTT alone does not
+satisfy Step3B's USB supervision requirement.
+
+For an immediate check, close the finished capture, open PuTTY at115200,
+leave it connected, press n, then use dashboard Start. Check usb=3,
+CLOCK PASS, released GP20/GP21 and valid ADC/calibration. Leave PuTTY open
+through the run. Do not open the capture and PuTTY on the same COM port.
+If it still refuses, send the n output and NET_COMMAND line from that attempt.
+
+Robo Pico can power its controller and motors from USB with the board power
+switch on; USB-only power is not proof of the cause. For a loaded floor run,
+use the robot's usual tested power arrangement and keep USB serial supervision
+open. See [Cytron's power guide](https://www.cytron.io/tutorial/get-started-robo-pico-circuitpython-power-up-robo-pico)
+and [board power specifications](https://www.cytron.io/p-robo-pico).
+
 ## Record each test
 
 Install the USB capture dependency once: `py -3 -m pip install pyserial`
 (Mac: `python3 -m pip install pyserial`, or use your existing environment).
 
 Close PuTTY and run **Capture connected test.cmd**. Choose COM4, or the full
-Mac `/dev/cu.usbmodem...` path. The helper records120seconds and **holds USB
+Mac `/dev/cu.usbmodem...` path. The refreshed helper records300seconds and **holds USB
 supervision open**; it sends no robot commands. Mac equivalent:
 
 ```bash
@@ -62,6 +83,10 @@ python3 tools/rtos_migration/capture_connected_line.py
 Keep that capture window, the USB cable and the broker open. **Do not open
 PuTTY at the same time.** Closing the capture/console or unplugging USB stops
 the robot. Wireless driving without this supervision is not enabled yet.
+Click Start in the first10–20seconds. When capture ends, its serial connection
+closes and motion stops even if the command window remains visible. Reopen
+capture or PuTTY before another Start. The old helper defaults to120seconds;
+use `--seconds 300` to extend it without changing firmware.
 The automatic summary deliberately says `REVIEW_PHYSICAL_TEST`; it does not
 declare tracking or physical stopping successful from packet timing alone.
 

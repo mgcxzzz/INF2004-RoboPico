@@ -260,6 +260,14 @@ try {
   await emit(connected, 'is28/hb', hbF(10, 5));
   check('C04 emergency-stop heartbeat remains Emergency Stop',
     (await text(connected, 'opstate')) === 'Emergency Stop');
+  await emit(connected, 'is28/ack', ack(1, 210, 4, 3));
+  check('C05 connected result4 says Busy rather than falsely diagnosing queue full',
+    (await text(connected, 'lastack')).includes('rejected: busy') &&
+    !(await text(connected, 'lastack')).includes('queue full') &&
+    (await text(connected, 'cmdNote')).includes('OPEN USB serial connection'));
+  await emit(r, 'is28/ack', ack(1, 211, 4, 3));
+  check('C06 older RTOS queue-full interpretation remains unchanged',
+    (await text(r, 'lastack')).includes('queue full'));
   check('R08 no page or console errors', errors.length === 0);
   console.log(`\n${count} passed, 0 failed (simulated MQTT; no broker, Pico or car)`);
 } catch (e) {

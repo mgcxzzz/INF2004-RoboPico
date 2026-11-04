@@ -35,8 +35,9 @@ and runtime A–Z mapping return in Step 4. IMU/ramp assistance returns in Step 
 Buddy 5 remains unintegrated. Do not use this image as a ramp/obstacle test.
 
 The USB cable and an open serial connection are required during motion in
-this checkpoint. Closing PuTTY or losing USB DTR stops the car. The battery
-must still supply the motors, as in the successful Step 1 test.
+this checkpoint. Closing PuTTY or losing USB DTR stops the car. Ensure the
+Robo Pico power switch is ON and the motor supply is adequate for the load;
+the board supports USB as a supply as well as battery/Vin.
 
 ## Download and flash
 
