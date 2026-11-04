@@ -145,7 +145,7 @@ ifeq ($(APP),rtos_barcode_wifi)
 EXE_FILE := robopico_rtos_connected_barcode_v0_1_2
 endif
 ifeq ($(APP),rtos_imu_wifi)
-EXE_FILE := robopico_rtos_connected_imu_v0_1
+EXE_FILE := robopico_rtos_connected_imu_v0_1_1
 endif
 endif
 
@@ -228,6 +228,7 @@ CFLAGS += -DAPP_RTOS_BARCODE=1 -DBUDDY_RUNTIME_MAPPING=1 -DBUDDY_COORDINATED_BAR
 endif
 ifeq ($(APP),rtos_imu_wifi)
 CFLAGS += -DAPP_RTOS_IMU=1
+INCPATH += -I..
 endif
 CFLAGS  += -DTM_CONSOLE_UART=$(CRASH_REPORT)
 ifeq ($(CRASH_REPORT),0)

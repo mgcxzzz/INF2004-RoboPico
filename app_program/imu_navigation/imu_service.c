@@ -2,6 +2,8 @@
 #include "imu_service.h"
 #include "../network_bridge/network_bridge.h"
 #include "src/imu/imu_iface.h"
+#include "imu_acquisition.h"
+#include "acquisition_schedule.h"
 #include <string.h>
 
 /* One I2C/estimator writer on core0. Motion on core1 supplies observations;
@@ -11,8 +13,10 @@ static struct {
     b4v23_odo_t odo;
     b4v23_tilt_t tilt;
     imu_tlm_t tlm;
+    RiAcquisition acquisition;
     uint64_t observed_us;
     uint32_t invalid[2], run_serial, ticks, tick_us, max_tick_us, tx_drop;
+    uint32_t init_epoch, ready_epoch, max_wake_late_us;
     unsigned have : 1, running : 1, reset : 1;
 } shared;
 static UINT enter(void) {
@@ -26,6 +30,7 @@ static void leave(UINT key) {
 
 void ri_init(void) {
     memset(&shared, 0, sizeof(shared));
+    shared.init_epoch = 1U;
     /* Static-zero spinlock; initialise before either task is created. */
 }
 void ri_reset_request(void) {
@@ -69,6 +74,8 @@ static bool send_frame(const uint8_t *frame, uint32_t len) {
     if (imu_tlm_unpack(frame, len, &t)) {
         UINT key = enter();
         shared.tlm = t;
+        if (t.state == IMU_ST_IDLE && t.b_valid && !t.fault)
+            shared.ready_epoch = shared.init_epoch;
         leave(key);
     }
     if (!rn_drive_telemetry_enabled() || !rn_drive_online())
@@ -87,9 +94,12 @@ void ri_task(INT code, void *exinf) {
     b4v23_init(send_frame, false);
     bool was_running = false;
     uint32_t run_serial = 0;
+    uint64_t next = board_time_us();
     for (;;) {
         uint64_t now = board_time_us();
-        if (b4v23_due(now)) {
+        if (now >= next) {
+            uint32_t wake_late = (uint32_t)(now - next);
+            next = ri_next_release(next, now);
             UINT key = enter();
             b4v23_odo_t odo = shared.odo;
             uint64_t observed = shared.observed_us;
@@ -100,7 +110,17 @@ void ri_task(INT code, void *exinf) {
             odo.age_ms = now >= observed ? (uint32_t)((now - observed) / 1000) : UINT32_MAX;
             b4v23_mission_t mission = B4V23_NONE;
             if (reset) {
-                mission = B4V23_RESET;
+                /* bringup_clear_latch accepts this request only while stopped.
+                 * Reinitialise even from healthy Idle, then expose a new
+                 * calibration epoch; counters in IMU_ACQ remain lifetime. */
+                key = enter();
+                ++shared.init_epoch;
+                memset(&shared.tilt, 0, sizeof(shared.tilt));
+                leave(key);
+                b4v23_init(send_frame, false);
+                now = board_time_us();
+                next = now + RI_PERIOD_US;
+                odo.age_ms = now >= observed ? (uint32_t)((now - observed) / 1000) : UINT32_MAX;
                 was_running = false;
             } else if (running && (!was_running || run_serial != serial)) {
                 mission = run_serial == serial ? B4V23_RESUME : B4V23_START;
@@ -113,20 +133,28 @@ void ri_task(INT code, void *exinf) {
             b4v23_tick(now, mission, &odo);
             b4v23_tilt_t tilt;
             b4v23_tilt(&tilt);
+            RiAcquisition acquisition;
+            ri_acquisition_snapshot(&acquisition);
             key = enter();
             shared.tilt = tilt;
+            shared.acquisition = acquisition;
+            if (wake_late > shared.max_wake_late_us)
+                shared.max_wake_late_us = wake_late;
             ++shared.ticks;
             shared.tick_us = b4v23_last_tick_us();
             shared.max_tick_us = b4v23_max_tick_us();
             leave(key);
         }
-        (void)tk_dly_tsk(1);
+        (void)tk_dly_tsk(ri_release_delay_ms(next, board_time_us()));
     }
 }
 void ri_report(void) {
     UINT key = enter();
     imu_tlm_t t = shared.tlm;
     b4v23_tilt_t tilt = shared.tilt;
+    RiAcquisition acq = shared.acquisition;
+    uint32_t epoch = shared.init_epoch, ready_epoch = shared.ready_epoch,
+             wake_max = shared.max_wake_late_us;
     uint32_t ticks = shared.ticks, cost = shared.tick_us, maxcost = shared.max_tick_us,
              drop = shared.tx_drop;
     leave(key);
@@ -138,6 +166,14 @@ void ri_report(void) {
         t.i2c_errors, t.missed, ticks, cost, maxcost, drop);
     tm_printf((UB *)"IMU_TILT seq=%u age_ms=%u valid=%u tracking=%u height_mm=%d quality=%u\n",
               tilt.seq, age, tilt.valid, tilt.tracking, tilt.height_mm, tilt.quality_reasons);
+    tm_printf(
+        (UB *)"IMU_ACQ reads=%u failed=%u late_gaps=%u fifo_overruns=%u max_gap_us=%u wake_max_us=%u epoch=%u ready_epoch=%u\n",
+        acq.reads, acq.failed_reads, acq.late_gaps, acq.fifo_overruns, acq.max_gap_us, wake_max,
+        epoch, ready_epoch);
+    tm_printf(
+        (UB *)"IMU_I2C transfers=%u aborts=%u timeout_tx=%u timeout_stop=%u timeout_rx=%u rescued=%u max_transfer_us=%u last_phase=%u address=0x%x abort_source=0x%x\n",
+        acq.transfers, acq.aborts, acq.timeout_tx, acq.timeout_stop, acq.timeout_rx, acq.rescued,
+        acq.max_transfer_us, acq.last_phase, acq.last_address, acq.last_abort_source);
     ri_ramp_report();
 }
 #endif

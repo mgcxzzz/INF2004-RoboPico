@@ -5,8 +5,8 @@ import package_motor_bringup as common
 from package_line_following import linked_checks
 ROOT=common.ROOT
 CHECKPOINT=ROOT/'firmware/migration/micro_tkernel/step_05_imu'
-ART=CHECKPOINT/'firmware'
-NAME='robopico_rtos_connected_imu_v0_1'
+ART=CHECKPOINT/'firmware/v0_1_1'
+NAME='robopico_rtos_connected_imu_v0_1_1'
 common.ART=ART
 def main():
     ART.mkdir(parents=True,exist_ok=True)
@@ -31,7 +31,10 @@ def main():
         'calibration_priority':['CRC-valid RTOS saved0x1a9000','CRC-valid SDK record28 at0x1d0000','original fallback'],
         'expected_current_car_calibration':'white122,138 black246,267 origin1; read back actual car; no forced overwrite',
         'step4_parent':'78c42c050d6bbd464a3ceef255ce1ec597b60ada',
-        'features':['core0 priority18 sole I2C1 GP2/3 owner; original50Hz service and400Hz FIFO; copied odometry/tilt',
+        'features':['core0 priority13 sole I2C1 GP2/3 owner; fixed20ms releases; original50Hz service and400Hz FIFO; copied odometry/tilt',
+            'RTOS-only preemption-safe transfer completion/deadline recheck; bounded2ms per wait, abort-source diagnostics, no post-timeout queue writes',
+            'full32bit lifetime acquisition counters separate failed reads, late gaps and FIFO overruns; wake/transfer maxima; legacy MQTT formats retained',
+            'stopped Reset reinitialises IMU even from Idle; calibration epoch and ready_epoch distinguish acceptance from calibration completion',
             'original detector6 ramp requests via Buddy4 nav API with50ms TTL; ordinary drive/limits retained',
             'source2/4 original binary packets, source15 ramp/C1 share sequence with peak; copied USB IMU/ramp diagnostics','unchanged reference63-bank + peak Code39 decisions; independent verified-frame midpoint junction classifier with5% hysteresis',
             'fresh4mm white re-arm after decode/Resume;2ms debounce;11..30mm stripe and4mm trailing white; confirmation-time visibility/search/clearance gate; explicit rejection flags; no300ms/3deg/min-wheel-speed dwell',
@@ -43,10 +46,10 @@ def main():
             '640 copied100Hz line rows;2048 ten-byte raw rows frozen at first decode;192 reference barcode events',
             'stopped USB exports, mandatory USB DTR and network-loss stop/no automatic restart'],
         'deferred':['Buddy5','powerbank/untethered supervision (deferred until final integration)','dashboard stored-row downloads'],
-        'software_checks':['33 strict C regression programs including actual failed Step4 Y-to-junction replay and A-Z bidirectional migration model',
+        'software_checks':['35 strict C regression programs including real RTOS transport preemption/NACK/stuck-bus cases, actual task/service Reset, failed Step4 Y replay and A-Z bidirectional model',
             'Python capture/export/provisioning checks plus pinned upstream TCP allocation experiment',
             'ARM Step4/Step5; source parity/UF2/stack/RAM gates; dashboard Step5 profile/IMU packet checks; network controls unchanged from Step4'],
-        'hardware_checks':'Prepared in parallel. Step4 v0.1.2 and Step5 physical acceptance both pending; stationary IMU, flat timing/heartbeat and same one-sided ramp test required.',
+        'hardware_checks':'Step4 barcode/dispatch user-reported working; L/R line rejoin needs sufficient mat. Step5 v0.1 stationary acquisition failed; v0.1.1 stationary retest required before driving/ramp.',
         'linked_checks':linked}
     for name,data in [('BUILD_MANIFEST.json',manifest),('SOURCE_SHA256.json',hashes)]:
         (ART/name).write_text(json.dumps(data,indent=2)+'\n',encoding='utf-8',newline='\n')

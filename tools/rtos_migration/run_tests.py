@@ -17,6 +17,7 @@ sources = [CORE / "src/navigation" / (n + ".c") for n in ("motion_api", "nav_coo
 sources.append(CORE / "src/motion/motion_executor.c")
 
 checks = [(ROOT / "testing/rtos_migration/test_bringup_policy.c", []),
+          (ROOT / "testing/rtos_migration/test_imu_i2c.c", []),
           (ROOT / "testing/rtos_migration/test_encoder_quality.c", []),
           (ROOT / "testing/rtos_migration/test_mqtt_delivery.c", []),
           (ROOT / "testing/rtos_migration/test_line_model.c", []),
@@ -31,6 +32,7 @@ for name, extra in [("test_continuous_drive", []), ("test_interface", sources),
                     ("test_uturn", [])]:
     checks.append((CORE / "tests/unit" / (name + ".c"), extra))
 checks.extend([
+    (ROOT / "testing/rtos_migration/test_imu_task_reset.c", [CORE / "tests/imu/fake_drv.c", CORE / "src/imu/imu_service.c", CORE / "src/imu/imu_proc.c", CORE / "src/imu/b4_pack.c", CORE / "src/telemetry/b2_pack.c"]),
     (ROOT / "testing/rtos_migration/test_rtos_ramp_bridge.c", sources + [CORE / "src/network/wifi_protocol.c"]),
     (ROOT / "testing/rtos_migration/test_rtos_ramp.c", sources + [CORE / "src/network/wifi_protocol.c"]),
     (ROOT / "testing/rtos_migration/test_imu_service_rtos.c", [CORE / "tests/imu/fake_drv.c", CORE / "src/imu/imu_service.c", CORE / "src/imu/imu_proc.c", CORE / "src/imu/b4_pack.c", CORE / "src/telemetry/b2_pack.c"]),
@@ -49,7 +51,7 @@ checks.extend([
     (CORE / "tests/unit/test_wifi_settings.c", [])])
 for source, extra in checks:
     exe = OUT / (source.stem + (".exe" if os.name == "nt" else ""))
-    profile_flags = ["-DAPP_RTOS_IMU=1"] if source.stem == "test_imu_service_rtos" else []
+    profile_flags = ["-DAPP_RTOS_IMU=1"] if source.stem in ("test_imu_service_rtos", "test_imu_task_reset") else []
     subprocess.run([*cc, *host_float, *profile_flags, "-std=c11", "-Wall", "-Wextra", "-Werror", "-O2", "-UNDEBUG",
                     "-DCIRCUIT_SWEEP_SEARCH=1", "-I" + str(ROOT), "-I" + str(CORE), "-I" + str(CORE / "config"),
                     source, *extra, "-lm", "-o", exe], check=True)

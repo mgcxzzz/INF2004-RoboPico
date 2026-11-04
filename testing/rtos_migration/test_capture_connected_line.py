@@ -30,5 +30,14 @@ class CaptureTests(unittest.TestCase):
         self.assertEqual(r['delivery_last']['coalesced'],20)
         self.assertEqual(r['encoder_guard_last']['trip_kind'],1)
         self.assertEqual(len(r['encoder_trips']),1)
+    def test_full_imu_counters_and_reset_epochs_are_preserved(self):
+        rows=[{'kind':'IMU_ACQ','failed':65,'epoch':1,'ready_epoch':1},
+              {'kind':'IMU_ACQ','failed':66,'epoch':2,'ready_epoch':1},
+              {'kind':'IMU_I2C','timeout_stop':4,'aborts':2}]
+        r=summarize(rows,[],[])
+        self.assertEqual(r['imu_acquisition_first']['failed'],65)
+        self.assertEqual(r['imu_acquisition_last']['epoch'],2)
+        self.assertEqual(r['imu_acquisition_last']['ready_epoch'],1)
+        self.assertEqual(r['imu_i2c_last']['timeout_stop'],4)
 
 if __name__=='__main__':unittest.main()

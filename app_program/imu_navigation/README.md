@@ -4,10 +4,17 @@ Experimental Step5, based on Step4 v0.1.2. Physical acceptance of both the
 new gate and this IMU port is pending. Buddy5 and powerbank driving remain
 deferred. SDK main and the published Step4 artifacts are unchanged.
 
-`ri_task` owns the GY-511/LSM303 on I2C1 GP2/GP3, core0 priority18. It runs
+Step5 v0.1.1 corrects the v0.1 stationary acquisition failure. The RTOS-only
+transport rechecks completion before timing out, retains bounded2ms waits
+for each hardware phase, records abort sources and stops queuing commands
+after failure. Interrupts/dispatch remain enabled. The reference SDK driver
+transport is retained behind the opposite compile-time branch.
+
+`ri_task` owns the GY-511/LSM303 on I2C1 GP2/GP3, core0 priority13. It runs
 the existing `b4v23_tick` service every20ms, using its400Hz FIFO, axis mapping,
 2second stationary calibration, powered acceptance and detector6 parameters.
-`imu_proc.c`, `b4_config.h`, FIFO driver and binary packers are unchanged.
+`imu_proc.c`, `b4_config.h`, FIFO processing/configuration and binary packers
+are unchanged. A reference-service hook records acquisition outcomes.
 The shared register shim selects the verified migration TIMER instead of
 the SDK timer API; SDK builds retain their original branch. RTOS diagnostics
 replace the SDK service's optional console printing.
@@ -18,7 +25,20 @@ state into a spinlock-protected mailbox. Buddy4 never drains encoders.
 The IMU task computes observation age and Start/Resume/Stop/Reset edges;
 it copies its latest tilt/quality view back under the same short lock.
 No I2C, packet enqueue or formatting occurs while the mailbox lock is held.
-An accepted stopped Reset/USB x resets the IMU, not the front IR calibration.
+An accepted stopped Reset/USB x requests physical IMU reinitialisation and
+a fresh2second calibration, including when the sensor was healthy/idle.
+`IMU_ACQ epoch` increments when reinitialisation starts; `ready_epoch`
+catches up only after calibrated Idle is observed. Acceptance alone is not
+calibration completion. No front IR calibration changes. Acquisition counters
+are lifetime32bit counters and remain across Reset; the legacy six-bit
+telemetry error count can wrap or restart after IMU reinitialisation.
+
+The task sleeps to the next fixed20ms release (rebases after a full missed
+period), above the application bridge/reporting tasks and below USB/Wi-Fi.
+`IMU_ACQ` separates failed FIFO reads, gaps>30ms and sensor FIFO overruns,
+with max gap/wake lateness. `IMU_I2C` reports TX/STOP/RX timeout counts,
+abort count/source/address, rescued deadline checks and maximum transfer
+wall time. Snapshot copies are protected; formatting occurs outside locks.
 
 The motion owner calls the pure `ri_ramp_request` adapter with that copied
 tilt. It uses the reference RampAssist detector6: four valid20ms samples at

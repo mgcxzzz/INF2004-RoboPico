@@ -103,6 +103,7 @@ static bool g_b_mag = false;
  * I2C1, polled
  * ================================================================== */
 
+#ifndef APP_RTOS_IMU
 static bool wait_until(uint32_t addr, uint32_t mask, uint32_t want, uint32_t start_us) {
     while ((in_w(addr) & mask) != want) {
         if ((sys_time_us() - start_us) > B4_I2C_TIMEOUT_US) {
@@ -112,6 +113,7 @@ static bool wait_until(uint32_t addr, uint32_t mask, uint32_t want, uint32_t sta
 
     return true;
 }
+#endif
 
 static void bus_setup(void) {
     /* Reset the block so a bus left half-way by a fault starts clean. */
@@ -143,6 +145,7 @@ static void bus_setup(void) {
  * Write wlen bytes then (repeated start) read rlen bytes, STOP at the end.
  * rlen <= 16 (hardware FIFO).
  */
+#ifndef APP_RTOS_IMU /* RTOS uses the preemption-safe transport, same sensor/FIFO setup. */
 static bool xfer(uint8_t addr, uint8_t const *p_w, uint32_t wlen, uint8_t *p_r, uint32_t rlen) {
     uint32_t start = sys_time_us();
     uint32_t i;
@@ -227,6 +230,7 @@ bool b4_i2c_write_reg(uint8_t addr, uint8_t reg, uint8_t value) {
     buf[1] = value;
     return xfer(addr, buf, 2U, NULL, 0U);
 }
+#endif
 
 /* =====================================================================
  * Sensor

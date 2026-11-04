@@ -21,6 +21,9 @@
 #include "src/imu/imu_proc.h"
 #include "src/imu/b4_diagnostics.h"
 #include "src/telemetry/sys_tlm.h"
+#ifdef APP_RTOS_IMU
+#include "app_program/imu_navigation/imu_acquisition.h"
+#endif
 
 #define AXIS_LAT (3 - B4_AXIS_FWD - B4_AXIS_UP)
 
@@ -223,6 +226,9 @@ void b4v23_tick(uint64_t now_us, b4v23_mission_t mission, const b4v23_odo_t *odo
     if ((g_ctx.state != IMU_ST_INIT) && (g_ctx.state != IMU_ST_FAULT)) {
         uint32_t i;
         g_in.b_read_ok = b4_drv_read_fifo(g_raw, (uint8_t)B4_FIFO_DEPTH, &g_in.n, &g_in.b_overrun);
+#ifdef APP_RTOS_IMU
+        ri_acquisition_record(g_in.gap_us, g_in.b_read_ok, g_in.b_overrun);
+#endif
         for (i = 0U; i < (uint32_t)g_in.n; i++)
             to_car(&g_raw[i], &g_in.s[i]);
         /* b4_odometry_adapter.c semantics, from v2.3's encoders. */

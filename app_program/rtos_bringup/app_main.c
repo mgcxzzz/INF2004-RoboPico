@@ -37,7 +37,7 @@ static ER start(FP entry, PRI priority, UW processor, const char *name) {
 void bringup_help(void) {
 #if defined(APP_RTOS_IMU)
     tm_printf(
-        (UB *)"\nROBOPICO RTOS CONNECTED IMU v0.1 | Step5 EXPERIMENTAL | micro T-Kernel SMP\n");
+        (UB *)"\nROBOPICO RTOS CONNECTED IMU v0.1.1 | Step5 EXPERIMENTAL | micro T-Kernel SMP\n");
     tm_printf((
         UB *)"Based on Step4 v0.1.2 (physical acceptance pending). Buddy1-4; Buddy5 NOT integrated.\n");
     tm_printf((
@@ -205,7 +205,7 @@ EXPORT INT usermain(void) {
         result = start((FP)bringup_control_task, 14, TP_PRC2, "motion");
 #ifdef APP_RTOS_IMU
     if (result == E_OK)
-        result = start((FP)ri_task, 18, TP_PRC1, "imu-terrain");
+        result = start((FP)ri_task, 13, TP_PRC1, "imu-terrain");
 #endif
     if (result == E_OK)
         result = start((FP)bringup_safety_task, 6, TP_PRC2, "safety");
