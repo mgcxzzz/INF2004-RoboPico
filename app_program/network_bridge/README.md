@@ -1,11 +1,21 @@
 # Application-to-kernel network bridge
 
+**Step4 update:** `APP=rtos_barcode_wifi` uses the same connected command and
+safety foundation, adding the Buddy3 ADC-owner decoder adapter. Live mapping
+crosses cores as a locked snapshot. Source11 status/events share one sequence
+allocator; only STATUS is coalesced. See the
+[Step4 guide](../../firmware/migration/micro_tkernel/step_04_barcode/README.md).
+Step3B v0.1.2 and Step4 use exact-size TCP allocations plus copied heap/retry
+diagnostics; [investigation and evidence](../../firmware/migration/micro_tkernel/step_04_barcode/NETWORK_DELIVERY.md).
+IMU/ramp and Buddy5 remain deferred.
+
 **Step3B update:** `APP=rtos_line_wifi` adds the Step2 controller to this bridge;
 `APP=rtos_network` remains the motor-disabled Step3A bench. See the complete
 [connected execution/command specification](../../firmware/migration/micro_tkernel/step_03_connected_line/ARCHITECTURE.md)
 and [setup/test guide](../../firmware/migration/micro_tkernel/step_03_connected_line/README.md).
 `APP_RTOS_NETWORK` selects the kernel robot transport; `APP_RTOS_NET_BENCH`
-adds only the bench motor/start inhibition. Barcode/IMU are still deferred.
+adds only the bench motor/start inhibition. Barcode is disabled in those two
+profiles; it is enabled only in the separate Step4 profile.
 
 Current buffers reserve TX1024bytes, ACK256, HB128, RX256 and (Step3B) owner
 commands256. Copied RX/control envelopes are25bytes; out-of-queue validated

@@ -220,11 +220,11 @@ int main(void) {
     /* Congested stream keeps only the newest copied sample per live source.
      * With no stream budget, ACK/HB still pass; map replies are never merged. */
     uint32_t coalesced = rn_status().tx_coalesced;
-    uint8_t live_motion[2] = {0x92, 0}, live_nav[2] = {0xb2, 0};
+    uint8_t live_motion[2] = {0x92, 0}, live_nav[WPK_NAV_BYTES] = {0xb2, 23};
     for (unsigned n = 0; n < 100; ++n) {
-        live_motion[1] = live_nav[1] = (uint8_t)n;
+        live_motion[1] = live_nav[2] = (uint8_t)n;
         assert(rn_tx_push(RN_TLM, live_motion, 2, clock_ms));
-        assert(rn_tx_push(RN_TLM, live_nav, 2, clock_ms));
+        assert(rn_tx_push(RN_TLM, live_nav, sizeof(live_nav), clock_ms));
     }
     assert(rn_status().tx_coalesced - coalesced == 198);
     live_motion[1] = 0; /* Buffer copy owns its bytes after caller returns. */
@@ -239,10 +239,17 @@ int main(void) {
     unsigned seen_sources = 0;
     for (unsigned n = 0; n < 2; ++n) {
         assert(rn_tx_take(&topic, payload, &len, clock_ms));
-        assert(topic == RN_TLM && len == 2 && payload[1] == 99);
+        assert(topic == RN_TLM && (payload[0] == 0x92 ? len == 2 && payload[1] == 99
+                                                      : len == WPK_NAV_BYTES && payload[2] == 99));
         seen_sources |= payload[0] == 0x92 ? 1 : payload[0] == 0xb2 ? 2 : 0;
     }
     assert(seen_sources == 3 && !rn_tx_take(&topic, payload, &len, clock_ms));
+    live_nav[7] = WPK_EVENT_DECODED;
+    assert(rn_tx_push(RN_TLM, live_nav, sizeof(live_nav), clock_ms));
+    live_nav[7] = WPK_EVENT_DISPATCH;
+    assert(rn_tx_push(RN_TLM, live_nav, sizeof(live_nav), clock_ms));
+    assert(rn_tx_take(&topic, payload, &len, clock_ms) && payload[7] == WPK_EVENT_DECODED);
+    assert(rn_tx_take(&topic, payload, &len, clock_ms) && payload[7] == WPK_EVENT_DISPATCH);
     assert(rn_tx_push(RN_TLM, live_motion, 2, clock_ms));
     assert(!rn_tx_take(&topic, payload, &len, clock_ms + 251));
     assert(!rn_telemetry_room(2, 1024, 11680));

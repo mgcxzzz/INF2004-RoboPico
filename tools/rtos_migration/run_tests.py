@@ -31,6 +31,9 @@ for name, extra in [("test_continuous_drive", []), ("test_interface", sources),
                     ("test_uturn", [])]:
     checks.append((CORE / "tests/unit" / (name + ".c"), extra))
 checks.extend([
+    (ROOT / "testing/rtos_migration/test_rtos_barcode.c", sources + [CORE / "src/network/wifi_protocol.c"]),
+    (ROOT / "testing/rtos_migration/test_reference_peak.c", [CORE / "src/network/wifi_protocol.c"]),
+    (CORE / "tests/barcode/test_barcode_peak.c", []),
     (ROOT / "testing/rtos_migration/test_connected_bridge.c", sources + [CORE / "src/network/wifi_protocol.c", CORE / "src/network/wifi_packets.c"]),
     (ROOT / "testing/rtos_migration/test_network_bench.c", [CORE / "src/network/wifi_protocol.c"]),
     (CORE / "tests/unit/test_wifi_packets.c", [CORE / "src/network/wifi_packets.c"]),
@@ -48,4 +51,6 @@ subprocess.run([sys.executable, ROOT / "testing/rtos_migration/test_capture_adc_
 subprocess.run([sys.executable, ROOT / "testing/rtos_migration/test_provision_network.py"], check=True)
 subprocess.run([sys.executable, ROOT / "testing/rtos_migration/test_capture_network_bench.py"], check=True)
 subprocess.run([sys.executable, ROOT / "testing/rtos_migration/test_capture_connected_line.py"], check=True)
+subprocess.run([sys.executable, ROOT / "testing/rtos_migration/test_export_barcode_log.py"], check=True)
+subprocess.run([sys.executable, ROOT / "testing/rtos_migration/test_tcp_allocation.py"], check=True)
 print(f"PASS: {len(checks)} production-C regression programs plus capture/export/provisioning checks. Hardware test is still required.")

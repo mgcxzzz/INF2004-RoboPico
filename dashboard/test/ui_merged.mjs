@@ -268,6 +268,19 @@ try {
   await emit(r, 'is28/ack', ack(1, 211, 4, 3));
   check('C06 older RTOS queue-full interpretation remains unchanged',
     (await text(r, 'lastack')).includes('queue full'));
+  drive[15] |= 0x20;
+  await emit(connected, 'is28/tlm', drive);
+  check('C07 Step4 marker labels barcode migration without claiming IMU completion',
+    (await text(connected, 'profilePill')).includes('Step4') &&
+    (await text(connected, 'profilePill')).includes('RTOS connected barcode'));
+  check('C08 Step4 retains connected Busy interpretation and disabled stored dashboard download',
+    (await text(connected, 'lastack')).includes('rejected: busy') &&
+    (await connected.locator('#logDownload').isDisabled()));
+  drive[15] &= ~0x20;
+  await emit(connected, 'is28/hb', hbF(1, 0));
+  await emit(connected, 'is28/tlm', drive);
+  check('C09 a reboot to the comparison image clears the Step4 badge',
+    (await text(connected, 'profilePill')).includes('Step3B'));
   check('R08 no page or console errors', errors.length === 0);
   console.log(`\n${count} passed, 0 failed (simulated MQTT; no broker, Pico or car)`);
 } catch (e) {

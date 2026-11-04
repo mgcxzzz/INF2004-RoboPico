@@ -26,12 +26,14 @@ static uint32_t published, received, tx_dropped, rx_dropped;
  * their own MBFs. Every slot is copied under the short bridge lock. */
 typedef struct {
     uint32_t ms;
-    uint8_t data[RN_PACKET_MAX], len;
-    bool ready;
+    uint8_t data[RN_PACKET_MAX];
+    uint8_t len : 7, ready : 1;
 } LatestTelemetry;
 static LatestTelemetry latest[2];
 static unsigned next_latest;
 static uint32_t tx_coalesced;
+static uint32_t mapping_snapshot;
+static uint8_t source_sequence[16];
 
 static UINT enter(void) {
     UINT key;
@@ -40,6 +42,20 @@ static UINT enter(void) {
 }
 static void leave(UINT key) {
     (void)ISpinUnlock(&lock, key);
+}
+uint32_t rn_mapping_snapshot(void) {
+    UINT key = enter();
+    uint32_t value = mapping_snapshot;
+    leave(key);
+    return value;
+}
+uint8_t rn_next_sequence(unsigned source) {
+    if (source >= 16)
+        return 0;
+    UINT key = enter();
+    uint8_t value = source_sequence[source]++;
+    leave(key);
+    return value;
 }
 static void count_drop(bool receive) {
     UINT key = enter();
@@ -85,7 +101,8 @@ static uint32_t get32(const uint8_t *p) {
 bool rn_tx_push(uint8_t topic, const uint8_t *data, uint8_t len, uint32_t now) {
     if (!rn_ready() || !data || len == 0 || len > RN_PACKET_MAX || topic > RN_HB)
         return false;
-    if (topic == RN_TLM && ((data[0] >> 4) == 9 || (data[0] >> 4) == 11)) {
+    if (topic == RN_TLM && ((data[0] >> 4) == 9 ||
+                            ((data[0] >> 4) == 11 && len >= 8 && data[7] == WPK_EVENT_STATUS))) {
         unsigned index = (data[0] >> 4) == 9 ? 0 : 1;
         UINT key = enter();
         if (latest[index].ready && tx_coalesced != UINT32_MAX)
@@ -271,6 +288,10 @@ void rn_report(void) {
         (UB *)"NET_TX coalesced=%u mem=%u errors=%u deferred=%u result=%d free_req=%u ring_used=%u tcp_free=%u nagle_off=%u admit_ms=%u complete_ms=%u\n",
         s.tx_coalesced, s.publish_mem, s.publish_error, s.telemetry_wait, s.publish_result,
         s.request_free, s.ring_used, s.tcp_free, s.nagle_off, s.last_admit_ms, s.last_complete_ms);
+    tm_printf(
+        (UB *)"NET_MEMORY heap_used=%u heap_max=%u heap_capacity=%u heap_errors=%u tcp_queue=%u tcp_retries=%u tcp_rto_ms=%u oversize=0\n",
+        s.heap_used, s.heap_max, s.heap_capacity, s.heap_errors, s.tcp_queue, s.tcp_retries,
+        s.tcp_rto_ms);
 }
 void rn_app_task(int32_t code, void *exinf) {
     (void)code;
@@ -314,6 +335,9 @@ void rn_app_task(int32_t code, void *exinf) {
             }
 #endif
             uint8_t result = plan.result;
+            UINT map_key = enter();
+            mapping_snapshot = mapping;
+            leave(map_key);
             bool send_map = (plan.flags & RN_PLAN_MAP) != 0;
             force_hb |= (plan.flags & RN_PLAN_HEARTBEAT) != 0;
             if (plan.flags & RN_PLAN_STOP)

@@ -16,7 +16,11 @@ typedef struct {
     uint32_t published, received, tx_dropped, rx_dropped;
     uint32_t tx_coalesced, publish_mem, publish_error, telemetry_wait;
     uint32_t last_admit_ms, last_complete_ms;
-    uint16_t ring_used, tcp_free;
+    unsigned ring_used : 11, tcp_free : 14;
+    uint16_t heap_errors;
+    unsigned tcp_rto_ms : 24;
+    unsigned heap_used : 15, heap_max : 15, heap_capacity : 15, tcp_queue : 6;
+    unsigned tcp_retries : 4;
     int16_t mqtt_result;
     int8_t publish_result;
     int8_t link;
@@ -34,6 +38,8 @@ bool rn_rx_push(const uint8_t *data, uint8_t copied, uint32_t original, uint32_t
 void rn_publish_result(bool ok);
 void rn_status_update(const RnStatus *status);
 RnStatus rn_status(void);
+uint32_t rn_mapping_snapshot(void);
+uint8_t rn_next_sequence(unsigned source);
 void rn_app_task(int32_t code, void *exinf);
 void rn_report(void);
 void rn_command_result(uint8_t code, uint8_t result);
@@ -51,5 +57,6 @@ void rn_drive_begin(void);
 bool rn_drive_online(void);
 void rn_drive_telemetry(uint32_t now);
 void rn_drive_set_telemetry(bool enabled);
+bool rn_drive_telemetry_enabled(void);
 #endif
 #endif

@@ -4,11 +4,13 @@
 
 `codex/micro-tkernel-migration` starts from the working main baseline and follows
 the [staged RTOS migration plan](firmware/migration/micro_tkernel/README.md).
-The current checkpoint is [Step3B connected line following](firmware/migration/micro_tkernel/step_03_connected_line/README.md):
-Continuous V2 profile1 plus kernel-owned Wi-Fi/MQTT, live dashboard telemetry
-and supervisory controls. **USB supervision is required; Step3B hardware tests
-are pending.** Step1 passed, Step2 extended-mat L/R/bends remain pending, and
-Step3A stopped networking/reconnect passed. Barcode and IMU/ramp ports are later steps.
+The current checkpoint is [Step4 connected barcode](firmware/migration/micro_tkernel/step_04_barcode/README.md):
+Continuous V2 profile1, kernel-owned Wi-Fi/MQTT, both reference barcode decoders
+and live mapped junction actions. **USB supervision is required; new network
+and Step4 hardware acceptance is pending.** The bundle includes a barcode-free
+Step3B network comparison image. User reports Step3B v0.1.1 motion/safety tests
+passed; Step2 extended-mat L/R/bends remain pending. IMU/ramp is Step5 and Buddy5
+is deferred. This branch is not a final Buddy1–4/5 release.
 The SDK integration below remains the behaviour reference; it does not fulfil
 the project's micro T-Kernel requirement by itself.
 

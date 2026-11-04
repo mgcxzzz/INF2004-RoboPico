@@ -1,5 +1,16 @@
 # Team and subsystems
 
+> **Step4 migration override:** `APP=rtos_barcode_wifi` adds both reference
+> Code39 decoders to the existing core1 priority14 ADC/line owner. GP27 keeps
+> its2ms four-sample acquisition; there is no competing ADC task. Buddy3
+> approval/targets use the shared nav coordinator and single motion writer.
+> Runtime mappings and telemetry cross cores as copied locked data; only the
+> kernel core0 priority4 service calls lwIP/MQTT. Existing Stop/E-stop, USB
+> supervision and no-auto-restart rules remain. Barcode events use source10/11,
+> peak reports source15; source11 status/events share one sequence allocator.
+> No Buddy4 IMU/ramp or Buddy5 is enabled. Step4's640-row line ring makes room
+> for the original63 banks and2048 packed raw rows; see its test guide.
+
 > **Step3A override:** `APP=rtos_network` is the stopped network checkpoint.
 > USB/core0 priority3, kernel CYW43/lwIP/MQTT/core0 priority4, copied application
 > network bridge/core0 priority16. Core1 retains the100Hz clock/encoder/stop

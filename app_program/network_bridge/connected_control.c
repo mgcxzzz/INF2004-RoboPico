@@ -9,9 +9,12 @@ static ID requests;
 static volatile uint32_t paused;
 static uint32_t lease;
 static uint32_t seen_connects, connected_since;
-static bool telemetry_enabled = true; /* Network application task owns this setting. */
+static volatile uint32_t telemetry_enabled = 1;
 void rn_drive_set_telemetry(bool enabled) {
-    telemetry_enabled = enabled;
+    __atomic_store_n(&telemetry_enabled, enabled ? 1U : 0U, __ATOMIC_RELEASE);
+}
+bool rn_drive_telemetry_enabled(void) {
+    return __atomic_load_n(&telemetry_enabled, __ATOMIC_ACQUIRE) != 0;
 }
 
 int32_t rn_drive_init(void) {
@@ -132,14 +135,13 @@ void rn_drive_process(void *raw) {
 }
 void rn_drive_telemetry(uint32_t now) {
     static uint32_t last_motion, last_nav;
-    static uint8_t motion_sequence, nav_sequence;
-    if (!telemetry_enabled || !rn_drive_online())
+    if (!rn_drive_telemetry_enabled() || !rn_drive_online())
         return;
     if (now - last_motion >= 50) {
         last_motion = now;
         WifiMotionPacket p;
         rtos_line_telemetry(&p);
-        p.seq = motion_sequence++;
+        p.seq = rn_next_sequence(WPK_SRC_MOTION);
         uint8_t bytes[WPK_MOTION_BYTES];
         if (wpk_motion(&p, bytes))
             (void)rn_tx_push(RN_TLM, bytes, sizeof(bytes), now);
@@ -147,7 +149,7 @@ void rn_drive_telemetry(uint32_t now) {
     if (now - last_nav >= 250) {
         last_nav = now;
         MotionStatus s = motion_get_status();
-        WifiNavPacket p = {.seq = nav_sequence++,
+        WifiNavPacket p = {.seq = rn_next_sequence(WPK_SRC_NAV),
                            .uptime_ms = now,
                            .owner = s.owner,
                            .mode = s.mode,

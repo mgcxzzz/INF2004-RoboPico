@@ -32,9 +32,22 @@ static ER start(FP entry, PRI priority, UW processor, const char *name) {
 }
 
 void bringup_help(void) {
-#if defined(APP_RTOS_LINE) && defined(APP_RTOS_NETWORK)
+#if defined(APP_RTOS_BARCODE)
+    tm_printf((UB *)"\nROBOPICO RTOS CONNECTED BARCODE v0.1 | Step4 | micro T-Kernel SMP\n");
+    tm_printf((UB *)"Original63-bank + peak Code39, Buddy3 -> NAV -> MOTION; live A-Z mapping.\n");
     tm_printf((
-        UB *)"\nROBOPICO RTOS CONNECTED LINE v0.1.1 | encoder quality + MQTT delivery | Step3B | micro T-Kernel SMP\n");
+        UB *)"Continuous V2/profile1/calibration/Step2 junction policy retained; IMU/ramp/Buddy5 deferred.\n");
+    tm_printf(
+        (UB *)"USB DTR supervision REQUIRED; dashboard Start2s/Pause/Resume/Stop/E-stop/Reset.\n");
+    tm_printf((
+        UB *)"w/l/r/k calibration retained; do NOT recalibrate for comparison. b=stopped barcode/raw log, d=line log, n=status.\n");
+    tm_printf((
+        UB *)"Line RAM640 rows (6.4s); raw2048 GP27 samples freeze on first decode. No automatic restart after loss.\n");
+    tm_printf((
+        UB *)"Exact-size TCP allocations; heap/delivery diagnostics. Manual canonical USB L/R/U disabled.\n");
+#elif defined(APP_RTOS_LINE) && defined(APP_RTOS_NETWORK)
+    tm_printf((
+        UB *)"\nROBOPICO RTOS CONNECTED LINE v0.1.2 | exact-size TCP allocation | Step3B | micro T-Kernel SMP\n");
     tm_printf((UB *)"Step2 v0.1.2 Continuous V2/profile1/calibration/junction policy retained.\n");
     tm_printf(
         (UB *)"USB DTR supervision REQUIRED. Dashboard Start2s/Stop/E-stop/Pause/Resume/Reset.\n");

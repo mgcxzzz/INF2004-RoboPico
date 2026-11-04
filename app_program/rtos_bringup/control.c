@@ -596,14 +596,22 @@ void bringup_nav_task(INT code, void *exinf) {
         }
 #ifdef APP_RTOS_LINE
         else if (command == 'g' || command == 'w' || command == 'l' || command == 'r' ||
-                 command == 'c' || command == 'k' || command == 'd') {
+                 command == 'c' || command == 'k' || command == 'd'
+#ifdef APP_RTOS_BARCODE
+                 || command == 'b'
+#endif
+        ) {
             if (!rtos_line_command(command, received))
                 tm_printf((UB *)"LINE command queue full; command rejected.\n");
         } else if (command == 'L' || command == 'R' || command == 'U') {
+#ifdef APP_RTOS_BARCODE
+            tm_printf((UB *)"Step4: use an actual mapped barcode; canonical USB L/R/U disabled.\n");
+#else
             char route = command == 'L' ? 'A' : command == 'R' ? 'F' : 'Z';
             MotionResult result = motion_submit_barcode(MOTION_BUDDY3, route);
             tm_printf((UB *)"USB route %c -> Buddy3 -> NAV result=%u; await separate junction.\n",
                       command, result);
+#endif
         }
 #endif
         else if (command == 'h' || command == '?')

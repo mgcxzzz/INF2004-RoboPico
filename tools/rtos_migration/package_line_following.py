@@ -15,7 +15,10 @@ ART = CHECKPOINT / "firmware"
 common.ART = ART
 
 
-def linked_checks(elf: Path, network: bool = False) -> dict:
+def linked_checks(elf: Path, network: bool = False, barcode: bool = False) -> dict:
+    expected='rtos_barcode_wifi' if barcode else 'rtos_line_wifi' if network else 'rtos_line'
+    assert (ROOT/'build_make/.build_profile').read_text(encoding='utf-8').strip().startswith(expected+'-'), \
+        'Rebuild the requested profile before packaging so stack-usage files match its ELF.'
     tool = ROOT.parent / ".buddy2-tools/arm-gcc/bin/arm-none-eabi-nm.exe"
     output = common.command(tool, "-n", elf)
     symbols = {}
@@ -26,14 +29,19 @@ def linked_checks(elf: Path, network: bool = False) -> dict:
     for name in ("usermain", "bringup_control_task", "bringup_safety_task", "bringup_nav_task",
                  "bringup_console_task", "bringup_status_task", "rtos_line_flash_task",
                  "rtos_line_follow", "rtos_line_power", "rtos_line_init",
-                 "motion_submit_navigation", "motion_submit_barcode", "motion_commit",
+                 "motion_submit_navigation", "motion_commit",
                  "rl_flash_park", "rl_flash_write"):
         assert name in symbols, name
+    if not barcode:
+        assert 'motion_submit_barcode' in symbols
     if network:
         for name in ("cyw43_utk_task", "mqtt_client_connect", "rn_app_task", "rn_drive_process", "rn_drive_telemetry"):
             assert name in symbols, name
+    if barcode:
+        for name in ('motion_accept_barcode','bp_window','rtos_line_side_poll'):
+            assert name in symbols,name
     for name in ((() if network else ("cyw43_utk_task", "mqtt_client_connect")) + ("subsystem5_start", "dev_init_adc",
-                 "dev_init_ser", "barcode_analog_sample", "barcode_peak_sample")):
+                 "dev_init_ser") + (() if barcode else ("barcode_analog_sample", "barcode_peak_sample"))):
         assert name not in symbols, name
     for name in ("rl_flash_park", "rl_flash_write"):
         assert 0x20000000 <= symbols[name] < 0x20040000, name

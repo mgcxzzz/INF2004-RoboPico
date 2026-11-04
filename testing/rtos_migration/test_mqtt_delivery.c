@@ -27,7 +27,14 @@ enum { ERR_OK = 0, ERR_MEM = -1, ERR_ABRT = -13, MQTT_CONNECT_ACCEPTED = 0 };
 struct altcp_pcb {
     unsigned free;
     int nagle;
+    uint16_t snd_queuelen, rto;
+    uint8_t nrtx;
 };
+static struct {
+    struct {
+        uint16_t used, max, avail, err;
+    } mem;
+} lwip_stats;
 struct mqtt_request_t {
     struct mqtt_request_t *next;
 };
@@ -50,7 +57,7 @@ typedef struct {
 } T_CYW43_UTK_STATUS;
 static uint32_t now = 10000;
 static mqtt_client_t client;
-static struct altcp_pcb tcp = {11680, 0};
+static struct altcp_pcb tcp = {.free = 11680};
 static unsigned free_slots = 16, successes, drops, takes;
 static uint8_t queued_topic;
 static bool queued, allow_seen, radio_up = true;
@@ -180,6 +187,8 @@ static void enqueue(uint8_t topic) {
     queued_topic = topic;
 }
 int main(void) {
+    lwip_stats.mem.used=4096;lwip_stats.mem.max=8192;lwip_stats.mem.avail=16384;lwip_stats.mem.err=7;
+    tcp.rto=32767;tcp.snd_queuelen=16;tcp.nrtx=2;
     client.conn = &tcp;
     client.connected = true;
     robot_client = &client;
@@ -202,6 +211,8 @@ int main(void) {
     assert(successes == 2 && allow_seen);
     assert(copied_status.ring_used == 100 && copied_status.request_free == 16 &&
            copied_status.nagle_off);
+    assert(copied_status.tcp_rto_ms==16383500&&copied_status.heap_capacity==16384&&
+           copied_status.heap_errors==7&&copied_status.tcp_retries==2);
     complete(NULL, ERR_OK);
     assert(robot_complete_ms == now);
     publish_error = ERR_MEM;

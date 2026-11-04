@@ -16,7 +16,12 @@ enum {
     RL_CAL_OFFSET = 0x1a9000,
     RL_MAIN_OFFSET = 0x1d0000,
     RL_CAL_MAGIC = 0x31434c52,
-    RL_LOG_ROWS = 1536
+    RL_LOG_ROWS =
+#ifdef APP_RTOS_BARCODE
+        640 /* RAM is shared with the original63 banks and2ms raw capture. */
+#else
+        1536
+#endif
 };
 
 enum {

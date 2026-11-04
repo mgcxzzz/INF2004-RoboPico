@@ -18,6 +18,7 @@ def summarize(rows, frames, interruptions):
     net = [r for r in rows if r['kind']=='NET']
     delivery = [r for r in rows if r['kind']=='NET_TX']
     guard = [r for r in rows if r['kind']=='ENCODER_GUARD']
+    memory = [r for r in rows if r['kind']=='NET_MEMORY']
     return {'result':'REVIEW_PHYSICAL_TEST', 'clock':clock, 'heartbeats':len(beats),
             'max_heartbeat_gap_s':max(gaps,default=None), 'motion_frames':len(motion),
             'network_first':net[0] if net else None, 'network_last':net[-1] if net else None,
@@ -25,6 +26,8 @@ def summarize(rows, frames, interruptions):
             'delivery_last':delivery[-1] if delivery else None,
             'encoder_guard_last':guard[-1] if guard else None,
             'encoder_trips':[r for r in rows if r['kind']=='ENCODER_TRIP'],
+            'memory_first':memory[0] if memory else None,'memory_last':memory[-1] if memory else None,
+            'barcode_decodes':[r for r in rows if r['kind']=='BARCODE_DECODE'],
             'monitor_interruptions':interruptions,
             'scope':'Clock and passive receive evidence only. Review video and stopped USB line log for tracking/stops; intentional outage gaps are not a baseline heartbeat pass.'}
 
@@ -41,7 +44,10 @@ def monitor(broker, stop, frames, interruptions, started):
                 while not stop.is_set():
                     if time.monotonic()-last_ping>20:
                         sock.sendall(b'\xc0\0'); last_ping=time.monotonic()
-                    header,body=read_packet(sock,3)
+                    # Preserve the passive observer through short stalls. The
+                    # measured heartbeat gap still includes every silent second;
+                    # this changes no car/dashboard keepalive or acceptance limit.
+                    header,body=read_packet(sock,6)
                     if header>>4!=3 or len(body)<2: continue
                     n=int.from_bytes(body[:2],'big')
                     if n>len(body)-2: raise ValueError('Truncated MQTT topic')

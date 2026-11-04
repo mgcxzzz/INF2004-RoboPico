@@ -1,4 +1,12 @@
 #include "line_service.h"
+#ifdef APP_RTOS_BARCODE
+#include "../barcode_navigation/barcode_model.h"
+static RbDecoder barcode;
+static uint32_t barcode_peak_sent, barcode_status_ms;
+static bool barcode_dump;
+static void barcode_publish(uint64_t now);
+static void barcode_export(void);
+#endif
 #ifdef APP_RTOS_NETWORK
 #include "../network_bridge/network_bridge.h"
 static WifiMotionPacket telemetry;
@@ -40,6 +48,12 @@ static struct {
     RlAdcDiagnostics adc_diag;
     uint32_t adc_retries, adc_recoveries, adc_frames;
     unsigned adc_state : 2, adc_good : 2;
+#ifdef APP_RTOS_BARCODE
+    uint32_t decoded, peak_decodes, peak_applied, conflicts, gaps, max_gap, samples, max_sample;
+    uint16_t barcode_min, barcode_max, barcode_adc, threshold;
+    uint8_t bank, last_code, pending_action, pending_revision, executing_action, executing_revision;
+    unsigned scanning : 1, raw_frozen : 1;
+#endif
 } view;
 
 static UINT enter(void) {
@@ -134,13 +148,28 @@ void rtos_line_side_poll(uint64_t now) {
         && !rn_drive_paused()
 #endif
     ) {
+        BringupStatus safety;
+        bringup_get_status(&safety);
+        if (!(safety.flags & BR_ACTIVE))
+            return;
         /* Between 10 ms encoder drains, interpolate at the last measured
          * velocity, as a bounded-distance edge estimate, never a PWM change. */
         double wheel[2];
         double elapsed = now >= input.now ? (double)(now - input.now) / 1000000 : 0;
         for (unsigned w = 0; w < 2; ++w)
             wheel[w] = input.wheel[w] + input.speed[w] * elapsed;
+#ifdef APP_RTOS_BARCODE
+        uint64_t started = board_time_us();
+        planner.nav.mapping = rn_mapping_snapshot();
+        rb_sample(&barcode, &planner.nav, adc[1], now, wheel);
+        planner.black = barcode.analog.black;
+        planner.side_adc = adc[1];
+        uint32_t cost = (uint32_t)(board_time_us() - started);
+        if (cost > barcode.max_sample_us)
+            barcode.max_sample_us = cost;
+#else
         rl_side(&planner, adc[1], now, wheel);
+#endif
     }
 }
 
@@ -187,10 +216,14 @@ bool rtos_line_request_start(uint32_t received_us) {
 }
 #ifdef APP_RTOS_NETWORK
 void rtos_line_resume(void) {
+#ifdef APP_RTOS_BARCODE
+    rb_resume(&planner, &barcode, &input, adc[1]);
+#else
     char pending = planner.nav.pending;
     rl_begin(&planner, &input, adc[1]);
     if (pending)
         (void)barcode_set_pending(&planner.nav, pending);
+#endif
     power = (LinePower){0};
     last_noted_phase = UINT32_MAX;
 }
@@ -294,11 +327,19 @@ bool rtos_line_prepare(const MotionFeedback *f, double path, float dt, bool acti
         if (!br_command_after_stop((uint32_t)board_time_us(), received, stopped, serial != 0))
             continue;
         unsigned command = msg[0];
-        if (command == 'd') {
+        if (command == 'd'
+#ifdef APP_RTOS_BARCODE
+            || command == 'b'
+#endif
+        ) {
             countdown = 0;
             UINT key = enter();
-            if (!active)
+            if (!active) {
                 dump_requested = true;
+#ifdef APP_RTOS_BARCODE
+                barcode_dump = command == 'b';
+#endif
+            }
             leave(key);
             if (active)
                 tm_printf((UB *)"LOG rejected: stop before d.\n");
@@ -337,6 +378,12 @@ bool rtos_line_prepare(const MotionFeedback *f, double path, float dt, bool acti
 void rtos_line_begin(void) {
     start_offered = false;
     rl_begin(&planner, &input, adc[1]);
+#ifdef APP_RTOS_BARCODE
+    planner.nav.mapping = rn_mapping_snapshot();
+    rb_begin(&barcode, &planner.nav, adc[1], input.now, input.wheel);
+    barcode_peak_sent = 0;
+    barcode_status_ms = 0;
+#endif
     power = (LinePower){0};
     run_start = input.now;
 #ifdef APP_RTOS_NETWORK
@@ -357,7 +404,12 @@ void rtos_line_begin(void) {
 AnalogDemand rtos_line_follow(float dt) {
     previous_phase = planner.circuit.phase;
     input.side_black = planner.black;
+#ifdef APP_RTOS_BARCODE
+    planner.nav.mapping = rn_mapping_snapshot();
+    return rb_follow(&planner, &barcode, &calibration, &input, dt);
+#else
     return rl_follow(&planner, &calibration, &input, dt);
+#endif
 }
 
 void rtos_line_feedback(MotionFeedback *f, const AnalogDemand *d) {
@@ -407,9 +459,14 @@ void rtos_line_record(const BringupStatus *s, const AnalogDemand *d, uint32_t co
     row.meta = (d->decision & 63U) | ((planner.circuit.reason & 63U) << 6) |
                ((uint32_t)planner.black << 12) | ((uint32_t)planner.circuit.busy << 13) |
                ((uint32_t)tracker->core.white << 14) | ((uint32_t)tracker->search.active << 15) |
+#ifdef APP_RTOS_BARCODE
+               (rl_route_bits(rb_log_route(&planner.nav, planner.nav.pending)) << 16) |
+               (rl_route_bits(rb_log_route(&planner.nav, planner.nav.action)) << 18) |
+#else
                (rl_route_bits(planner.nav.pending) << 16) |
-               (rl_route_bits(planner.nav.action) << 18) | ((s->reason & 15U) << 20) |
-               ((s->flags & 127U) << 24);
+               (rl_route_bits(planner.nav.action) << 18) |
+#endif
+               ((s->reason & 15U) << 20) | ((s->flags & 127U) << 24);
     UINT key = enter();
     view.cal = calibration;
     view.cal_origin = cal_origin;
@@ -431,6 +488,28 @@ void rtos_line_record(const BringupStatus *s, const AnalogDemand *d, uint32_t co
     view.adc_retries = adc_retries;
     view.adc_recoveries = adc_recoveries;
     view.adc_frames = adc_frames;
+#ifdef APP_RTOS_BARCODE
+    view.decoded = planner.nav.decoded_total;
+    view.peak_decodes = barcode.peak_decodes;
+    view.peak_applied = barcode.peak_applied;
+    view.conflicts = barcode.peak_conflicts;
+    view.gaps = barcode.analog.gap_count;
+    view.max_gap = barcode.analog.max_gap_us;
+    view.samples = barcode.samples;
+    view.max_sample = barcode.max_sample_us;
+    view.barcode_min = barcode.analog.minimum;
+    view.barcode_max = barcode.analog.maximum;
+    view.barcode_adc = adc[1];
+    view.threshold = barcode_analog_threshold(barcode.analog.selected);
+    view.bank = barcode.analog.selected;
+    view.last_code = planner.nav.last_code;
+    view.pending_action = planner.nav.pending_action;
+    view.pending_revision = planner.nav.pending_revision;
+    view.executing_action = planner.nav.executing_action;
+    view.executing_revision = planner.nav.executing_revision;
+    view.scanning = barcode.analog.scanning;
+    view.raw_frozen = barcode.raw_frozen;
+#endif
     if (recording) {
         row.sequence = ++row_sequence;
         rows[row_head] = row;
@@ -453,7 +532,11 @@ void rtos_line_record(const BringupStatus *s, const AnalogDemand *d, uint32_t co
         .profile = RL_PROFILE,
         .flags = (s->flags & BR_ACTIVE ? 1U : 0U) | (calibration_valid(&calibration) ? 2U : 0U) |
                  (s->flags & BR_ACTIVE && !rn_drive_paused() ? 4U : 0U) |
-                 (s->flags & BR_ESTOP ? 8U : 0U) | 0x40U,
+                 (s->flags & BR_ESTOP ? 8U : 0U) | 0x40U
+#ifdef APP_RTOS_BARCODE
+                 | 0x20U /* Step4 identification within the existing RTOS marker. */
+#endif
+        ,
         .recovery_state = (uint8_t)(tracker->search.active ? 2
                                     : tracker->core.white  ? 1
                                                            : 0),
@@ -481,9 +564,28 @@ void rtos_line_record(const BringupStatus *s, const AnalogDemand *d, uint32_t co
     view.overwritten = row_overwritten;
     view.sequence = row_sequence;
     leave(key);
+#ifdef APP_RTOS_BARCODE
+    barcode_publish(input.now);
+#endif
 }
 
 void rtos_line_report(void) {
+#ifdef APP_RTOS_BARCODE
+    UINT bk = enter();
+    uint32_t decoded = view.decoded, peak = view.peak_decodes, applied = view.peak_applied,
+             conflicts = view.conflicts;
+    uint32_t gaps = view.gaps, maxgap = view.max_gap, samples = view.samples,
+             maxsample = view.max_sample;
+    uint16_t minimum = view.barcode_min, maximum = view.barcode_max, threshold = view.threshold;
+    unsigned bank = view.bank, last = view.last_code, pa = view.pending_action,
+             rev = view.pending_revision;
+    bool frozen = view.raw_frozen;
+    leave(bk);
+    tm_printf(
+        (UB *)"BARCODE decoded=%u peak=%u applied=%u conflicts=%u last_ascii=%u pending_action=%u revision=%u min=%u max=%u threshold=%u bank=%u samples=%u max_gap_us=%u gaps_over10ms=%u max_sample_us=%u raw_frozen=%u\n",
+        decoded, peak, applied, conflicts, last, pa, rev, minimum, maximum, threshold, bank,
+        samples, maxgap, gaps, maxsample, frozen);
+#endif
     UINT key = enter();
     /* No formatting while holding the shared packed-data lock. */
     LineCalibration cal = view.cal;
@@ -544,6 +646,12 @@ void rtos_line_dump_if_requested(void) {
     bringup_get_status(&status);
     if (status.flags & BR_ACTIVE)
         goto done;
+#ifdef APP_RTOS_BARCODE
+    if (barcode_dump) {
+        barcode_export();
+        goto done;
+    }
+#endif
     rtos_line_report();
     tm_printf((UB *)"LINE_LOG_BEGIN version=2 rows=%u overwritten=%u\n", count, overwritten);
     tm_printf((UB *)"LINE_LOG_CAL white=%u,%u black=%u,%u origin=%u\n", run_calibration.white[0],
@@ -590,3 +698,6 @@ void rtos_line_flash_task(INT code, void *exinf) {
         (void)tk_dly_tsk(1);
     }
 }
+#ifdef APP_RTOS_BARCODE
+#include "../barcode_navigation/barcode_runtime.inc"
+#endif

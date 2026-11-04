@@ -81,6 +81,7 @@ def sources():
                    "tools/elf2uf2", "tools/rtos_migration", "testing/rtos_migration",
                    "firmware/integration/buddy1_4/src", "firmware/integration/buddy1_4/include",
                    "firmware/integration/buddy1_4/config", "firmware/integration/buddy1_4/tests/unit",
+                   "firmware/integration/buddy1_4/tests/barcode",
                    "firmware/migration/micro_tkernel", "docs"]
     for directory in directories:
         for path in sorted((ROOT / directory).rglob("*")):
