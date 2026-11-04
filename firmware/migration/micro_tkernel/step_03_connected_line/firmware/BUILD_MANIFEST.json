@@ -2,7 +2,7 @@
   "name": "robopico_rtos_connected_line_v0_1",
   "status": "EXPERIMENTAL Step3B USB-supervised connected line; physical acceptance pending; not final Buddy1-5",
   "branch": "codex/micro-tkernel-migration",
-  "source_commit": "485025ac438d2b81fbab81a8d217b34b382c73d4",
+  "source_commit": "7770eb9a166e2315b11c216ff7442ea397e4f180",
   "reference_main_commit": "7843f45fbe45d5a774bc18c93be9bb11084d1b64",
   "step2_firmware_reference": "49244d256b80cf64c10fbec750c8531a0a58907c",
   "step3a_acceptance_reference": "8866729",
