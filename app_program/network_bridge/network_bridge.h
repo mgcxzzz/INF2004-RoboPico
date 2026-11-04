@@ -14,15 +14,22 @@ enum { RN_URGENT_STOP = 1, RN_URGENT_ESTOP = 2, RN_URGENT_PAUSE = 4, RN_RX_BYTES
 typedef struct {
     uint32_t polls, last_poll_ms, ipv4, broker_ipv4, connects;
     uint32_t published, received, tx_dropped, rx_dropped;
+    uint32_t tx_coalesced, publish_mem, publish_error, telemetry_wait;
+    uint32_t last_admit_ms, last_complete_ms;
+    uint16_t ring_used, tcp_free;
     int16_t mqtt_result;
+    int8_t publish_result;
     int8_t link;
     uint8_t flags;
+    unsigned request_free : 5, nagle_off : 1;
 } RnStatus;
 /* No lwIP, radio or kernel typedefs cross this header. All messages are copied. */
 int32_t rn_init(void);
 bool rn_ready(void);
 bool rn_tx_push(uint8_t topic, const uint8_t *data, uint8_t len, uint32_t now);
 bool rn_tx_take(uint8_t *topic, uint8_t data[RN_PACKET_MAX], uint8_t *len, uint32_t now);
+bool rn_tx_take_budget(uint8_t *topic, uint8_t data[RN_PACKET_MAX], uint8_t *len, uint32_t now,
+                       bool telemetry);
 bool rn_rx_push(const uint8_t *data, uint8_t copied, uint32_t original, uint32_t now);
 void rn_publish_result(bool ok);
 void rn_status_update(const RnStatus *status);

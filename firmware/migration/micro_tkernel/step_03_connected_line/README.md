@@ -1,11 +1,14 @@
-# Step 3B — connected line following v0.1
+# Step 3B — connected line following v0.1.1
+
+See [v0.1.1 encoder/network changes and exact retest](UPDATE_V0_1_1.md).
+Latest artifacts: [firmware/v0_1_1](firmware/v0_1_1). Older v0.1 files remain for rollback.
 
 **Experimental, hardware validation pending. Keep USB connected and its serial
 capture actively reading while driving.** This joins Step2 v0.1.2 to the professor-style
 kernel-owned Wi-Fi/MQTT bridge. It is not the complete Buddy1–4 migration.
 
 Continuous V2 profile1 (nominal45mm/s), motor controller, front filtering,
-calibration priority and angle-only junction experiment are retained. No gain,
+calibration priority and angle-only junction experiment are retained. No line-follower gain,
 threshold or turn-window changes. Physical barcode decoding is Step4; IMU/ramp
 assist is Step5. The dashboard mapping can be set/read back but does not yet
 control physical barcode actions. USB L/R/U still queue the canonical actions
@@ -13,11 +16,11 @@ at a separate bare cross. L/R and sharp bends still need the extended-mat test.
 
 ## Download and flash
 
-1. Extract `robopico_rtos_connected_line_v0_1_bundle.zip` into a new folder.
+1. Extract `robopico_rtos_connected_line_v0_1_1_bundle.zip` into a new folder.
    Keep the accepted Step2 and Step3A bundles for rollback.
 2. Stop the robot, disconnect battery/motor power and close serial programs.
    Hold BOOTSEL while connecting USB; copy
-   `firmware/robopico_rtos_connected_line_v0_1.uf2` onto RPI-RP2.
+   `firmware/robopico_rtos_connected_line_v0_1_1.uf2` onto RPI-RP2.
 3. Close the previous bundle's dashboard/server terminal first so port8765
    serves this updated dashboard. Run **Start dashboard.cmd** from the new
    bundle and keep its broker/server terminal open.
@@ -29,7 +32,7 @@ at a separate bare cross. L/R and sharp bends still need the extended-mat test.
    Enter BOOTSEL only when prompted. The helper sends a settings-only UF2;
    **do not flash the application again afterward.** It may close when done.
 5. Open the USB console at115200/no flow control. Check the connected-line
-   v0.1 banner, `CLOCK ... status=PASS`, `LINE ... flags=0x3` while idle,
+   v0.1.1 banner, `CLOCK ... status=PASS`, `LINE ... flags=0x3` while idle,
    and `NET ... connected=1 subscribed=1` with advancing polls/last_ms.
    Kernel/USB tasks must show successful creation. Motors must remain off.
    The kernel reports `wifi: drive PM set=0 get=0 mode=0` when no-power-save
@@ -50,8 +53,7 @@ at a separate bare cross. L/R and sharp bends still need the extended-mat test.
 
 The original dashboard mislabeled Step3B response4 as **queue full**. This
 response means **Busy/start conditions unmet**, which includes a closed USB
-serial session. The refreshed dashboard uses the correct label; firmware is
-unchanged. A visible command window showing the completed summary or
+serial session. The refreshed dashboard uses the correct label. v0.1.1 also includes the documented encoder/network changes. A visible command window showing the completed summary or
 "Press any key" is **not** an open serial session. Browser MQTT alone does not
 satisfy Step3B's USB supervision requirement.
 

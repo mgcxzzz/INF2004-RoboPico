@@ -9,16 +9,22 @@ from check_mqtt import mqtt_connect_packet, subscribe_packet, read_packet, Diagn
 
 
 def summarize(rows, frames, interruptions):
-    clock = analyze_clock(rows)
+    clock = analyze_clock(rows, allow_active=True)
     beats = [dict(wall_s=f['wall_s'], **b) for f in frames
              if f['topic']=='is28/hb' and (b := heartbeat(bytes.fromhex(f['hex']))) is not None]
     gaps = [b['wall_s']-a['wall_s'] for a,b in zip(beats,beats[1:])]
     motion = [f for f in frames if f['topic']=='is28/tlm' and
               len(p := bytes.fromhex(f['hex']))==48 and p[0]==0x92]
     net = [r for r in rows if r['kind']=='NET']
+    delivery = [r for r in rows if r['kind']=='NET_TX']
+    guard = [r for r in rows if r['kind']=='ENCODER_GUARD']
     return {'result':'REVIEW_PHYSICAL_TEST', 'clock':clock, 'heartbeats':len(beats),
             'max_heartbeat_gap_s':max(gaps,default=None), 'motion_frames':len(motion),
             'network_first':net[0] if net else None, 'network_last':net[-1] if net else None,
+            'delivery_first':delivery[0] if delivery else None,
+            'delivery_last':delivery[-1] if delivery else None,
+            'encoder_guard_last':guard[-1] if guard else None,
+            'encoder_trips':[r for r in rows if r['kind']=='ENCODER_TRIP'],
             'monitor_interruptions':interruptions,
             'scope':'Clock and passive receive evidence only. Review video and stopped USB line log for tracking/stops; intentional outage gaps are not a baseline heartbeat pass.'}
 

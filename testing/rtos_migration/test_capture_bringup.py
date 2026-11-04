@@ -58,6 +58,16 @@ class CaptureTest(unittest.TestCase):
         rows[-2]["active"] = 1
         self.assertEqual(capture.analyze(rows)["result"], "FAIL")
 
+    def test_connected_clock_can_include_motion_without_hiding_fault(self):
+        rows = sample_rows()
+        rows[-2]["active"] = 1
+        self.assertEqual(capture.analyze(rows, allow_active=True)["timing_result"], "PASS")
+        rows[-2]["flags"] = 76
+        result = capture.analyze(rows, allow_active=True)
+        self.assertEqual(result["timing_result"], "PASS")
+        self.assertEqual(result["motor_readiness"], "BLOCKED")
+        self.assertTrue(any("encoder feedback/quality" in s for s in result["motor_blockers"]))
+
     def test_duplicate_query(self):
         rows = sample_rows()
         rows.insert(1, dict(rows[0], wall_s=0.5))

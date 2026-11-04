@@ -19,8 +19,10 @@ typedef struct {
     uint32_t clock_kernel_ms, clock_timer_us, clock_samples;
     int32_t ticks[2];
     uint32_t edges[2], invalid[2];
+    uint32_t encoder_bad[2], encoder_changes[2];
     int16_t speed_x10[2], target[2], pwm[2];
     unsigned flags : 7, clock_good : 2, reason : 4;
+    unsigned encoder_kind : 2, encoder_wheel : 2;
 } BringupStatus;
 
 extern ID bringup_commands;

@@ -148,6 +148,7 @@ static void rtos_line_telemetry(WifiMotionPacket *p) {
 static void bringup_stop_from(uint8_t reason, uint16_t latch, MotionOwner who);
 #include "app_program/network_bridge/network_bridge.c"
 #include "app_program/network_bridge/connected_control.c"
+#include "app_program/network_bridge/delivery_policy.h"
 static void bringup_stop_from(uint8_t reason, uint16_t latch, MotionOwner who) {
     hardware.flags = (hardware.flags & ~BR_ACTIVE) | latch;
     hardware.reason = reason;
@@ -216,6 +217,38 @@ int main(void) {
     assert(rn_tx_take(&topic, payload, &len, clock_ms) && topic == RN_ACK);
     assert(rn_tx_take(&topic, payload, &len, clock_ms) && topic == RN_HB);
     assert(!rn_tx_take(&topic, payload, &len, clock_ms + 251));
+    /* Congested stream keeps only the newest copied sample per live source.
+     * With no stream budget, ACK/HB still pass; map replies are never merged. */
+    uint32_t coalesced = rn_status().tx_coalesced;
+    uint8_t live_motion[2] = {0x92, 0}, live_nav[2] = {0xb2, 0};
+    for (unsigned n = 0; n < 100; ++n) {
+        live_motion[1] = live_nav[1] = (uint8_t)n;
+        assert(rn_tx_push(RN_TLM, live_motion, 2, clock_ms));
+        assert(rn_tx_push(RN_TLM, live_nav, 2, clock_ms));
+    }
+    assert(rn_status().tx_coalesced - coalesced == 198);
+    live_motion[1] = 0; /* Buffer copy owns its bytes after caller returns. */
+    uint8_t map_reply = 0x82;
+    assert(rn_tx_push(RN_TLM, &map_reply, 1, clock_ms));
+    assert(rn_tx_push(RN_HB, &value, 1, clock_ms));
+    assert(rn_tx_push(RN_ACK, &value, 1, clock_ms));
+    assert(rn_tx_take_budget(&topic, payload, &len, clock_ms, false) && topic == RN_ACK);
+    assert(rn_tx_take_budget(&topic, payload, &len, clock_ms, false) && topic == RN_HB);
+    assert(!rn_tx_take_budget(&topic, payload, &len, clock_ms, false));
+    assert(rn_tx_take(&topic, payload, &len, clock_ms) && payload[0] == map_reply);
+    unsigned seen_sources = 0;
+    for (unsigned n = 0; n < 2; ++n) {
+        assert(rn_tx_take(&topic, payload, &len, clock_ms));
+        assert(topic == RN_TLM && len == 2 && payload[1] == 99);
+        seen_sources |= payload[0] == 0x92 ? 1 : payload[0] == 0xb2 ? 2 : 0;
+    }
+    assert(seen_sources == 3 && !rn_tx_take(&topic, payload, &len, clock_ms));
+    assert(rn_tx_push(RN_TLM, live_motion, 2, clock_ms));
+    assert(!rn_tx_take(&topic, payload, &len, clock_ms + 251));
+    assert(!rn_telemetry_room(2, 1024, 11680));
+    assert(!rn_telemetry_room(16, 203, 11680));
+    assert(!rn_telemetry_room(16, 1024, 203));
+    assert(rn_telemetry_room(3, 204, 204));
     MotionPort port = {.now_us = api_now, .outputs_off = api_off};
     motion_init(&port);
     MotionFeedback f = {.now_us = board_time_us(), .line_level = {500, 0}};

@@ -21,6 +21,17 @@ static T_SPLOCK lock;
 static volatile uint32_t ready;
 static RnStatus status;
 static uint32_t published, received, tx_dropped, rx_dropped;
+/* Source9 motion and11 navigation describe the present, not queued history.
+ * Other telemetry (including mapping replies), ACKs and heartbeat retain
+ * their own MBFs. Every slot is copied under the short bridge lock. */
+typedef struct {
+    uint32_t ms;
+    uint8_t data[RN_PACKET_MAX], len;
+    bool ready;
+} LatestTelemetry;
+static LatestTelemetry latest[2];
+static unsigned next_latest;
+static uint32_t tx_coalesced;
 
 static UINT enter(void) {
     UINT key;
@@ -74,6 +85,18 @@ static uint32_t get32(const uint8_t *p) {
 bool rn_tx_push(uint8_t topic, const uint8_t *data, uint8_t len, uint32_t now) {
     if (!rn_ready() || !data || len == 0 || len > RN_PACKET_MAX || topic > RN_HB)
         return false;
+    if (topic == RN_TLM && ((data[0] >> 4) == 9 || (data[0] >> 4) == 11)) {
+        unsigned index = (data[0] >> 4) == 9 ? 0 : 1;
+        UINT key = enter();
+        if (latest[index].ready && tx_coalesced != UINT32_MAX)
+            ++tx_coalesced;
+        memcpy(latest[index].data, data, len);
+        latest[index].len = len;
+        latest[index].ms = now;
+        latest[index].ready = true;
+        leave(key);
+        return true;
+    }
     uint8_t message[70];
     put32(message, now);
     message[4] = topic;
@@ -88,6 +111,10 @@ bool rn_tx_push(uint8_t topic, const uint8_t *data, uint8_t len, uint32_t now) {
     return false;
 }
 bool rn_tx_take(uint8_t *topic, uint8_t data[RN_PACKET_MAX], uint8_t *len, uint32_t now) {
+    return rn_tx_take_budget(topic, data, len, now, true);
+}
+bool rn_tx_take_budget(uint8_t *topic, uint8_t data[RN_PACKET_MAX], uint8_t *len, uint32_t now,
+                       bool telemetry) {
     if (!rn_ready())
         return false;
     /* Bound stale-message cleanup too: never block the kernel Wi-Fi service. */
@@ -96,19 +123,42 @@ bool rn_tx_take(uint8_t *topic, uint8_t data[RN_PACKET_MAX], uint8_t *len, uint3
         INT count = tk_rcv_mbf(ack, message, TMO_POL);
         if (count < 0)
             count = tk_rcv_mbf(hb, message, TMO_POL);
-        if (count < 0)
+        if (count < 0 && telemetry)
             count = tk_rcv_mbf(tx, message, TMO_POL);
         if (count < 0)
-            return false;
+            break;
         if (count < 7 || message[5] > RN_PACKET_MAX || count != message[5] + 6 ||
             now - get32(message) > (message[4] == RN_TLM ? 250U : 2000U)) {
             count_drop(false);
+            if (n == 3)
+                return false; /* Bound cleanup without bypassing remaining ACKs. */
             continue;
         }
         *topic = message[4];
         *len = message[5];
         memcpy(data, message + 6, *len);
         return true;
+    }
+    if (telemetry) {
+        for (unsigned n = 0; n < 2; ++n) {
+            UINT key = enter();
+            unsigned index = next_latest;
+            next_latest ^= 1;
+            LatestTelemetry *slot = &latest[index];
+            bool valid = slot->ready && now - slot->ms <= 250U;
+            bool stale = slot->ready && !valid;
+            if (valid) {
+                *topic = RN_TLM;
+                *len = slot->len;
+                memcpy(data, slot->data, *len);
+            }
+            slot->ready = false;
+            leave(key);
+            if (stale)
+                count_drop(false);
+            if (valid)
+                return true;
+        }
     }
     return false;
 }
@@ -188,6 +238,7 @@ RnStatus rn_status(void) {
     result.received = received;
     result.tx_dropped = tx_dropped;
     result.rx_dropped = rx_dropped;
+    result.tx_coalesced = tx_coalesced;
     leave(key);
     return result;
 }
@@ -216,6 +267,10 @@ void rn_report(void) {
     tm_printf((UB *)"NET_ADDRESS ip=%u.%u.%u.%u broker=%u.%u.%u.%u\n", s.ipv4 & 255U,
               (s.ipv4 >> 8) & 255U, (s.ipv4 >> 16) & 255U, s.ipv4 >> 24, s.broker_ipv4 & 255U,
               (s.broker_ipv4 >> 8) & 255U, (s.broker_ipv4 >> 16) & 255U, s.broker_ipv4 >> 24);
+    tm_printf(
+        (UB *)"NET_TX coalesced=%u mem=%u errors=%u deferred=%u result=%d free_req=%u ring_used=%u tcp_free=%u nagle_off=%u admit_ms=%u complete_ms=%u\n",
+        s.tx_coalesced, s.publish_mem, s.publish_error, s.telemetry_wait, s.publish_result,
+        s.request_free, s.ring_used, s.tcp_free, s.nagle_off, s.last_admit_ms, s.last_complete_ms);
 }
 void rn_app_task(int32_t code, void *exinf) {
     (void)code;

@@ -139,7 +139,7 @@ $(error rtos_network requires SMP=1 CONSOLE=usb_cdc WIFI=cyw43 NET=lwip MQTT=1 C
 endif
 EXE_FILE := robopico_rtos_network_bench_v0_1
 ifeq ($(APP),rtos_line_wifi)
-EXE_FILE := robopico_rtos_connected_line_v0_1
+EXE_FILE := robopico_rtos_connected_line_v0_1_1
 endif
 endif
 

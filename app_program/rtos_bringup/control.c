@@ -8,6 +8,7 @@
 #endif
 #ifdef APP_RTOS_LINE
 #include "../line_navigation/line_service.h"
+#include "encoder_quality.h"
 static LineEnvelope committed_envelope;
 #endif
 
@@ -150,7 +151,8 @@ void bringup_control_task(INT code, void *exinf) {
     if (line_result != E_OK)
         tm_printf((UB *)"LINE_INIT failed result=%d; starts inhibited.\n", line_result);
     double path = 0;
-    uint32_t bad_direction_us[2] = {0, 0}, initial_invalid[2] = {0, 0};
+    uint32_t bad_direction_us[2] = {0, 0};
+    BrEncoderQuality encoder_quality[2] = {0};
 #endif
     uint64_t previous = board_time_us(), due = previous + BR_CONTROL_US;
     uint32_t clock_start = (uint32_t)previous, kernel_start = board_kernel_ms();
@@ -282,9 +284,12 @@ void bringup_control_task(INT code, void *exinf) {
                 rn_drive_begin();
 #endif
                 for (unsigned w = 0; w < 2; ++w) {
-                    initial_invalid[w] = invalid[w];
+                    br_encoder_reset(&encoder_quality[w], (uint32_t)now, edges[w], invalid[w]);
                     bad_direction_us[w] = 0;
                 }
+                key = status_enter();
+                status.encoder_kind = status.encoder_wheel = 0;
+                status_leave(key);
             }
         }
         AnalogDemand optical = {0};
@@ -322,6 +327,37 @@ void bringup_control_task(INT code, void *exinf) {
         }
 #endif
         LineEnvelope envelope = {0};
+        if (active) {
+            /* Age the quality window during Pause too. Resume is not a new
+             * session and cannot turn sparse lifetime errors into a fault. */
+            for (unsigned w = 0; w < 2; ++w) {
+                unsigned kind =
+                    br_encoder_quality(&encoder_quality[w], (uint32_t)now, edges[w], invalid[w]);
+                bad_direction_us[w] = !paused && optical.target[w] != 0 &&
+                                              speed[w] * (optical.target[w] > 0 ? 1 : -1) < -20
+                                          ? bad_direction_us[w] + dt_us
+                                          : 0;
+                if (bad_direction_us[w] >= 50000)
+                    kind = BR_ENC_DIRECTION;
+                key = status_enter();
+                status.encoder_bad[w] = encoder_quality[w].window_bad;
+                status.encoder_changes[w] = encoder_quality[w].window_changes;
+                if (!paused && kind && !status.encoder_kind) {
+                    status.encoder_kind = kind;
+                    status.encoder_wheel = w + 1;
+                }
+                status_leave(key);
+                if (!paused && kind) {
+                    bringup_stop(BR_REASON_ENCODER, BR_ENCODER);
+                    tm_printf(
+                        (UB *)"ENCODER_TRIP wheel=%u trip_kind=%u window_bad=%u window_changes=%u\n",
+                        w + 1, kind, encoder_quality[w].window_bad,
+                        encoder_quality[w].window_changes);
+                    active = false;
+                    break;
+                }
+            }
+        }
         if (active && !paused) {
             uintptr_t api_key = board_motion_lock(NULL);
             LineEnvelope previous_envelope = committed_envelope;
@@ -329,16 +365,6 @@ void bringup_control_task(INT code, void *exinf) {
             for (unsigned w = 0; w < 2; ++w)
                 rtos_line_actual_output(w, rl_cap(&previous_envelope, w, board_time_us()));
             envelope = rtos_line_power(&demand, &optical, dt);
-            for (unsigned w = 0; w < 2; ++w) {
-                bad_direction_us[w] =
-                    optical.target[w] != 0 && speed[w] * (optical.target[w] > 0 ? 1 : -1) < -20
-                        ? bad_direction_us[w] + dt_us
-                        : 0;
-                if (bad_direction_us[w] >= 50000)
-                    bringup_stop(BR_REASON_ENCODER, BR_ENCODER);
-                if (invalid[w] - initial_invalid[w] >= 8)
-                    bringup_stop(BR_REASON_ENCODER, BR_ENCODER);
-            }
             bool committed = motion_commit(demand.generation, apply_outputs, &envelope);
             for (unsigned w = 0; w < 2; ++w)
                 rtos_line_actual_output(w, committed ? rl_cap(&envelope, w, board_time_us()) : 0);

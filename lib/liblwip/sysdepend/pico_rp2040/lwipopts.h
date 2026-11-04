@@ -55,6 +55,13 @@
  * room to spare; each slot is only a few bytes. */
 #define MEMP_NUM_SYS_TIMEOUT        (LWIP_NUM_SYS_TIMEOUT_INTERNAL + 4)
 
+#ifdef APP_RTOS_NETWORK
+/* Continuous 20Hz motion must not exhaust lwIP's defaults (4 requests,
+ * 256 output bytes). The kernel bridge reserves capacity for ACK/HB too. */
+#define MQTT_REQ_MAX_IN_FLIGHT       16
+#define MQTT_OUTPUT_RINGBUF_SIZE     1024
+#endif
+
 #define LWIP_ARP                    1
 #define LWIP_ETHERNET               1
 #define LWIP_ICMP                   1

@@ -20,5 +20,15 @@ class CaptureTests(unittest.TestCase):
         self.assertEqual(r['max_heartbeat_gap_s'],3)
         self.assertEqual(r['motion_frames'],1)
         self.assertEqual(len(r['monitor_interruptions']),1)
+    def test_delivery_and_guard_are_preserved_in_summary(self):
+        rows=[{'kind':'NET_TX','mem':5,'coalesced':10},
+              {'kind':'NET_TX','mem':6,'coalesced':20},
+              {'kind':'ENCODER_GUARD','trip_kind':1},
+              {'kind':'ENCODER_TRIP','wheel':2,'trip_kind':1}]
+        r=summarize(rows,[],[])
+        self.assertEqual(r['delivery_first']['mem'],5)
+        self.assertEqual(r['delivery_last']['coalesced'],20)
+        self.assertEqual(r['encoder_guard_last']['trip_kind'],1)
+        self.assertEqual(len(r['encoder_trips']),1)
 
 if __name__=='__main__':unittest.main()

@@ -17,6 +17,8 @@ sources = [CORE / "src/navigation" / (n + ".c") for n in ("motion_api", "nav_coo
 sources.append(CORE / "src/motion/motion_executor.c")
 
 checks = [(ROOT / "testing/rtos_migration/test_bringup_policy.c", []),
+          (ROOT / "testing/rtos_migration/test_encoder_quality.c", []),
+          (ROOT / "testing/rtos_migration/test_mqtt_delivery.c", []),
           (ROOT / "testing/rtos_migration/test_line_model.c", []),
           (ROOT / "testing/rtos_migration/test_line_model_angle.c", []),
           (ROOT / "testing/rtos_migration/test_adc_reader.c", []),
@@ -46,4 +48,4 @@ subprocess.run([sys.executable, ROOT / "testing/rtos_migration/test_capture_adc_
 subprocess.run([sys.executable, ROOT / "testing/rtos_migration/test_provision_network.py"], check=True)
 subprocess.run([sys.executable, ROOT / "testing/rtos_migration/test_capture_network_bench.py"], check=True)
 subprocess.run([sys.executable, ROOT / "testing/rtos_migration/test_capture_connected_line.py"], check=True)
-print(f"PASS: {len(checks)} production-C regression programs and 49 capture/export/provisioning checks. Hardware test is still required.")
+print(f"PASS: {len(checks)} production-C regression programs plus capture/export/provisioning checks. Hardware test is still required.")

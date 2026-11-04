@@ -51,3 +51,4 @@ dashboard_session/
 **/rtos_network_session/
 **/rtos_connected_session/
 !/firmware/migration/micro_tkernel/step_03_connected_line/firmware/robopico_rtos_connected_line_v0_1.uf2
+!/firmware/migration/micro_tkernel/step_03_connected_line/firmware/v0_1_1/robopico_rtos_connected_line_v0_1_1.uf2

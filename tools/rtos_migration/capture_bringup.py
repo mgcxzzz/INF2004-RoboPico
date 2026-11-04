@@ -23,7 +23,7 @@ def parse_line(line: str) -> tuple[str, dict]:
     return kind, values
 
 
-def analyze(rows: list[dict]) -> dict:
+def analyze(rows: list[dict], *, allow_active: bool = False) -> dict:
     clocks, controls, wheels = [], [], []
     for row in rows:
         if row["kind"] == "CLOCK" and "timer_us" in row:
@@ -59,7 +59,7 @@ def analyze(rows: list[dict]) -> dict:
         issues.append("Additional control intervals exceeded 15 ms during capture.")
     if controls[-1]["tx_drop"] != controls[0]["tx_drop"] or controls[-1]["rx_drop"] != controls[0]["rx_drop"]:
         issues.append("USB diagnostics were dropped during capture; recapture before interpreting timing.")
-    if any(row.get("active", 0) for row in controls):
+    if not allow_active and any(row.get("active", 0) for row in controls):
         issues.append("This idle clock check included an active motor test; repeat it idle first.")
     # Stable clocks are only one prerequisite. Inspect the current inhibit
     # state independently, including faults raised before this capture.
@@ -70,7 +70,7 @@ def analyze(rows: list[dict]) -> dict:
         blockers.append("Motor readiness unavailable: missing/invalid flags.")
     else:
         for mask, name in [(2, "emergency stop"), (16, "stall"),
-                           (32, "late control loop"), (64, "encoder initialization")]:
+                           (32, "late control loop"), (64, "encoder feedback/quality")]:
             if flags & mask:
                 blockers.append(f"Latched fault: {name}; motor requests remain inhibited.")
         if (flags & 12) != 12:
@@ -96,7 +96,9 @@ def analyze(rows: list[dict]) -> dict:
             "timer_seconds": round(timer, 6), "control_hz": round(hz, 3),
             "new_late_intervals": new_late, "samples": len(clocks),
             "limits": "Both clocks within 3% of laptop time; 97..103Hz; no new >15ms intervals or USB drops.",
-            "scope": "USB timing and idle start-prerequisite observation; rest-time eligibility and physical stop/motor performance still require the bench tests."}
+            "scope": ("USB timing during connected motion; current stop/readiness is reported separately."
+                      if allow_active else "USB timing and idle start-prerequisite observation;") +
+                     " Rest-time eligibility and physical stop/motor performance require the bench tests."}
 
 
 def main() -> int:

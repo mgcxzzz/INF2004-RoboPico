@@ -3,15 +3,19 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
+#ifndef RN_BRIDGE_DEPENDENCIES_PROVIDED /* Host test supplies hardware/lwIP doubles. */
 #include "lwip/apps/mqtt.h"
 #include "lwip/apps/mqtt_priv.h"
 #include "lwip/ip_addr.h"
+#include "lwip/altcp.h"
 #include "lwip/sys.h"
 #include "mqtt_utk.h"
 #include "../../../libwifi/sysdepend/pico_rp2040/cyw43_utk.h"
 #include "../../../libwifi/sysdepend/pico_rp2040/network_settings.h"
 #include "../../../../app_program/network_bridge/network_bridge.h"
+#include "../../../../app_program/network_bridge/delivery_policy.h"
 #include <tm/tmonitor.h>
+#endif
 
 #if MEMP_NUM_SYS_TIMEOUT < (LWIP_NUM_SYS_TIMEOUT_INTERNAL + 4)
 #error "Reserve MQTT/application timer slots before enabling the network bridge"
@@ -25,6 +29,39 @@ static bool robot_command_topic, robot_pending;
 static uint8_t robot_rx[RN_RX_MAX], robot_copied, robot_packet[RN_PACKET_MAX];
 static uint32_t robot_total, robot_received, robot_packet_ms;
 static uint8_t robot_topic, robot_length;
+static uint32_t robot_mem, robot_errors, robot_deferred, robot_admit_ms, robot_complete_ms;
+static int8_t robot_publish_result;
+
+static void robot_increment(uint32_t *value) {
+    if (*value != UINT32_MAX)
+        ++*value;
+}
+/* Pinned lwIP private layout, inspected ONLY by this kernel owner. The
+ * allocator marks free requests by next==self. No client pointer crosses
+ * into a subsystem task. Keep this audited with SDK upgrades. */
+static unsigned robot_free_requests(void) {
+    unsigned free = 0;
+    if (robot_client)
+        for (unsigned n = 0; n < MQTT_REQ_MAX_IN_FLIGHT; ++n)
+            free += robot_client->req_list[n].next == &robot_client->req_list[n];
+    return free;
+}
+static unsigned robot_ring_used(void) {
+    if (!robot_client)
+        return 0;
+    int used = (int)robot_client->output.put - (int)robot_client->output.get;
+    return (unsigned)(used < 0 ? used + MQTT_OUTPUT_RINGBUF_SIZE : used);
+}
+static void robot_publish_done(void *arg, err_t result) {
+    (void)arg;
+    /* QoS0 callback: TCP acknowledgement activity, NOT broker/application
+     * delivery confirmation for an individual frame. */
+    if (result == ERR_OK)
+        robot_complete_ms = sys_now();
+    else
+        robot_increment(&robot_errors);
+    robot_publish_result = result;
+}
 
 static void robot_receive_topic(void *arg, const char *topic, u32_t length) {
     (void)arg;
@@ -74,6 +111,8 @@ static void robot_connected(mqtt_client_t *client, void *arg, mqtt_connection_st
     robot_result = (int16_t)result;
     robot_connecting = robot_subscribed = robot_sub_pending = false;
     if (result == MQTT_CONNECT_ACCEPTED) {
+        if (robot_client->conn)
+            altcp_nagle_disable(robot_client->conn);
         ++robot_connects;
         mqtt_set_inpub_callback(robot_client, robot_receive_topic, robot_receive_data, NULL);
         robot_subscribe();
@@ -137,10 +176,19 @@ void mqtt_utk_start(void) {
         robot_pending = false;
     }
     bool connected = robot_client && mqtt_client_is_connected(robot_client);
+    if (!connected && robot_pending) {
+        rn_publish_result(false);
+        robot_pending = false;
+    }
     if (connected && robot_subscribed) {
         for (unsigned n = 0; n < 4; ++n) {
             if (!robot_pending) {
-                if (!rn_tx_take(&robot_topic, robot_packet, &robot_length, now))
+                unsigned tcp_free = robot_client->conn ? altcp_sndbuf(robot_client->conn) : 0;
+                bool telemetry = rn_telemetry_room(robot_free_requests(),
+                                        MQTT_OUTPUT_RINGBUF_SIZE - robot_ring_used(), tcp_free);
+                if (!telemetry)
+                    robot_increment(&robot_deferred);
+                if (!rn_tx_take_budget(&robot_topic, robot_packet, &robot_length, now, telemetry))
                     break;
                 robot_packet_ms = now;
                 robot_pending = true;
@@ -154,9 +202,23 @@ void mqtt_utk_start(void) {
                                 : robot_topic == RN_HB ? "is28/hb"
                                                        : "is28/tlm";
             err_t result =
-                mqtt_publish(robot_client, topic, robot_packet, robot_length, 0, 0, NULL, NULL);
-            if (result == ERR_MEM)
+                mqtt_publish(robot_client, topic, robot_packet, robot_length, 0, 0,
+                             robot_publish_done, NULL);
+            robot_publish_result = result;
+            if (result == ERR_MEM) {
+                robot_increment(&robot_mem);
+                /* Never hold old telemetry ahead of an ACK or heartbeat.
+                 * ACK/HB retries remain bounded by their 2s freshness limit. */
+                if (robot_topic == RN_TLM) {
+                    rn_publish_result(false);
+                    robot_pending = false;
+                }
                 break;
+            }
+            if (result == ERR_OK)
+                robot_admit_ms = now;
+            else
+                robot_increment(&robot_errors);
             rn_publish_result(result == ERR_OK);
             robot_pending = false;
         }
@@ -166,6 +228,16 @@ void mqtt_utk_start(void) {
                        .ipv4 = radio.link_status == 3 ? radio.ip_addr : 0,
                        .broker_ipv4 = configured ? ip4_addr_get_u32(ip_2_ip4(&robot_broker)) : 0,
                        .connects = robot_connects,
+                       .publish_mem = robot_mem,
+                       .publish_error = robot_errors,
+                       .telemetry_wait = robot_deferred,
+                       .last_admit_ms = robot_admit_ms,
+                       .last_complete_ms = robot_complete_ms,
+                       .publish_result = robot_publish_result,
+                       .request_free = robot_free_requests(),
+                       .ring_used = robot_ring_used(),
+                       .tcp_free = connected && robot_client->conn ? altcp_sndbuf(robot_client->conn) : 0,
+                       .nagle_off = connected && robot_client->conn && altcp_nagle_disabled(robot_client->conn),
                        .mqtt_result = robot_result,
                        .link = (int8_t)radio.link_status,
                        .flags = (configured ? RN_CONFIGURED : 0) | (connected ? RN_CONNECTED : 0) |

@@ -33,7 +33,8 @@ static ER start(FP entry, PRI priority, UW processor, const char *name) {
 
 void bringup_help(void) {
 #if defined(APP_RTOS_LINE) && defined(APP_RTOS_NETWORK)
-    tm_printf((UB *)"\nROBOPICO RTOS CONNECTED LINE v0.1 | Step3B | micro T-Kernel SMP\n");
+    tm_printf((
+        UB *)"\nROBOPICO RTOS CONNECTED LINE v0.1.1 | encoder quality + MQTT delivery | Step3B | micro T-Kernel SMP\n");
     tm_printf((UB *)"Step2 v0.1.2 Continuous V2/profile1/calibration/junction policy retained.\n");
     tm_printf(
         (UB *)"USB DTR supervision REQUIRED. Dashboard Start2s/Stop/E-stop/Pause/Resume/Reset.\n");
@@ -107,6 +108,9 @@ void bringup_report(void) {
         s.speed_x10[1], s.target[0], s.target[1], s.pwm[0], s.pwm[1], board_button_pressed(20U),
         board_button_pressed(21U), bringup_irq_stop);
 #ifdef APP_RTOS_LINE
+    tm_printf((UB *)"ENCODER_GUARD bad=%u,%u changes=%u,%u trip_kind=%u trip_wheel=%u\n",
+              s.encoder_bad[0], s.encoder_bad[1], s.encoder_changes[0], s.encoder_changes[1],
+              s.encoder_kind, s.encoder_wheel);
     rtos_line_report();
 #endif
 #ifdef APP_RTOS_NETWORK
