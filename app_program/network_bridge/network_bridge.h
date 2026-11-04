@@ -5,6 +5,11 @@
 
 enum { RN_PACKET_MAX = 64, RN_RX_MAX = 8, RN_TLM = 0, RN_ACK = 1, RN_HB = 2 };
 enum { RN_CONFIGURED = 1, RN_CONNECTED = 2, RN_SUBSCRIBED = 4 };
+/* Incoming MQTT PUBLISH must be non-retained. A broker replay is never a
+ * fresh motion request; QoS/DUP bits do not change this condition. */
+static inline bool rn_live_command(bool command_topic, uint8_t fixed_header) {
+    return command_topic && (fixed_header & 0xf1U) == 0x30U;
+}
 enum { RN_URGENT_STOP = 1, RN_URGENT_ESTOP = 2, RN_URGENT_PAUSE = 4, RN_RX_BYTES = 25 };
 typedef struct {
     uint32_t polls, last_poll_ms, ipv4, broker_ipv4, connects;

@@ -19,8 +19,12 @@
   Full/oversized messages are counted and never executed as a valid prefix.
   Saturation can lose an ACK; absence of ACK does not imply Stop was ignored.
 - Fresh dashboard Start requires1s after observing this connection; an early
-  retained/replayed Start at resubscription is rejected. Commands from the
-  supplied dashboard are non-retained. Reconnect does not resume a session.
+  queued Start at resubscription is rejected. The kernel owner discards all
+  retained command publications before RX copying. The public lwIP callback
+  omits RETAIN; the port reads its pinned mqtt_priv.h fixed-header byte during
+  pub_cb, where mqtt.c also reads QoS. No upstream library is edited and no
+  private client pointer reaches application tasks. Commands from the supplied
+  dashboard are non-retained. Reconnect does not resume a session.
 - Pause keeps the session active for supervision/logging while output is zero.
   The line planner is not advanced while paused; side edges are not processed.
   Resume of ordinary tracking restarts acquisition from current pose, clears
@@ -53,6 +57,7 @@ blocking operation or subsystem API runs under the bridge's data lock.
 
 Existing protocol source1 heartbeat is1Hz, source9 motion48bytes is20Hz and
 source11 coordinator26bytes is4Hz. No change to their lengths, units or offsets.
+Each source has its own sequence counter, including mapping versus heartbeat.
 **Source9 flags bit6 (0x40) explicitly identifies the RTOS connected runtime**;
 bit7 keeps the prior run-relative stored-timestamp meaning. The shared dashboard
 uses bit6 to identify this profile instead of guessing SDK from the source ID.

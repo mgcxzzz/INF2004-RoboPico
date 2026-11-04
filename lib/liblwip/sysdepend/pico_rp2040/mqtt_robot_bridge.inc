@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 #include "lwip/apps/mqtt.h"
+#include "lwip/apps/mqtt_priv.h"
 #include "lwip/ip_addr.h"
 #include "lwip/sys.h"
 #include "mqtt_utk.h"
@@ -27,7 +28,12 @@ static uint8_t robot_topic, robot_length;
 
 static void robot_receive_topic(void *arg, const char *topic, u32_t length) {
     (void)arg;
-    robot_command_topic = topic && strcmp(topic, "is28/cmd") == 0;
+    /* The pinned lwIP mqtt.c retains the PUBLISH fixed header at rx_buffer[0]
+     * through pub_cb (it reads QoS from that same byte immediately above the
+     * callback). Its public callback omits RETAIN, so inspect it only here in
+     * the single kernel owner, never expose the private client to a task. */
+    robot_command_topic = rn_live_command(topic && strcmp(topic, "is28/cmd") == 0,
+                                          robot_client ? robot_client->rx_buffer[0] : 0);
     robot_copied = 0;
     robot_received = 0;
     robot_total = length;

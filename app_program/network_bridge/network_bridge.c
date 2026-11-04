@@ -221,7 +221,7 @@ void rn_app_task(int32_t code, void *exinf) {
     (void)code;
     (void)exinf;
     uint32_t last_hb = board_kernel_ms(), mapping = 0, previous_connects = 0;
-    uint8_t sequence = 0;
+    uint8_t sequence = 0, map_sequence = 0;
     for (;;) {
         uint32_t now = board_kernel_ms();
         __atomic_store_n(&app_last_ms, now, __ATOMIC_RELEASE);
@@ -271,18 +271,26 @@ void rn_app_task(int32_t code, void *exinf) {
             wp_ack(&command, result, state, packet);
             (void)rn_tx_push(RN_ACK, packet, WP_ACK_BYTES, now);
             if (send_map) {
-                wp_map_frame(mapping, command.id, sequence++, packet);
+                wp_map_frame(mapping, command.id, map_sequence++, packet);
                 (void)rn_tx_push(RN_TLM, packet, WP_MAP_FRAME_BYTES, now);
             }
         }
         if (net.connects != previous_connects) {
             uint8_t map[WP_MAP_FRAME_BYTES];
-            wp_map_frame(mapping, 0, sequence++, map);
+            wp_map_frame(mapping, 0, map_sequence++, map);
             (void)rn_tx_push(RN_TLM, map, sizeof(map), now);
             previous_connects = net.connects;
             force_hb = true;
         }
         if (rn_heartbeat_due(now, &last_hb, force_hb)) {
+            /* A Stop/Reset may have executed in this pass. Advertise the
+             * current supervisor state, not the snapshot before dispatch. */
+            bringup_get_status(&motion);
+            state = rn_drive_state(motion.flags, false, false, motion.reason);
+#ifdef APP_RTOS_LINE
+            state =
+                rn_drive_state(motion.flags, rn_drive_paused(), rtos_line_pending(), motion.reason);
+#endif
             UINT key = enter();
             WifiHeartbeat heartbeat = {
                 .seq = sequence++,

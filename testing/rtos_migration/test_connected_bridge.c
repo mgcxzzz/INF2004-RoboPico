@@ -177,6 +177,11 @@ static void request(unsigned code) {
 }
 int main(void) {
     assert(rn_init() == 0);
+    assert(rn_live_command(true, 0x30));
+    assert(rn_live_command(true, 0x38));
+    assert(!rn_live_command(true, 0x31));
+    assert(!rn_live_command(true, 0x39));
+    assert(!rn_live_command(false, 0x30));
     online();
     assert(rn_drive_state(BR_CLOCK_OK, false, false, BR_REASON_BOOT) == 0);
     assert(rn_drive_state(BR_ACTIVE, false, false, 0) == 1);
@@ -257,7 +262,23 @@ int main(void) {
     bringup_stop_from(BR_REASON_GP20, BR_ESTOP, MOTION_BUDDY2);
     rn_drive_process(&f);
     assert(hardware.flags & BR_ESTOP);
+    while (rn_tx_take(&topic, payload, &len, clock_ms)) {
+    }
+    unsigned motions = 0, navs = 0;
+    for (unsigned n = 0; n < 20; ++n) {
+        clock_ms += 50;
+        online();
+        rn_drive_telemetry(clock_ms);
+        while (rn_tx_take(&topic, payload, &len, clock_ms)) {
+            if ((payload[0] >> 4) == WPK_SRC_MOTION) {
+                assert(len == WPK_MOTION_BYTES && payload[2] == motions++);
+            } else if ((payload[0] >> 4) == WPK_SRC_NAV) {
+                assert(len == WPK_NAV_BYTES && payload[2] == navs++);
+            }
+        }
+    }
+    assert(motions == 20 && navs == 4); /* No artificial gaps between sources. */
     puts(
-        "PASS connected bridge: state/epochs/stale/flood STOP/priority/real coordinator Pause+Resume/late Reset");
+        "PASS connected bridge: state/epochs/stale/flood STOP/priority/real coordinator Pause+Resume/late Reset/independent telemetry sequences");
     return 0;
 }

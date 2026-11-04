@@ -132,14 +132,14 @@ void rn_drive_process(void *raw) {
 }
 void rn_drive_telemetry(uint32_t now) {
     static uint32_t last_motion, last_nav;
-    static uint8_t seq;
+    static uint8_t motion_sequence, nav_sequence;
     if (!telemetry_enabled || !rn_drive_online())
         return;
     if (now - last_motion >= 50) {
         last_motion = now;
         WifiMotionPacket p;
         rtos_line_telemetry(&p);
-        p.seq = seq++;
+        p.seq = motion_sequence++;
         uint8_t bytes[WPK_MOTION_BYTES];
         if (wpk_motion(&p, bytes))
             (void)rn_tx_push(RN_TLM, bytes, sizeof(bytes), now);
@@ -147,7 +147,7 @@ void rn_drive_telemetry(uint32_t now) {
     if (now - last_nav >= 250) {
         last_nav = now;
         MotionStatus s = motion_get_status();
-        WifiNavPacket p = {.seq = seq++,
+        WifiNavPacket p = {.seq = nav_sequence++,
                            .uptime_ms = now,
                            .owner = s.owner,
                            .mode = s.mode,
