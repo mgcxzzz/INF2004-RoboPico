@@ -5,8 +5,8 @@ import package_motor_bringup as common
 from package_line_following import linked_checks
 ROOT=common.ROOT
 CHECKPOINT=ROOT/'firmware/migration/micro_tkernel/step_05_imu'
-ART=CHECKPOINT/'firmware/v0_1_2'
-NAME='robopico_rtos_connected_imu_v0_1_2'
+ART=CHECKPOINT/'firmware/v0_1_3'
+NAME='robopico_rtos_connected_imu_v0_1_3'
 common.ART=ART
 def main():
     ART.mkdir(parents=True,exist_ok=True)
@@ -31,7 +31,9 @@ def main():
         'calibration_priority':['CRC-valid RTOS saved0x1a9000','CRC-valid SDK record28 at0x1d0000','original fallback'],
         'expected_current_car_calibration':'white122,138 black246,267 origin1; read back actual car; no forced overwrite',
         'step4_parent':'78c42c050d6bbd464a3ceef255ce1ec597b60ada',
-        'features':['core0 priority13 sole I2C1 GP2/3 owner; fixed20ms releases; original50Hz service and400Hz FIFO; copied odometry/tilt',
+        'features':['core1 priority16 sole I2C1 GP2/3 owner, below safety/nav/motion; fixed20ms releases; original50Hz service and400Hz FIFO; copied odometry/tilt',
+            'per-epoch calibration progress/best/counts, exact axis/speed restart reasons and rejected spans retained after fault; original2s/10s/40mg guards unchanged',
+            'core0 kernel service radio/timers/MQTT elapsed-wall-time diagnostics via copied application mailbox, never direct subsystem network calls',
             'RTOS-only preemption-safe transfer completion/deadline recheck; bounded2ms per wait, abort-source diagnostics, no post-timeout queue writes',
             'full32bit lifetime acquisition counters separate failed reads, late gaps and FIFO overruns; wake/transfer maxima; legacy MQTT formats retained',
             'Step5 USB-only printf formats outside locks; bounded768-byte atomic ring records, whole-record drops, copy critical-section duration diagnostics',
@@ -48,10 +50,10 @@ def main():
             '640 copied100Hz line rows;2048 ten-byte raw rows frozen at first decode;192 reference barcode events',
             'stopped USB exports, mandatory USB DTR and network-loss stop/no automatic restart'],
         'deferred':['Buddy5','powerbank/untethered supervision (deferred until final integration)','dashboard stored-row downloads'],
-        'software_checks':['36 strict C regression programs including actual USB formatter/ring bounds and nested producer integrity, recent timing buckets, RTOS transport failures, task/service Reset and barcode regression',
+        'software_checks':['37 strict C regression programs including actual calibration restart/timeout/recovery diagnostics, task/service Reset, USB record bounds, timing buckets, transport failures and barcode regression',
             'Python capture/export/provisioning checks plus pinned upstream TCP allocation experiment',
             'ARM Step4/Step5; source parity/UF2/stack/RAM gates; dashboard Step5 profile/IMU packet checks; network controls unchanged from Step4'],
-        'hardware_checks':'Step4 barcode/dispatch user-reported working; L/R line rejoin needs sufficient mat. Step5 v0.1.1 passed reads/Reset but had9/10 late gaps in two settled minutes; v0.1.2 logging correction requires stationary retest before driving/ramp.',
+        'hardware_checks':'Step4 barcode/dispatch user-reported working; L/R rejoin needs mat. Step5 v0.1.2 passed reads/Reset but had17/20 late gaps and an unexplained stationary cold-calibration timeout; v0.1.3 requires cold-boot/two-window retest before driving/ramp.',
         'linked_checks':linked}
     for name,data in [('BUILD_MANIFEST.json',manifest),('SOURCE_SHA256.json',hashes)]:
         (ART/name).write_text(json.dumps(data,indent=2)+'\n',encoding='utf-8',newline='\n')

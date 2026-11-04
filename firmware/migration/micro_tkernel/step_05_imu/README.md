@@ -1,15 +1,13 @@
-# Step5 v0.1.2 — short logging critical sections and recent IMU timing
+# Step5 v0.1.3 — isolated IMU task and calibration startup diagnostics
 
 **EXPERIMENTAL micro T-Kernel Buddy1–4 test build.** Buddy5 is not integrated.
-Prepared in parallel while Step4 v0.1.2 hardware results are pending; this is
-not acceptance of Step4, completion of migration or a main-branch release.
 Step4 barcode/turn dispatch has been reported working; full left/right line
-reacquisition still needs sufficient mat. Step5 v0.1 stationary testing found
-intermittent IMU read errors. v0.1.1 passed reads/Reset in two stationary
-windows but retained9/10 late gaps. **This update needs a stationary retest
-first: logging now formats outside interrupt-disabled locks.**
-Any further Step4 correction must also
-be carried into this checkpoint before final acceptance/merge.
+reacquisition still needs sufficient mat. This is not a main-branch release
+or acceptance of the complete migration. v0.1.2 stationary testing retained
+17/20 late IMU gaps and a cold calibration timeout, despite clean reads.
+**v0.1.3 isolates IMU work from core0 USB/Wi-Fi and records exact calibration
+restart evidence. Complete the stationary test first.** Any further Step4
+correction must also be carried into this checkpoint before final merge.
 
 ## What is included
 
@@ -24,8 +22,9 @@ be carried into this checkpoint before final acceptance/merge.
 - Kernel-owned networking, dashboard IMU/quality/ramp cards and copied
   telemetry. USB diagnostics add **IMU**, **IMU_TILT** and **RAMP** lines.
 
-The IMU is sampled in its own core0 priority13 task. The core1 control task
-remains100Hz and owns ADC/encoders/PWM; it does not perform I2C transfers.
+The IMU is sampled in its own core1 priority16 task, below motor/safety/
+navigation. The core1 control task remains100Hz and owns ADC/encoders/PWM;
+it does not perform I2C transfers.
 The motor cap420 and slew1200/s remain. Buddy4 requests temporary modifiers
 through the nav coordinator; it does not take line ownership or write PWM.
 
@@ -38,13 +37,17 @@ The current baseline detects **one wheel higher than the other** using side
 tilt. Use the same one-sided ramp and mounting as the working Buddy4 SDK
 tests. A ramp lifting both wheels equally is not the same acceptance test.
 
+The main-branch Buddy1–4 UF2 uses the Pico SDK. This migration image uses
+micro T-Kernel tasks; the shared algorithms do not by themselves guarantee
+the same timing after task/core placement changes.
+
 ## Setup
 
 1. Finish/export the current Step4 run before changing firmware. Keep its
    files and the Step4 v0.1.2 bundle for comparison/rollback.
 2. Extract this complete Step5 bundle into a NEW folder. Close the previous
    dashboard and USB serial programs. With motor power off, BOOTSEL and flash
-   `firmware/robopico_rtos_connected_imu_v0_1_2.uf2`.
+   `firmware/robopico_rtos_connected_imu_v0_1_3.uf2`.
 3. Saved Wi-Fi and front calibration remain. Do not use w/l/r/k/c. If the
    network or laptop broker IP changed, run **Setup Wi-Fi.cmd**; it sends
    settings only. Otherwise skip Wi-Fi setup.
@@ -83,7 +86,7 @@ No BOOTSEL is required for dashboard/capture/log exports.
 ## Test A — IMU readiness while stationary
 
 Keep motor power off, car flat and still for at least3seconds after boot.
-Confirm the banner **CONNECTED IMU v0.1.2 / Step5**, CLOCK PASS, network online,
+Confirm the banner **CONNECTED IMU v0.1.3 / Step5**, CLOCK PASS, network online,
 and the unchanged front calibration. Confirm:
 
 - `IMU state=2` (Idle), `valid=1`, `fault=0` after stationary calibration.
@@ -94,52 +97,55 @@ and the unchanged front calibration. Confirm:
   `IMU i2c_errors` field is only6bits and wraps; `missed` combines late gaps
   and FIFO overruns. Those old fields alone do not identify the cause.
 
-### Exact v0.1.2 stationary retest (no Start and no ramp yet)
+### Exact v0.1.3 stationary cold-boot and two-window retest
 
-1. USB power only, car flat and still. Start the dashboard and the connected
-   capture as above; leave telemetry ON and other serial apps closed.
-2. Confirm `LOGGING atomic=1` is present. Wait10seconds for boot/connection/calibration to settle. Check `state=2`,
-   `valid=1`, `fault=0` and `IMU_ACQ epoch=ready_epoch=1`.
-3. Keep capturing for60seconds. Read counters as **changes during this
-   window**: `failed`, `late_gaps`, `fifo_overruns`, `timeout_tx/stop/rx`
-   and `aborts` should not increase. `LOGGING dropped/oversize` should stay
-   constant in settled windows. Keep the initial counter values as baseline.
-   Initial magnetometer probing can produce
-   NACKs during init, so do not require lifetime abort counters to start at0.
-   `reads` should increase about3000 in60seconds. `rescued` may increase:
-   it counts completed transfers saved from the former false-timeout race.
-4. While still stopped, click dashboard **Reset once**. This version starts
-   a fresh IMU hardware init/calibration even from healthy Idle. Keep it still;
-   `epoch` advances to2 and `ready_epoch` catches up to2 after calibration.
-   A brief Calibrating state is expected. Do not press Start.
-5. Wait10seconds, then observe another60second window. Acquisition/transport
-   counters remain lifetime counters; compare changes after settling, not
-   absolute totals across the deliberate reset/init.
-6. Stop the capture with Ctrl+C. Zip the new `rtos_connected_session`
-   folder and send it (USB text, MQTT CSV and summary JSON), with your
-   observation of heartbeat and both calibration epochs. **No video, line
-   export or barcode export is needed for this stationary retest.**
+1. Motor/battery power OFF. Place the car flat before the new UF2 boots and
+   keep it still. Start the dashboard and connected capture, telemetry ON,
+   other serial apps closed. Do not press Start or use w/l/r/k/c.
+2. **Observe cold-boot status before pressing Reset.** Record at least20s
+   of capture. Confirm the v0.1.3 banner, `IMU_CAL core=1 priority=16`,
+   `NET_SERVICE core=0`, `LOGGING atomic=1`, CLOCK PASS and the expected front
+   calibration. Initial success is IMU state2/valid1/fault0, progress100/best100
+   and ready_epoch matching the actual epoch. Do not relabel epochs.
+3. If cold boot faults, leave the capture running for20seconds before using
+   one stopped Reset. The frozen IMU_CAL counters/progress/reasons/spans are
+   evidence; do not discard the run or repeatedly Reset. Mark cold boot as
+   failed even if this recovery succeeds. If recovery also fails, stop here
+   and send the capture. Do not force calibration or change thresholds.
+4. Once calibrated Idle is reached, wait10seconds, then record a60second
+   settled window. `reads` should increase about3000; failed/late_gaps/FIFO
+   overruns/timeouts/aborts and LOGGING dropped/oversize should not increase.
+   Compare deltas, since init can probe an absent optional magnetometer.
+   `rescued` can increase. Main CONTROL should stay100Hz with CLOCK PASS and
+   no new late intervals; keep checking this after the IMU core change.
+5. Click stopped dashboard Reset once, keep the car still and confirm the
+   new ready_epoch catches up after calibration. Wait10seconds, then record
+   another60second window. Keep all epochs and any initial failure evidence.
+6. Ctrl+C while stopped. Zip the entire new `rtos_connected_session` folder
+   (USB text, MQTT CSV and summary JSON) and send it, with cold-boot outcome
+   and the two actual window epochs. No video or stored-log exports needed.
 
-`IMU_TIMING` records last gap and last late gap (with its read number), plus
-current/previous10second bucket maxima and late counts. `win_seq` changes
-every10seconds; these recent buckets are separate from lifetime
-`max_gap_us`. `LOGGING max_copy_us` measures only the short masked ring copy,
-not formatting or lock-wait time. Include these lines if late gaps persist.
+New diagnostic meanings:
 
-If any errors grow, send the capture rather than repeatedly resetting or
-changing calibration. `IMU_I2C` now identifies the failing hardware phase
-and abort source; `IMU_ACQ` identifies late scheduling separately from FIFO
-overrun. These counters are included in the new capture summary.
+- IMU_CAL progress/best are stable means out of100. age_ms is total elapsed
+  time from starting that calibration, not time since the last stability
+  restart. Counters reset only on physical IMU reinitialisation and remain
+  visible after a fault, even when capture opens after startup.
+- last_reason bits1/2/4 identify forward/lateral/up axis range>40mg. Bit8
+  identifies the existing estimated-speed stationary guard. axis_restarts
+  count each affected axis; last_span_mg retains the rejected ranges.
+  Failed/empty reads, late gaps and FIFO overruns during calibration are
+  recorded separately. State6/fault3 means the unchanged10s deadline expired.
+- NET_SERVICE shows elapsed radio/link, lwIP timer and MQTT bridge service
+  durations on core0. They include interruptions/waits and are not exclusive
+  CPU time. The application only reads a copied snapshot.
+- IMU_TIMING retains recent last/late gaps and current/previous10second bucket
+  maxima; LOGGING max_copy_us measures the short masked ring copy. Lifetime
+  maxima may predate the settled windows, so retain recent bucket records.
 
-The v0.1.1 correction uses status rechecks and bounded per-phase waits with
-interrupts enabled; it does not hide errors by removing timeouts. The existing
-binary MQTT packet formats, steering, front calibration, barcode logic and
-ramp settings are retained. Physical success remains to be established.
-
-If IMU state=6/fault is nonzero, retain the capture, check GP2/GP3 power/ground
-and mounting, then use **dashboard Reset while stopped**, release buttons and
-keep the car still for a fresh2second IMU calibration. Reset does not change
-front IR calibration. Do not attempt the ramp until IMU readiness is confirmed.
+The code still uses the same2second calibration requirement,10second deadline,
+30ms timing guard, IR calibration, decoder, motor limits and ramp logic. This
+retest establishes scheduling/readiness; ramp success is not assumed.
 
 ## Test B — short flat run
 

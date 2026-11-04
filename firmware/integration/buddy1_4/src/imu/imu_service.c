@@ -23,6 +23,7 @@
 #include "src/telemetry/sys_tlm.h"
 #ifdef APP_RTOS_IMU
 #include "app_program/imu_navigation/imu_acquisition.h"
+#include "app_program/imu_navigation/calibration_diagnostics.h"
 #endif
 
 #define AXIS_LAT (3 - B4_AXIS_FWD - B4_AXIS_UP)
@@ -44,6 +45,27 @@ static b4_out_t const k_no_out;
 static imu_tlm_t const k_no_tlm;
 static b4v23_odo_t g_odo;   /* latest view, for source 2 */
 static b4v23_tilt_t g_tilt; /* ramp-assist v0.1: latest side tilt */
+#ifdef APP_RTOS_IMU
+static RiCalibration g_calibration;
+void b4v23_calibration(RiCalibration *out) {
+    *out = g_calibration;
+    out->state = g_ctx.state;
+    out->fault = g_ctx.fault;
+}
+void ri_calibration_restart(uint8_t reasons, const b4_ctx_t *ctx, const int16_t mean[3]) {
+    ++g_calibration.restarts;
+    g_calibration.last_reason = reasons;
+    g_calibration.speed_restarts += (reasons & RI_CAL_SPEED) != 0;
+    if (ctx->cal_n > g_calibration.best)
+        g_calibration.best = ctx->cal_n > 100 ? 100 : ctx->cal_n;
+    for (unsigned i = 0; i < 3; ++i) {
+        int32_t lo = mean[i] < ctx->cal_min[i] ? mean[i] : ctx->cal_min[i];
+        int32_t hi = mean[i] > ctx->cal_max[i] ? mean[i] : ctx->cal_max[i];
+        g_calibration.axis_restarts[i] += (reasons & (1U << i)) != 0;
+        g_calibration.last_span_mg[i] = (uint16_t)(hi - lo);
+    }
+}
+#endif
 
 static void send_frame(const uint8_t *f, uint32_t n) {
     if (g_send)
@@ -186,6 +208,9 @@ static b4_mission_t map_mission(b4v23_mission_t m) {
 void b4v23_init(b4v23_send_fn send, bool console) {
     g_send = send;
     g_console = console;
+#ifdef APP_RTOS_IMU
+    g_calibration = (RiCalibration){0};
+#endif
     b4_reset(&g_ctx);
     init_sensor();
     g_last_us = g_status_us = sys_time_us();
@@ -248,7 +273,27 @@ void b4v23_tick(uint64_t now_us, b4v23_mission_t mission, const b4v23_odo_t *odo
             g_in.b_fine_motion = false;
             g_in.distance_um = 0;
         }
+#ifdef APP_RTOS_IMU
+        bool calibrating = g_ctx.state == IMU_ST_CALIBRATING;
+        if (calibrating) {
+            g_calibration.failed_reads += !g_in.b_read_ok;
+            g_calibration.empty_reads += g_in.b_read_ok && !g_in.n;
+            g_calibration.late_gaps += g_in.gap_us > B4_LATE_US;
+            g_calibration.fifo_overruns += g_in.b_overrun;
+        }
+#endif
         b4_tick(&g_ctx, &g_in, &imu_out);
+#ifdef APP_RTOS_IMU
+        if (calibrating) {
+            uint32_t age_ms = (uint32_t)(now - g_ctx.cal_start_us) / 1000U;
+            g_calibration.age_ms = (uint16_t)(age_ms > 65535 ? 65535 : age_ms);
+            g_calibration.progress = g_ctx.cal_n > 100 ? 100 : g_ctx.cal_n;
+            if (g_calibration.progress > g_calibration.best)
+                g_calibration.best = g_calibration.progress;
+        }
+        g_calibration.state = g_ctx.state;
+        g_calibration.fault = g_ctx.fault;
+#endif
         b4_diag_accumulate(&g_side_diag, &g_ctx);
         processed = g_in.b_read_ok;
     }

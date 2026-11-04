@@ -49,5 +49,13 @@ class CaptureTests(unittest.TestCase):
         self.assertEqual(r['imu_timing_windows'][0]['win_max_us'],31000)
         self.assertEqual(r['imu_timing_last']['prev_max_us'],31000)
         self.assertEqual(r['logging_last']['max_copy_us'],20)
+    def test_startup_calibration_fault_and_service_timing_retained(self):
+        rows=[{'kind':'IMU_CAL','epoch':1,'core':1,'fault':3,'last_reason':2},
+              {'kind':'IMU_CAL','epoch':2,'core':1,'fault':0,'progress':100},
+              {'kind':'NET_SERVICE','max_radio_us':14000,'max_total_us':15000}]
+        r=summarize(rows,[],[])
+        self.assertEqual(r['imu_calibration_faults'][0]['last_reason'],2)
+        self.assertEqual(r['imu_calibration_last']['progress'],100)
+        self.assertEqual(r['network_service_last']['max_total_us'],15000)
 
 if __name__=='__main__':unittest.main()

@@ -26,6 +26,9 @@
 #endif
 
 #include <string.h>
+#ifdef APP_RTOS_IMU
+#include "app_program/network_bridge/network_bridge.h"
+#endif
 
 /* tm/tmonitor.h only pulls in tk/typedef.h (plain B/H/W/D-style typedefs),
  * never tk/tkernel.h/tk/syslib.h -- so it is safe in this pico-sdk/cyw43
@@ -340,6 +343,9 @@ void cyw43_utk_task(int32_t stacd, void *exinf)
 
     for(;;) {
 #if TM_NET_LWIP
+#ifdef APP_RTOS_IMU
+        uint64_t service_start = time_us_64();
+#endif
         cyw43_thread_enter();
         if(cyw43_poll != NULL) cyw43_poll();
         radio_status.poll_count++;
@@ -392,7 +398,13 @@ void cyw43_utk_task(int32_t stacd, void *exinf)
         cyw43_utk_poll_requested = 0;
         cyw43_thread_exit();
 #if TM_NET_LWIP
+#ifdef APP_RTOS_IMU
+        uint64_t radio_done = time_us_64();
+#endif
         sys_check_timeouts();
+#ifdef APP_RTOS_IMU
+        uint64_t timers_done = time_us_64();
+#endif
 #if TM_MQTT
         /* mqtt_utk_start() is idempotent (see its own connecting/is_connected
          * guard), so calling it on every poll iteration once the link is up
@@ -406,6 +418,11 @@ void cyw43_utk_task(int32_t stacd, void *exinf)
         }
 #endif
 #endif
+#endif
+#if defined(APP_RTOS_IMU) && TM_NET_LWIP
+        rn_service_sample((uint32_t)(radio_done - service_start),
+                          (uint32_t)(timers_done - radio_done),
+                          (uint32_t)(time_us_64() - timers_done));
 #endif
         (void)tk_dly_tsk(CYW43_POLL_MS);
     }

@@ -34,6 +34,12 @@ static unsigned next_latest;
 static uint32_t tx_coalesced;
 static uint32_t mapping_snapshot;
 static uint8_t source_sequence[16];
+#ifdef APP_RTOS_IMU
+static struct {
+    uint32_t samples, radio_us, timers_us, mqtt_us;
+    uint32_t max_radio_us, max_timers_us, max_mqtt_us, max_total_us;
+} service_timing;
+#endif
 
 static UINT enter(void) {
     UINT key;
@@ -43,6 +49,25 @@ static UINT enter(void) {
 static void leave(UINT key) {
     (void)ISpinUnlock(&lock, key);
 }
+#ifdef APP_RTOS_IMU
+void rn_service_sample(uint32_t radio_us, uint32_t timers_us, uint32_t mqtt_us) {
+    UINT key = enter();
+    ++service_timing.samples;
+    service_timing.radio_us = radio_us;
+    service_timing.timers_us = timers_us;
+    service_timing.mqtt_us = mqtt_us;
+    if (radio_us > service_timing.max_radio_us)
+        service_timing.max_radio_us = radio_us;
+    if (timers_us > service_timing.max_timers_us)
+        service_timing.max_timers_us = timers_us;
+    if (mqtt_us > service_timing.max_mqtt_us)
+        service_timing.max_mqtt_us = mqtt_us;
+    uint32_t total = radio_us + timers_us + mqtt_us;
+    if (total > service_timing.max_total_us)
+        service_timing.max_total_us = total;
+    leave(key);
+}
+#endif
 uint32_t rn_mapping_snapshot(void) {
     UINT key = enter();
     uint32_t value = mapping_snapshot;
@@ -292,6 +317,17 @@ void rn_report(void) {
         (UB *)"NET_MEMORY heap_used=%u heap_max=%u heap_capacity=%u heap_errors=%u tcp_queue=%u tcp_retries=%u tcp_rto_ms=%u oversize=0\n",
         s.heap_used, s.heap_max, s.heap_capacity, s.heap_errors, s.tcp_queue, s.tcp_retries,
         s.tcp_rto_ms);
+#ifdef APP_RTOS_IMU
+    UINT key = enter();
+    uint32_t sample[] = {service_timing.samples,      service_timing.radio_us,
+                         service_timing.timers_us,    service_timing.mqtt_us,
+                         service_timing.max_radio_us, service_timing.max_timers_us,
+                         service_timing.max_mqtt_us,  service_timing.max_total_us};
+    leave(key);
+    tm_printf(
+        (UB *)"NET_SERVICE core=0 samples=%u radio_us=%u timers_us=%u mqtt_us=%u max_radio_us=%u max_timers_us=%u max_mqtt_us=%u max_total_us=%u\n",
+        sample[0], sample[1], sample[2], sample[3], sample[4], sample[5], sample[6], sample[7]);
+#endif
 }
 void rn_app_task(int32_t code, void *exinf) {
     (void)code;

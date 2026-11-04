@@ -42,6 +42,11 @@ uint32_t rn_mapping_snapshot(void);
 uint8_t rn_next_sequence(unsigned source);
 void rn_app_task(int32_t code, void *exinf);
 void rn_report(void);
+#ifdef APP_RTOS_IMU
+/* Kernel Wi-Fi owner publishes elapsed service wall times; copied only,
+ * never calls network APIs from the diagnostic/application tasks. */
+void rn_service_sample(uint32_t radio_us, uint32_t timers_us, uint32_t mqtt_us);
+#endif
 void rn_command_result(uint8_t code, uint8_t result);
 uint32_t rn_barrier(void);
 unsigned rn_take_urgent(void);

@@ -4,6 +4,12 @@ Experimental Step5, based on Step4 v0.1.2. Physical acceptance of both the
 new gate and this IMU port is pending. Buddy5 and powerbank driving remain
 deferred. SDK main and the published Step4 artifacts are unchanged.
 
+Step5 v0.1.3 moves the sole IMU task to core1 priority16, below safety6,
+navigation10 and motor control14. USB/Wi-Fi remain core0 owners. The motor
+task sleeps between releases and can preempt IMU I2C work; no I/O is moved
+inside a shared lock. `IMU_CAL core` reports the actual executing core, and
+the configured priority is printed alongside it.
+
 Step5 v0.1.2 removes whole-format interrupt masking in the USB-only console:
 each tm_printf formats/expands CRLF in local768-byte storage, then uses one
 short ring lock to enqueue the record. Full or oversized records drop whole
@@ -18,11 +24,12 @@ for each hardware phase, records abort sources and stops queuing commands
 after failure. Interrupts/dispatch remain enabled. The reference SDK driver
 transport is retained behind the opposite compile-time branch.
 
-`ri_task` owns the GY-511/LSM303 on I2C1 GP2/GP3, core0 priority13. It runs
+`ri_task` owns the GY-511/LSM303 on I2C1 GP2/GP3, core1 priority16. It runs
 the existing `b4v23_tick` service every20ms, using its400Hz FIFO, axis mapping,
 2second stationary calibration, powered acceptance and detector6 parameters.
-`imu_proc.c`, `b4_config.h`, FIFO processing/configuration and binary packers
-are unchanged. A reference-service hook records acquisition outcomes.
+The `imu_proc.c` numeric/state decisions, `b4_config.h`, FIFO processing/
+configuration and binary packers are unchanged. RTOS-only passive hooks
+record acquisition outcomes and exact calibration restart reasons.
 The shared register shim selects the verified migration TIMER instead of
 the SDK timer API; SDK builds retain their original branch. RTOS diagnostics
 replace the SDK service's optional console printing.
@@ -42,7 +49,7 @@ are lifetime32bit counters and remain across Reset; the legacy six-bit
 telemetry error count can wrap or restart after IMU reinitialisation.
 
 The task sleeps to the next fixed20ms release (rebases after a full missed
-period), above the application bridge/reporting tasks and below USB/Wi-Fi.
+period), below core1 motor/safety/navigation and separate from core0 USB/Wi-Fi.
 `IMU_ACQ` separates failed FIFO reads, gaps>30ms and sensor FIFO overruns,
 with max gap/wake lateness. `IMU_I2C` reports TX/STOP/RX timeout counts,
 abort count/source/address, rescued deadline checks and maximum transfer
@@ -53,6 +60,21 @@ maximum gap, so startup maxima cannot obscure current intervals. `win_seq`
 increments on bucket rotation; buckets continue across Reset, and counters
 are copied into the same mailbox. The bucket counts use9-bit fields (at most
 501 releases per10seconds at50Hz); lifetime counters retain32-bit wrap.
+
+`IMU_CAL` retains per-initialisation epoch evidence after a fault: progress
+and best of100 stable period means, total calibration age, axis/speed restart
+counts, last rejected axis spans, failed/empty reads, late gaps and overruns.
+`last_reason` bits1/2/4 are forward/lateral/up range>40mg; bit8 is the existing
+estimated-speed stationary guard. Multiple bits can occur on one restart.
+These observations do not relax the2second/10second/40mg requirements.
+Each physical reinitialisation resets this diagnostic epoch only; fault
+evidence remains visible until an explicit Reset/reinitialisation.
+
+`NET_SERVICE` is a copied snapshot measured by the kernel Wi-Fi owner on
+core0, covering radio/link work, lwIP timeout servicing and MQTT bridge work.
+Durations include preemption and any waits: they are elapsed wall time, not
+exclusive CPU usage or proof that one phase caused a particular late sample.
+Application reporting never calls network stack APIs to obtain these values.
 
 The motion owner calls the pure `ri_ramp_request` adapter with that copied
 tilt. It uses the reference RampAssist detector6: four valid20ms samples at

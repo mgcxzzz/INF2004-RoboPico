@@ -2,6 +2,8 @@
 #define RTOS_IMU_SERVICE_H
 #include "../rtos_bringup/bringup.h"
 #include "imu_motion.h"
+#define RI_TASK_PRIORITY 16
+#define RI_TASK_PROCESSOR TP_PRC2
 void ri_init(void);
 void ri_task(INT code, void *exinf);
 void ri_report(void);

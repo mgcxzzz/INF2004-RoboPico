@@ -42,6 +42,9 @@
 #include "src/imu/imu_proc.h"
 #include "src/imu/b4_side_ramp.h"
 #include "src/imu/b4_side_filter.h"
+#ifdef APP_RTOS_IMU
+#include "app_program/imu_navigation/calibration_diagnostics.h"
+#endif
 
 #define AX_FWD (0)
 #define AX_LAT (1)
@@ -1017,6 +1020,9 @@ static void classify(b4_ctx_t *p_ctx, b4_in_t const *p_in, bool b_quiet, b4_out_
 static void calibrate(b4_ctx_t *p_ctx, int16_t const mean[3], b4_in_t const *p_in,
                       b4_out_t *p_out) {
     bool b_restart = false;
+#ifdef APP_RTOS_IMU
+    uint8_t restart_reason = 0U;
+#endif
     uint32_t i;
 
     if ((uint32_t)(p_in->t_us - p_ctx->cal_start_us) >= (B4_CAL_DEADLINE_MS * 1000U)) {
@@ -1028,6 +1034,9 @@ static void calibrate(b4_ctx_t *p_ctx, int16_t const mean[3], b4_in_t const *p_i
 
     if (p_ctx->b_rates && (iabs(p_ctx->speed_mm_s) >= B4_STILL_MM_S)) {
         b_restart = true; /* [stationary] guard          */
+#ifdef APP_RTOS_IMU
+        restart_reason |= RI_CAL_SPEED;
+#endif
     }
 
     for (i = 0U; i < 3U; i++) {
@@ -1036,10 +1045,16 @@ static void calibrate(b4_ctx_t *p_ctx, int16_t const mean[3], b4_in_t const *p_i
 
         if (((int32_t)hi - (int32_t)lo) > B4_CAL_STABLE_MG) {
             b_restart = true; /* moved: start the window again */
+#ifdef APP_RTOS_IMU
+            restart_reason |= (uint8_t)(1U << i);
+#endif
         }
     }
 
     if (b_restart) {
+#ifdef APP_RTOS_IMU
+        ri_calibration_restart(restart_reason, p_ctx, mean);
+#endif
         cal_restart(p_ctx);
     }
 

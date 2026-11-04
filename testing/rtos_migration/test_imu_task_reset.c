@@ -40,6 +40,9 @@ uint32_t board_kernel_ms(void) {
     return host_now_us / 1000;
 }
 static int tk_dly_tsk(uint32_t ms);
+static int tk_get_prc(void) {
+    return 2;
+}
 bool rn_drive_telemetry_enabled(void) {
     return true;
 }
@@ -90,6 +93,7 @@ static int tk_dly_tsk(uint32_t ms) {
     }
     if (host_now_us >= 7500000) {
         assert(checked_calibrating && shared.ready_epoch == 2 && shared.init_epoch == 2);
+        assert(shared.core == 1);
         assert(shared.tlm.state == IMU_ST_IDLE && !shared.tlm.fault);
         assert(!acq.failed_reads && !acq.late_gaps && !acq.fifo_overruns);
         assert(acq.reads > 300 && shared.ticks > 300 && sleeps < 400);

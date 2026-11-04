@@ -43,7 +43,8 @@ def linked_checks(elf: Path, network: bool = False, barcode: bool = False, imu: 
     if imu:
         for name in ('ri_task','ri_ramp_step','b4v23_tick','b4_drv_read_fifo',
                      'ri_acquisition_record','ri_acquisition_snapshot','b4_i2c_read_reg',
-                     'tm_usb_console_record','tm_usb_log_snapshot'):
+                     'tm_usb_console_record','tm_usb_log_snapshot','b4v23_calibration',
+                     'ri_calibration_restart','rn_service_sample'):
             assert name in symbols, name
     for name in ((() if network else ("cyw43_utk_task", "mqtt_client_connect")) + ("subsystem5_start", "dev_init_adc",
                  "dev_init_ser") + (() if barcode else ("barcode_analog_sample", "barcode_peak_sample"))):

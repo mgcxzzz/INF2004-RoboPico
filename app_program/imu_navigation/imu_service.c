@@ -4,9 +4,11 @@
 #include "src/imu/imu_iface.h"
 #include "imu_acquisition.h"
 #include "acquisition_schedule.h"
+#include "calibration_diagnostics.h"
 #include <string.h>
 
-/* One I2C/estimator writer on core0. Motion on core1 supplies observations;
+/* One I2C/estimator writer on core1, below motor/safety/navigation priority.
+ * Motion supplies observations;
  * all cross-task data are copied under this short lock. No I/O under lock. */
 static T_SPLOCK copy_lock;
 static struct {
@@ -14,10 +16,11 @@ static struct {
     b4v23_tilt_t tilt;
     imu_tlm_t tlm;
     RiAcquisition acquisition;
+    RiCalibration calibration;
     uint64_t observed_us;
     uint32_t invalid[2], run_serial, ticks, tick_us, max_tick_us, tx_drop;
     uint32_t init_epoch, ready_epoch, max_wake_late_us;
-    unsigned have : 1, running : 1, reset : 1;
+    unsigned have : 1, running : 1, reset : 1, core : 1;
 } shared;
 static UINT enter(void) {
     UINT key;
@@ -91,6 +94,9 @@ static bool send_frame(const uint8_t *frame, uint32_t len) {
 void ri_task(INT code, void *exinf) {
     (void)code;
     (void)exinf;
+    UINT start_key = enter();
+    shared.core = (unsigned)(tk_get_prc() - 1);
+    leave(start_key);
     b4v23_init(send_frame, false);
     bool was_running = false;
     uint32_t run_serial = 0;
@@ -135,9 +141,12 @@ void ri_task(INT code, void *exinf) {
             b4v23_tilt(&tilt);
             RiAcquisition acquisition;
             ri_acquisition_snapshot(&acquisition);
+            RiCalibration calibration;
+            b4v23_calibration(&calibration);
             key = enter();
             shared.tilt = tilt;
             shared.acquisition = acquisition;
+            shared.calibration = calibration;
             if (wake_late > shared.max_wake_late_us)
                 shared.max_wake_late_us = wake_late;
             ++shared.ticks;
@@ -153,6 +162,8 @@ void ri_report(void) {
     imu_tlm_t t = shared.tlm;
     b4v23_tilt_t tilt = shared.tilt;
     RiAcquisition acq = shared.acquisition;
+    RiCalibration cal = shared.calibration;
+    unsigned core = shared.core;
     uint32_t epoch = shared.init_epoch, ready_epoch = shared.ready_epoch,
              wake_max = shared.max_wake_late_us;
     uint32_t ticks = shared.ticks, cost = shared.tick_us, maxcost = shared.max_tick_us,
@@ -179,6 +190,12 @@ void ri_report(void) {
         (UB *)"IMU_I2C transfers=%u aborts=%u timeout_tx=%u timeout_stop=%u timeout_rx=%u rescued=%u max_transfer_us=%u last_phase=%u address=0x%x abort_source=0x%x\n",
         acq.transfers, acq.aborts, acq.timeout_tx, acq.timeout_stop, acq.timeout_rx, acq.rescued,
         acq.max_transfer_us, acq.last_phase, acq.last_address, acq.last_abort_source);
+    tm_printf(
+        (UB *)"IMU_CAL epoch=%u core=%u priority=%u state=%u fault=%u progress=%u required=100 best=%u age_ms=%u restarts=%u axis_restarts=%u,%u,%u speed_restarts=%u last_reason=0x%x last_span_mg=%u,%u,%u failed=%u empty=%u late=%u overruns=%u\n",
+        epoch, core, RI_TASK_PRIORITY, cal.state, cal.fault, cal.progress, cal.best, cal.age_ms,
+        cal.restarts, cal.axis_restarts[0], cal.axis_restarts[1], cal.axis_restarts[2],
+        cal.speed_restarts, cal.last_reason, cal.last_span_mg[0], cal.last_span_mg[1],
+        cal.last_span_mg[2], cal.failed_reads, cal.empty_reads, cal.late_gaps, cal.fifo_overruns);
     ri_ramp_report();
 }
 #endif

@@ -44,9 +44,14 @@ def verify_shared_sources(hashes):
                                   "current_sha256": hashes[relative], "change": "RTOS-only verified TIMER shim and stddef include; SDK timer branch retained."}
             continue
         if relative == prefix + "src/imu/imu_service.c":
-            assert hashes[relative] == "3212f101cc275bd0e1530931ec05b0071857e6c9635419827e3ddc1b03fb24da", relative
+            assert hashes[relative] == "c97a4510b26acd0e971870b7efe6b6ee2cdcf755dc3c2ecb475256980750934f", relative
             reviewed[relative] = {"baseline_sha256": hashlib.sha256(original).hexdigest(),
-                                  "current_sha256": hashes[relative], "change": "RTOS-only suppression of SDK console formatting and acquisition outcome hook; estimator/service numeric logic unchanged."}
+                                  "current_sha256": hashes[relative], "change": "RTOS-only console suppression, acquisition hook and passive per-epoch calibration evidence; estimator/service numeric logic unchanged."}
+            continue
+        if relative == prefix + "src/imu/imu_proc.c":
+            assert hashes[relative] == "8e4e34c8816396b0a1af61b3b944bfc5e23f6bd1caee74271134ab8ec5732043", relative
+            reviewed[relative] = {"baseline_sha256": hashlib.sha256(original).hexdigest(),
+                                  "current_sha256": hashes[relative], "change": "APP_RTOS_IMU passive exact calibration restart-reason hook; no change to guard arithmetic, state decisions or default SDK tokens."}
             continue
         if relative == prefix + "src/imu/lsm303_driver.c":
             assert hashes[relative] == "ec597798435b938a236e7d6dadc22cbece000495c9cccef0af8e7c3223e6323f", relative
