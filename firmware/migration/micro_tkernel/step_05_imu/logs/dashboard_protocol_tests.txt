@@ -1,0 +1,114 @@
+TAP version 13
+# SDK segment {"total":1801,"decoded":1762,"perSrc":{"1":54,"2":72,"4":75,"8":3,"9":719,"10":717,"11":79,"12":1,"14":42},"topics":{"is28/hb":54,"is28/tlm":1708,"is28/cmd":20,"is28/ack":19}}
+# RTOS segment {"total":1500,"decoded":1498,"perSrc":{"1":305,"2":596,"4":596,"8":1}}
+# Subtest: differential: RTOS sources 1-8 decode exactly as the RTOS dashboard decoder
+ok 1 - differential: RTOS sources 1-8 decode exactly as the RTOS dashboard decoder
+  ---
+  duration_ms: 32.3174
+  type: 'test'
+  ...
+# Subtest: differential: SDK sources 1, 8, 9-14 decode exactly as the v2.3 dashboard decoder
+ok 2 - differential: SDK sources 1, 8, 9-14 decode exactly as the v2.3 dashboard decoder
+  ---
+  duration_ms: 21.571
+  type: 'test'
+  ...
+# Subtest: SDK frames reach 64 bytes and are not truncated; RTOS 40-byte frame accepted
+ok 3 - SDK frames reach 64 bytes and are not truncated; RTOS 40-byte frame accepted
+  ---
+  duration_ms: 0.4839
+  type: 'test'
+  ...
+# Subtest: units, signs and unavailable markers are preserved
+ok 4 - units, signs and unavailable markers are preserved
+  ---
+  duration_ms: 0.4183
+  type: 'test'
+  ...
+# Subtest: profile detection: observed packet types, inference and manual override
+ok 5 - profile detection: observed packet types, inference and manual override
+  ---
+  duration_ms: 0.5172
+  type: 'test'
+  ...
+# Subtest: existing name contracts kept for both dashboards
+ok 6 - existing name contracts kept for both dashboards
+  ---
+  duration_ms: 0.8147
+  type: 'test'
+  ...
+# Subtest: real capture: SDK v2.3 + Buddy4 add-on segment decodes completely and is detected as SDK
+ok 7 - real capture: SDK v2.3 + Buddy4 add-on segment decodes completely and is detected as SDK
+  ---
+  duration_ms: 26.4489
+  type: 'test'
+  ...
+# Subtest: real capture: RTOS Buddy4 v0.9 segment decodes completely and is inferred as RTOS
+ok 8 - real capture: RTOS Buddy4 v0.9 segment decodes completely and is inferred as RTOS
+  ---
+  duration_ms: 23.2163
+  type: 'test'
+  ...
+# Subtest: real capture: last-will segment contains broker offline messages
+ok 9 - real capture: last-will segment contains broker offline messages
+  ---
+  duration_ms: 6.935
+  type: 'test'
+  ...
+# Subtest: fine barcode bank63 is valid, bank64 and reserved flags are rejected
+ok 10 - fine barcode bank63 is valid, bank64 and reserved flags are rejected
+  ---
+  duration_ms: 0.5301
+  type: 'test'
+  ...
+# Subtest: ramp constraint remains distinct from the requested target
+ok 11 - ramp constraint remains distinct from the requested target
+  ---
+  duration_ms: 2.6661
+  type: 'test'
+  ...
+# Subtest: out-of-bounds or unknown ramp target layouts are rejected
+ok 12 - out-of-bounds or unknown ramp target layouts are rejected
+  ---
+  duration_ms: 0.4468
+  type: 'test'
+  ...
+# Subtest: every C-packed frame of the combined build decodes without error
+ok 13 - every C-packed frame of the combined build decodes without error
+  ---
+  duration_ms: 1.1879
+  type: 'test'
+  ...
+# Subtest: source 15: ramp-assist and barcode-peak layouts interleave and dispatch by length/subtype
+ok 14 - source 15: ramp-assist and barcode-peak layouts interleave and dispatch by length/subtype
+  ---
+  duration_ms: 1.2264
+  type: 'test'
+  ...
+# Subtest: real SDK decode reaches source 10/11 and the mapping gives the movement
+ok 15 - real SDK decode reaches source 10/11 and the mapping gives the movement
+  ---
+  duration_ms: 0.2296
+  type: 'test'
+  ...
+# Subtest: malformed and foreign source-15 frames are rejected, never guessed
+ok 16 - malformed and foreign source-15 frames are rejected, never guessed
+  ---
+  duration_ms: 0.4295
+  type: 'test'
+  ...
+# Subtest: profile detection: source 15 is SDK-only
+ok 17 - profile detection: source 15 is SDK-only
+  ---
+  duration_ms: 0.2591
+  type: 'test'
+  ...
+1..17
+# tests 17
+# suites 0
+# pass 17
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 266.8931

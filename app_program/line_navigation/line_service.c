@@ -378,6 +378,9 @@ bool rtos_line_prepare(const MotionFeedback *f, double path, float dt, bool acti
 }
 
 void rtos_line_begin(void) {
+#ifdef APP_RTOS_IMU
+    ri_new_run();
+#endif
     start_offered = false;
     rl_begin(&planner, &input, adc[1]);
 #ifdef APP_RTOS_BARCODE
@@ -542,6 +545,9 @@ void rtos_line_record(const BringupStatus *s, const AnalogDemand *d, uint32_t co
                  (s->flags & BR_ESTOP ? 8U : 0U) | 0x40U
 #ifdef APP_RTOS_BARCODE
                  | 0x20U /* Step4 identification within the existing RTOS marker. */
+#endif
+#ifdef APP_RTOS_IMU
+                 | 0x10U /* Step5 plus Step4 features; no USB policy change. */
 #endif
         ,
         .recovery_state = (uint8_t)(tracker->search.active ? 2

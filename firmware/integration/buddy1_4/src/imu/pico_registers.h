@@ -7,7 +7,12 @@
 #define V23B4_RP2040_SHIM_H
 #include <stdbool.h>
 #include <stdint.h>
+#include <stddef.h>
+#ifdef APP_RTOS_IMU
+extern uint64_t board_time_us(void); /* Verified migration TIMER; no SDK runtime. */
+#else
 #include "hardware/timer.h" /* time_us_32() */
+#endif
 
 static inline void out_w(uint32_t a, uint32_t v) {
     *(volatile uint32_t *)(uintptr_t)a = v;
@@ -22,7 +27,11 @@ static inline void set_w(uint32_t a, uint32_t v) {
     *(volatile uint32_t *)(uintptr_t)(a + 0x2000U) = v;
 }
 static inline uint32_t sys_time_us(void) {
+#ifdef APP_RTOS_IMU
+    return (uint32_t)board_time_us();
+#else
     return time_us_32();
+#endif
 }
 
 #define V23B4_RESETS_BASE (0x4000C000U)

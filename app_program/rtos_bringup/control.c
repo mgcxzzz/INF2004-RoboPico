@@ -2,6 +2,9 @@
  * APP_RTOS_LINE adds the sensor/line provider. Both cross the unchanged shared
  * API/coordinator. Only this task calculates normal motor output. */
 #include "bringup.h"
+#ifdef APP_RTOS_IMU
+#include "../imu_navigation/imu_service.h"
+#endif
 #include "src/motion/continuous_drive.h"
 #ifdef APP_RTOS_NETWORK
 #include "../network_bridge/network_bridge.h"
@@ -64,6 +67,10 @@ bool bringup_clear_latch(void) {
         stopped_us = (uint32_t)board_time_us();
     }
     status_leave(key);
+#ifdef APP_RTOS_IMU
+    if (ok)
+        ri_reset_request();
+#endif
     return ok;
 }
 void bringup_stop(uint8_t reason, uint16_t latch) {
@@ -292,6 +299,14 @@ void bringup_control_task(INT code, void *exinf) {
                 status_leave(key);
             }
         }
+#ifdef APP_RTOS_IMU
+        MotionStatus imu_status = motion_get_status();
+        bool imu_running =
+            active && !paused && imu_status.session_active && imu_status.mode == MOTION_AUTO;
+        ri_observe(&feedback, invalid, dt_us, imu_running);
+        if (!imu_running)
+            ri_ramp_halt(now);
+#endif
         AnalogDemand optical = {0};
         if (active && paused) {
             rtos_line_feedback(&feedback, NULL);

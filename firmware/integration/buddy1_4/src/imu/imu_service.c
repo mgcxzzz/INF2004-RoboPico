@@ -122,6 +122,7 @@ static void init_sensor(void) /* task_imu.c init_sensor() */
     bool b_mag = false;
     bool b_ok = b4_drv_init(&chip, &b_mag);
     b4_out_t out;
+#ifndef APP_RTOS_IMU
     if (g_console) {
         if (b_ok)
             printf(
@@ -132,6 +133,7 @@ static void init_sensor(void) /* task_imu.c init_sensor() */
             printf("[imu] GY-511 not answering on I2C1 (SDA GP%u, SCL GP%u)\n",
                    (unsigned)B4_I2C_SDA_PIN, (unsigned)B4_I2C_SCL_PIN);
     }
+#endif /* RTOS uses copied diagnostics, never SDK/newlib console output. */
     out = k_no_out;
     b4_init_done(&g_ctx, b_ok, sys_time_us(), &out);
     handle(&out, sys_time_us());

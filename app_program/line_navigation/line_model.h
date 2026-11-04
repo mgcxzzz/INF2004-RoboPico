@@ -18,6 +18,9 @@
 #include "src/motion/ramp_profile.h"
 #include "src/barcode/barcode_record.h"
 #include "config/calibration_presets.h"
+#ifdef APP_RTOS_IMU
+#include "../imu_navigation/imu_motion.h"
+#endif
 
 enum {
     RL_PROFILE = 1,
@@ -211,13 +214,22 @@ static inline LineEnvelope rl_power(LinePower *s, const LinePlanner *p, const Ci
                       .maneuver = maneuver,
                       .reverse =
                           barcode_nav_action(&p->nav, p->nav.action) == 'U' && c->phase == J_TURN};
+#ifdef APP_RTOS_IMU
+    MotionRampAssist approved =
+        ri_ramp_step(i->now, dt, continuous && !recovering, i->speed, d->target, s->drive);
+#endif
     for (unsigned w = 0; w < 2; ++w) {
         bool loaded = turning || effort == (int)w;
         if (loaded)
             e.loaded |= 1U << w;
         if (!continuous)
             continuous_leave(&s->drive[w], &s->wheel[w], w, d->target[w], i->speed[w],
+#ifdef APP_RTOS_IMU
+                             ri_unboosted(&s->drive[w], s->output[w]));
+        motion_apply_ramp_profile(&s->drive[w], &approved);
+#else
                              s->output[w]);
+#endif
         if (!maneuver)
             maneuver_leave(&s->maneuver[w], &s->wheel[w], d->target[w]);
     }

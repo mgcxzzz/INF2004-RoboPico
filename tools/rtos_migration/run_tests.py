@@ -31,6 +31,11 @@ for name, extra in [("test_continuous_drive", []), ("test_interface", sources),
                     ("test_uturn", [])]:
     checks.append((CORE / "tests/unit" / (name + ".c"), extra))
 checks.extend([
+    (ROOT / "testing/rtos_migration/test_rtos_ramp_bridge.c", sources + [CORE / "src/network/wifi_protocol.c"]),
+    (ROOT / "testing/rtos_migration/test_rtos_ramp.c", sources + [CORE / "src/network/wifi_protocol.c"]),
+    (ROOT / "testing/rtos_migration/test_imu_service_rtos.c", [CORE / "tests/imu/fake_drv.c", CORE / "src/imu/imu_service.c", CORE / "src/imu/imu_proc.c", CORE / "src/imu/b4_pack.c", CORE / "src/telemetry/b2_pack.c"]),
+    (CORE / "tests/imu/test_powered_acceptance.c", []),
+    (CORE / "tests/ramp/test_ramp_assist.c", []),
     (ROOT / "testing/rtos_migration/test_barcode_gate.c", sources + [CORE / "src/network/wifi_protocol.c"]),
     (ROOT / "testing/rtos_migration/test_barcode_gate_reference.c", sources + [CORE / "src/network/wifi_protocol.c"]),
     (ROOT / "testing/rtos_migration/test_junction_sensor.c", sources + [CORE / "src/network/wifi_protocol.c"]),
@@ -44,10 +49,11 @@ checks.extend([
     (CORE / "tests/unit/test_wifi_settings.c", [])])
 for source, extra in checks:
     exe = OUT / (source.stem + (".exe" if os.name == "nt" else ""))
-    subprocess.run([*cc, *host_float, "-std=c11", "-Wall", "-Wextra", "-Werror", "-O2", "-UNDEBUG",
+    profile_flags = ["-DAPP_RTOS_IMU=1"] if source.stem == "test_imu_service_rtos" else []
+    subprocess.run([*cc, *host_float, *profile_flags, "-std=c11", "-Wall", "-Wextra", "-Werror", "-O2", "-UNDEBUG",
                     "-DCIRCUIT_SWEEP_SEARCH=1", "-I" + str(ROOT), "-I" + str(CORE), "-I" + str(CORE / "config"),
                     source, *extra, "-lm", "-o", exe], check=True)
-    subprocess.run([exe], check=True)
+    subprocess.run([exe], check=True, cwd=OUT if source.stem in ("test_imu_service_rtos", "test_ramp_assist") else ROOT)
 subprocess.run([sys.executable, ROOT / "testing/rtos_migration/test_capture_bringup.py"], check=True)
 subprocess.run([sys.executable, ROOT / "testing/rtos_migration/test_export_line_log.py"], check=True)
 subprocess.run([sys.executable, ROOT / "testing/rtos_migration/test_capture_adc_readiness.py"], check=True)

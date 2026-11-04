@@ -15,8 +15,8 @@ ART = CHECKPOINT / "firmware"
 common.ART = ART
 
 
-def linked_checks(elf: Path, network: bool = False, barcode: bool = False) -> dict:
-    expected='rtos_barcode_wifi' if barcode else 'rtos_line_wifi' if network else 'rtos_line'
+def linked_checks(elf: Path, network: bool = False, barcode: bool = False, imu: bool = False) -> dict:
+    expected='rtos_imu_wifi' if imu else 'rtos_barcode_wifi' if barcode else 'rtos_line_wifi' if network else 'rtos_line'
     assert (ROOT/'build_make/.build_profile').read_text(encoding='utf-8').strip().startswith(expected+'-'), \
         'Rebuild the requested profile before packaging so stack-usage files match its ELF.'
     tool = ROOT.parent / ".buddy2-tools/arm-gcc/bin/arm-none-eabi-nm.exe"
@@ -40,6 +40,9 @@ def linked_checks(elf: Path, network: bool = False, barcode: bool = False) -> di
     if barcode:
         for name in ('motion_accept_barcode','bp_window','rtos_line_side_poll'):
             assert name in symbols,name
+    if imu:
+        for name in ('ri_task','ri_ramp_step','b4v23_tick','b4_drv_read_fifo'):
+            assert name in symbols, name
     for name in ((() if network else ("cyw43_utk_task", "mqtt_client_connect")) + ("subsystem5_start", "dev_init_adc",
                  "dev_init_ser") + (() if barcode else ("barcode_analog_sample", "barcode_peak_sample"))):
         assert name not in symbols, name
@@ -54,7 +57,8 @@ def linked_checks(elf: Path, network: bool = False, barcode: bool = False) -> di
     usage = {}
     for directory in (ROOT / "build_make/mtkernel_3/app_program/rtos_bringup",
                       ROOT / "build_make/mtkernel_3/app_program/line_navigation",
-                      *([ROOT / "build_make/mtkernel_3/app_program/network_bridge"] if network else [])):
+                      *([ROOT / "build_make/mtkernel_3/app_program/network_bridge"] if network else []),
+                      *([ROOT / "build_make/mtkernel_3/app_program/imu_navigation"] if imu else [])):
         for path in directory.glob("*.su"):
             for line in path.read_text(encoding="utf-8").splitlines():
                 label, size, kind = line.rsplit("\t", 2)

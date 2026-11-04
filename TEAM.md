@@ -1,5 +1,15 @@
 # Team and subsystems
 
+> **Step5 migration override (experimental):** `APP=rtos_imu_wifi` extends
+> Step4 v0.1.2 with a sole I2C1 GP2/GP3 owner, core0 priority18,20ms IMU task.
+> Core1 still exclusively drains encoders and controls ADC/motors. Odometry,
+> mission edges and tilt cross cores as locked copied snapshots. Buddy4 ramp
+> requests use the shared nav coordinator and expiring profile API; no IMU
+> motor writes or application lwIP calls. USB supervision remains required;
+> untethered policy is deferred. IMU faults retain baseline diagnostic policy.
+> Step4 hardware acceptance and Step5 hardware acceptance are separate and
+> pending; Buddy5 is not integrated. See the Step5 test guide.
+
 > **Step4 migration override:** `APP=rtos_barcode_wifi` adds both reference
 > Code39 decoders to the existing core1 priority14 ADC/line owner. GP27 keeps
 > its2ms four-sample acquisition; there is no competing ADC task. Buddy3

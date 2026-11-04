@@ -1,0 +1,73 @@
+PASS S01 first automatic publish is the read-only mapping query
+PASS S02 retained heartbeat does not make the car online
+PASS S03 fresh heartbeat shows car: online
+PASS S04 SDK packets select the SDK profile
+PASS S05 RTOS Safety shown as not provided on SDK firmware, never Normal
+PASS S06 SDK measured/target speed, PWM, ADC, levels with unavailable marker
+PASS S07 live right-minus-left height shown with sign
+PASS S08 profile notes the Buddy4 add-on
+PASS S09 accepted hump peak shown separately
+PASS S10 later live height does not replace the accepted ramp height
+PASS S11 pitch and roll shown
+PASS S12 accepted START reported as acceptance, state still from telemetry
+PASS S13 SDK fault displayed
+PASS S14 accepted Reset with lingering v2.3 per-run Fault is explained, not hidden
+PASS S15 RTOS Safety frame alongside SDK frames is flagged, not shown as Normal
+PASS S16 restart clears SDK live values
+PASS S17 restart clears Buddy2/Buddy4 live values with a reason
+PASS S18 restart keeps export history
+PASS S19 restart resets observed profile (mixed state cleared)
+PASS S20 Recording panel, markers, evidence bundle and Firmware profile card are gone (not hidden)
+PASS S21 compact firmware badge kept, with observed sources in its tooltip
+PASS S22 SDK drive profile (1 = normal 45) still shown in motion telemetry
+PASS S23 64-byte SDK frame retained whole (no 40-byte truncation)
+PASS S24 command from another client is surfaced
+PASS S25 Clear visible keeps message log, frames and events
+PASS S26 retained/dropped history status shown in Exports
+PASS S27 telemetry CSV: v2.3 columns plus src/seq/laptop time, all session rows, no label column
+PASS S28 telemetry JSON: motion, events, Buddy4 rows and limits; no markers
+PASS S29 event JSON includes commands and ACKs with capture limits
+PASS S30 all-frames CSV has laptop ISO time, Pico uptime, source/sequence, run ID and decoded data
+PASS S31 Buddy4 CSV separates live height and accepted peak
+PASS S32 all-frames JSON covers the whole retained session
+PASS S33 stale coordinator status disables stored downloads with a reason
+PASS S34 stale SDK motion marked
+PASS S35 only GET was sent automatically; START and RESET only when clicked
+PASS S36 disconnect: car link unknown and live values cleared
+PASS R01 RTOS profile and Safety Normal from a fresh frame
+PASS R02 stored downloads explained as SDK-only; STEER test enabled on RTOS
+PASS R03 stale Safety never shown as Normal
+PASS R04 stale navigation falls back to heartbeat state
+PASS R05 last will: car offline and live values cleared
+PASS R06 RTOS Buddy4 build (shared sources only) inferred as RTOS
+PASS R07 mobile layout has no horizontal overflow
+PASS C01 connected RTOS marker identifies runtime despite reusing source9/11
+PASS C02 idle ready heartbeat is not turned into Running by motion packets
+PASS C03 paused heartbeat remains Paused with source11 paused mode
+PASS C04 emergency-stop heartbeat remains Emergency Stop
+PASS C05 connected result4 says Busy rather than falsely diagnosing queue full
+PASS C06 older RTOS queue-full interpretation remains unchanged
+PASS C07 Step4 marker labels barcode migration without claiming IMU completion
+PASS C08 Step4 retains connected Busy interpretation and disabled stored dashboard download
+PASS C09 a reboot to the comparison image clears the Step4 badge
+PASS R08 no page or console errors
+
+53 passed, 0 failed (simulated MQTT; no broker, Pico or car)
+PASS P01 before any decode the B3 letter shows no frames
+PASS P02 Last decoded letter (B3) updates from the real SDK decode (sources 10/11)
+PASS P03 mapped movement from the confirmed mapping readback
+PASS P04 progress card: latest letter and pending action
+PASS P05 peak decoder card shows the queued letter
+PASS P06 ramp-assist card decodes the interleaved ramp frames
+PASS P07 combined build identified (peak bit7 + ramp detector/estimator)
+PASS P08 SDK profile selected
+PASS P09 timeline has the peak read and the run-start announce
+PASS P10 connectivity test counts ramp and peak source-15 streams separately, 0 missing each
+PASS P14 ramp requested/effective targets are visible
+PASS P15 provisional status and missing Buddy5 are explicit
+PASS P11 unknown source-15 layout is rejected
+PASS P12 car restart: mapping unknown again, build/peak cards cleared
+PASS P16 restart clears previous ramp target data
+PASS P13 no page or console errors
+
+16 passed, 0 failed (simulated MQTT; frames from the real C packers)

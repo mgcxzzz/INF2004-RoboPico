@@ -1,4 +1,7 @@
 #include "bringup.h"
+#ifdef APP_RTOS_IMU
+#include "../imu_navigation/imu_service.h"
+#endif
 #ifdef APP_RTOS_NETWORK
 #include "../network_bridge/network_bridge.h"
 #endif
@@ -32,7 +35,20 @@ static ER start(FP entry, PRI priority, UW processor, const char *name) {
 }
 
 void bringup_help(void) {
-#if defined(APP_RTOS_BARCODE)
+#if defined(APP_RTOS_IMU)
+    tm_printf(
+        (UB *)"\nROBOPICO RTOS CONNECTED IMU v0.1 | Step5 EXPERIMENTAL | micro T-Kernel SMP\n");
+    tm_printf((
+        UB *)"Based on Step4 v0.1.2 (physical acceptance pending). Buddy1-4; Buddy5 NOT integrated.\n");
+    tm_printf((
+        UB *)"GY-511 I2C1 GP2/GP3,50Hz detector6 task; keep still2s. Dashboard Reset restarts IMU calibration.\n");
+    tm_printf((
+        UB *)"Ramp modifier: Buddy4 -> NAV -> MOTION; bounded boost/hold/push;420 cap. IMU faults remove assistance, not an unconditional global stop.\n");
+    tm_printf((
+        UB *)"Continuous V2/front calibration/barcode/junction110mm and relaxed gate retained. USB DTR supervision REQUIRED.\n");
+    tm_printf((
+        UB *)"Same dashboard/capture and stopped b/d exports. n=status, s/GP21=Stop,e/GP20=E-stop; no powerbank driving yet.\n");
+#elif defined(APP_RTOS_BARCODE)
     tm_printf((UB *)"\nROBOPICO RTOS CONNECTED BARCODE v0.1.2 | Step4 | micro T-Kernel SMP\n");
     tm_printf((UB *)"Independent contrast junction sensor; 4mm white re-arm; sensor ahead110mm.\n");
     tm_printf((
@@ -132,6 +148,9 @@ void bringup_report(void) {
 #ifdef APP_RTOS_NETWORK
     rn_report();
 #endif
+#ifdef APP_RTOS_IMU
+    ri_report();
+#endif
 }
 
 void bringup_status_task(INT code, void *exinf) {
@@ -169,6 +188,9 @@ EXPORT INT usermain(void) {
                              .now_us = port_now};
     motion_init(&port);
     ER result = bringup_create_objects();
+#ifdef APP_RTOS_IMU
+    ri_init();
+#endif
 #ifdef APP_RTOS_NETWORK
     if (result == E_OK)
         result = rn_init();
@@ -181,6 +203,10 @@ EXPORT INT usermain(void) {
 #endif
     if (result == E_OK)
         result = start((FP)bringup_control_task, 14, TP_PRC2, "motion");
+#ifdef APP_RTOS_IMU
+    if (result == E_OK)
+        result = start((FP)ri_task, 18, TP_PRC1, "imu-terrain");
+#endif
     if (result == E_OK)
         result = start((FP)bringup_safety_task, 6, TP_PRC2, "safety");
     if (result == E_OK)

@@ -38,6 +38,16 @@ def verify_shared_sources(hashes):
             preserved.append(relative)
             continue
         expected = original.decode("utf-8")
+        if relative == prefix + "src/imu/pico_registers.h":
+            assert hashes[relative] == "73fb9058c6e3ac24786ebf6b81cda774a1cd56c0904722ef9751d126c956d1ce", relative
+            reviewed[relative] = {"baseline_sha256": hashlib.sha256(original).hexdigest(),
+                                  "current_sha256": hashes[relative], "change": "RTOS-only verified TIMER shim and stddef include; SDK timer branch retained."}
+            continue
+        if relative == prefix + "src/imu/imu_service.c":
+            assert hashes[relative] == "1bc53c2b89021acab0b39fb5dc538fedad17c90520f4d71eef17156af492b613", relative
+            reviewed[relative] = {"baseline_sha256": hashlib.sha256(original).hexdigest(),
+                                  "current_sha256": hashes[relative], "change": "RTOS-only suppression of SDK console formatting; estimator/service numeric logic unchanged."}
+            continue
         if relative == prefix + "src/barcode/barcode_nav.h":
             # Exact reviewed source fingerprint: default SDK behaviour retained;
             # Step4 opts into110mm/external sensor/confirmation-time eligibility.

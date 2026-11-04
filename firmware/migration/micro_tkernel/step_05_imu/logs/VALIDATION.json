@@ -1,0 +1,20 @@
+{
+  "date": "2026-11-04",
+  "step4_parent": "78c42c050d6bbd464a3ceef255ce1ec597b60ada",
+  "step4_uf2_sha256_published": "53edcc6f47bd4feda8642480a77f1e4944f91af157820bf8eb16dd01a59f55a9",
+  "step4_uf2_sha256_rebuilt": "53edcc6f47bd4feda8642480a77f1e4944f91af157820bf8eb16dd01a59f55a9",
+  "step4_byte_identical": true,
+  "production_c_programs_passed": 33,
+  "dashboard_protocol_tests_passed": 17,
+  "dashboard_browser": "both local simulated MQTT suites passed; see dashboard_browser_tests.txt",
+  "new_profile_marker_test": "PASS Step5/Step4/Step3B reset compatibility",
+  "imu_c_frames_dashboard_decode": {
+    "source2": 29,
+    "source4": 35,
+    "errors": 0,
+    "accepted_humps": 1,
+    "max_height_mm": 10
+  },
+  "hardware_acceptance": "NOT RUN: stationary physical sensor/calibration, actual50Hz I2C/task timing,100Hz control, heartbeat, ramp crossing and hump estimate require the car. Step4 v0.1.2 acceptance also remains pending.",
+  "powerbank_policy": "unchanged mandatory USB supervision; deferred to final integration"
+}
