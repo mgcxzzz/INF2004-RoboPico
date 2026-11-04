@@ -18,7 +18,9 @@ at a separate bare cross. L/R and sharp bends still need the extended-mat test.
 2. Stop the robot, disconnect battery/motor power and close serial programs.
    Hold BOOTSEL while connecting USB; copy
    `firmware/robopico_rtos_connected_line_v0_1.uf2` onto RPI-RP2.
-3. Run **Start dashboard.cmd** and keep its broker/server terminal open.
+3. Close the previous bundle's dashboard/server terminal first so port8765
+   serves this updated dashboard. Run **Start dashboard.cmd** from the new
+   bundle and keep its broker/server terminal open.
    Mac: `python3 tools/dashboard/run_dashboard.py`.
 4. Reuse the saved Wi-Fi settings if SSID/password and the laptop broker IPv4
    are unchanged. Otherwise run **Setup Wi-Fi.cmd**, or on Mac
