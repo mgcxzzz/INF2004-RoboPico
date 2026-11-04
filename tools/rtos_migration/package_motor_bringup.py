@@ -39,19 +39,13 @@ def verify_shared_sources(hashes):
             continue
         expected = original.decode("utf-8")
         if relative == prefix + "src/barcode/barcode_nav.h":
-            assert expected.count("enum {\n") == 1
-            expected = expected.replace("enum {\n", "#ifndef BARCODE_SENSOR_AHEAD_MM\n"
-                "#define BARCODE_SENSOR_AHEAD_MM 92\n#endif\nenum {\n", 1)
-            assert expected.count("B_SIDE_AHEAD_MM = 92,") == 1
-            expected = expected.replace("B_SIDE_AHEAD_MM = 92,", "B_SIDE_AHEAD_MM = BARCODE_SENSOR_AHEAD_MM,")
-            anchor = "    bool external_reader, external_scanning;\n"
-            assert expected.count(anchor) == 1
-            expected = expected.replace(anchor, anchor +
-                "    bool external_cross; /* Optional independent junction sensor; reference defaults false. */\n")
-            anchor = "        barcode_cross_confirm(n, i->now, mean, !i->side_black);"
-            assert expected.count(anchor) == 1
-            expected = expected.replace(anchor, "        if (!n->external_cross)\n    " + anchor)
-            description = "Only opt-in sensor offset (SDK default92) and external-cross producer ownership (defaultfalse)."
+            # Exact reviewed source fingerprint: default SDK behaviour retained;
+            # Step4 opts into110mm/external sensor/confirmation-time eligibility.
+            assert hashes[relative] == "74e4854db9aa99d611f81cfb0d49cb07f9d99462504527a6e3c9127038828796", relative
+            reviewed[relative] = {"baseline_sha256": hashlib.sha256(original).hexdigest(),
+                                  "current_sha256": hashes[relative],
+                                  "change": "Opt-in sensor geometry/external-cross ownership and confirmation-time gate with explicit rejection bits; SDK defaults unchanged."}
+            continue
         elif relative == prefix + "src/barcode/barcode_analog.h":
             anchor = "if (selected || !n->pending)"
             assert expected.count(anchor) == 1

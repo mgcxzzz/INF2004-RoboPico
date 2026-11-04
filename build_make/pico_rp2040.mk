@@ -142,7 +142,7 @@ ifeq ($(APP),rtos_line_wifi)
 EXE_FILE := robopico_rtos_connected_line_v0_1_2
 endif
 ifeq ($(APP),rtos_barcode_wifi)
-EXE_FILE := robopico_rtos_connected_barcode_v0_1_1
+EXE_FILE := robopico_rtos_connected_barcode_v0_1_2
 endif
 endif
 

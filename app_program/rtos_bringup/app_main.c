@@ -33,8 +33,10 @@ static ER start(FP entry, PRI priority, UW processor, const char *name) {
 
 void bringup_help(void) {
 #if defined(APP_RTOS_BARCODE)
-    tm_printf((UB *)"\nROBOPICO RTOS CONNECTED BARCODE v0.1.1 | Step4 | micro T-Kernel SMP\n");
+    tm_printf((UB *)"\nROBOPICO RTOS CONNECTED BARCODE v0.1.2 | Step4 | micro T-Kernel SMP\n");
     tm_printf((UB *)"Independent contrast junction sensor; 4mm white re-arm; sensor ahead110mm.\n");
+    tm_printf((
+        UB *)"Gate at confirmed cross; no300ms/3deg/speed dwell. Reject flags:1=legacy approach,2=clearance,4=line lost,8=not visible,16=search.\n");
     tm_printf((UB *)"Original63-bank + peak Code39, Buddy3 -> NAV -> MOTION; live A-Z mapping.\n");
     tm_printf((
         UB *)"Continuous V2/profile1/calibration/Step2 junction policy retained; IMU/ramp/Buddy5 deferred.\n");

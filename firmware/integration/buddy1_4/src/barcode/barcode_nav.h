@@ -13,6 +13,9 @@
 #ifndef BARCODE_SENSOR_AHEAD_MM
 #define BARCODE_SENSOR_AHEAD_MM 92
 #endif
+#ifndef BARCODE_CONFIRM_GATE
+#define BARCODE_CONFIRM_GATE 0
+#endif
 enum {
     B_CROSS_MIN_MM = 11,
     B_CROSS_MAX_MM = 30,
@@ -230,6 +233,12 @@ static inline void barcode_straight_gate(Circuit *c, BarcodeNav *n, const Circui
 #ifdef CIRCUIT_SWEEP_SEARCH
     visible = visible && !c->follower.core.white;
 #endif
+    if (BARCODE_CONFIRM_GATE) {
+        /* Step4: eligibility is rechecked at confirmation, not latched at
+         * the first edge. Ordinary corrections need no yaw/speed dwell. */
+        n->allow_cross = visible && i->path >= c->clear_path;
+        return;
+    }
     bool straight = visible && i->speed[0] >= 10 && i->speed[1] >= 10;
     if (!straight)
         c->gate_timing = false;
@@ -248,6 +257,28 @@ static inline void barcode_straight_gate(Circuit *c, BarcodeNav *n, const Circui
     }
     n->allow_cross =
         c->gate_timing && i->now - c->gate_since >= C_GATE_US && i->path >= c->clear_path;
+}
+enum {
+    B_GATE_APPROACH = 1,
+    B_GATE_CLEARANCE = 2,
+    B_GATE_LINE_LOST = 4,
+    B_GATE_NOT_VISIBLE = 8,
+    B_GATE_SEARCH = 16
+};
+static inline unsigned barcode_cross_rejection(const Circuit *c, const BarcodeNav *n,
+                                                const CircuitInput *i, const AnalogDemand *d) {
+    unsigned flags = !BARCODE_CONFIRM_GATE && !n->cross_gate ? B_GATE_APPROACH : 0;
+    if (i->path < c->clear_path)
+        flags |= B_GATE_CLEARANCE;
+#ifdef CIRCUIT_SWEEP_SEARCH
+    if (c->follower.core.white)
+        flags |= B_GATE_LINE_LOST;
+    if (BARCODE_CONFIRM_GATE && c->follower.search.active)
+        flags |= B_GATE_SEARCH;
+#endif
+    if (BARCODE_CONFIRM_GATE && d->level[0] < 400 && d->level[1] < 400)
+        flags |= B_GATE_NOT_VISIBLE;
+    return flags;
 }
 /* Right turns reuse the proven rolling-left geometry in a virtual mirror:
    swap front calibration, ADCs, wheel distances/speeds, then swap outputs.
@@ -288,17 +319,14 @@ static inline AnalogDemand barcode_circuit_step(Circuit *c, BarcodeNav *n,
         barcode_straight_gate(c, n, i, &d);
         if (n->cross_ready) {
             n->cross_ready = false;
+            unsigned rejection = barcode_cross_rejection(c, n, i, &d);
             if (!n->pending) {
                 ++n->straight_crosses;
                 barcode_event(n, B_NO_COMMAND, i->now, mean, n->cross_width, 0, 'S', 0, NULL);
-            } else if (!n->cross_gate || i->path < c->clear_path
-#ifdef CIRCUIT_SWEEP_SEARCH
-                       || c->follower.core.white
-#endif
-            ) {
+            } else if (rejection) {
                 ++c->ignored;
-                barcode_event(n, B_GATE_REJECT, i->now, mean, n->cross_width, n->pending, 0, 0,
-                              NULL);
+                barcode_event(n, B_GATE_REJECT, i->now, mean, n->cross_width, n->pending, 0,
+                              BARCODE_CONFIRM_GATE ? rejection : 0, NULL);
             } else {
                 n->action = n->pending;
                 n->executing_action = barcode_nav_action(n, n->pending);

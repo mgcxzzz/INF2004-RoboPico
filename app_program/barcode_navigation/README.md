@@ -38,6 +38,19 @@ width11–30mm,4mm white confirmation, straight gate and Step2 turn/acquisition
 policy still apply. Motor targets continue through the shared coordinator
 and the single motion writer; this folder never writes PWM.
 
+Step4 v0.1.2 opts into `BARCODE_CONFIRM_GATE=1`: the confirmed crossing is
+evaluated using current line visibility, no active line search/lost-line
+state, and the existing150mm post-turn clearance. The old300ms/3degree
+heading qualification, minimum10mm/s measured wheel speeds and latched
+leading-edge veto are not prerequisites in this profile. The independent
+sensor still requires a verified mapped label, fresh4mm white,11–30mm black
+and4mm trailing white. Other profiles/SDK default to the legacy gate.
+`B_GATE_REJECT.flags` is a bitmask in this opt-in profile:1 legacy approach,
+2 post-turn clearance,4 line lost,8 no visible front line,16 active search.
+An event can contain several bits. Rejecting a cross preserves the pending
+letter/action/revision for a later cross; it never starts a delayed turn
+after the rejected crossing has passed. Safety/STOP ownership is unchanged.
+
 During Pause, no new barcode is consumed. Qualified Resume preserves completed
 events and an already verified pending action/revision, clears partial reader
 and crossing state, and reacquires from the current position. New Start resets

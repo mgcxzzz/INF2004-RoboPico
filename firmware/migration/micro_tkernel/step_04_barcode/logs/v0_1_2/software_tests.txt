@@ -1,0 +1,86 @@
+PASS: clock disagreement/freeze, start gates, urgent-stop output gates, wraparound and encoder decoding
+PASS encoder quality: sparse/repeated errors, boundary bursts, density, Pause, wrap and saturation
+PASS production MQTT owner: reserved headroom, wrapped ring, Nagle off, QoS0 ACK activity, ERR_MEM priority, expiry and disconnect cancellation
+PASS Step2: planner parity, cross qualification, calibration CRC/import, power envelopes, log packing.
+PASS Step2: planner parity, cross qualification, calibration CRC/import, power envelopes, log packing.
+PASS ADC: normal/preempted conversions, true timeout, ERR including after preemption, unchanged failed output, timer wrap, stopped-only retry and three-frame qualification.
+PASS junction policy=angle_only: L/R/U windows, two dwells, faults and diagnostic packing.
+PASS junction policy=reference_white: L/R/U windows, two dwells, faults and diagnostic packing.
+continuous drive tests passed (software input/plant models only)
+representation: request<=8 bytes wheels=4 bytes audit=31 bytes status=32 event_ram=40 request_working=24 command_status=16
+PASS shared coordinator ownership, stop atomicity, finite reverse/turn completion, route/terrain/fault APIs, interrupted junction resume, stale commands/leases, rejection/timeout, compact binary roundtrips and bounded audit.
+PASS real clock ordering:1..5000us newer requests remain AUTO for14000 ticks; stale100ms heartbeat and2s settling still fault; delayed takeover/resume never underflow.
+PASS coordinator assist: wire bounds, owner preserved, expiry, search/stop/takeover clearing, barcode approval and audit
+continuous steering v2 tests passed
+continuous follow wrapper regression passed
+continuous integration test passed (coordinator ownership, STOP/off, stale commit rejection, controller reset, and profile routing)
+PASS: five widening stages/both directions; zero-tick timeout/travel bound; brief gap/flash handling; opposite-sensor acquisition; visible-line parity; invalid-cal rejection; maneuver60%/bounded75% effort; off-wheel zero; pending command preserved/no junction while lost.
+U geometry: x=45.7 y=0.7 angle=177.9 travel=541.2 turn_ms=5320
+U geometry: x=45.7 y=0.7 angle=177.9 travel=541.2 turn_ms=5320
+U geometry: x=45.7 y=0.7 angle=177.9 travel=682.3 turn_ms=5320
+U geometry: x=45.7 y=0.7 angle=177.9 travel=682.3 turn_ms=5320
+U geometry: x=48.8 y=2.1 angle=178.3 travel=542.6 turn_ms=5560
+PASS: complete analogue Z both sizes/directions; queued crossing; 90deg arm ignored; reverse quarter and settled forward rejoin; original-line geometry; missing-return/time/drift rejection; signed PWM; next junction after reverse; V1..V12 record integrity.
+PASS barcode gate policy=confirmation: all actions, stale leading veto, low speed/no dwell, clearance, visibility/search/lost reason bits, decode-alone rejection
+PASS barcode gate policy=legacy: all actions, stale leading veto, low speed/no dwell, clearance, visibility/search/lost reason bits, decode-alone rejection
+PASS captured Y: decoder=212 junction=1181 hysteresis=94 width=13.78mm confirmed=1 offset=110mm
+PASS independent junction: relative contrast, white re-arm, stop/narrow bar rejection, short-gap cancellation, reset, gate preservation
+PASS RTOS barcode: real failed Z/Y captures, synthetic A-Z both directions, coordinator approval, mapping freeze, unmapped letters, partial Resume and raw ring
+PASS combined peak integration (BARCODE_PEAK_ACTIVE=1): 28 checks (real original decoder + runtime mapping + peak harness: apply, duplicate, both conflict orders, unmapped, junction, no-barcode identity, busy reset, mixed source-15)
+capture z_original       decoded Z (rev) groups 1 bars 15 unit 2.95 mm narrow-space max 1.17 u, wide-space min 3.01 u, narrow rise min 38
+capture z_fine_v02_run3  decoded Z (rev) groups 1 bars 15 unit 2.94 mm narrow-space max 1.50 u, wide-space min 3.05 u, narrow rise min 34
+capture z_fine_v03_run1  decoded Z (fwd) groups 1 bars 15 unit 2.97 mm narrow-space max 1.15 u, wide-space min 3.08 u, narrow rise min 34
+capture y_original       decoded Y (rev) groups 1 bars 15 unit 3.01 mm narrow-space max 1.19 u, wide-space min 3.06 u, narrow rise min 38
+  synthetic miss D rev=1: k=0 reason=3 bars=18 sigma=1.65 u=3.18 noise=3.7
+  synthetic miss E rev=0: k=0 reason=3 bars=18 sigma=1.50 u=3.16 noise=3.8
+  synthetic miss G rev=0: k=0 reason=3 bars=18 sigma=1.53 u=3.16 noise=3.6
+synthetic: 931/936 decoded, 0 misreads
+harsh: 825/2000 decoded, 0 misreads
+random bar patterns: 0 frames accepted out of 300 (only exact *X* patterns can pass)
+latency: decoded at most 11.0 mm after the label's last edge (junction stripe 30 mm behind)
+f2185a04030201b1135a000f00af00ce00ef081f193d9687050700
+PASS barcode peak decoder v0.1 host tests: 47 checks (4 captured car failures, synthetic A-Z/0-9 both directions, harsh no-misread, negatives, telemetry)
+PASS connected bridge: state/epochs/stale/flood STOP/priority/real coordinator Pause+Resume/late Reset/independent telemetry sequences
+PASS network bench: Start/Resume/manual drive prohibited, stop plan, mapping/CRC, stale commands/wrap and independent heartbeat deadline.
+wifi packet tests passed
+wifi protocol tests passed
+PASS runtime settings CRC, bounds, IPv4 validation and open-network password
+................
+----------------------------------------------------------------------
+Ran 16 tests in 0.002s
+
+OK
+.............
+----------------------------------------------------------------------
+Ran 13 tests in 0.001s
+
+OK
+..........
+----------------------------------------------------------------------
+Ran 10 tests in 0.003s
+
+OK
+....
+----------------------------------------------------------------------
+Ran 4 tests in 0.004s
+
+OK
+.....
+----------------------------------------------------------------------
+Ran 5 tests in 0.001s
+
+OK
+...
+----------------------------------------------------------------------
+Ran 3 tests in 0.000s
+
+OK
+....
+----------------------------------------------------------------------
+Ran 4 tests in 0.001s
+
+OK
+PASS pinned lwIP allocation: single=1 oversize=1460 payload60 reserved=1460 bytes/packet,14 packets=20440 bytes
+PASS pinned lwIP allocation: single=0 oversize=0 payload60 reserved=60 bytes/packet,14 packets=840 bytes
+PASS new options match the source; CYW43 upstream path supports pbuf chains via pbuf_copy_partial.
+PASS: 28 production-C regression programs plus capture/export/provisioning checks. Hardware test is still required.

@@ -7,6 +7,9 @@
 /* Horizontal GP27 sensing point -> wheel axle, measured on the current car.
  * Other migration steps and the SDK reference retain their 92mm geometry. */
 #define BARCODE_SENSOR_AHEAD_MM 110
+#ifndef BARCODE_CONFIRM_GATE
+#define BARCODE_CONFIRM_GATE 1
+#endif
 #endif
 #include "src/line_following/continuous_follow.h"
 #include "src/line_following/circuit_capture.h"

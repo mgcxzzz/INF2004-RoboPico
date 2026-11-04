@@ -56,3 +56,4 @@ dashboard_session/
 !/firmware/migration/micro_tkernel/step_04_barcode/firmware/robopico_rtos_connected_barcode_v0_1.uf2
 **/rtos_barcode_session/
 !/firmware/migration/micro_tkernel/step_04_barcode/firmware/v0_1_1/robopico_rtos_connected_barcode_v0_1_1.uf2
+!/firmware/migration/micro_tkernel/step_04_barcode/firmware/v0_1_2/robopico_rtos_connected_barcode_v0_1_2.uf2

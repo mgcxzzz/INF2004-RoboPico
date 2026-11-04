@@ -5,8 +5,8 @@ import package_motor_bringup as common
 from package_line_following import linked_checks
 ROOT=common.ROOT
 CHECKPOINT=ROOT/'firmware/migration/micro_tkernel/step_04_barcode'
-ART=CHECKPOINT/'firmware/v0_1_1'
-NAME='robopico_rtos_connected_barcode_v0_1_1'
+ART=CHECKPOINT/'firmware/v0_1_2'
+NAME='robopico_rtos_connected_barcode_v0_1_2'
 common.ART=ART
 def main():
     ART.mkdir(parents=True,exist_ok=True)
@@ -31,7 +31,7 @@ def main():
         'calibration_priority':['CRC-valid RTOS saved0x1a9000','CRC-valid SDK record28 at0x1d0000','original fallback'],
         'expected_current_car_calibration':'white122,138 black246,267 origin1; read back actual car; no forced overwrite',
         'features':['unchanged reference63-bank + peak Code39 decisions; independent verified-frame midpoint junction classifier with5% hysteresis',
-            'fresh4mm white re-arm after decode/Resume;2ms debounce;11..30mm stripe and4mm trailing white; original straight gate',
+            'fresh4mm white re-arm after decode/Resume;2ms debounce;11..30mm stripe and4mm trailing white; confirmation-time visibility/search/clearance gate; explicit rejection flags; no300ms/3deg/min-wheel-speed dwell',
             'measured GP27 forward axle offset110mm; SDK/other steps keep92mm; track width/55mm rolling offset unchanged',
             'Buddy3 coordinator approval; frozen action/map revision at decode; next separate junction',
             'dashboard live A-Z mapping and decoded/queued/dispatch/completed events; separate source sequence ownership',
@@ -40,10 +40,10 @@ def main():
             '640 copied100Hz line rows;2048 ten-byte raw rows frozen at first decode;192 reference barcode events',
             'stopped USB exports, mandatory USB DTR and network-loss stop/no automatic restart'],
         'deferred':['IMU/ramp Step5','Buddy5','untethered acceptance','dashboard stored-row downloads'],
-        'software_checks':['26 strict C regression programs including actual failed Step4 Y-to-junction replay and A-Z bidirectional migration model',
+        'software_checks':['28 strict C regression programs including actual failed Step4 Y-to-junction replay and A-Z bidirectional migration model',
             'Python capture/export/provisioning checks plus pinned upstream TCP allocation experiment',
             'ARM Step4; source parity/UF2/stack/RAM gates; dashboard/network logic unchanged from published Step4'],
-        'hardware_checks':'v0.1 decoded Y but retained212 junction threshold below all ADC readings. v0.1.1 replay confirms one13.78mm cross. Physical110mm alignment, extended-mat L/R, U-turn and sharp bends pending.',
+        'hardware_checks':'v0.1.1 user-tested successful F-left/Z-right; two further crosses confirmed but vetoed. v0.1.2 confirmation gate requires physical retest; IMU/ramp still Step5.',
         'linked_checks':linked}
     for name,data in [('BUILD_MANIFEST.json',manifest),('SOURCE_SHA256.json',hashes)]:
         (ART/name).write_text(json.dumps(data,indent=2)+'\n',encoding='utf-8',newline='\n')
@@ -52,9 +52,9 @@ def main():
         for p in paths:z.write(p,p.relative_to(ROOT).as_posix())
         for p in (firmware,ART/'BUILD_MANIFEST.json',ART/'SOURCE_SHA256.json'):z.write(p,p.relative_to(ROOT).as_posix())
         z.write(firmware,'firmware/'+firmware.name)
-        z.writestr('START_HERE.md',(CHECKPOINT/'README.md').read_text(encoding='utf-8').replace('../../../../app_program/','app_program/').replace('firmware/v0_1_1/','firmware/'))
+        z.writestr('START_HERE.md',(CHECKPOINT/'README.md').read_text(encoding='utf-8').replace('../../../../app_program/','app_program/').replace('firmware/v0_1_2/','firmware/'))
         z.writestr('NETWORK_DELIVERY.md',(CHECKPOINT/'NETWORK_DELIVERY.md').read_text(encoding='utf-8'))
-        z.writestr('UPDATE_V0_1_1.md',(CHECKPOINT/'UPDATE_V0_1_1.md').read_text(encoding='utf-8'))
+        z.writestr('UPDATE_V0_1_2.md',(CHECKPOINT/'UPDATE_V0_1_2.md').read_text(encoding='utf-8'))
         for title,script in [('Start dashboard.cmd','tools/dashboard/run_dashboard.py'),
             ('Setup Wi-Fi.cmd','tools/rtos_migration/provision_network.py'),
             ('Capture connected test.cmd','tools/rtos_migration/capture_connected_line.py'),

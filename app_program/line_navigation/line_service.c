@@ -598,6 +598,8 @@ void rtos_line_report(void) {
     tm_printf(
         (UB *)"JUNCTION_SENSOR offset_mm=%u threshold=%u hysteresis=%u valid=%u armed=%u black=%u\n",
         B_SIDE_AHEAD_MM, cross_threshold, cross_hysteresis, cross_valid, cross_armed, cross_black);
+    tm_printf((
+        UB *)"JUNCTION_GATE policy=confirmation clear_mm=150 reject_bits=1:legacy,2:clearance,4:line_lost,8:not_visible,16:search\n");
 #endif
     UINT key = enter();
     /* No formatting while holding the shared packed-data lock. */

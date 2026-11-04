@@ -1,10 +1,10 @@
-# Step4 v0.1.1 — connected barcode and junction sensing
+# Step4 v0.1.2 â€” connected barcode and junction sensing
 
-**Latest test image:** `firmware/v0_1_1/robopico_rtos_connected_barcode_v0_1_1.uf2`.
-Read [the exact junction retest and log instructions](UPDATE_V0_1_1.md) first.
+**Latest test image:** `firmware/v0_1_2/robopico_rtos_connected_barcode_v0_1_2.uf2`.
+Read [the exact junction retest and log instructions](UPDATE_V0_1_2.md) first.
 The original v0.1 UF2/bundle remain in `firmware/` for rollback.
 
-**EXPERIMENTAL. Hardware acceptance pending.** This is Buddy1–3 on micro
+**EXPERIMENTAL. Hardware acceptance pending.** This is Buddy1â€“3 on micro
 T-Kernel with the tested Step3B motion baseline, physical barcode decoding and
 the network allocation correction. **Buddy4 IMU/ramp is Step5; Buddy5 is not
 integrated.** Main and its SDK reference remain unchanged.
@@ -13,9 +13,9 @@ The latest bundle contains ONE application image:
 
 | Image in `firmware/` | Purpose |
 |---|---|
-| `robopico_rtos_connected_barcode_v0_1_1.uf2` | Step4 junction fix: same decoders/network/motion, independent contrast junction sensor,110mm sensor offset;640 line rows plus raw barcode history. |
+| `robopico_rtos_connected_barcode_v0_1_2.uf2` | Step4 junction fix: same decoders/network/motion, independent contrast junction sensor, confirmation-time gate,110mm sensor offset;640 line rows plus raw barcode history. |
 
-Keep the accepted v0.1.1 bundle for rollback. Read
+Keep the previous v0.1.1 Step4 bundle for rollback. Read
 [the network investigation](NETWORK_DELIVERY.md) and
 [barcode logic](../../../../app_program/barcode_navigation/README.md).
 Steering/PI gains, speed45mm/s, calibration priority, PWM limits and Step2's
@@ -28,7 +28,7 @@ alignment acceptance.
 1. Extract the complete bundle into a NEW folder. Close the previous
    dashboard/server terminal and all USB serial programs.
 2. Stop the robot/remove motor power. Enter BOOTSEL and copy the desired
-   **connected_barcode_v0_1_1** application UF2 to RPI-RP2.
+   **connected_barcode_v0_1_2** application UF2 to RPI-RP2.
 3. Run **Start dashboard.cmd** from this new folder; keep its terminal open.
    Browser http://localhost:8765/; connect ws://localhost:9001; hard-refresh.
 4. Saved Wi-Fi is retained if SSID/password/broker IPv4 are unchanged.
@@ -49,7 +49,7 @@ Mac commands: `python3 tools/dashboard/run_dashboard.py`,
 `python3 tools/rtos_migration/export_barcode_log.py`.
 Install pyserial once in your existing Python environment if needed.
 
-## A — network check, no motion
+## A â€” network check, no motion
 
 With motors off, capture60seconds Telemetry off, then60seconds on. Avoid
 repeated Ping/map commands during those intervals. No need to repeat already
@@ -60,14 +60,14 @@ and actual received heartbeat gaps are normally<=2seconds. Do not discard a
 failed capture or assume a connected MQTT flag guarantees timely delivery.
 
 Wi-Fi/calibration sectors remain intact. The dashboard firmware badge should
-say **Step4**; the USB banner identifies **v0.1.1** specifically. The dashboard
+say **Step4**; the USB banner identifies **v0.1.2** specifically. The dashboard
 itself is unchanged. A new stationary network comparison is only necessary if
 delivery problems recur; the priority for this update is the junction retest.
 
-## B — decode first, with no junction in the scan path
+## B â€” decode first, with no junction in the scan path
 
 1. Apply/read back the dashboard mapping. Suggested first test:
-   **Straight=Y, U-turn=Z, Left=A, Right=F**. All four must be distinct A–Z.
+   **Straight=Y, U-turn=Z, Left=A, Right=F**. All four must be distinct Aâ€“Z.
    Mapping is RAM state: reapply after a reboot/reflash. No default letters.
 2. Use one known good label, preferably A, on a straight with ample supported
    mat. Use the original low sensor mounting and unchanged front calibration.
@@ -84,7 +84,7 @@ delivery problems recur; the priority for this update is the junction retest.
    first-decode raw capture. Do not tune thresholds merely because one
    hardware scan fails: retain its raw capture for replay.
 
-## C — mapped junction action and live mapping
+## C â€” mapped junction action and live mapping
 
 Only after B works: label then a physically SEPARATE supported cross, leaving
 adequate white gap as in the SDK arrangement. Expect decoded/queued, junction
@@ -118,7 +118,7 @@ helpers. Live graphs are20Hz, not the2ms raw barcode recording. On a failed
 scan, stop promptly so a later wait does not overwrite its raw trace. On each
 new Start, RAM run logs are replaced. Never send Wi-Fi passwords/settings UF2.
 The unchanged line CSV pending/action fields encode canonical A/F/Z turn
-codes; use barcode event export for the actual A–Z letter, action and revision.
+codes; use barcode event export for the actual Aâ€“Z letter, action and revision.
 
 Review BARCODE/BARCODE_DECODE/ADC and NET_TX/NET_MEMORY in USB capture. The
 export result COMPLETE means all rows arrived, not physical acceptance.
