@@ -18,6 +18,7 @@ sources.append(CORE / "src/motion/motion_executor.c")
 
 checks = [(ROOT / "testing/rtos_migration/test_bringup_policy.c", []),
           (ROOT / "testing/rtos_migration/test_imu_i2c.c", []),
+          (ROOT / "testing/rtos_migration/test_usb_printf.c", []),
           (ROOT / "testing/rtos_migration/test_encoder_quality.c", []),
           (ROOT / "testing/rtos_migration/test_mqtt_delivery.c", []),
           (ROOT / "testing/rtos_migration/test_line_model.c", []),
@@ -52,6 +53,8 @@ checks.extend([
 for source, extra in checks:
     exe = OUT / (source.stem + (".exe" if os.name == "nt" else ""))
     profile_flags = ["-DAPP_RTOS_IMU=1"] if source.stem in ("test_imu_service_rtos", "test_imu_task_reset") else []
+    if source.stem == "test_usb_printf":
+        profile_flags += ["-I" + str(ROOT / "testing/rtos_migration/printf_stubs")]
     subprocess.run([*cc, *host_float, *profile_flags, "-std=c11", "-Wall", "-Wextra", "-Werror", "-O2", "-UNDEBUG",
                     "-DCIRCUIT_SWEEP_SEARCH=1", "-I" + str(ROOT), "-I" + str(CORE), "-I" + str(CORE / "config"),
                     source, *extra, "-lm", "-o", exe], check=True)

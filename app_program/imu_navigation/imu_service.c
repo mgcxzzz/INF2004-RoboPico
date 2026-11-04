@@ -171,6 +171,11 @@ void ri_report(void) {
         acq.reads, acq.failed_reads, acq.late_gaps, acq.fifo_overruns, acq.max_gap_us, wake_max,
         epoch, ready_epoch);
     tm_printf(
+        (UB *)"IMU_TIMING last_gap_us=%u last_late_us=%u last_late_read=%u win_seq=%u win_reads=%u win_late=%u win_max_us=%u prev_reads=%u prev_late=%u prev_max_us=%u\n",
+        acq.last_gap_us, acq.last_late_us, acq.last_late_read, acq.window_seq, acq.window_reads,
+        acq.window_late, acq.window_max_gap_us, acq.previous_reads, acq.previous_late,
+        acq.previous_max_gap_us);
+    tm_printf(
         (UB *)"IMU_I2C transfers=%u aborts=%u timeout_tx=%u timeout_stop=%u timeout_rx=%u rescued=%u max_transfer_us=%u last_phase=%u address=0x%x abort_source=0x%x\n",
         acq.transfers, acq.aborts, acq.timeout_tx, acq.timeout_stop, acq.timeout_rx, acq.rescued,
         acq.max_transfer_us, acq.last_phase, acq.last_address, acq.last_abort_source);

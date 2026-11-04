@@ -39,5 +39,15 @@ class CaptureTests(unittest.TestCase):
         self.assertEqual(r['imu_acquisition_last']['epoch'],2)
         self.assertEqual(r['imu_acquisition_last']['ready_epoch'],1)
         self.assertEqual(r['imu_i2c_last']['timeout_stop'],4)
+    def test_recent_timing_windows_and_logging_are_preserved(self):
+        rows=[{'kind':'IMU_TIMING','win_seq':1,'win_max_us':20000},
+              {'kind':'IMU_TIMING','win_seq':1,'win_max_us':31000},
+              {'kind':'IMU_TIMING','win_seq':2,'prev_max_us':31000,'win_max_us':20000},
+              {'kind':'LOGGING','atomic':1,'dropped':0,'max_copy_us':20}]
+        r=summarize(rows,[],[])
+        self.assertEqual(len(r['imu_timing_windows']),2)
+        self.assertEqual(r['imu_timing_windows'][0]['win_max_us'],31000)
+        self.assertEqual(r['imu_timing_last']['prev_max_us'],31000)
+        self.assertEqual(r['logging_last']['max_copy_us'],20)
 
 if __name__=='__main__':unittest.main()

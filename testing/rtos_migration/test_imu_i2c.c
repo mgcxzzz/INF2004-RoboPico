@@ -98,6 +98,25 @@ int main(void) {
     assert(after.late_gaps == before.late_gaps + 1 &&
            after.fifo_overruns == before.fifo_overruns + 1);
     assert(after.max_gap_us == 31000);
+    assert(after.last_gap_us == 20000 && after.last_late_us == 31000);
+    assert(after.last_late_read == after.reads - 1);
+    assert(after.window_seq == 1 && after.window_max_gap_us == 31000);
+    now_us += 10000000;
+    ri_acquisition_record(20000, true, false);
+    ri_acquisition_snapshot(&after);
+    assert(after.window_seq == 2 && after.previous_max_gap_us == 31000);
+    assert(after.previous_late == 1 && after.previous_reads == 3);
+    assert(after.window_max_gap_us == 20000 && after.window_reads == 1 && !after.window_late);
+    for (unsigned i = 0; i < 499; ++i) {
+        now_us += 19990; /* fake_time adds10us: exactly20ms per call */
+        ri_acquisition_record(20000, true, false);
+    }
+    ri_acquisition_snapshot(&after);
+    assert(after.window_seq == 2 && after.window_reads == 500);
+    now_us += 19990;
+    ri_acquisition_record(20000, true, false);
+    ri_acquisition_snapshot(&after);
+    assert(after.window_seq == 3 && after.previous_reads == 500 && after.window_reads == 1);
     assert(ri_next_release(100000, 101000) == 120000);
     assert(ri_next_release(100000, 141000) == 161000);
     assert(ri_release_delay_ms(120000, 103000) == 16);

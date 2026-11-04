@@ -328,4 +328,41 @@ EXPORT void tm_usb_console_put(const UB *buf, INT size)
 	tx_lock_leave(intsts);
 }
 
+#ifdef APP_RTOS_IMU
+#include "usb_record.h"
+IMPORT unsigned long long board_time_us(void);
+LOCAL UW record_count, record_drops, record_oversize, record_max_copy_us;
+
+/* Formatting and CRLF expansion have finished before entering here. The
+ * only masked work is a bounded (<=768 byte) ring copy/counter update. */
+EXPORT void tm_usb_console_record(const UB *buf, INT size)
+{
+    UINT saved;
+    UW start, elapsed;
+    if(size <= 0) return;
+    tx_lock_enter(&saved);
+    start = (UW)board_time_us();
+    ++record_count;
+    if(!buf || size > 768 || !tm_usb_record_append(tx_buffer, USB_TX_MASK, &tx_head,
+                                                 tx_tail, buf, size)) {
+        ++record_drops;
+        record_oversize += !buf || size > 768;
+        tm_usb_dropped += (UW)size;
+    }
+    elapsed = (UW)board_time_us() - start;
+    if(elapsed > record_max_copy_us) record_max_copy_us = elapsed;
+    tx_lock_leave(saved);
+}
+EXPORT void tm_usb_log_snapshot(UW out[4])
+{
+    UINT saved;
+    tx_lock_enter(&saved);
+    out[0] = record_count;
+    out[1] = record_drops;
+    out[2] = record_oversize;
+    out[3] = record_max_copy_us;
+    tx_lock_leave(saved);
+}
+#endif
+
 #endif /* USE_TMONITOR && TM_CONSOLE_USB_CDC */

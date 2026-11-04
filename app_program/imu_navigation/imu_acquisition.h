@@ -10,6 +10,10 @@ typedef struct {
     uint32_t transfers, aborts, timeout_tx, timeout_stop, timeout_rx, rescued;
     uint32_t max_transfer_us, last_abort_source;
     uint32_t reads, failed_reads, late_gaps, fifo_overruns, max_gap_us;
+    uint32_t last_gap_us, last_late_us, last_late_read;
+    uint32_t window_seq, window_max_gap_us, previous_max_gap_us;
+    /* Ten-second buckets at50Hz hold at most501 releases (9 bits). */
+    unsigned window_reads : 9, window_late : 9, previous_reads : 9, previous_late : 9;
     unsigned last_phase : 2;
     unsigned last_address : 7;
 } RiAcquisition;

@@ -34,7 +34,18 @@
 #if USE_TM_PRINTF
 #include <stdarg.h>
 
-#if TK_SUPPORT_SMP && TM_CONSOLE_USB_CDC
+/* Step5 USB-only: format into task/handler-local bounded storage with the
+ * caller's interrupt state unchanged, then copy one complete record into
+ * the USB ring under its short lock. Other profiles retain their path. */
+#if defined(APP_RTOS_IMU) && TK_SUPPORT_SMP && TM_CONSOLE_USB_CDC && !TM_CONSOLE_UART
+#define TM_ATOMIC_USB_PRINTF 1
+#define TM_PRINT_RECORD_BYTES 768
+IMPORT void tm_usb_console_record(const UB *buf, INT size);
+#else
+#define TM_ATOMIC_USB_PRINTF 0
+#endif
+
+#if TK_SUPPORT_SMP && TM_CONSOLE_USB_CDC && !TM_ATOMIC_USB_PRINTF
 #include <tk/smp.h>
 
 /*
@@ -306,6 +317,24 @@ LOCAL	void	tm_vsprintf( OutFn ostr, OutPar *par, const UB *fmt, va_list ap )
 /*
  *	Output to console
  */
+#if TM_ATOMIC_USB_PRINTF
+LOCAL void record_byte(OutPar *par, UB value)
+{
+    if(par->cnt < TM_PRINT_RECORD_BYTES) par->bufp[par->cnt] = value;
+    /* Count converted bytes even when oversized; never write beyond cap.
+     * OutPar's inherited signed16 counters saturate rather than overflow. */
+    if(par->cnt < 32767) par->cnt++;
+}
+LOCAL void out_record(UB *str, INT len, OutPar *par)
+{
+    if(str == NULL) return; /* formatter's optional flush callback */
+    par->len = len > 32767 - par->len ? 32767 : par->len + len;
+    while(len-- > 0) {
+        if(*str == CHR_LF) record_byte(par, CHR_CR);
+        record_byte(par, *str++);
+    }
+}
+#else
 LOCAL	void	out_cons( UB *str, INT len,  OutPar *par )
 {
 #if	TM_OUTBUF_SZ == 0
@@ -333,11 +362,25 @@ LOCAL	void	out_cons( UB *str, INT len,  OutPar *par )
 	}
 #endif
 }
+#endif
 
 EXPORT INT	tm_printf( const UB *format, ... )
 {
 	va_list	ap;
 	INT	result;
+#if TM_ATOMIC_USB_PRINTF
+    UB record[TM_PRINT_RECORD_BYTES];
+    OutPar par;
+    par.len = par.cnt = 0;
+    par.bufp = record;
+    va_start(ap, format);
+    tm_vsprintf(out_record, &par, format, ap);
+    va_end(ap);
+    /* An oversized/full record is dropped whole and counted, never emitted
+     * as an apparently valid partial diagnostic line. No host waits. */
+    tm_usb_console_record(par.cnt > TM_PRINT_RECORD_BYTES ? NULL : record, par.cnt);
+    result = par.len;
+#else
 #if TK_SUPPORT_SMP && TM_CONSOLE_USB_CDC
 	UINT	intsts;
 
@@ -364,6 +407,7 @@ EXPORT INT	tm_printf( const UB *format, ... )
 #endif
 #if TK_SUPPORT_SMP && TM_CONSOLE_USB_CDC
 	tm_printf_unlock(intsts);
+#endif
 #endif
 	return result;
 }

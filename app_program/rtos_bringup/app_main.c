@@ -37,7 +37,7 @@ static ER start(FP entry, PRI priority, UW processor, const char *name) {
 void bringup_help(void) {
 #if defined(APP_RTOS_IMU)
     tm_printf(
-        (UB *)"\nROBOPICO RTOS CONNECTED IMU v0.1.1 | Step5 EXPERIMENTAL | micro T-Kernel SMP\n");
+        (UB *)"\nROBOPICO RTOS CONNECTED IMU v0.1.2 | Step5 EXPERIMENTAL | micro T-Kernel SMP\n");
     tm_printf((
         UB *)"Based on Step4 v0.1.2 (physical acceptance pending). Buddy1-4; Buddy5 NOT integrated.\n");
     tm_printf((
@@ -150,6 +150,11 @@ void bringup_report(void) {
 #endif
 #ifdef APP_RTOS_IMU
     ri_report();
+    UW log[4];
+    extern void tm_usb_log_snapshot(UW out[4]);
+    tm_usb_log_snapshot(log);
+    tm_printf((UB *)"LOGGING atomic=1 records=%u dropped=%u oversize=%u max_copy_us=%u\n",
+              log[0], log[1], log[2], log[3]);
 #endif
 }
 

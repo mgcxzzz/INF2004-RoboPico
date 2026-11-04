@@ -4,6 +4,14 @@ Experimental Step5, based on Step4 v0.1.2. Physical acceptance of both the
 new gate and this IMU port is pending. Buddy5 and powerbank driving remain
 deferred. SDK main and the published Step4 artifacts are unchanged.
 
+Step5 v0.1.2 removes whole-format interrupt masking in the USB-only console:
+each tm_printf formats/expands CRLF in local768-byte storage, then uses one
+short ring lock to enqueue the record. Full or oversized records drop whole
+and increment diagnostics. It never waits for the host. Other RTOS profiles
+and UART console builds retain the previous formatter. `LOGGING` reports
+record/drop/oversize counts and maximum masked copy time in microseconds
+(not formatting time, lock wait, or total task runtime).
+
 Step5 v0.1.1 corrects the v0.1 stationary acquisition failure. The RTOS-only
 transport rechecks completion before timing out, retains bounded2ms waits
 for each hardware phase, records abort sources and stops queuing commands
@@ -39,6 +47,12 @@ period), above the application bridge/reporting tasks and below USB/Wi-Fi.
 with max gap/wake lateness. `IMU_I2C` reports TX/STOP/RX timeout counts,
 abort count/source/address, rescued deadline checks and maximum transfer
 wall time. Snapshot copies are protected; formatting occurs outside locks.
+`IMU_TIMING` adds last acquisition gap, last late gap and its lifetime read
+number. Ten-second buckets expose current and previous read/late counts and
+maximum gap, so startup maxima cannot obscure current intervals. `win_seq`
+increments on bucket rotation; buckets continue across Reset, and counters
+are copied into the same mailbox. The bucket counts use9-bit fields (at most
+501 releases per10seconds at50Hz); lifetime counters retain32-bit wrap.
 
 The motion owner calls the pure `ri_ramp_request` adapter with that copied
 tilt. It uses the reference RampAssist detector6: four valid20ms samples at

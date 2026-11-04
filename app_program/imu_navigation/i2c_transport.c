@@ -20,11 +20,33 @@
 #define RI_RESTART (1U << 10)
 
 static RiAcquisition diagnostics;
+static uint32_t window_start_us;
 void ri_acquisition_snapshot(RiAcquisition *out) {
     *out = diagnostics;
 }
 void ri_acquisition_record(uint32_t gap_us, bool ok, bool overrun) {
+    uint32_t now = sys_time_us();
+    if (!diagnostics.reads) {
+        window_start_us = now;
+        diagnostics.window_seq = 1;
+    } else if ((uint32_t)(now - window_start_us) >= 10000000U) {
+        ++diagnostics.window_seq;
+        diagnostics.previous_max_gap_us = diagnostics.window_max_gap_us;
+        diagnostics.previous_reads = diagnostics.window_reads;
+        diagnostics.previous_late = diagnostics.window_late;
+        diagnostics.window_reads = diagnostics.window_late = diagnostics.window_max_gap_us = 0;
+        window_start_us = now;
+    }
     ++diagnostics.reads;
+    ++diagnostics.window_reads;
+    diagnostics.last_gap_us = gap_us;
+    if (gap_us > B4_LATE_US) {
+        diagnostics.last_late_us = gap_us;
+        diagnostics.last_late_read = diagnostics.reads;
+        ++diagnostics.window_late;
+    }
+    if (gap_us > diagnostics.window_max_gap_us)
+        diagnostics.window_max_gap_us = gap_us;
     diagnostics.failed_reads += !ok;
     diagnostics.late_gaps += gap_us > B4_LATE_US;
     diagnostics.fifo_overruns += overrun;

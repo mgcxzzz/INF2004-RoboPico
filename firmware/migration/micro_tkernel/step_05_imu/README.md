@@ -1,11 +1,13 @@
-# Step5 v0.1.1 — IMU acquisition correction and coordinated ramp assistance
+# Step5 v0.1.2 — short logging critical sections and recent IMU timing
 
 **EXPERIMENTAL micro T-Kernel Buddy1–4 test build.** Buddy5 is not integrated.
 Prepared in parallel while Step4 v0.1.2 hardware results are pending; this is
 not acceptance of Step4, completion of migration or a main-branch release.
 Step4 barcode/turn dispatch has been reported working; full left/right line
 reacquisition still needs sufficient mat. Step5 v0.1 stationary testing found
-intermittent IMU read errors. **This update needs a stationary retest first.**
+intermittent IMU read errors. v0.1.1 passed reads/Reset in two stationary
+windows but retained9/10 late gaps. **This update needs a stationary retest
+first: logging now formats outside interrupt-disabled locks.**
 Any further Step4 correction must also
 be carried into this checkpoint before final acceptance/merge.
 
@@ -42,7 +44,7 @@ tests. A ramp lifting both wheels equally is not the same acceptance test.
    files and the Step4 v0.1.2 bundle for comparison/rollback.
 2. Extract this complete Step5 bundle into a NEW folder. Close the previous
    dashboard and USB serial programs. With motor power off, BOOTSEL and flash
-   `firmware/robopico_rtos_connected_imu_v0_1_1.uf2`.
+   `firmware/robopico_rtos_connected_imu_v0_1_2.uf2`.
 3. Saved Wi-Fi and front calibration remain. Do not use w/l/r/k/c. If the
    network or laptop broker IP changed, run **Setup Wi-Fi.cmd**; it sends
    settings only. Otherwise skip Wi-Fi setup.
@@ -81,7 +83,7 @@ No BOOTSEL is required for dashboard/capture/log exports.
 ## Test A — IMU readiness while stationary
 
 Keep motor power off, car flat and still for at least3seconds after boot.
-Confirm the banner **CONNECTED IMU v0.1.1 / Step5**, CLOCK PASS, network online,
+Confirm the banner **CONNECTED IMU v0.1.2 / Step5**, CLOCK PASS, network online,
 and the unchanged front calibration. Confirm:
 
 - `IMU state=2` (Idle), `valid=1`, `fault=0` after stationary calibration.
@@ -92,15 +94,17 @@ and the unchanged front calibration. Confirm:
   `IMU i2c_errors` field is only6bits and wraps; `missed` combines late gaps
   and FIFO overruns. Those old fields alone do not identify the cause.
 
-### Exact v0.1.1 stationary retest (no Start and no ramp yet)
+### Exact v0.1.2 stationary retest (no Start and no ramp yet)
 
 1. USB power only, car flat and still. Start the dashboard and the connected
    capture as above; leave telemetry ON and other serial apps closed.
-2. Wait10seconds for boot/connection/calibration to settle. Check `state=2`,
+2. Confirm `LOGGING atomic=1` is present. Wait10seconds for boot/connection/calibration to settle. Check `state=2`,
    `valid=1`, `fault=0` and `IMU_ACQ epoch=ready_epoch=1`.
 3. Keep capturing for60seconds. Read counters as **changes during this
    window**: `failed`, `late_gaps`, `fifo_overruns`, `timeout_tx/stop/rx`
-   and `aborts` should not increase. Initial magnetometer probing can produce
+   and `aborts` should not increase. `LOGGING dropped/oversize` should stay
+   constant in settled windows. Keep the initial counter values as baseline.
+   Initial magnetometer probing can produce
    NACKs during init, so do not require lifetime abort counters to start at0.
    `reads` should increase about3000 in60seconds. `rescued` may increase:
    it counts completed transfers saved from the former false-timeout race.
@@ -115,6 +119,12 @@ and the unchanged front calibration. Confirm:
    folder and send it (USB text, MQTT CSV and summary JSON), with your
    observation of heartbeat and both calibration epochs. **No video, line
    export or barcode export is needed for this stationary retest.**
+
+`IMU_TIMING` records last gap and last late gap (with its read number), plus
+current/previous10second bucket maxima and late counts. `win_seq` changes
+every10seconds; these recent buckets are separate from lifetime
+`max_gap_us`. `LOGGING max_copy_us` measures only the short masked ring copy,
+not formatting or lock-wait time. Include these lines if late gaps persist.
 
 If any errors grow, send the capture rather than repeatedly resetting or
 changing calibration. `IMU_I2C` now identifies the failing hardware phase
