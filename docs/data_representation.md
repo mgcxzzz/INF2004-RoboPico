@@ -60,3 +60,23 @@ packers and payload lengths are retained. The new USB diagnostics add RAM;
 the v0.1.3/v0.1.4 linker measurements are recorded with the update. This is
 evidence for the new fields and does not claim completion of the repository's
 outstanding whole-firmware Tribunal before/after evaluation.
+
+
+## Step5 v0.1.5 qualification fields
+
+| New field | Defined domain | Representation |
+| --- | --- | --- |
+| Hold reason |0–3|2-bit field|
+| Clear and retained failure reasons |0–10 each|4-bit fields|
+| Gap-disarmed and heading-guard states |0–1 each|1-bit fields|
+| Last/current gap milliseconds |0–127, capped|7-bit fields|
+| Bounded gap microseconds |0–131071, capped|17-bit field|
+| Qualification flags |four independent booleans|4-bit mask|
+| Heading anchor |full signed16 modulo heading|int16_t|
+| Heading anchor timestamp |full uint32 modulo microseconds|uint32_t|
+| Hold/recover/disarm/early-clear counts |full modulo32 domain|uint32_t|
+
+Context is written solely by the IMU task. Copied reporting fields cross tasks
+under the existing short spinlock; formatting occurs after releasing it.
+New fields do not alter binary message sizes. Compare static RAM using the
+matching v0.1.4/v0.1.5 ARM build profile in the Step5 manifest/update.

@@ -69,4 +69,16 @@ class CaptureTests(unittest.TestCase):
         self.assertEqual(r['side_service_last']['polls'],500)
         self.assertEqual(r['result'],'REVIEW_PHYSICAL_TEST')
 
+    def test_hump_holds_and_clear_reasons_remain_reviewable(self):
+        rows=[{'kind':'IMU_HUMP','wall_s':1,'flags':1,'holds':0,'recoveries':0,'disarms':0},
+              {'kind':'IMU_HUMP','wall_s':2,'flags':1,'holds':0,'recoveries':0,'disarms':0},
+              {'kind':'IMU_HUMP','wall_s':3,'flags':3,'holds':1,'recoveries':1,'disarms':0},
+              {'kind':'IMU_HUMP','wall_s':4,'flags':0,'holds':2,'recoveries':1,'disarms':1,'clear_reason':6,'failure_reason':1}]
+        r=summarize(rows,[],[])
+        self.assertEqual(r['imu_hump_first']['flags'],1)
+        self.assertEqual(r['imu_hump_last']['clear_reason'],6)
+        self.assertEqual(r['imu_hump_last']['failure_reason'],1)
+        self.assertEqual(len(r['imu_hump_changes']),3)
+        self.assertEqual(r['result'],'REVIEW_PHYSICAL_TEST')
+
 if __name__=='__main__':unittest.main()

@@ -24,6 +24,7 @@
 #ifdef APP_RTOS_IMU
 #include "app_program/imu_navigation/imu_acquisition.h"
 #include "app_program/imu_navigation/calibration_diagnostics.h"
+#include "app_program/imu_navigation/hump_diagnostics.h"
 #endif
 
 #define AXIS_LAT (3 - B4_AXIS_FWD - B4_AXIS_UP)
@@ -47,6 +48,22 @@ static b4v23_odo_t g_odo;   /* latest view, for source 2 */
 static b4v23_tilt_t g_tilt; /* ramp-assist v0.1: latest side tilt */
 #ifdef APP_RTOS_IMU
 static RiCalibration g_calibration;
+void b4v23_hump_qualification(RiHumpQualification *out) {
+    out->holds = g_ctx.side_diag_hold_count;
+    out->recoveries = g_ctx.side_diag_recover_count;
+    out->disarms = g_ctx.side_diag_disarm_count;
+    out->early_clears = g_ctx.side_diag_early_clear_count;
+    out->flags = (g_ctx.side_level_ready ? 1U : 0U) |
+                 (g_ctx.side_candidate ? 2U : 0U) |
+                 (g_ctx.side_rising ? 4U : 0U) |
+                 (g_ctx.side_returning ? 8U : 0U);
+    out->hold_reason = g_ctx.side_diag_last_hold_reason;
+    out->clear_reason = g_ctx.side_diag_last_clear_reason;
+    out->failure_reason = g_ctx.side_diag_last_failure_reason;
+    uint32_t gap_ms = g_ctx.side_odo_gap_run_us / 1000U;
+    out->gap_ms = gap_ms > 127U ? 127U : gap_ms;
+    out->last_gap_ms = g_ctx.side_odo_gap_last_ms;
+}
 void b4v23_calibration(RiCalibration *out) {
     *out = g_calibration;
     out->state = g_ctx.state;

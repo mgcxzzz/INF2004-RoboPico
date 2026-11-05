@@ -4,6 +4,16 @@ Experimental Step5, based on Step4 v0.1.2. Physical acceptance of both the
 new gate and this IMU port is pending. Buddy5 and powerbank driving remain
 deferred. SDK main and the published Step4 artifacts are unchanged.
 
+Step5 v0.1.5 adds RTOS-only bounded odometry-gap qualification recovery.
+Proven level readiness/candidate state may pause for at most100ms without
+crediting uncertain peak, rise/return time or travelled distance. Shared
+uncertainty/exclusion limits and hard turn/reverse/shock/Stop guards remain.
+The maximum remains an accepted-profile result; no separate observed-peak
+counter is added. `IMU_HUMP` publishes packed copied counters/reasons; see
+[the update](../../firmware/migration/micro_tkernel/step_05_imu/UPDATE_V0_1_5.md)
+for exact field meanings. Periodic low-priority USB reports are paced; the
+sensor/motor tasks and binary telemetry payload sizes are unchanged.
+
 Step5 v0.1.4 moves the sole IMU task to core0 priority2, ahead of USB3
 and kernel Wi-Fi4. Core1 safety6, navigation10 and motor14 are unchanged.
 v0.1.3's core1 priority16 placement passed stationary tests but starved IMU

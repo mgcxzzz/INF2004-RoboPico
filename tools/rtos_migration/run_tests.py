@@ -34,6 +34,7 @@ for name, extra in [("test_continuous_drive", []), ("test_interface", sources),
                     ("test_uturn", [])]:
     checks.append((CORE / "tests/unit" / (name + ".c"), extra))
 checks.extend([
+    (ROOT / "testing/rtos_migration/test_hump_odo_grace.c", []),
     (ROOT / "testing/rtos_migration/test_imu_calibration_diagnostics.c", [CORE / "tests/imu/fake_drv.c", CORE / "src/imu/imu_service.c", CORE / "src/imu/imu_proc.c", CORE / "src/imu/b4_pack.c", CORE / "src/telemetry/b2_pack.c"]),
     (ROOT / "testing/rtos_migration/test_imu_task_reset.c", [CORE / "tests/imu/fake_drv.c", CORE / "src/imu/imu_service.c", CORE / "src/imu/imu_proc.c", CORE / "src/imu/b4_pack.c", CORE / "src/telemetry/b2_pack.c"]),
     (ROOT / "testing/rtos_migration/test_rtos_ramp_bridge.c", sources + [CORE / "src/network/wifi_protocol.c"]),
@@ -63,7 +64,7 @@ if args.only:
     checks = [(source, extra) for source, extra in checks if source.stem in args.only]
 for source, extra in checks:
     exe = OUT / (source.stem + (".exe" if os.name == "nt" else ""))
-    profile_flags = ["-DAPP_RTOS_IMU=1"] if source.stem in ("test_imu_service_rtos", "test_imu_task_reset", "test_imu_calibration_diagnostics") else []
+    profile_flags = ["-DAPP_RTOS_IMU=1"] if source.stem in ("test_hump_odo_grace", "test_imu_service_rtos", "test_imu_task_reset", "test_imu_calibration_diagnostics") else []
     if source.stem == "test_usb_printf":
         profile_flags += ["-I" + str(ROOT / "testing/rtos_migration/printf_stubs")]
     subprocess.run([*cc, *host_float, *profile_flags, "-std=c11", "-Wall", "-Wextra", "-Werror", "-O2", "-UNDEBUG",

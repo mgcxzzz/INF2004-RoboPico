@@ -47,7 +47,7 @@ def linked_checks(elf: Path, network: bool = False, barcode: bool = False, imu: 
                      'ri_calibration_restart','rn_service_sample',
                      'ri_acquisition_fifo_begin','ri_acquisition_fifo_end',
                      'ri_acquisition_init_begin','ri_acquisition_init_end',
-                     'ri_acquisition_record_tick'):
+                     'ri_acquisition_record_tick','b4v23_hump_qualification'):
             assert name in symbols, name
     for name in ((() if network else ("cyw43_utk_task", "mqtt_client_connect")) + ("subsystem5_start", "dev_init_adc",
                  "dev_init_ser") + (() if barcode else ("barcode_analog_sample", "barcode_peak_sample"))):
@@ -65,6 +65,7 @@ def linked_checks(elf: Path, network: bool = False, barcode: bool = False, imu: 
                       ROOT / "build_make/mtkernel_3/app_program/line_navigation",
                       *([ROOT / "build_make/mtkernel_3/app_program/network_bridge"] if network else []),
                       *([ROOT / "build_make/mtkernel_3/app_program/imu_navigation",
+                         ROOT / "build_make/mtkernel_3/firmware/integration/buddy1_4/src/imu",
                          ROOT / "build_make/mtkernel_3/lib/libtm",
                          ROOT / "build_make/mtkernel_3/lib/libtm/sysdepend/pico_rp2040/usb"] if imu else [])):
         for path in directory.glob("*.su"):

@@ -28,6 +28,15 @@ def summarize(rows, frames, interruptions):
     phase = [r for r in rows if r['kind']=='IMU_PHASE']
     budget = [r for r in rows if r['kind']=='IMU_BUDGET']
     side = [r for r in rows if r['kind']=='SIDE_SERVICE']
+    hump = [r for r in rows if r['kind']=='IMU_HUMP']
+    hump_changes = []
+    previous = None
+    for row in hump:
+        signature = tuple(row.get(k) for k in ('flags','holds','recoveries','disarms',
+                                               'early_clears','hold_reason','clear_reason','failure_reason'))
+        if signature != previous:
+            hump_changes.append(row)
+        previous = signature
     return {'result':'REVIEW_PHYSICAL_TEST', 'clock':clock, 'heartbeats':len(beats),
             'max_heartbeat_gap_s':max(gaps,default=None), 'motion_frames':len(motion),
             'network_first':net[0] if net else None, 'network_last':net[-1] if net else None,
@@ -56,6 +65,9 @@ def summarize(rows, frames, interruptions):
             'imu_budget_last':budget[-1] if budget else None,
             'side_service_first':side[0] if side else None,
             'side_service_last':side[-1] if side else None,
+            'imu_hump_first':hump[0] if hump else None,
+            'imu_hump_last':hump[-1] if hump else None,
+            'imu_hump_changes':hump_changes,
             'barcode_decodes':[r for r in rows if r['kind']=='BARCODE_DECODE'],
             'monitor_interruptions':interruptions,
             'scope':'Clock and passive receive evidence only. Review video and stopped USB line log for tracking/stops; intentional outage gaps are not a baseline heartbeat pass.'}

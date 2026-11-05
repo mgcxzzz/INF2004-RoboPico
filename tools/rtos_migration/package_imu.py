@@ -5,8 +5,8 @@ import package_motor_bringup as common
 from package_line_following import linked_checks
 ROOT=common.ROOT
 CHECKPOINT=ROOT/'firmware/migration/micro_tkernel/step_05_imu'
-ART=CHECKPOINT/'firmware/v0_1_4'
-NAME='robopico_rtos_connected_imu_v0_1_4'
+ART=CHECKPOINT/'firmware/v0_1_5'
+NAME='robopico_rtos_connected_imu_v0_1_5'
 common.ART=ART
 def main():
     ART.mkdir(parents=True,exist_ok=True)
@@ -33,6 +33,8 @@ def main():
         'step4_parent':'78c42c050d6bbd464a3ceef255ce1ec597b60ada',
         'features':['core0 priority2 sole I2C1 GP2/3 owner, ahead of USB3/kernel WiFi4; motor14/nav10/safety6 remain core1; fixed20ms releases; original50Hz service and400Hz FIFO',
             'aggregate8ms FIFO and20ms init elapsed deadlines;2ms reset-ready bound; no post-expiry I2C commands; full ticks over8ms diagnostic only',
+            'RTOS-only bounded100ms dirty-odometry hold/recovery; unchanged200ms level/return,5mm60ms rise,10mm trusted travel and25% exclusion cap; no outage travel/invalid peak credit',
+            'copied IMU_HUMP counters/latched reasons; low-priority periodic diagnostics paced in10ms groups; manual reports unchanged',
             'copied IMU_PHASE/IMU_BUDGET wall-time diagnostics and SIDE_SERVICE all-due ADC/decoder/planner profiling; unchanged binary message sizes',
             'per-epoch calibration progress/best/counts, exact axis/speed restart reasons and rejected spans retained after fault; original2s/10s/40mg guards unchanged',
             'core0 kernel service radio/timers/MQTT elapsed-wall-time diagnostics via copied application mailbox, never direct subsystem network calls',
@@ -52,13 +54,13 @@ def main():
             '640 copied100Hz line rows;2048 ten-byte raw rows frozen at first decode;192 reference barcode events',
             'stopped USB exports, mandatory USB DTR and network-loss stop/no automatic restart'],
         'deferred':['Buddy5','powerbank/untethered supervision (deferred until final integration)','dashboard stored-row downloads'],
-        'software_checks':['6 focused strict C programs: test_imu_i2c, test_imu_task_reset, test_imu_service_rtos, test_imu_calibration_diagnostics, test_rtos_ramp_bridge, test_rtos_ramp',
-            '24 focused Python capture/line-export/barcode-export tests; default SDK preprocessed token parity for imu_service/imu_proc/lsm303_driver',
+        'software_checks':['6 focused strict C programs: test_hump_odo_grace, test_imu_task_reset, test_imu_service_rtos, test_usb_printf, test_rtos_ramp_bridge, test_rtos_ramp',
+            '25 focused Python capture/line-export/barcode-export tests; default SDK preprocessed token parity for imu_service/imu_proc/imu_proc.h/b4_config.h/lsm303_driver',
             'ARM Step5 build; UF2/stack/RAM/source and bundle-integrity gates; unchanged algorithm suites not rerun'],
-        'hardware_checks':'Step4 dispatch working; full L/R rejoin still needs mat. Step5 v0.1.3 passed stationary cold boot/Reset and functional flat Pause/Resume/Stop, but motion starved IMU (about15-20Hz, late gaps/FIFO overruns). v0.1.4 physical timing unverified: short stationary then flat motion/USB/network check required before ramp.',
-        'ram_comparison':{'baseline':'Step5 v0.1.3 same ARM build profile',
-            'baseline_static_ram_end':'0x2002e630',
-            'static_ram_growth_bytes':int(linked['static_ram_end'],16)-0x2002e630,
+        'hardware_checks':'Step4 dispatch working; full L/R rejoin still needs mat. Step5 v0.1.4 motion/ramp IMU about50Hz with no new timing/read faults and assist1959ms/descent; accepted humps remained0 and USB records dropped. v0.1.5 qualification recovery/paced logging is physically unverified: flat zero-hump control then one complete ramp required.',
+        'ram_comparison':{'baseline':'Step5 v0.1.4 same ARM build profile',
+            'baseline_static_ram_end':'0x2002e6c8',
+            'static_ram_growth_bytes':int(linked['static_ram_end'],16)-0x2002e6c8,
             'binary_message_growth_bytes':0,
             'scope':'Linker static image; not dynamic task-stack high-water or a complete Tribunal audit.'},
         'linked_checks':linked}
@@ -69,8 +71,8 @@ def main():
         for p in paths:z.write(p,p.relative_to(ROOT).as_posix())
         for p in (firmware,ART/'BUILD_MANIFEST.json',ART/'SOURCE_SHA256.json'):z.write(p,p.relative_to(ROOT).as_posix())
         z.write(firmware,'firmware/'+firmware.name)
-        z.writestr('START_HERE.md',(CHECKPOINT/'README.md').read_text(encoding='utf-8').replace('../../../../app_program/','app_program/').replace('firmware/v0_1_4/','firmware/'))
-        z.write(CHECKPOINT/'UPDATE_V0_1_4.md','UPDATE_V0_1_4.md')
+        z.writestr('START_HERE.md',(CHECKPOINT/'README.md').read_text(encoding='utf-8').replace('../../../../app_program/','app_program/').replace('firmware/v0_1_5/','firmware/'))
+        z.write(CHECKPOINT/'UPDATE_V0_1_5.md','UPDATE_V0_1_5.md')
         for title,script in [('Start dashboard.cmd','tools/dashboard/run_dashboard.py'),
             ('Setup Wi-Fi.cmd','tools/rtos_migration/provision_network.py'),
             ('Capture connected test.cmd','tools/rtos_migration/capture_connected_line.py'),

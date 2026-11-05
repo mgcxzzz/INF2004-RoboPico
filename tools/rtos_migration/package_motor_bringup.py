@@ -44,14 +44,19 @@ def verify_shared_sources(hashes):
                                   "current_sha256": hashes[relative], "change": "RTOS-only verified TIMER shim and stddef include; SDK timer branch retained."}
             continue
         if relative == prefix + "src/imu/imu_service.c":
-            assert hashes[relative] == "c68685a2c75c7162955ae5ec275b91a3feb48f787712d2efa2d4d45e96e7f863", relative
+            assert hashes[relative] == "d405e8b45de3e8de0bdd660080f0c642fa82e5431c7b3b85bdfa2d146de314ed", relative
             reviewed[relative] = {"baseline_sha256": hashlib.sha256(original).hexdigest(),
-                                  "current_sha256": hashes[relative], "change": "RTOS-only bounded init/FIFO acquisition, wall-time hooks, console suppression and passive calibration evidence; default SDK tokens and estimator decisions unchanged."}
+                                  "current_sha256": hashes[relative], "change": "RTOS-only bounded acquisition, copied qualification/calibration diagnostics and console suppression; default SDK tokens unchanged."}
+            continue
+        if relative == prefix + "src/imu/imu_proc.h":
+            assert hashes[relative] == "5fd7d5e0ef2b4abd37bf7643eaf0aa25589aeb137771dae2eb4236c9eb66f766", relative
+            reviewed[relative] = {"baseline_sha256": hashlib.sha256(original).hexdigest(),
+                                  "current_sha256": hashes[relative], "change": "RTOS-only packed gap/heading qualification state and diagnostics; default SDK tokens unchanged."}
             continue
         if relative == prefix + "src/imu/imu_proc.c":
-            assert hashes[relative] == "8e4e34c8816396b0a1af61b3b944bfc5e23f6bd1caee74271134ab8ec5732043", relative
+            assert hashes[relative] == "885521f0cd1378201e516c09149f504247b99cce6203ac9aa07615fd2d192c0a", relative
             reviewed[relative] = {"baseline_sha256": hashlib.sha256(original).hexdigest(),
-                                  "current_sha256": hashes[relative], "change": "APP_RTOS_IMU passive exact calibration restart-reason hook; no change to guard arithmetic, state decisions or default SDK tokens."}
+                                  "current_sha256": hashes[relative], "change": "RTOS-only bounded odometry-gap qualification recovery, bounded heading requalification and passive diagnostics; default SDK tokens unchanged."}
             continue
         if relative == prefix + "src/imu/lsm303_driver.c":
             assert hashes[relative] == "424f5a5e335ea6f0745c097f2c10658e6d5ba6a4af87bc0f89915e1cba2e6911", relative

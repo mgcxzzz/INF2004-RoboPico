@@ -67,6 +67,32 @@ typedef struct {
     bool b_clear_fault;    /* clear SYS_FAULT_IMU (after reset) */
 } b4_out_t;
 
+#ifdef APP_RTOS_IMU
+/* Compact, RTOS-only diagnostics for side-ramp qualification interruptions.
+ * These values are copied into the existing diagnostic snapshot; they do not
+ * alter the IMU wire frame. */
+typedef enum {
+    B4_SIDE_HOLD_NONE = 0,
+    B4_SIDE_HOLD_ODO_GAP = 1,
+    B4_SIDE_HOLD_QUALITY_SKIP = 2,
+    B4_SIDE_HOLD_MIXED = 3
+} b4_side_hold_reason_t;
+
+typedef enum {
+    B4_SIDE_CLEAR_NONE = 0,
+    B4_SIDE_CLEAR_ODO_GAP_LONG = 1,
+    B4_SIDE_CLEAR_SKIP_BUDGET = 2,
+    B4_SIDE_CLEAR_TURN = 3,
+    B4_SIDE_CLEAR_REVERSE = 4,
+    B4_SIDE_CLEAR_SHOCK = 5,
+    B4_SIDE_CLEAR_STOP_RESET = 6,
+    B4_SIDE_CLEAR_HEIGHT_BEFORE_RISE = 7,
+    B4_SIDE_CLEAR_OTHER_QUALITY = 8,
+    B4_SIDE_CLEAR_TIMEOUT = 9,
+    B4_SIDE_CLEAR_MIXED_SKIP_RUN = 10
+} b4_side_clear_reason_t;
+#endif
+
 /* Operating-state changes from the Navigation Coordinator, mapped. */
 typedef enum {
     B4_MISSION_START = 0, /* Ready -> Running: new run, reset maximum */
@@ -184,6 +210,23 @@ typedef struct {
     uint32_t side_skip_us;     /* v0.8: skipped time in candidate  */
     int16_t side_last_h_mm;    /* v0.8: last valid candidate height */
     bool side_have_odo;
+
+#ifdef APP_RTOS_IMU
+    /* Hump odometry-gap grace diagnostics. Counters wrap modulo 2^32. */
+    uint32_t side_diag_hold_count;
+    uint32_t side_diag_recover_count;
+    uint32_t side_diag_disarm_count;
+    uint32_t side_diag_early_clear_count;
+    uint32_t side_diag_last_hold_reason : 2;
+    uint32_t side_diag_last_clear_reason : 4;
+    uint32_t side_diag_last_failure_reason : 4;
+    uint32_t side_odo_gap_disarmed : 1;
+    uint32_t side_odo_gap_last_ms : 7;
+    uint32_t side_odo_gap_run_us : 17;
+    uint32_t side_odo_rate_guard_active : 1;
+    int16_t side_odo_rate_anchor_head;
+    uint32_t side_odo_rate_anchor_us;
+#endif
 
     /* Data health */
     uint8_t i2c_run; /* failed reads in a row             */

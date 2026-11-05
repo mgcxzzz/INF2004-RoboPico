@@ -5,6 +5,7 @@
 #include "imu_acquisition.h"
 #include "acquisition_schedule.h"
 #include "calibration_diagnostics.h"
+#include "hump_diagnostics.h"
 #include <string.h>
 
 /* One I2C/estimator writer on core0, ahead of background USB/Wi-Fi.
@@ -17,6 +18,7 @@ static struct {
     imu_tlm_t tlm;
     RiAcquisition acquisition;
     RiCalibration calibration;
+    RiHumpQualification hump;
     uint64_t observed_us;
     uint32_t invalid[2], run_serial, ticks, tick_us, max_tick_us, tx_drop;
     uint32_t init_epoch, ready_epoch, max_wake_late_us;
@@ -122,6 +124,7 @@ void ri_task(INT code, void *exinf) {
                 key = enter();
                 ++shared.init_epoch;
                 memset(&shared.tilt, 0, sizeof(shared.tilt));
+                memset(&shared.hump, 0, sizeof(shared.hump));
                 leave(key);
                 b4v23_init(send_frame, false);
                 now = board_time_us();
@@ -143,10 +146,13 @@ void ri_task(INT code, void *exinf) {
             ri_acquisition_snapshot(&acquisition);
             RiCalibration calibration;
             b4v23_calibration(&calibration);
+            RiHumpQualification hump;
+            b4v23_hump_qualification(&hump);
             key = enter();
             shared.tilt = tilt;
             shared.acquisition = acquisition;
             shared.calibration = calibration;
+            shared.hump = hump;
             if (wake_late > shared.max_wake_late_us)
                 shared.max_wake_late_us = wake_late;
             ++shared.ticks;
@@ -163,6 +169,7 @@ void ri_report(void) {
     b4v23_tilt_t tilt = shared.tilt;
     RiAcquisition acq = shared.acquisition;
     RiCalibration cal = shared.calibration;
+    RiHumpQualification hump = shared.hump;
     unsigned core = shared.core;
     uint32_t epoch = shared.init_epoch, ready_epoch = shared.ready_epoch,
              wake_max = shared.max_wake_late_us;
@@ -208,6 +215,10 @@ void ri_report(void) {
         cal.restarts, cal.axis_restarts[0], cal.axis_restarts[1], cal.axis_restarts[2],
         cal.speed_restarts, cal.last_reason, cal.last_span_mg[0], cal.last_span_mg[1],
         cal.last_span_mg[2], cal.failed_reads, cal.empty_reads, cal.late_gaps, cal.fifo_overruns);
+    tm_printf(
+        (UB *)"IMU_HUMP flags=%u holds=%u recoveries=%u disarms=%u early_clears=%u hold_reason=%u clear_reason=%u failure_reason=%u gap_ms=%u last_gap_ms=%u\n",
+        hump.flags, hump.holds, hump.recoveries, hump.disarms, hump.early_clears,
+        hump.hold_reason, hump.clear_reason, hump.failure_reason, hump.gap_ms, hump.last_gap_ms);
     ri_ramp_report();
 }
 #endif

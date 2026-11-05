@@ -37,7 +37,7 @@ static ER start(FP entry, PRI priority, UW processor, const char *name) {
 void bringup_help(void) {
 #if defined(APP_RTOS_IMU)
     tm_printf(
-        (UB *)"\nROBOPICO RTOS CONNECTED IMU v0.1.4 | Step5 EXPERIMENTAL | micro T-Kernel SMP\n");
+        (UB *)"\nROBOPICO RTOS CONNECTED IMU v0.1.5 | Step5 EXPERIMENTAL | micro T-Kernel SMP\n");
     tm_printf((
         UB *)"Based on Step4 v0.1.2 (physical acceptance pending). Buddy1-4; Buddy5 NOT integrated.\n");
     tm_printf((
@@ -121,7 +121,17 @@ void bringup_help(void) {
 #endif
 }
 
-void bringup_report(void) {
+static void report_pause(bool paced) {
+#ifdef APP_RTOS_IMU
+    /* Reports run only in the USB console or low-priority diagnostics task. */
+    if (paced)
+        (void)tk_dly_tsk(10);
+#else
+    (void)paced;
+#endif
+}
+
+static void bringup_report_impl(bool paced) {
     BringupStatus s;
     bringup_get_status(&s);
     tm_printf(
@@ -130,10 +140,12 @@ void bringup_report(void) {
         s.flags & BR_CLOCK_OK ? "PASS"
         : s.clock_samples     ? "CHECK"
                               : "PENDING");
+    report_pause(paced);
     tm_printf(
         (UB *)"CONTROL count=%u dt_us=%u min_dt_us=%u max_dt_us=%u max_cost_us=%u late=%u flags=0x%x active=%u reason=%u usb=%u tx_drop=%u rx_drop=%u\n",
         s.control_count, s.dt_us, s.min_dt_us, s.max_dt_us, s.max_cost_us, s.late_count, s.flags,
         (s.flags & BR_ACTIVE) != 0U, s.reason, tm_usb_state(), tm_usb_dropped, tm_usb_rx_dropped);
+    report_pause(paced);
     tm_printf(
         (UB *)"WHEELS ticks=%d,%d edges=%u,%u invalid=%u,%u speed_x10=%d,%d target=%d,%d pwm=%d,%d gp20=%u gp21=%u irq_stop=%u\n",
         s.ticks[0], s.ticks[1], s.edges[0], s.edges[1], s.invalid[0], s.invalid[1], s.speed_x10[0],
@@ -144,12 +156,15 @@ void bringup_report(void) {
               s.encoder_bad[0], s.encoder_bad[1], s.encoder_changes[0], s.encoder_changes[1],
               s.encoder_kind, s.encoder_wheel);
     rtos_line_report();
+    report_pause(paced);
 #endif
 #ifdef APP_RTOS_NETWORK
     rn_report();
 #endif
 #ifdef APP_RTOS_IMU
+    report_pause(paced);
     ri_report();
+    report_pause(paced);
     UW log[4];
     extern void tm_usb_log_snapshot(UW out[4]);
     tm_usb_log_snapshot(log);
@@ -157,6 +172,8 @@ void bringup_report(void) {
               log[0], log[1], log[2], log[3]);
 #endif
 }
+
+void bringup_report(void) { bringup_report_impl(false); }
 
 void bringup_status_task(INT code, void *exinf) {
     (void)code;
@@ -169,7 +186,7 @@ void bringup_status_task(INT code, void *exinf) {
 #endif
         uint32_t now = board_kernel_ms();
         if ((int32_t)(now - next) >= 0) {
-            bringup_report();
+            bringup_report_impl(true);
             if ((reports++ % 5U) == 0U)
                 board_clock_report();
             next += 1000U;

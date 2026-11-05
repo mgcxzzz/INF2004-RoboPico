@@ -295,8 +295,69 @@ static void side_clear(b4_ctx_t *p_ctx) {
     p_ctx->side_last_h_mm = 0;
 }
 
+#ifdef APP_RTOS_IMU
+static uint32_t side_u17_add(uint32_t value, uint32_t add) {
+    uint32_t const max_value = 131071U;
+
+    return (add > (max_value - value)) ? max_value : (value + add);
+}
+
+static void side_diag_disarm(b4_ctx_t *p_ctx, b4_side_clear_reason_t reason) {
+    p_ctx->side_diag_disarm_count++;
+    p_ctx->side_diag_last_clear_reason = (uint32_t)reason;
+    if (reason != B4_SIDE_CLEAR_STOP_RESET) {
+        p_ctx->side_diag_last_failure_reason = (uint32_t)reason;
+    }
+}
+
+static void side_diag_note_hold(b4_ctx_t *p_ctx, b4_side_hold_reason_t reason,
+                                bool b_qualifying) {
+    uint32_t const previous = p_ctx->side_diag_last_hold_reason;
+
+    if (p_ctx->side_skip_run_us == 0U) {
+        if (b_qualifying) {
+            p_ctx->side_diag_hold_count++;
+        }
+        p_ctx->side_diag_last_hold_reason = (uint32_t)reason;
+    } else if ((previous != (uint32_t)reason) && (previous != B4_SIDE_HOLD_MIXED)) {
+        p_ctx->side_diag_last_hold_reason = B4_SIDE_HOLD_MIXED;
+    } else {
+        /* retain the first or already mixed reason for this skip run */
+    }
+}
+
+static b4_side_clear_reason_t side_diag_reject_reason(b4_ctx_t const *p_ctx, imu_reject_t why) {
+    if (why == IMU_REJ_STOPPED) {
+        return B4_SIDE_CLEAR_STOP_RESET;
+    }
+    if (why == IMU_REJ_SHOCK) {
+        return B4_SIDE_CLEAR_SHOCK;
+    }
+    if (why == IMU_REJ_TIMEOUT) {
+        return B4_SIDE_CLEAR_TIMEOUT;
+    }
+    if ((p_ctx->side_quality_reason & B4_Q_TURN) != 0U) {
+        return B4_SIDE_CLEAR_TURN;
+    }
+    if ((p_ctx->side_quality_reason & B4_Q_REVERSE) != 0U) {
+        return B4_SIDE_CLEAR_REVERSE;
+    }
+    return B4_SIDE_CLEAR_OTHER_QUALITY;
+}
+#endif
+
 static void side_reject(b4_ctx_t *p_ctx, imu_reject_t why, uint32_t t_us, b4_out_t *p_out) {
     bool const started = p_ctx->side_rising;
+
+#ifdef APP_RTOS_IMU
+    if (p_ctx->side_candidate) {
+        side_diag_disarm(p_ctx, side_diag_reject_reason(p_ctx, why));
+        p_ctx->side_odo_rate_guard_active = 0U;
+        if (!started) {
+            p_ctx->side_diag_early_clear_count++;
+        }
+    }
+#endif
 
     if (started) {
         p_ctx->rejected++;
@@ -317,6 +378,10 @@ static void side_finish(b4_ctx_t *p_ctx, uint32_t t_us, b4_out_t *p_out) {
     if (((uint64_t)p_ctx->side_skip_us * 100U) >
         ((uint64_t)(uint32_t)(t_us - p_ctx->side_start_us) * B4_SIDE_SKIP_MAX_PCT)) {
         side_reject(p_ctx, IMU_REJ_RANGE, t_us, p_out);
+#ifdef APP_RTOS_IMU
+        p_ctx->side_diag_last_clear_reason = B4_SIDE_CLEAR_SKIP_BUDGET;
+        p_ctx->side_diag_last_failure_reason = B4_SIDE_CLEAR_SKIP_BUDGET;
+#endif
         return;
     }
 
@@ -351,6 +416,11 @@ static void side_terrain(b4_ctx_t *p_ctx, b4_in_t const *p_in, bool b_quality, b
     bool b_skip;
     int32_t dd = 0;
     int32_t dh = 0;
+#ifdef APP_RTOS_IMU
+    bool b_odo_gap_eligible = false;
+    bool b_odo_gap_recovery = false;
+    bool b_odo_recovery_safe = true;
+#endif
 
     if (!p_ctx->b_mission || (p_ctx->state == IMU_ST_IMPACT)) {
         if (p_ctx->side_candidate) {
@@ -359,17 +429,104 @@ static void side_terrain(b4_ctx_t *p_ctx, b4_in_t const *p_in, bool b_quality, b
         return;
     }
 
+#ifdef APP_RTOS_IMU
+    if (p_ctx->side_candidate &&
+        ((uint32_t)(p_in->t_us - p_ctx->side_start_us) >=
+         (B4_SIDE_TIMEOUT_MS * 1000U))) {
+        side_reject(p_ctx, IMU_REJ_TIMEOUT, p_in->t_us, p_out);
+        return;
+    }
+#endif
+
+#ifdef APP_RTOS_IMU
+    if (!p_in->b_motion) {
+        if (p_ctx->speed_mm_s < 0) {
+            p_ctx->side_quality_reason |= B4_Q_REVERSE;
+        }
+        if (iabs(p_ctx->turn_dd_s) > B4_TURN_DD_S) {
+            p_ctx->side_quality_reason |= B4_Q_TURN;
+        }
+        b_odo_gap_eligible = b_quality && !p_in->b_overrun &&
+                             (p_in->gap_us <= B4_LATE_US) &&
+                             (p_ctx->state != IMU_ST_IMPACT) &&
+                             ((p_ctx->side_quality_reason &
+                               (B4_Q_GRAVITY | B4_Q_TIMING | B4_Q_IMPACT | B4_Q_TURN |
+                                B4_Q_REVERSE)) == 0U);
+    } else if (p_ctx->side_odo_gap_run_us != 0U) {
+        uint64_t const elapsed_us = (uint64_t)p_ctx->side_odo_gap_run_us + p_in->gap_us;
+        int32_t gap_dd = 0;
+        int32_t gap_dh = 0;
+        uint32_t gap_ms;
+
+        b_odo_gap_recovery = true;
+        if (p_ctx->side_have_odo) {
+            gap_dd = (int32_t)(int16_t)((uint16_t)p_in->distance_mm -
+                                        (uint16_t)p_ctx->side_last_dist);
+            gap_dh = (int32_t)(int16_t)((uint16_t)p_in->heading_dd -
+                                        (uint16_t)p_ctx->side_last_head);
+        }
+        if (gap_dd < 0) {
+            p_ctx->side_quality_reason |= B4_Q_REVERSE;
+            b_odo_recovery_safe = false;
+        }
+        if (((uint64_t)(uint32_t)iabs(gap_dh) * 1000000U) >
+            ((uint64_t)B4_TURN_DD_S * elapsed_us)) {
+            p_ctx->side_quality_reason |= B4_Q_TURN;
+            b_odo_recovery_safe = false;
+        }
+        gap_ms = (p_ctx->side_odo_gap_run_us + 500U) / 1000U;
+        if (gap_ms > 127U) {
+            gap_ms = 127U;
+        }
+        p_ctx->side_odo_gap_last_ms = gap_ms;
+        p_ctx->side_diag_recover_count++;
+        p_ctx->side_odo_gap_run_us = 0U;
+        if (b_odo_recovery_safe) {
+            if (p_ctx->side_odo_rate_guard_active == 0U) {
+                p_ctx->side_odo_rate_anchor_head = p_in->heading_dd;
+                p_ctx->side_odo_rate_anchor_us = p_in->t_us;
+                p_ctx->side_odo_rate_guard_active = 1U;
+            }
+        } else {
+            p_ctx->side_odo_rate_guard_active = 0U;
+        }
+        p_ctx->side_odo_gap_disarmed = 0U;
+    } else {
+        /* no isolated gap to recover */
+    }
+#endif
+
     b_odo_safe = p_in->b_motion && !p_in->b_overrun && (p_in->gap_us <= B4_LATE_US);
     if (p_in->b_motion) {
+#ifdef APP_RTOS_IMU
+        if (!b_odo_gap_recovery) {
+#endif
         if (p_ctx->side_have_odo) {
             dd = (int32_t)(int16_t)((uint16_t)p_in->distance_mm - (uint16_t)p_ctx->side_last_dist);
             dh = (int32_t)(int16_t)((uint16_t)p_in->heading_dd - (uint16_t)p_ctx->side_last_head);
         }
+#ifdef APP_RTOS_IMU
+        } else {
+            /* Compare the outage span for safety above, then exclude its
+             * translation and rotation from every accepted delta. */
+            dd = 0;
+            dh = 0;
+        }
+#endif
         p_ctx->side_last_dist = p_in->distance_mm;
         p_ctx->side_last_head = p_in->heading_dd;
         p_ctx->side_have_odo = true;
     } else {
+#ifdef APP_RTOS_IMU
+        if (!b_odo_gap_eligible) {
+            p_ctx->side_have_odo = false;
+            p_ctx->side_odo_gap_run_us = 0U;
+            p_ctx->side_odo_gap_disarmed = 0U;
+            p_ctx->side_odo_rate_guard_active = 0U;
+        }
+#else
         p_ctx->side_have_odo = false;
+#endif
     }
     /* Encoder edges arrive in steps. Differentiating one 20 ms heading
      * increment falsely rejected a powered run at an averaged 2.4 deg/s.
@@ -377,7 +534,41 @@ static void side_terrain(b4_ctx_t *p_ctx, b4_in_t const *p_in, bool b_quality, b
      * the instantaneous guard during warm-up, before a rate is available. */
     b_turn_safe = p_ctx->b_rates ? (iabs(p_ctx->turn_dd_s) <= B4_TURN_DD_S)
                                  : (iabs(dh) <= (B4_TURN_DD_S * (int32_t)p_in->gap_us / 1000000));
+#ifdef APP_RTOS_IMU
+    if (p_ctx->b_rates) {
+        p_ctx->side_odo_rate_guard_active = 0U;
+    } else if ((p_ctx->side_odo_rate_guard_active != 0U) && p_in->b_motion) {
+        uint32_t const elapsed_us = (uint32_t)(p_in->t_us - p_ctx->side_odo_rate_anchor_us);
+        uint32_t const minimum_window_us = B4_RATE_WINDOW_MS * 1000U;
+        uint32_t const rate_window_us =
+            (elapsed_us < minimum_window_us) ? minimum_window_us : elapsed_us;
+        int32_t const yaw_dd =
+            (int32_t)(int16_t)((uint16_t)p_in->heading_dd -
+                               (uint16_t)p_ctx->side_odo_rate_anchor_head);
+
+        /* Before a full rate window exists, keep the same 200 ms average
+         * meaning with a bounded 4 degree yaw budget. Large turns still fail
+         * immediately, while one quantized encoder step is not mistaken for
+         * a 20 ms turn rate. */
+        b_turn_safe = ((uint64_t)(uint32_t)iabs(yaw_dd) * 1000000U) <=
+                      ((uint64_t)B4_TURN_DD_S * rate_window_us);
+        if (elapsed_us >= minimum_window_us) {
+            /* The just-checked interval is complete; the next bounded window
+             * starts here. This anchor survives every intervening odo gap. */
+            p_ctx->side_odo_rate_anchor_head = p_in->heading_dd;
+            p_ctx->side_odo_rate_anchor_us = p_in->t_us;
+        }
+    } else {
+        /* Use the normal instantaneous guard before a gap. During a missing
+         * odo sample heading is only a placeholder, so keep the last anchor. */
+    }
+#endif
     b_motion_safe = b_odo_safe && (dd >= 0) && b_turn_safe;
+#ifdef APP_RTOS_IMU
+    if (!b_odo_recovery_safe) {
+        b_motion_safe = false;
+    }
+#endif
     if (!b_odo_safe)
         p_ctx->side_quality_reason |= B4_Q_UNAVAILABLE;
     if (dd < 0)
@@ -394,9 +585,69 @@ static void side_terrain(b4_ctx_t *p_ctx, b4_in_t const *p_in, bool b_quality, b
              ((p_ctx->side_quality_reason & (B4_Q_GRAVITY | B4_Q_TIMING | B4_Q_UNAVAILABLE |
                                              B4_Q_IMPACT | B4_Q_TURN | B4_Q_REVERSE)) == 0U);
 
+#ifdef APP_RTOS_IMU
+    if (b_odo_gap_eligible) {
+        bool const b_had_level_progress = p_ctx->side_level_us != 0U;
+        bool const b_qualifying = p_ctx->side_candidate || p_ctx->side_level_ready;
+        uint32_t const prior_skip_us = p_ctx->side_skip_run_us;
+        uint32_t run_ms;
+
+        side_diag_note_hold(p_ctx, B4_SIDE_HOLD_ODO_GAP, b_qualifying);
+        p_ctx->side_skip_run_us = side_u17_add(p_ctx->side_skip_run_us, p_in->gap_us);
+        p_ctx->side_odo_gap_run_us = side_u17_add(p_ctx->side_odo_gap_run_us, p_in->gap_us);
+        run_ms = (p_ctx->side_odo_gap_run_us + 500U) / 1000U;
+        p_ctx->side_odo_gap_last_ms = (run_ms > 127U) ? 127U : run_ms;
+        if (p_ctx->side_candidate) {
+            p_ctx->side_skip_us += p_in->gap_us;
+        } else if (!p_ctx->side_level_ready) {
+            /* An unqualified partial level interval is not continuous across
+             * missing odometry and cannot contribute toward the 200 ms arm. */
+            p_ctx->side_level_us = 0U;
+            if (b_had_level_progress && (prior_skip_us == 0U)) {
+                side_diag_disarm(p_ctx, B4_SIDE_CLEAR_OTHER_QUALITY);
+            }
+        }
+
+        if (p_ctx->side_candidate &&
+            ((uint32_t)(p_in->t_us - p_ctx->side_start_us) >=
+             (B4_SIDE_TIMEOUT_MS * 1000U))) {
+            side_reject(p_ctx, IMU_REJ_TIMEOUT, p_in->t_us, p_out);
+            p_ctx->side_odo_gap_disarmed = 1U;
+            return;
+        }
+
+        if ((p_ctx->side_skip_run_us > (B4_SIDE_SKIP_RUN_MS * 1000U)) &&
+            !p_ctx->side_odo_gap_disarmed) {
+            b4_side_clear_reason_t reason = B4_SIDE_CLEAR_ODO_GAP_LONG;
+
+            if (p_ctx->side_diag_last_hold_reason == B4_SIDE_HOLD_MIXED) {
+                reason = B4_SIDE_CLEAR_MIXED_SKIP_RUN;
+            }
+            if (p_ctx->side_candidate) {
+                side_reject(p_ctx, IMU_REJ_NO_ODOMETRY, p_in->t_us, p_out);
+                p_ctx->side_diag_last_clear_reason = (uint32_t)reason;
+                p_ctx->side_diag_last_failure_reason = (uint32_t)reason;
+            } else if (p_ctx->side_level_ready) {
+                p_ctx->side_level_ready = false;
+                p_ctx->side_level_us = 0U;
+                side_diag_disarm(p_ctx, reason);
+            } else {
+                /* no qualification remained to clear */
+            }
+            p_ctx->side_odo_gap_disarmed = 1U;
+        }
+        return;
+    }
+#endif
+
     if (p_ctx->side_candidate) {
         bool b_unsafe = (!b_quality && !b_skip) || !b_odo_safe ||
                         (p_ctx->side_have_odo && (dd < 0)) || !b_turn_safe;
+#ifdef APP_RTOS_IMU
+        if (!b_odo_recovery_safe) {
+            b_unsafe = true;
+        }
+#endif
         if (p_ctx->b_rates &&
             ((p_ctx->speed_mm_s < 0) || ((iabs(p_ctx->accel_mm_s2) > B4_ACCEL_MM_S2) && !b_skip) ||
              (iabs(p_ctx->turn_dd_s) > B4_TURN_DD_S))) {
@@ -408,15 +659,26 @@ static void side_terrain(b4_ctx_t *p_ctx, b4_in_t const *p_in, bool b_quality, b
         }
 
         if (b_skip) {
-            /* Height unknown this tick: no peak, rise or return update;
-             * forward travel still counts while last seen elevated. */
+            /* Height unknown: no peak/rise/return update. Only reference SDK
+             * retains clean-odometry distance credit; RTOS excludes this tick. */
+#ifdef APP_RTOS_IMU
+            side_diag_note_hold(p_ctx, B4_SIDE_HOLD_QUALITY_SKIP, true);
+#endif
             p_ctx->side_skip_run_us += p_in->gap_us;
             p_ctx->side_skip_us += p_in->gap_us;
+#ifndef APP_RTOS_IMU
             if ((dd > 0) && (p_ctx->side_last_h_mm >= B4_SIDE_START_MM)) {
                 p_ctx->side_travel_mm += dd;
             }
+#endif
             if (p_ctx->side_skip_run_us > (B4_SIDE_SKIP_RUN_MS * 1000U)) {
                 side_reject(p_ctx, IMU_REJ_RANGE, p_in->t_us, p_out);
+#ifdef APP_RTOS_IMU
+                if (p_ctx->side_diag_last_hold_reason == B4_SIDE_HOLD_MIXED) {
+                    p_ctx->side_diag_last_clear_reason = B4_SIDE_CLEAR_MIXED_SKIP_RUN;
+                    p_ctx->side_diag_last_failure_reason = B4_SIDE_CLEAR_MIXED_SKIP_RUN;
+                }
+#endif
             } else if ((uint32_t)(p_in->t_us - p_ctx->side_start_us) >=
                        (B4_SIDE_TIMEOUT_MS * 1000U)) {
                 side_reject(p_ctx, IMU_REJ_TIMEOUT, p_in->t_us, p_out);
@@ -445,6 +707,12 @@ static void side_terrain(b4_ctx_t *p_ctx, b4_in_t const *p_in, bool b_quality, b
                     emit(p_ctx, p_out, IMU_EVT_HUMP_START, 0U, 0, p_in->t_us);
                 }
             } else {
+#ifdef APP_RTOS_IMU
+                if (p_ctx->side_candidate && !p_ctx->side_rising) {
+                    p_ctx->side_diag_early_clear_count++;
+                    side_diag_disarm(p_ctx, B4_SIDE_CLEAR_HEIGHT_BEFORE_RISE);
+                }
+#endif
                 side_clear(p_ctx);
                 p_ctx->state = IMU_ST_TRACKING;
                 return;
@@ -469,16 +737,45 @@ static void side_terrain(b4_ctx_t *p_ctx, b4_in_t const *p_in, bool b_quality, b
 
     if (b_skip && b_motion_safe) {
         /* v0.8: hold arming state; a long skip run disarms. */
+#ifdef APP_RTOS_IMU
+        bool const b_had_level = p_ctx->side_level_ready || (p_ctx->side_level_us != 0U);
+        side_diag_note_hold(p_ctx, B4_SIDE_HOLD_QUALITY_SKIP, b_had_level);
+#endif
         p_ctx->side_skip_run_us += p_in->gap_us;
         if (p_ctx->side_skip_run_us > (B4_SIDE_SKIP_RUN_MS * 1000U)) {
+#ifdef APP_RTOS_IMU
+            bool const b_was_ready = p_ctx->side_level_ready || (p_ctx->side_level_us != 0U);
+#endif
             p_ctx->side_level_ready = false;
             p_ctx->side_level_us = 0U;
+#ifdef APP_RTOS_IMU
+            if (b_was_ready) {
+                b4_side_clear_reason_t reason = B4_SIDE_CLEAR_OTHER_QUALITY;
+                if (p_ctx->side_diag_last_hold_reason == B4_SIDE_HOLD_MIXED) {
+                    reason = B4_SIDE_CLEAR_MIXED_SKIP_RUN;
+                }
+                side_diag_disarm(p_ctx, reason);
+            }
+#endif
         }
         return;
     }
     p_ctx->side_skip_run_us = 0U;
 
     if (!b_quality || !b_motion_safe) {
+#ifdef APP_RTOS_IMU
+        if (p_ctx->side_level_ready || (p_ctx->side_level_us != 0U)) {
+            b4_side_clear_reason_t reason = B4_SIDE_CLEAR_OTHER_QUALITY;
+            if ((p_ctx->side_quality_reason & B4_Q_TURN) != 0U) {
+                reason = B4_SIDE_CLEAR_TURN;
+            } else if ((p_ctx->side_quality_reason & B4_Q_REVERSE) != 0U) {
+                reason = B4_SIDE_CLEAR_REVERSE;
+            } else {
+                /* retain the generic sensor/odometry quality reason */
+            }
+            side_diag_disarm(p_ctx, reason);
+        }
+#endif
         p_ctx->side_level_ready = false;
         p_ctx->side_level_us = 0U;
     } else if (!p_ctx->side_level_ready) {
@@ -582,6 +879,12 @@ void b4_mission(b4_ctx_t *p_ctx, b4_mission_t event, uint32_t t_us, b4_out_t *p_
         side_clear(p_ctx);
         p_ctx->side_level_ready = false;
         p_ctx->side_level_us = 0U;
+#ifdef APP_RTOS_IMU
+        p_ctx->side_odo_gap_run_us = 0U;
+        p_ctx->side_odo_gap_disarmed = 0U;
+        p_ctx->side_odo_rate_guard_active = 0U;
+        p_ctx->side_have_odo = false;
+#endif
 #endif
         p_ctx->max_height_mm = 0U;
         p_ctx->last_height_mm = 0U;
@@ -604,6 +907,18 @@ void b4_mission(b4_ctx_t *p_ctx, b4_mission_t event, uint32_t t_us, b4_out_t *p_
         if (p_ctx->side_candidate) {
             side_reject(p_ctx, IMU_REJ_STOPPED, t_us, p_out);
         }
+#ifdef APP_RTOS_IMU
+        else if (p_ctx->side_level_ready || (p_ctx->side_level_us != 0U)) {
+            side_diag_disarm(p_ctx, B4_SIDE_CLEAR_STOP_RESET);
+        } else {
+            /* no qualification to disarm */
+        }
+        p_ctx->side_odo_gap_run_us = 0U;
+        p_ctx->side_odo_gap_disarmed = 0U;
+        p_ctx->side_odo_rate_guard_active = 0U;
+        p_ctx->side_have_odo = false;
+        p_ctx->side_skip_run_us = 0U;
+#endif
         p_ctx->side_level_ready = false;
         p_ctx->side_level_us = 0U;
 #endif
@@ -634,6 +949,18 @@ void b4_mission(b4_ctx_t *p_ctx, b4_mission_t event, uint32_t t_us, b4_out_t *p_
         if (p_ctx->side_candidate) {
             side_reject(p_ctx, IMU_REJ_STOPPED, t_us, p_out);
         }
+#ifdef APP_RTOS_IMU
+        else if (p_ctx->side_level_ready || (p_ctx->side_level_us != 0U)) {
+            side_diag_disarm(p_ctx, B4_SIDE_CLEAR_STOP_RESET);
+        } else {
+            /* no qualification to disarm */
+        }
+        p_ctx->side_odo_gap_run_us = 0U;
+        p_ctx->side_odo_gap_disarmed = 0U;
+        p_ctx->side_odo_rate_guard_active = 0U;
+        p_ctx->side_have_odo = false;
+        p_ctx->side_skip_run_us = 0U;
+#endif
         p_ctx->side_level_ready = false;
         p_ctx->side_level_us = 0U;
 #endif
@@ -1160,6 +1487,19 @@ void b4_tick(b4_ctx_t *p_ctx, b4_in_t const *p_in, b4_out_t *p_out) {
         if (p_ctx->side_candidate) {
             side_reject(p_ctx, IMU_REJ_NO_ODOMETRY, p_in->t_us, p_out);
         }
+#ifdef APP_RTOS_IMU
+        else if (p_ctx->side_level_ready || (p_ctx->side_level_us != 0U)) {
+            side_diag_disarm(p_ctx, B4_SIDE_CLEAR_OTHER_QUALITY);
+            p_ctx->side_level_ready = false;
+            p_ctx->side_level_us = 0U;
+        } else {
+            /* no qualification to disarm */
+        }
+        p_ctx->side_odo_gap_run_us = 0U;
+        p_ctx->side_odo_gap_disarmed = 0U;
+        p_ctx->side_odo_rate_guard_active = 0U;
+        p_ctx->side_have_odo = false;
+#endif
 #endif
         p_ctx->i2c_errors++;
         p_ctx->i2c_run++;
@@ -1179,6 +1519,19 @@ void b4_tick(b4_ctx_t *p_ctx, b4_in_t const *p_in, b4_out_t *p_out) {
         if (p_ctx->side_candidate) {
             side_reject(p_ctx, IMU_REJ_NO_ODOMETRY, p_in->t_us, p_out);
         }
+#ifdef APP_RTOS_IMU
+        else if (p_ctx->side_level_ready || (p_ctx->side_level_us != 0U)) {
+            side_diag_disarm(p_ctx, B4_SIDE_CLEAR_OTHER_QUALITY);
+            p_ctx->side_level_ready = false;
+            p_ctx->side_level_us = 0U;
+        } else {
+            /* no qualification to disarm */
+        }
+        p_ctx->side_odo_gap_run_us = 0U;
+        p_ctx->side_odo_gap_disarmed = 0U;
+        p_ctx->side_odo_rate_guard_active = 0U;
+        p_ctx->side_have_odo = false;
+#endif
 #endif
         p_ctx->stale_run++;
 
@@ -1338,6 +1691,18 @@ void b4_tick(b4_ctx_t *p_ctx, b4_in_t const *p_in, b4_out_t *p_out) {
             if (p_ctx->side_candidate) {
                 side_reject(p_ctx, IMU_REJ_SHOCK, p_in->t_us, p_out);
             }
+#ifdef APP_RTOS_IMU
+            else if (p_ctx->side_level_ready || (p_ctx->side_level_us != 0U)) {
+                side_diag_disarm(p_ctx, B4_SIDE_CLEAR_SHOCK);
+                p_ctx->side_level_ready = false;
+                p_ctx->side_level_us = 0U;
+            } else {
+                /* no qualification to disarm */
+            }
+            p_ctx->side_odo_gap_run_us = 0U;
+            p_ctx->side_odo_gap_disarmed = 0U;
+            p_ctx->side_odo_rate_guard_active = 0U;
+#endif
 #else
             if (p_ctx->state == IMU_ST_HUMP) {
                 reject_hump(p_ctx, IMU_REJ_SHOCK, p_in->t_us, p_out);
