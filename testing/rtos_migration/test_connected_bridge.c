@@ -95,7 +95,11 @@ static uint64_t board_time_us(void) {
 }
 static unsigned bringup_irq_stop;
 static unsigned tm_usb_state(void) {
+#ifdef APP_RTOS_RELEASE
+    return 0; /* Exercise actual Resume with a powerbank/no terminal. */
+#else
     return 3;
+#endif
 }
 static bool board_button_pressed(unsigned p) {
     (void)p;
@@ -146,6 +150,11 @@ static void rtos_line_telemetry(WifiMotionPacket *p) {
     *p = (WifiMotionPacket){0};
 }
 static void bringup_stop_from(uint8_t reason, uint16_t latch, MotionOwner who);
+#ifdef APP_RTOS_RELEASE
+#include "src/network/wifi_protocol.h"
+static void rtos_line_release_info(uint8_t seq, uint8_t out[15]) { (void)seq;memset(out,0,15); }
+static uint8_t rtos_line_log_reply(const WifiCommand *cmd) { (void)cmd;return hardware.flags&BR_ACTIVE?WP_ACK_BUSY:WP_ACK_ACCEPTED; }
+#endif
 #include "app_program/network_bridge/network_bridge.c"
 #include "app_program/network_bridge/connected_control.c"
 #include "app_program/network_bridge/delivery_policy.h"
@@ -166,7 +175,7 @@ static void api_off(void *u) {
     ++offs;
 }
 static void online(void) {
-    RnStatus s = {.link = 3, .flags = 7, .polls = 1, .last_poll_ms = clock_ms, .connects = 1};
+    RnStatus s = {.link = 3, .flags = 7, .polls = 1, .last_poll_ms = clock_ms, .last_complete_ms = clock_ms, .connects = 1};
     rn_status_update(&s);
     app_last_ms = clock_ms;
 }

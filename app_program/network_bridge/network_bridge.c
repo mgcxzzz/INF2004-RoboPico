@@ -2,6 +2,9 @@
 #include "network_bridge.h"
 #include "network_policy.h"
 #include "connected_policy.h"
+#if defined(APP_RTOS_RELEASE) && defined(APP_RTOS_IMU)
+#include "../imu_navigation/imu_service.h"
+#endif
 #ifdef APP_RTOS_LINE
 #include "../line_navigation/line_service.h"
 #endif
@@ -352,7 +355,11 @@ void rn_app_task(int32_t code, void *exinf) {
 #ifdef APP_RTOS_LINE
             uint8_t parsed = wp_parse(message + 5, message[4], &command);
             if (!parsed && (command.code == WP_CMD_START || command.code == WP_CMD_PAUSE ||
-                            command.code == WP_CMD_RESUME || command.code == WP_CMD_RESET)) {
+                            command.code == WP_CMD_RESUME || command.code == WP_CMD_RESET
+#ifdef APP_RTOS_RELEASE
+                            || command.code == WP_CMD_GET_LOG
+#endif
+                            )) {
                 if (rn_drive_enqueue(message))
                     continue; /* ACK follows actual owner decision. */
                 uint8_t reply[4];
@@ -397,6 +404,22 @@ void rn_app_task(int32_t code, void *exinf) {
             previous_connects = net.connects;
             force_hb = true;
         }
+#ifdef APP_RTOS_RELEASE
+        static uint32_t release_last;
+        if (now - release_last >= 1000U) {
+            release_last = now;
+            uint8_t info[15];
+            rtos_line_release_info(rn_next_sequence(15), info);
+            (void)rn_tx_push(RN_TLM, info, sizeof(info), now);
+#ifdef APP_RTOS_IMU
+            if (rn_drive_telemetry_enabled()) {
+                uint8_t diagnostics[63];
+                ri_release_diagnostics(rn_next_sequence(15), now, diagnostics);
+                (void)rn_tx_push(RN_TLM, diagnostics, sizeof(diagnostics), now);
+            }
+#endif
+        }
+#endif
         if (rn_heartbeat_due(now, &last_hb, force_hb)) {
             /* A Stop/Reset may have executed in this pass. Advertise the
              * current supervisor state, not the snapshot before dispatch. */

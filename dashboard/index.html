@@ -81,7 +81,7 @@
 </head>
 <body>
 <header>
-  <h1>RoboPico <span class="ver">PROVISIONAL Buddy 1–4 integration v0.1 · Buddy 5 NOT integrated</span></h1>
+  <h1>RoboPico <span class="ver">PROVISIONAL Buddy 1–4 RTOS v0.2.0 · Buddy 5 NOT integrated</span></h1>
   <input id="url" type="text" aria-label="Broker WebSocket URL">
   <button id="connect" class="primary">Connect</button>
   <span id="broker" class="pill muted">not connected</span>
@@ -98,8 +98,8 @@
     <dl style="margin-top:8px">
       <dt>Heartbeat-reported state</dt><dd id="hbState">–</dd>
       <dt>Motion owner</dt><dd id="owner">–</dd>
-      <dt>Mode / owner / command (SDK)</dt><dd id="navDetails">waiting for coordinator telemetry</dd>
-      <dt>Coordinator fault bitmap (SDK)</dt><dd id="sdkFault">—</dd>
+      <dt>Coordinator mode / owner / command</dt><dd id="navDetails">waiting for coordinator telemetry</dd>
+      <dt>Coordinator fault bitmap</dt><dd id="sdkFault">—</dd>
       <dt>Safety (RTOS)</dt><dd id="safety">–</dd>
       <dt>Fault mask (RTOS)</dt><dd id="faults">–</dd>
       <dt>Last stop time (RTOS)</dt><dd id="stopms">–</dd>
@@ -145,7 +145,7 @@
       <button id="framesCsvSave">Export all frames CSV</button><button id="framesJsonSave">Export all frames JSON</button>
     </div>
     <div id="exportStatus" class="muted small" role="status"></div>
-    <p class="muted small">SDK v2.3 stopped-only stored data is downloaded from the Live motion panel. Save log is in Messages.</p>
+    <p class="muted small">After Stop, request stored data from the Live motion panel. Main RTOS releases support wireless downloads. Save log is in Messages.</p>
   </section>
 
   <section>
@@ -164,7 +164,7 @@
 
   <section class="wide">
     <h2>Live motion telemetry (Buddy 2 / Buddy 3)</h2>
-    <div id="sdkMotionStatus" class="muted small">No SDK motion telemetry received.</div>
+    <div id="sdkMotionStatus" class="muted small">No motion telemetry received.</div>
     <div id="sdkMotionGrid" class="metric-grid">
       <div class="metric"><label>Measured speed · left / right</label><strong id="speedMeasured">—</strong></div>
       <div class="metric"><label>Target speed · left / right</label><strong id="speedTarget">—</strong></div>
@@ -180,7 +180,7 @@
     </div>
     <div class="row"><span class="muted small">Chart window: latest 240 samples · laptop capture: up to 72,000 motion samples.</span><span id="chartSampleCount" class="muted small">0 / 240 chart samples</span></div>
     <div class="row">
-      <label for="logDataset">Stored data (SDK v2.3, stopped only)</label>
+      <label for="logDataset">Stored data (stopped only)</label>
       <select id="logDataset" aria-label="Stored log dataset">
         <option value="0">Motion rows</option><option value="1">Diagnostics</option>
         <option value="2">Raw sensor rows</option><option value="3">Navigation rows</option>
@@ -195,7 +195,7 @@
   </section>
 
   <section>
-    <h2>Barcode diagnostics (SDK source 14)</h2>
+    <h2>Barcode diagnostics (source 14)</h2>
     <div id="diagStatus" class="muted small">No diagnostics received.</div>
     <dl>
       <dt>Threshold / bank</dt><dd id="diagThreshold">—</dd>
@@ -207,6 +207,13 @@
       <dt>Invalid encoder L / R</dt><dd id="diagInvalid">—</dd>
       <dt>Diagnostics uptime</dt><dd id="diagUptime">—</dd>
     </dl>
+  </section>
+
+  <section id="rtosRuntimeCard" hidden>
+    <h2>RTOS runtime health</h2>
+    <p id="releaseCal" class="small muted">Waiting for release metadata.</p>
+    <p id="rtosRuntime" class="small">Waiting for runtime counters.</p>
+    <p id="rtosHump" class="small muted">Waiting for hump qualification.</p>
   </section>
 
   <section>
@@ -290,7 +297,7 @@
   </section>
 
   <section class="wide">
-    <h2>Barcode and junction progress (SDK sources 10/11/12)</h2>
+    <h2>Barcode and junction progress (sources 10/11/12)</h2>
     <div id="progressStatus" class="muted small">No line/coordinator telemetry received.</div>
     <div class="metric-grid">
       <div class="metric"><label>Latest decoded letter</label><strong id="eventLetter">—</strong></div>
@@ -480,13 +487,20 @@ function isOwnCommand(bytes) {
   if (i < 0) return false;
   ownCommands.splice(i, 1); return true;
 }
+function logDatasetInfo(id) {
+  const d=Object.assign({},IS28.LOG_DATASETS[id]);
+  if((logDownload.release||releaseInfo)?.storedLogs && id===1) {
+    d.rowBytes=56; d.label='Controller diagnostics (RTOS)';
+  }
+  return d;
+}
 function startLogDownload() {
   if (coordinatorMode !== 7 || coordinatorOffSince === null || now()-coordinatorOffSince<5000) { $('logDownloadStatus').textContent = 'Manual stop is required. Wait 5 s after coordinator reports Off before requesting stored logs.'; return; }
   if (!client || !client.connected) { $('logDownloadStatus').textContent = 'Connect to the broker before downloading.'; return; }
   Object.assign(logDownload, { active:true, dataset:Number($('logDataset').value), requestId:null,
-    rowIndex:0, totalRows:null, parts:null, partCount:0, retries:0, rows:[], status:'requesting' });
-  $('logDownloadStatus').textContent = `Requesting ${IS28.LOG_DATASETS[logDownload.dataset].name} rows…`;
-  addEvent(`Stored-data download started: ${IS28.LOG_DATASETS[logDownload.dataset].label}`, null, 'download');
+    release:releaseInfo ? JSON.parse(JSON.stringify(releaseInfo)) : null, rowIndex:0, totalRows:null, parts:null, partCount:0, retries:0, rows:[], status:'requesting' });
+  $('logDownloadStatus').textContent = `Requesting ${logDatasetInfo(logDownload.dataset).name} rows…`;
+  addEvent(`Stored-data download started: ${logDatasetInfo(logDownload.dataset).label}`, null, 'download');
   updateLogDownloadControl(); requestNextLogRow();
 }
 function requestNextLogRow() {
@@ -519,6 +533,7 @@ function onLogChunk(d) {
   if (d.dataset !== logDownload.dataset || d.requestId !== logDownload.requestId || d.rowIndex !== logDownload.rowIndex) {
     log('is28/tlm', `ignored unmatched log chunk dataset ${d.dataset}, row ${d.rowIndex}, id ${d.requestId}`); return;
   }
+  if (d.totalRows===0 && d.rowIndex===0 && d.status===3) { logDownload.totalRows=0; finishLogDownload(true,''); return; }
   if (d.status !== 0) { finishLogDownload(false, `Firmware rejected dataset ${d.dataset} row ${d.rowIndex} with status ${d.status}.`); return; }
   if (logDownload.totalRows === null) logDownload.totalRows = d.totalRows;
   if (d.totalRows !== logDownload.totalRows || d.rowIndex >= d.totalRows) {
@@ -531,18 +546,18 @@ function onLogChunk(d) {
   logDownload.parts[d.partIndex]=d.bytes;
   if (logDownload.parts.filter(Array.isArray).length === logDownload.partCount) {
     const row=Uint8Array.from(logDownload.parts.flat());
-    const expected=IS28.LOG_DATASETS[logDownload.dataset].rowBytes;
+    const expected=logDatasetInfo(logDownload.dataset).rowBytes;
     if (row.length !== expected) { retryLogRow(`row length ${row.length}, expected ${expected}`); return; }
     clearTimeout(logDownload.timer); logDownload.rows.push(row); logDownload.rowIndex++;
-    $('logDownloadStatus').textContent = `Received ${logDownload.rowIndex}${logDownload.totalRows===null?'':` / ${logDownload.totalRows}`} ${IS28.LOG_DATASETS[logDownload.dataset].name} rows.`;
+    $('logDownloadStatus').textContent = `Received ${logDownload.rowIndex}${logDownload.totalRows===null?'':` / ${logDownload.totalRows}`} ${logDatasetInfo(logDownload.dataset).name} rows.`;
     setTimeout(requestNextLogRow, 20);
   }
 }
 function finishLogDownload(ok, message) {
   clearTimeout(logDownload.timer); logDownload.active=false; logDownload.status=ok?'complete':'incomplete';
   if (ok) exportLogDownload();
-  $('logDownloadStatus').textContent = ok ? `Complete: received all ${logDownload.rows.length} ${IS28.LOG_DATASETS[logDownload.dataset].name} rows; binary and CSV exports downloaded.` : message;
-  addEvent(ok ? `Stored-data download complete: ${IS28.LOG_DATASETS[logDownload.dataset].label}, ${logDownload.rows.length} rows` : `Stored-data download incomplete: ${message}`, null, 'download');
+  $('logDownloadStatus').textContent = ok ? `Complete: received all ${logDownload.rows.length} ${logDatasetInfo(logDownload.dataset).name} rows; binary and CSV exports downloaded.` : message;
+  addEvent(ok ? `Stored-data download complete: ${logDatasetInfo(logDownload.dataset).label}, ${logDownload.rows.length} rows` : `Stored-data download incomplete: ${message}`, null, 'download');
   updateLogDownloadControl();
 }
 function joinRows(rows) {
@@ -551,7 +566,7 @@ function joinRows(rows) {
 }
 function hexRow(row) { return Array.from(row,(b)=>b.toString(16).padStart(2,'0')).join(''); }
 function exportLogDownload() {
-  const ds=IS28.LOG_DATASETS[logDownload.dataset], filename=`is28_${ds.name}_${stamp()}`;
+  const ds=logDatasetInfo(logDownload.dataset), filename=`is28_${ds.name}_${stamp()}`;
   const raw=joinRows(logDownload.rows);
   download(`${filename}.bin`,raw,'application/octet-stream');
   let header=['row_index','byte_length','bytes_hex'], rows=logDownload.rows.map((r,i)=>[i,r.length,hexRow(r)]), format='raw-row-hex';
@@ -560,9 +575,19 @@ function exportLogDownload() {
     rows=logDownload.rows.map((r,i)=>{const f=IS28.decodeFrame(r); if(f.error||f.src!==SRC.SDK_MOTION) return [i,...Array(header.length-1).fill('decode_error')]; const d=f.data; return [i,d.runRelativeUptime?'run-relative':'system-uptime',d.uptimeMs,d.runId,d.elapsedMs,d.phase,d.profile,d.recoveryState,d.motionActive,d.calibrationValid,d.automatic,d.emergencyStop,d.speedL,d.speedR,d.targetL,d.targetR,d.pwmL,d.pwmR,...d.adc,formatCalLevel(d.levels[0],d.calibrationValid),formatCalLevel(d.levels[1],d.calibrationValid),formatCalLevel(d.levels[2],false),d.lineMaskAvailable?'0x'+d.lineMask.toString(16):'unavailable',d.distanceMm,d.headingCdeg];});
     format='decoded-source-9-motion';
   }
+  if(logDownload.release && logDownload.dataset===1 && logDownload.rows.length) {
+    const decoded=logDownload.rows.map(r=>IS28.decodeStoredLine(r));
+    if(decoded.some(r=>r.error)) { $('logDownloadStatus').textContent='Invalid controller row; inspect binary export.'; return; }
+    header=['row_index',...Object.keys(decoded[0])];
+    rows=decoded.map((r,i)=>[i,...Object.values(r)]); format='rtos-controller-v1';
+  } else if(logDownload.release && logDownload.dataset===2) {
+    header=['row_index','ms','distance_x100mm','adc'];
+    rows=logDownload.rows.map((r,i)=>[i,IS28.u32(r,0),(IS28.u32(r,4)|0),IS28.u16(r,8)]);
+    format='rtos-barcode-raw-v1';
+  }
   const csv=[header,...rows].map((r)=>r.map(csvCell).join(',')).join('\r\n')+'\r\n';
   download(`${filename}.csv`,csv,'text/csv');
-  download(`${filename}.json`,JSON.stringify({dataset:logDownload.dataset,name:ds.name,rowCount:logDownload.rows.length,rowBytes:ds.rowBytes,format,uptimeBasis:logDownload.dataset===0?'per-row flags bit 7 (run-relative when set)':'not interpreted',exportedAt:new Date().toISOString(),dashboard:DASHBOARD_VERSION,rawFile:`${filename}.bin`,csvFile:`${filename}.csv`},null,2)+'\n','application/json');
+  download(`${filename}.json`,JSON.stringify({dataset:logDownload.dataset,name:ds.name,rowCount:logDownload.rows.length,rowBytes:ds.rowBytes,format,release:logDownload.release,uptimeBasis:logDownload.dataset===0?'per-row flags bit 7 (run-relative when set)':'not interpreted',exportedAt:new Date().toISOString(),dashboard:DASHBOARD_VERSION,rawFile:`${filename}.bin`,csvFile:`${filename}.csv`},null,2)+'\n','application/json');
 }
 function handleLogAck(ack) {
   if (!logDownload.active || ack.id!==logDownload.requestId || ack.code!==IS28.CMD.GET_LOG) return;
@@ -572,10 +597,10 @@ function handleLogAck(ack) {
 function cancelLogDownload(reason) { if(logDownload.active) finishLogDownload(false,reason); }
 function updateLogDownloadControl() {
   const offReady = coordinatorMode === 7 && coordinatorOffSince !== null && now() - coordinatorOffSince >= 5000;
-  const rtos = currentProfile() === 'rtos';
+  const rtos = currentProfile() === 'rtos' && !(releaseInfo && releaseInfo.storedLogs && now()-releaseSeenAt<3500);
   $('logDownload').disabled = rtos || !offReady || logDownload.active || !client || !client.connected;
   if (!logDownload.active && logDownload.status === 'idle') {
-    $('logDownloadStatus').textContent = rtos ? 'Stored downloads are an SDK v2.3 feature; the RTOS firmware does not provide them.' :
+    $('logDownloadStatus').textContent = rtos ? 'This migration checkpoint needs USB for stored exports. Main RTOS releases advertise wireless download support.' :
       coordinatorMode === null && staleShown.sdkNav ? 'Coordinator status is stale (telemetry off?). Switch Telemetry on and wait for coordinator Off.' :
       coordinatorMode !== 7 ? 'Stop the car, then wait 5 s for coordinator Off status.' : !offReady ?
       `Coordinator is Off; wait ${Math.max(0,5-Math.floor((now()-coordinatorOffSince)/1000))} s before downloading.` :
@@ -629,6 +654,7 @@ $('mapApply').onclick = () => {
 };
 
 /* ---------- firmware profile ---------- */
+let releaseInfo = null, releaseRuntime = null, releaseSeenAt = 0, releaseRuntimeSeenAt = 0;
 let connectedDriveSeen = false, sdkDriveSeen = false, connectedBarcodeSeen = false, connectedImuSeen = false;
 function detectedProfile() {
   if (connectedDriveSeen) return sdkDriveSeen ? 'mixed' : 'rtos-connected';
@@ -636,12 +662,13 @@ function detectedProfile() {
 }
 function currentProfile() { const p = detectedProfile(); return p === 'rtos-connected' ? 'rtos' : IS28.effectiveProfile(p, 'auto'); }
 function profileText(p) {
+  if (releaseInfo && p==='rtos-connected') return `RTOS Buddy1-4 v${releaseInfo.version} - ${releaseInfo.wireless?'network supervised':'USB supervised'} - provisional`;
   return p === 'rtos-connected' ? (connectedImuSeen ? 'RTOS connected IMU/ramp (micro T-Kernel · Step5 · experimental)' : connectedBarcodeSeen ? 'RTOS connected barcode (micro T-Kernel · Step4)' : 'RTOS connected line (micro T-Kernel · Step3B)') :
          p === 'sdk' ? 'SDK v2.3' + (seenSources.has(SRC.IMU) || seenSources.has(SRC.MOTION) ? ' + Buddy4 add-on' : '') :
          p === 'rtos' ? 'RTOS (micro T-Kernel)' : p === 'rtos-inferred' ? 'RTOS (inferred from Buddy 2/4 frames without SDK telemetry)' : p === 'mixed' ? 'MIXED (RTOS and SDK frames)' : 'unknown';
 }
 function noteSource(src) { const t = now(), isNew = !seenSources.has(src); seenSources.set(src, t); if (!firstSeen.has(src)) firstSeen.set(src, t); if (isNew) updateProfile(); }
-function clearSeen() { seenSources.clear(); firstSeen.clear(); connectedDriveSeen = sdkDriveSeen = connectedBarcodeSeen = connectedImuSeen = false; }
+function clearSeen() { releaseInfo=releaseRuntime=null; releaseSeenAt=releaseRuntimeSeenAt=0; seenSources.clear(); firstSeen.clear(); connectedDriveSeen = sdkDriveSeen = connectedBarcodeSeen = connectedImuSeen = false; }
 function updateProfile() {
   const det = detectedProfile(), eff = currentProfile();
   const t = now();
@@ -676,7 +703,7 @@ function onMessage(topic, payload, packet) {
     if (retained) { log(topic, `retained ${f.srcName} #${f.seq} ignored for live display (not a fresh frame)`); return; }
     /* Source 15 carries two independently sequenced layouts: count the peak decoder under pseudo-key 16. */
     if (test.running && f.src !== SRC.BARCODE_MAP && f.src !== SRC.LOG_CHUNK)
-      test.seq.add(f.src === 15 && f.data && f.data.kind === 'peak' ? 16 : f.src === 15 && f.data && f.data.kind === 'ramp-targets' ? 17 : f.src, f.seq);
+      test.seq.add(f.src===15 && connectedDriveSeen ? 15 : f.src === 15 && f.data && f.data.kind === 'peak' ? 16 : f.src === 15 && f.data && f.data.kind === 'ramp-targets' ? 17 : f.src, f.seq);
     show(f);
     if (topic === 'is28/hb') heartbeat(f);
     if ((topic === 'is28/hb' && $('logHb').checked) || (topic !== 'is28/hb' && $('logTlm').checked))
@@ -887,6 +914,15 @@ function refreshOpState() {
   } else $('opNote').textContent = '';
 }
 function refreshSafety() {
+  if(releaseInfo) {
+    const fresh=releaseRuntime && now()-releaseRuntimeSeenAt<3500;
+    const flags=fresh?releaseRuntime.controlFlags:0, fault=flags&(2|16|32|64);
+    $('safety').textContent=!fresh?'Runtime status stale':fault?'Latched stop':flags&1?'Running':(flags&12)===12?'Ready':'Initializing';
+    $('safety').className=fault?'bad':fresh?'ok':'muted';
+    $('faults').textContent=!fresh?'unavailable':fault?'0x'+fault.toString(16):'none';
+    $('stopms').textContent='Stop latency is not measured by this runtime packet';
+    return;
+  }
   const prof = currentProfile();
   if (prof === 'mixed') {
     $('safety').textContent = 'not trusted: RTOS Safety frames and SDK v2.3 frames both seen since the last boot'; $('safety').className = 'bad';
@@ -937,7 +973,9 @@ function summary(f) {
     case 12: return `run ${d.runId}, result ${d.result}, ${d.elapsedMs} ms, ${d.distanceMm} mm`;
     case 13: return `log dataset ${d.dataset} row ${d.rowIndex}/${d.totalRows} part ${d.partIndex+1}/${d.partCount} status ${d.status}`;
     case 14: return `barcode threshold ${d.thresholdAdc}, bank ${d.bank}, decoded ${d.decodedTotal}, bad frames ${d.badFrames}`;
-    case 15: return d.kind === 'ramp-targets' ? `ramp requested ${d.requested.join('/')} → effective ${d.effective.join('/')} mm/s, hold ${d.holdActive ? 'on' : 'off'}` : d.kind === 'peak' ?
+    case 15: if(d.kind==='release') return `RTOS release ${d.version}, Profile ${d.profile}, powerbank ${d.wireless?'supported':'off'}`;
+      if(d.kind==='runtime') return `RTOS reads ${d.reads}, read failures ${d.failed}, late ${d.lateGaps}, FIFO ${d.fifoOverruns}`;
+      return d.kind === 'ramp-targets' ? `ramp requested ${d.requested.join('/')} → effective ${d.effective.join('/')} mm/s, hold ${d.holdActive ? 'on' : 'off'}` : d.kind === 'peak' ?
       `barcode peak v0.${d.version} ${d.reasonName}, code ${d.code}, bars ${d.bars}${d.applied ? ', applied' : ''}${d.originalConflict ? ', CONFLICT' : ''}` :
       `ramp assist ${d.eventName}, ${d.assisting ? 'assisting' : 'idle'}, added PWM ${d.addedPwm.join('/')}, height ${d.heightMm === null ? 'invalid' : d.heightMm + ' mm'}`;
     default: return '';
@@ -1155,6 +1193,7 @@ function actionName(action) {
 }
 function srcLabel(k) { return Number(k) === 17 ? 'Ramp targets (src 15)' : Number(k) === 15 ? 'Ramp assist (src 15)' : Number(k) === 16 ? 'Barcode peak (src 15)' : IS28.SRC_NAME[k]; }
 function showBuildId() {
+  if(releaseInfo) { $('buildId').textContent=`PROVISIONAL Buddy1-4 RTOS v${releaseInfo.version} - Buddy5 NOT integrated`; return; }
   const parts = [];
   if (lastPeak15) parts.push(lastPeak15.combinedBuild ? 'combined Buddy1-4 + peak' : 'standalone peak (no Buddy4/ramp)',
                              `peak v0.${lastPeak15.version} ${lastPeak15.active ? 'active' : 'shadow'}`);
@@ -1162,9 +1201,21 @@ function showBuildId() {
   $('buildId').textContent = parts.join(' · ') || '—';
 }
 function showSource15(d, f) {
+  if(d.kind==='release') {
+    releaseInfo=d; releaseSeenAt=now(); updateProfile(); updateLogDownloadControl();
+    $('buildId').textContent=`PROVISIONAL Buddy1-4 RTOS v${d.version} - Buddy5 NOT integrated`;
+    $('releaseCal').textContent=`${d.recordedCalibration?'Run':'Current'} calibration: white ${d.white.join('/')} - black ${d.black.join('/')} - Profile ${d.profile}`;
+    return;
+  }
+  if(d.kind==='runtime') {
+    releaseRuntime=d; releaseRuntimeSeenAt=now(); $('rtosRuntimeCard').hidden=false;
+    $('rtosRuntime').textContent=`IMU reads ${d.reads} - failed ${d.failed} - late ${d.lateGaps} - FIFO overruns ${d.fifoOverruns} - control late ${d.controlLate}`;
+    $('rtosHump').textContent=`Qualification flags ${d.qualificationFlags} - holds/recovered ${d.holds}/${d.recoveries} - clears ${d.disarms} - last failure ${d.failureReason}`;
+    return;
+  }
   if (d.kind === 'ramp-targets') {
     $('rampTargets').textContent = `${d.requested.join('/')} → ${d.effective.join('/')} · ${d.holdActive ? 'hold active' : 'hold off'} · owner Buddy ${d.owner}`;
-    $('buildId').textContent = 'PROVISIONAL Buddy 1–4 integration v0.1 · Buddy 5 NOT integrated';
+    showBuildId();
     return;
   }
   if (d.kind === 'ramp') {

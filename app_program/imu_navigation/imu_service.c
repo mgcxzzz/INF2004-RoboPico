@@ -221,4 +221,26 @@ void ri_report(void) {
         hump.hold_reason, hump.clear_reason, hump.failure_reason, hump.gap_ms, hump.last_gap_ms);
     ri_ramp_report();
 }
+#ifdef APP_RTOS_RELEASE
+void ri_release_diagnostics(uint8_t seq, uint32_t now_ms, uint8_t out[63]) {
+    BringupStatus control;
+    bringup_get_status(&control);
+    UINT key = enter();
+    RiAcquisition a = shared.acquisition;
+    RiHumpQualification h = shared.hump;
+    uint32_t epoch = shared.init_epoch;
+    leave(key);
+    uint32_t values[14] = {now_ms, a.reads, a.failed_reads, a.late_gaps,
+        a.fifo_overruns, a.fifo_budget_overruns, a.init_budget_overruns,
+        control.control_count, control.late_count, h.holds, h.recoveries,
+        h.disarms, h.early_clears, epoch};
+    out[0] = 0xf2; out[1] = 60; out[2] = seq; out[3] = 0xc3;
+    for (unsigned k = 0; k < 14; ++k)
+        for (unsigned b = 0; b < 4; ++b)
+            out[4 + 4*k + b] = values[k] >> (8*b);
+    out[60] = h.clear_reason | (h.failure_reason << 4);
+    out[61] = h.hold_reason | (h.flags << 2);
+    out[62] = control.flags;
+}
+#endif
 #endif

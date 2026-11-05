@@ -55,6 +55,9 @@ bool bringup_can_start(void) {
                            !board_button_pressed(20) && !board_button_pressed(21)) &&
               !bringup_irq_stop;
     status_leave(key);
+#ifdef APP_RTOS_RELEASE
+    ok = ok && rn_drive_online();
+#endif
     return ok;
 }
 bool bringup_clear_latch(void) {
@@ -467,7 +470,7 @@ void bringup_safety_task(INT code, void *exinf) {
                 bringup_stop(BR_REASON_SERIAL, 0U);
             else if (active && board_button_pressed(21U))
                 bringup_stop(BR_REASON_GP21, 0U);
-            else if (active && tm_usb_state() != 3U)
+            else if (active && !br_usb_supervised(tm_usb_state()))
                 bringup_stop(BR_REASON_USB, 0U);
             else if (active && now - last >= BR_LATE_US)
                 bringup_stop(BR_REASON_LATE, BR_LATE);
@@ -513,6 +516,10 @@ static void start_pulse(unsigned selected) {
     uint32_t stopped = stopped_us;
     status_leave(key);
     uint64_t now = board_time_us();
+#ifdef APP_RTOS_RELEASE
+    if (!rn_drive_online())
+        return;
+#endif
     if (!br_can_start(snapshot.flags, (uint32_t)now, stopped, tm_usb_state(),
                       !board_button_pressed(20U) && !board_button_pressed(21U)) ||
         bringup_irq_stop) {
@@ -550,7 +557,7 @@ static void start_pulse(unsigned selected) {
     }
 #ifdef APP_RTOS_LINE
     tm_printf(
-        (UB *)"LINE accepted: Buddy3 -> NAV -> MOTION; profile1, USB stop supervision active.\n");
+        (UB *)"LINE accepted: Buddy3 -> NAV -> MOTION; profile1, configured link supervision active.\n");
 #else
     tm_printf(
         (UB *)"REQUEST USB_BENCH -> Buddy3 target stub -> NAV -> MOTION: L=%d R=%d mm/s; automatic stop after 3s.\n",

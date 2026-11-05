@@ -1,5 +1,10 @@
 # Buddy4 IMU and ramp assistance on micro T-Kernel
 
+Main release APP=rtos_buddy1_4 enables the tested Buddy1–4 adapters plus
+network-supervised powerbank operation and stopped wireless exports. See
+[main setup](../../docs/setup.md) and [architecture](../../docs/architecture.md).
+The checkpoint history below describes the port and USB-supervised test profiles.
+
 Experimental Step5, based on Step4 v0.1.2. Physical acceptance of both the
 new gate and this IMU port is pending. Buddy5 and powerbank driving remain
 deferred. SDK main and the published Step4 artifacts are unchanged.

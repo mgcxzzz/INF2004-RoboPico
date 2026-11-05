@@ -1,5 +1,10 @@
 # RTOS Step1 application
 
+Main release APP=rtos_buddy1_4 enables the tested Buddy1–4 adapters plus
+network-supervised powerbank operation and stopped wireless exports. See
+[main setup](../../docs/setup.md) and [architecture](../../docs/architecture.md).
+The checkpoint history below describes the port and USB-supervised test profiles.
+
 `app_main.c` creates the five application tasks and prints USB diagnostics.
 `control.c` owns the kernel command buffer, stop state and motor task. USB
 commands are only bench target proposals; the unchanged main-branch motion API

@@ -103,6 +103,7 @@ def monitor(broker, stop, frames, interruptions, started):
 
 def main():
     p=argparse.ArgumentParser(description=__doc__)
+    p.add_argument('--network-supervised',action='store_true',help='Production release: closing USB does not stop motion; use dashboard/GP buttons first.')
     p.add_argument('--port');p.add_argument('--broker',default='127.0.0.1')
     p.add_argument('--seconds',type=float,default=300)
     p.add_argument('--output',type=Path,default=Path('rtos_connected_session'))
@@ -119,8 +120,8 @@ def main():
     a.output.mkdir(parents=True,exist_ok=True)
     prefix=a.output/dt.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
     print('Close PuTTY; keep USB attached. Keep broker/dashboard open.')
-    print('This capture holds USB supervision open. Use dashboard commands for the test.')
-    print('It sends NO Start/Stop/calibration commands. Closing it ends USB supervision and stops motion.')
+    print('Network-supervised production release; Stop before closing capture.' if a.network_supervised else 'This capture holds USB supervision open. Use dashboard commands for the test.')
+    print('It sends NO Start/Stop/calibration commands.' + (' Closing capture does not stop motion.' if a.network_supervised else ' Closing it ends USB supervision and stops motion.'))
     print(f'Capture runs for {a.seconds:g} seconds. Press dashboard Start near the beginning, not at the end.')
     frames,rows,interruptions=[],[],[];stop=threading.Event();started=time.monotonic()
     worker=threading.Thread(target=monitor,args=(a.broker,stop,frames,interruptions,started),daemon=True)
@@ -138,7 +139,7 @@ def main():
         interruptions.append({'wall_s':time.monotonic()-started,'error':'USB capture ended: '+str(error)})
     finally:
         stop.set();worker.join(7)
-    print('USB SERIAL SUPERVISION IS NOW CLOSED. To Start again, reopen capture or PuTTY.')
+    print('USB capture closed. Dashboard/network supervision remains active.' if a.network_supervised else 'USB SERIAL SUPERVISION IS NOW CLOSED. To Start again, reopen capture or PuTTY.')
     with prefix.with_name(prefix.name+'_mqtt.csv').open('w',newline='',encoding='utf-8') as f:
         writer=csv.DictWriter(f,fieldnames=['wall_s','topic','hex','retained']);writer.writeheader();writer.writerows(frames)
     result=summarize(rows,frames,interruptions)

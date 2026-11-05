@@ -1,5 +1,11 @@
 # Barcode decoding and junction routing — Buddy 3
 
+Main v0.2.0 uses the micro T-Kernel production profile. Active task/ownership
+adapters: [app_program/barcode_navigation](../../../../../app_program/barcode_navigation/README.md).
+See [RTOS architecture](../../../../../docs/architecture.md) and
+[current setup](../../../../../docs/setup.md). The shared logic below remains;
+references to the standalone SDK harness describe the historical adapter.
+
 **PROVISIONAL Buddy1–4 integration. Buddy5 is not integrated.**
 
 ## Two readers, one verified-result path

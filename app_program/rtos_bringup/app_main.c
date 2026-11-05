@@ -35,7 +35,14 @@ static ER start(FP entry, PRI priority, UW processor, const char *name) {
 }
 
 void bringup_help(void) {
-#if defined(APP_RTOS_IMU)
+#if defined(APP_RTOS_RELEASE)
+    tm_printf((UB *)"\nROBOPICO BUDDY1-4 RTOS v0.2.0 | PROVISIONAL | micro T-Kernel SMP | Buddy5 NOT integrated\n");
+    tm_printf((UB *)"Tested Step5 v0.1.5 logic: Continuous V2 Profile1 45mm/s; barcode/junction110mm; IMU/ramp via NAV.\n");
+    tm_printf((UB *)"Powerbank supported: no USB DTR requirement. Fresh MQTT link/service and TCP delivery required; no automatic restart.\n");
+    tm_printf((UB *)"Motors OFF at boot. Dashboard Start2s/Pause/Resume/Stop/Reset; s/GP21 Stop, e/GP20 E-stop.\n");
+    tm_printf((UB *)"Saved calibration retained; w/l/r/k available, c=fallback. Keep still for IMU calibration.\n");
+    tm_printf((UB *)"Stopped wireless motion/controller/raw/nav downloads; RAM-only, export before another Start/reboot. n=status,b/d=USB exports.\n");
+#elif defined(APP_RTOS_IMU)
     tm_printf(
         (UB *)"\nROBOPICO RTOS CONNECTED IMU v0.1.5 | Step5 EXPERIMENTAL | micro T-Kernel SMP\n");
     tm_printf((
@@ -186,8 +193,16 @@ void bringup_status_task(INT code, void *exinf) {
 #endif
         uint32_t now = board_kernel_ms();
         if ((int32_t)(now - next) >= 0) {
-            bringup_report_impl(true);
-            if ((reports++ % 5U) == 0U)
+#ifdef APP_RTOS_RELEASE
+            /* No absent-host log flood while running from a powerbank. */
+            if (tm_usb_state() == 3U)
+#endif
+                bringup_report_impl(true);
+            if ((reports++ % 5U) == 0U
+#ifdef APP_RTOS_RELEASE
+                && tm_usb_state() == 3U
+#endif
+            )
                 board_clock_report();
             next += 1000U;
             if ((int32_t)(now - next) >= 0)

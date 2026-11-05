@@ -1,5 +1,11 @@
 # Telemetry and stored diagnostics
 
+Main v0.2.0 uses the micro T-Kernel production profile. Active task/ownership
+adapters: [app_program/network_bridge](../../../../../app_program/network_bridge/README.md).
+See [RTOS architecture](../../../../../docs/architecture.md) and
+[current setup](../../../../../docs/setup.md). The shared logic below remains;
+references to the standalone SDK harness describe the historical adapter.
+
 **PROVISIONAL Buddy1–4 integration. Buddy5 is not integrated.**
 
 ## Data paths

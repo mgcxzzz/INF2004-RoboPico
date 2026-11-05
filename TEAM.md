@@ -1,46 +1,23 @@
 # Team and subsystems
 
-> **Step5 migration override (experimental):** `APP=rtos_imu_wifi` extends
-> Step4 v0.1.2 with a sole I2C1 GP2/GP3 owner, core0 priority18,20ms IMU task.
-> Core1 still exclusively drains encoders and controls ADC/motors. Odometry,
-> mission edges and tilt cross cores as locked copied snapshots. Buddy4 ramp
-> requests use the shared nav coordinator and expiring profile API; no IMU
-> motor writes or application lwIP calls. USB supervision remains required;
-> untethered policy is deferred. IMU faults retain baseline diagnostic policy.
-> Step4 hardware acceptance and Step5 hardware acceptance are separate and
-> pending; Buddy5 is not integrated. See the Step5 test guide.
+Main's active production profile is **APP=rtos_buddy1_4**, Buddy 1–4 RTOS
+v0.2.0. Buddy 5 is not integrated. User authorized the migration/shared changes
+and promotion to main. [Active ownership and priorities](docs/architecture.md)
+replace the example task table for this profile. Smaller priority numbers run
+first; all ownership is retained from tested Step 5v0.1.5.
 
-> **Step4 migration override:** `APP=rtos_barcode_wifi` adds both reference
-> Code39 decoders to the existing core1 priority14 ADC/line owner. GP27 keeps
-> its2ms four-sample acquisition; there is no competing ADC task. Buddy3
-> approval/targets use the shared nav coordinator and single motion writer.
-> Runtime mappings and telemetry cross cores as copied locked data; only the
-> kernel core0 priority4 service calls lwIP/MQTT. Existing Stop/E-stop, USB
-> supervision and no-auto-restart rules remain. Barcode events use source10/11,
-> peak reports source15; source11 status/events share one sequence allocator.
-> No Buddy4 IMU/ramp or Buddy5 is enabled. Step4's640-row line ring makes room
-> for the original63 banks and2048 packed raw rows; see its test guide.
+Core1 motor/ADC is the only normal encoder-drain/PWM owner. Core0 IMU solely
+owns I2C1 GP2/GP3. Safety may only stop/reduce committed output. Buddy requests
+use the nav coordinator; only the kernel Wi-Fi service calls lwIP/MQTT.
+Cross-core data use copied bounded buffers or short locked snapshots; packed
+read-modify-write data are never concurrently mutated without synchronization.
 
-> **Step3A override:** `APP=rtos_network` is the stopped network checkpoint.
-> USB/core0 priority3, kernel CYW43/lwIP/MQTT/core0 priority4, copied application
-> network bridge/core0 priority16. Core1 retains the100Hz clock/encoder/stop
-> foundation, but motor starts and the output callback are inhibited. The
-> bridge owns three bounded kernel message buffers(TX1024,ACK256,RX256bytes);
-> application commands/status pass through copied messages, all TMO_POL.
-> Buddy1 Stop/E-stop reaches the shared coordinator through `bringup_stop_from`.
-> GP23–25/29 remain kernel radio pins; existing encoder/motor/stop pin ownership
-> is unchanged. Calibration/ADC/barcode/IMU/Buddy5 are not active in this bench.
-> Kernel-library changes implement the user's explicit professor-style migration
-> request. See app_program/network_bridge/README.md and the Step3 checkpoint guide.
-
-> **Migration checkpoint override:** `APP=rtos_bringup` excludes all example
-> subsystem tasks listed below. The actual task priorities, pin ownership and
-> interfaces for this experimental profile are recorded in
-> [RTOS Step1](firmware/migration/micro_tkernel/step_01_motor_bringup/README.md).
-> GP0/1 and GP4/5 belong to its encoder owner, GP8–11 to Motion Control,
-> GP20/21 to its safety inputs; UART mirroring, Wi-Fi and Buddy5 are disabled.
-> The USB task sends5-byte copied commands through one256-byte kernel message
-> buffer, with TMO_POL on send. No task waits for USB/network output.
+Production is network supervised with powerbank support; historical migration
+checkpoints retain USB-DTR supervision. Motors are off at boot; Start is explicit;
+network reconnect never resumes motion. See docs/setup.md and release STATUS.md.
+The template/example rows below describe the original example profile only,
+not the active Buddy 1–4 runtime. Historical checkpoint guides retain their own
+pin/priority/build records.
 
 The tables are pre-filled with the **example** in `app_program/` (marked
 *example*). Replace those rows with your own as you replace the example code.

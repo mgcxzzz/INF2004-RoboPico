@@ -15,8 +15,8 @@ ART = CHECKPOINT / "firmware"
 common.ART = ART
 
 
-def linked_checks(elf: Path, network: bool = False, barcode: bool = False, imu: bool = False) -> dict:
-    expected='rtos_imu_wifi' if imu else 'rtos_barcode_wifi' if barcode else 'rtos_line_wifi' if network else 'rtos_line'
+def linked_checks(elf: Path, network: bool = False, barcode: bool = False, imu: bool = False, release: bool = False) -> dict:
+    expected='rtos_buddy1_4' if release else 'rtos_imu_wifi' if imu else 'rtos_barcode_wifi' if barcode else 'rtos_line_wifi' if network else 'rtos_line'
     assert (ROOT/'build_make/.build_profile').read_text(encoding='utf-8').strip().startswith(expected+'-'), \
         'Rebuild the requested profile before packaging so stack-usage files match its ELF.'
     tool = ROOT.parent / ".buddy2-tools/arm-gcc/bin/arm-none-eabi-nm.exe"
@@ -49,6 +49,9 @@ def linked_checks(elf: Path, network: bool = False, barcode: bool = False, imu: 
                      'ri_acquisition_init_begin','ri_acquisition_init_end',
                      'ri_acquisition_record_tick','b4v23_hump_qualification'):
             assert name in symbols, name
+    if release:
+        for name in ('rtos_line_log_reply','rtos_line_release_info','ri_release_diagnostics'):
+            assert name in symbols, 'Release feature missing from image: ' + name
     for name in ((() if network else ("cyw43_utk_task", "mqtt_client_connect")) + ("subsystem5_start", "dev_init_adc",
                  "dev_init_ser") + (() if barcode else ("barcode_analog_sample", "barcode_peak_sample"))):
         assert name not in symbols, name

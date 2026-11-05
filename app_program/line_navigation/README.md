@@ -1,5 +1,10 @@
 # RTOS line-navigation boundary (Step 2)
 
+Main release APP=rtos_buddy1_4 enables the tested Buddy1–4 adapters plus
+network-supervised powerbank operation and stopped wireless exports. See
+[main setup](../../docs/setup.md) and [architecture](../../docs/architecture.md).
+The checkpoint history below describes the port and USB-supervised test profiles.
+
 This folder ports the SDK integration's profile 1 execution boundary. It does
 not replace the reference tracker, Continuous V2 steering, PI controllers,
 turn geometry or line-search algorithms. The reference feature source,

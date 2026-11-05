@@ -37,6 +37,11 @@ static LineLogRow rows[RL_LOG_ROWS];
 static unsigned row_count, row_head, row_overwritten, row_sequence;
 static bool dump_requested, dumping;
 static bool recording;
+#ifdef APP_RTOS_RELEASE
+#include "release_export.h"
+static RlExportLease wireless_export;
+static float release_run_centre;
+#endif
 static volatile uint32_t cancel_serial;
 static uint32_t last_cancel_us, start_serial;
 static struct {
@@ -155,6 +160,9 @@ void rtos_line_cancel(void) {
 bool rtos_line_start_valid(void) {
     UINT key = enter();
     bool valid = start_serial == cancel_serial;
+#ifdef APP_RTOS_RELEASE
+    valid = valid && !rl_export_busy(&wireless_export, (uint32_t)board_time_us());
+#endif
     leave(key);
     return valid;
 }
@@ -246,6 +254,9 @@ bool rtos_line_request_fresh(uint32_t received_us) {
 bool rtos_line_request_start(uint32_t received_us) {
     UINT key = enter();
     bool allowed = !dumping && !dump_requested && !countdown && !start_offered &&
+#ifdef APP_RTOS_RELEASE
+                   !rl_export_busy(&wireless_export, (uint32_t)board_time_us()) &&
+#endif
                    br_command_after_stop((uint32_t)board_time_us(), received_us, last_cancel_us,
                                          cancel_serial != 0);
     uint32_t serial = cancel_serial;
@@ -419,7 +430,7 @@ bool rtos_line_prepare(const MotionFeedback *f, double path, float dt, bool acti
     BringupStatus s;
     bringup_get_status(&s);
     if (board_button_pressed(20) || board_button_pressed(21) || bringup_irq_stop ||
-        (s.flags & BR_LATCHED) || tm_usb_state() != 3 || !rtos_line_start_valid())
+        (s.flags & BR_LATCHED) || !br_usb_supervised(tm_usb_state()) || !rtos_line_start_valid())
         countdown = 0;
     bool start = countdown && f->now_us >= countdown && !active;
     if (start)
@@ -448,9 +459,13 @@ void rtos_line_begin(void) {
     run_path = input.path;
 #endif
     last_noted_phase = UINT32_MAX;
+    UINT key = enter();
     run_calibration = calibration;
     run_cal_origin = cal_origin;
-    UINT key = enter();
+#ifdef APP_RTOS_RELEASE
+    release_run_centre = (input.wheel[0] + input.wheel[1])*.5f;
+    wireless_export.active = 0;
+#endif
     row_count = row_head = row_overwritten = row_sequence = 0;
     recording = true;
     leave(key);
@@ -784,4 +799,8 @@ void rtos_line_flash_task(INT code, void *exinf) {
 }
 #ifdef APP_RTOS_BARCODE
 #include "../barcode_navigation/barcode_runtime.inc"
+#endif
+
+#ifdef APP_RTOS_RELEASE
+#include "release_exports.inc"
 #endif

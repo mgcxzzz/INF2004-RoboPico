@@ -80,3 +80,40 @@ Context is written solely by the IMU task. Copied reporting fields cross tasks
 under the existing short spinlock; formatting occurs after releasing it.
 New fields do not alter binary message sizes. Compare static RAM using the
 matching v0.1.4/v0.1.5 ARM build profile in the Step5 manifest/update.
+
+
+## Main RTOS v0.2.0 release fields
+
+| Field | Domain | Representation |
+|---|---|---|
+| Stored-export dataset |0–3|2-bit lease field; request uses existing 4-bit dataset slot|
+| Frozen row count |0–2048|12-bit lease field|
+| Run ID |full modulo16|16-bit lease field|
+| Lease active |boolean|1 bit|
+| Lease deadline / navigation sequence |full modulo32|uint32_t each|
+| Release version major/minor/patch |0–15 each|4 bits each in explicit packed bytes|
+| Wireless/log/calibration capabilities |independent booleans|individual bits|
+| Profile / calibration origin |0–3 each|2 bits each|
+| Four ADC calibration references |0–4095 each|four explicit 12-bit fields, 6 bytes total|
+| Runtime timestamps / lifetime counters |full modulo32|uint32_t, explicit little endian|
+| Hump clear/failure reason |0–10 each|4 bits each|
+| Hold reason / qualification flags |0–3 / four booleans|2 bits / 4-bit mask|
+| Safety flags |seven booleans|7-bit mask|
+
+The lease has one writer (core1 navigation owner); shared Start checks use the
+existing short copy lock. Calibration/history and IMU runtime snapshots are
+copied under their existing locks before encoding; no sensor I/O, formatting,
+network call or waiting occurs under those locks. Network sequence allocation
+uses the existing synchronized allocator.
+
+The shared source15 extension has validated subtype/length: C2 metadata is
+15 bytes including header; C3 runtime is63 bytes. At1Hz each they add78 bytes/s
+before MQTT/TCP overhead. Existing binary payload sizes and numeric source IDs
+are unchanged. Stored rows reuse the existing source13 chunk protocol, with
+bounded49-byte chunk data. The RTOS controller row is56 bytes, raw GP27 row10,
+and navigation event31; no text field is used to represent these MQTT values.
+
+The final build manifest compares linked static RAM against Step5 v0.1.5.
+This is not dynamic stack high-water measurement or completion of the remaining
+whole-firmware Tribunal before/after audit. Full-range counters intentionally
+retain32 bits; narrowing them would lose their defined modulo domain.

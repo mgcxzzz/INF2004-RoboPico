@@ -67,6 +67,12 @@ void ri_ramp_halt(uint64_t now) {
 void ri_ramp_report(void) {
     assert(!depth);
 }
+#ifdef APP_RTOS_RELEASE
+typedef struct { uint32_t control_count, late_count; unsigned flags; } BringupStatus;
+static void bringup_get_status(BringupStatus *s) {
+    assert(!depth); *s=(BringupStatus){.control_count=1234,.late_count=0,.flags=12};
+}
+#endif
 #include "app_program/imu_navigation/imu_service.c"
 void ri_acquisition_record(uint32_t gap, bool ok, bool overrun) {
     assert(!depth);
@@ -150,6 +156,13 @@ int main(void) {
     ri_init();
     if (!setjmp(finished))
         ri_task(0, NULL);
+#ifdef APP_RTOS_RELEASE
+    uint8_t packet[63];
+    ri_release_diagnostics(17, host_now_us/1000, packet);
+    assert(packet[0]==0xf2 && packet[1]==60 && packet[3]==0xc3 && packet[62]==12);
+    FILE *file=fopen("testing/rtos_migration/build-host/release_runtime.bin","wb");
+    assert(file && fwrite(packet,1,63,file)==63); fclose(file);
+#endif
     puts(
         "PASS actual IMU task/service: stationary calibration, fresh stopped Reset calibration epoch, lifetime counters, deadline waits and unlocked I/O.");
 }

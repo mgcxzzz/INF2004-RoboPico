@@ -1,5 +1,11 @@
 # Application lifecycle and scheduling
 
+Main v0.2.0 uses the micro T-Kernel production profile. Active task/ownership
+adapters: [app_program/rtos_bringup](../../../../../app_program/rtos_bringup/README.md).
+See [RTOS architecture](../../../../../docs/architecture.md) and
+[current setup](../../../../../docs/setup.md). The shared logic below remains;
+references to the standalone SDK harness describe the historical adapter.
+
 **PROVISIONAL Buddy1–4 integration. Buddy5 is not integrated.**
 
 `main.c` is the only application entry point; it no longer includes another main.c through version-numbered folders. It owns initialization, USB/button commands, run guards, the regular ADC/control schedule, stopped saves and ordered feature polling.

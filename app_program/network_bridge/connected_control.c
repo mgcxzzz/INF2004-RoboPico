@@ -30,7 +30,12 @@ bool rn_drive_enqueue(const uint8_t message[RN_RX_BYTES]) {
 }
 bool rn_drive_online(void) {
     RnStatus s = rn_status();
-    return rn_link_usable(&s, board_kernel_ms()) && board_kernel_ms() - rn_app_last_ms() <= 250U;
+    uint32_t now = board_kernel_ms();
+    bool usable = rn_link_usable(&s, now) && now - rn_app_last_ms() <= 250U;
+#ifdef APP_RTOS_RELEASE
+    usable = usable && rn_delivery_fresh(&s, now, __atomic_load_n(&connected_since, __ATOMIC_ACQUIRE));
+#endif
+    return usable;
 }
 bool rn_drive_paused(void) {
     return __atomic_load_n(&paused, __ATOMIC_ACQUIRE) != 0;
@@ -65,7 +70,7 @@ void rn_drive_process(void *raw) {
     RnStatus connection = rn_status();
     if (connection.connects != seen_connects) {
         seen_connects = connection.connects;
-        connected_since = board_kernel_ms();
+        __atomic_store_n(&connected_since, board_kernel_ms(), __ATOMIC_RELEASE);
     }
     if (rn_take_pause())
         (void)pause_line();
@@ -98,7 +103,7 @@ void rn_drive_process(void *raw) {
                 break;
             case WP_CMD_RESUME:
                 if (!rn_drive_online() || !rn_drive_paused() || !(s.flags & BR_ACTIVE) ||
-                    (s.flags & BR_LATCHED) || bringup_irq_stop || tm_usb_state() != 3 ||
+                    (s.flags & BR_LATCHED) || bringup_irq_stop || !br_usb_supervised(tm_usb_state()) ||
                     board_button_pressed(20) || board_button_pressed(21) || !rtos_line_ready() ||
                     motion_resume_line(MOTION_BUDDY1, lease, false) != MOTION_OK) {
                     result = WP_ACK_BUSY;
@@ -113,6 +118,11 @@ void rn_drive_process(void *raw) {
                         feedback); /* Finish coordinator handback before new targets. */
                 }
                 break;
+#ifdef APP_RTOS_RELEASE
+            case WP_CMD_GET_LOG:
+                result = rtos_line_log_reply(&cmd);
+                break;
+#endif
             case WP_CMD_RESET:
                 if (!bringup_clear_latch())
                     result = WP_ACK_BUSY;

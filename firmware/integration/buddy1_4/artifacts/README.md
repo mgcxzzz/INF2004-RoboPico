@@ -1,3 +1,11 @@
+# Firmware artifacts
+
+**Current: [Buddy1–4 RTOS v0.2.0](v0_2_0_rtos/).** Powerbank/network-supervised,
+Profile1; Buddy5 NOT integrated. Download the full bundle and use START_HERE.md.
+Source/build/physical status are recorded with that version.
+
+## Historical SDK release — retained for comparison
+
 # Provisional firmware and complete package
 
 **Buddy1–4 integration v0.1. Buddy5 NOT integrated. New physical acceptance pending.**

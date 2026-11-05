@@ -9,6 +9,9 @@
 void ri_init(void);
 void ri_task(INT code, void *exinf);
 void ri_report(void);
+#ifdef APP_RTOS_RELEASE
+void ri_release_diagnostics(uint8_t seq, uint32_t now_ms, uint8_t out[63]);
+#endif
 void ri_reset_request(void);
 void ri_observe(const MotionFeedback *f, const uint32_t invalid[2], uint32_t dt_us, bool running);
 void ri_tilt_snapshot(b4v23_tilt_t *out);

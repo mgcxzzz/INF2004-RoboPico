@@ -1,4 +1,9 @@
-# micro T-Kernel migration — experimental checkpoints
+# micro T-Kernel migration — checkpoint history
+
+Main now provides [Buddy1–4 RTOS v0.2.0](../../integration/buddy1_4/README.md),
+promoted from tested Step5v0.1.5 by user instruction. Remaining circuit checks
+and the new untethered policy are listed in its STATUS.md. This directory keeps
+the incremental test artifacts; its old pending statements are checkpoint history.
 
 The course project requires C, the Pico C SDK **and micro T-Kernel RTOS**.
 The working Buddy1–4 SDK-only integration on main at `7843f45fbe45d5a774bc18c93be9bb11084d1b64`

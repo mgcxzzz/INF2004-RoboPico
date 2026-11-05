@@ -1,7 +1,30 @@
-# Testing and evidence
+# Focused checks for Buddy 1–4 RTOS v0.2.0
 
-Run offline regressions from the repository root: `python firmware/integration/buddy1_4/tests/run_tests.py` (requires a C compiler, Python and Node). Set CC/CFLAGS/NODE for your installed tools. Windows GCC9 may need `CFLAGS=-msse2 -mfpmath=sse -Wno-misleading-indentation`. Assertions stay enabled.
+The tested hardware baseline is Step 5 v0.1.5. This release changes supervision,
+wireless exports and dashboard/capture support, not the tracker/decoder/control/
+IMU/ramp algorithms. [Physical status](../firmware/integration/buddy1_4/STATUS.md)
+keeps circuit and new powerbank checks distinct from software checks.
 
-The suite covers inherited tracker/controller/parity and Wi-Fi interfaces, captured peak signals, dual-reader integration, ramp state/budgets/plant models, IMU service/packers, and new coordinator/handback regressions. No test contacts the robot or broker; provisioning and launcher tests mock their I/O.
+With CC pointing to a host C compiler, from repository root:
 
-[Evidence index](../testing/evidence/README.md) distinguishes hardware records, historical failures and software/build tests. Each imported file has a pinned original branch/commit/path and hash. Current build checks are stored under testing/evidence/current. Hardware acceptance of this restructured image remains pending; see STATUS.md.
+```bash
+python tools/rtos_migration/run_tests.py --only test_bringup_policy test_connected_bridge test_release_policy test_release_bridge test_release_exports test_release_imu --skip-python
+python testing/rtos_migration/test_capture_wireless.py
+python testing/rtos_migration/test_capture_connected_line.py
+python testing/rtos_migration/test_export_line_log.py
+python testing/rtos_migration/test_export_barcode_log.py
+node dashboard/test/test_release.js
+node --test dashboard/test/test_source15.js dashboard/test/test_ramp_targets.js dashboard/test/test_merged_schema.js
+```
+
+The C export/IMU fixtures produce binary vectors consumed by the browser-codec
+check, so run them before test_release.js. The focused local-browser check
+`node dashboard/test/ui_release.mjs` uses simulated MQTT and needs Playwright/
+Chrome(set PLAYWRIGHT_NODE_MODULE_PATH and CHROME_PATH if needed). It sends no
+real car commands. No hardware test is fabricated by these fixtures.
+
+The ARM build and packager additionally check required production symbols,
+reviewed source fingerprints, unchanged baseline algorithm inputs, UF2 flash
+bounds, static RAM, stack-frame reports and bundle hashes. Wider unchanged
+algorithm suites are not repeated for this promotion. The original broad
+SDK tests remain documented in sdk_reference_testing.md.

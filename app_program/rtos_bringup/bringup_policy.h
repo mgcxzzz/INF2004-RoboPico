@@ -56,11 +56,22 @@ static inline bool br_clock_elapsed_ok(uint32_t timer_us, uint32_t kernel_ms) {
     return error <= 5000U + expected / 100U;
 }
 
+/* Production release uses the existing fresh MQTT/network supervisor. The
+ * migration bench profiles retain terminal-DTR supervision. */
+static inline bool br_usb_supervised(unsigned usb) {
+#ifdef APP_RTOS_RELEASE
+    (void)usb;
+    return true;
+#else
+    return usb == 3U;
+#endif
+}
+
 static inline bool br_can_start(uint16_t flags, uint32_t now, uint32_t stopped, unsigned usb,
                                 bool buttons_released) {
     return (flags & (BR_READY | BR_CLOCK_OK | BR_ACTIVE | BR_LATCHED)) ==
                (BR_READY | BR_CLOCK_OK) &&
-           now - stopped >= BR_REST_US && usb == 3U && buttons_released;
+           now - stopped >= BR_REST_US && br_usb_supervised(usb) && buttons_released;
 }
 
 static inline bool br_command_fresh(uint32_t now, uint32_t received) {
@@ -76,7 +87,7 @@ static inline bool br_command_after_stop(uint32_t now, uint32_t received, uint32
 static inline bool br_outputs_allowed(uint16_t flags, bool irq_latched, unsigned usb,
                                       bool buttons_released) {
     return (flags & (BR_ACTIVE | BR_CLOCK_OK | BR_LATCHED)) == (BR_ACTIVE | BR_CLOCK_OK) &&
-           !irq_latched && usb == 3U && buttons_released;
+           !irq_latched && br_usb_supervised(usb) && buttons_released;
 }
 
 #endif

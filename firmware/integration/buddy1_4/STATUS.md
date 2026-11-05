@@ -1,15 +1,32 @@
-# PROVISIONAL integration status
+# Provisional Buddy 1–4 RTOS v0.2.0 status
 
-Release: robopico_buddy1_4_integration_v0_1. This is not the final five-buddy system.
+Main is intentionally promoted before the remaining full-circuit checks, per
+user instruction. Buddy 5 remains a blank integration point, not a working feature.
 
-| Feature | Included | Evidence status |
-|---|---|---|
-|Buddy1 Wi-Fi/MQTT/dashboard|Yes|Working baseline retained; new image needs hardware heartbeat-under-motion check|
-|Buddy2 motion/encoders|Yes|Original zero-assist parity and host checks; new image needs driving check|
-|Buddy3 line/barcode/junction|Yes|Captured Z/Y replays and old combined hardware records; new full-course check pending|
-|Buddy4 IMU/ramp assistance|Yes|Old combinedv0.5 ramp successes retained; new coordinator route needs physical acceptance|
-|Buddy5 obstacle avoidance|No|Empty extension hooks and example only|
+| Feature | Current evidence |
+|---|---|
+| Micro T-Kernel clocks/tasks | Step 1 and subsequent captures passed verified clocks and about 100 Hz control |
+| Buddy 1 network/dashboard | Step 3 baseline/reconnect and connected controls passed; release adds network-supervised powerbank use |
+| Buddy 2 motion/encoder API | Motor/Stop/ESTOP and flat Pause/Resume passed; normal control algorithm retained |
+| Buddy 3 line/barcode/junction | Straight, U-turn, decode/mapped dispatch passed; full L/R rejoin and sharp bends pending |
+| Buddy 4 IMU/ramp | Step 5v0.1.5 flat0 humps; same 10 mm one-sided ramp1 accepted/13 mm maximum; assistance active; clean measured motion timing |
+| Main powerbank policy and wireless stored exports | Focused production software/browser/build checks; first physical powerbank check pending |
+| Buddy 5 avoidance | NOT integrated |
 
-New image acceptance checklist: stationary startup/motor-off and saved-calibration readback; flat/bend; both-direction mapped barcode then junction; ramp; Stop/ESTOP and Pause/Resume during an attempted scan; sustained heartbeat while driving. Existing software tests and the ARM build are recorded under testing/evidence/current and artifacts/BUILD_MANIFEST.json.
+The successful ramp was one run. User declined another repeat before main
+promotion. The13 mm estimate differs+3 mm from the nominal 10 mm object; this
+is not general accuracy/repeatability evidence. No IR recalibration or gain
+changes were made for this release. Stored calibration priority remains own
+CRC-valid RTOS save, SDK record28, then fallback. Expected current car values
+are white122/138, black246/267; verify actual readback.
 
-Known limits: ramp tuning is from one car and a10mm one-wheel ramp; speed hold limits steering on a ramp; peak decoding assumes the printed label geometry and blurred response; raw history contains only first2048 samples. Saved car calibration is preserved; the tilted-front calibration is not silently substituted for the built-in preset.
+Powerbank policy: no USB-DTR requirement, but fresh kernel MQTT/link/app service
+is required and recent TCP publish-ack activity must be within 3 seconds. Link/
+service loss or stale delivery stops motion; reconnect never restarts it.
+This acknowledges TCP delivery activity, not application-level execution.
+Heartbeat/release metadata continue when ordinary telemetry is off.
+
+Before tuning: short untethered Start/Pause/Resume/Stop and network-loss check,
+then the circuit with enough mat for sensors/wheels throughout bends and turns.
+Preserve failed runs and export before another Start. Further tuning versions
+can branch from this main baseline without changing the archived checkpoints.

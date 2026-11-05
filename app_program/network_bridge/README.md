@@ -1,5 +1,10 @@
 # Application-to-kernel network bridge
 
+Main release APP=rtos_buddy1_4 enables the tested Buddy1–4 adapters plus
+network-supervised powerbank operation and stopped wireless exports. See
+[main setup](../../docs/setup.md) and [architecture](../../docs/architecture.md).
+The checkpoint history below describes the port and USB-supervised test profiles.
+
 **Step4 update:** `APP=rtos_barcode_wifi` uses the same connected command and
 safety foundation, adding the Buddy3 ADC-owner decoder adapter. Live mapping
 crosses cores as a locked snapshot. Source11 status/events share one sequence

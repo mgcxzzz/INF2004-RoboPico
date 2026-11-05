@@ -1,16 +1,27 @@
-# Build the provisional integration
+# Build main's Buddy1–4 RTOS release
 
-The public bundle contains source and a ready-to-flash UF2. Building requires the Pico SDK and ARM GNU toolchain, CMake, Ninja and Python. Use SDK commit98a542c1a62fb549ffb5d66a3e5892b06276b670 to reproduce this build's dependency baseline. Normal SDK submodules for USB/Wi-Fi/lwIP are required; Bluetooth is not used.
+Ready-to-flash UF2 and full bundle are in
+firmware/integration/buddy1_4/artifacts/v0_2_0_rtos/. Building is optional.
+Main uses micro T-Kernel SMP with the Pico SDK's low-level USB/radio/lwIP
+libraries; it is not the SDK CMake superloop. The build manifest pins actual
+compiler and SDK commits. Populate the SDK's USB/Wi-Fi/lwIP submodules.
 
-From repository/package root:
+With ARM GNU gcc/make available and PICO_SDK_PATH set, from build_make/:
 
-```text
-cmake -S firmware/integration/buddy1_4 -B build-buddy1_4 -G Ninja -DCMAKE_BUILD_TYPE=Release -DPICO_BOARD=pico_w -DPICO_SDK_PATH=<your-sdk-path>
-cmake --build build-buddy1_4
+```bash
+make -j4 APP=rtos_buddy1_4 SMP=1 CONSOLE=usb_cdc WIFI=cyw43 NET=lwip MQTT=1 CRASH_REPORT=0 TEST=0
 ```
 
-The output is robopico_buddy1_4_integration_v0_1.uf2 when a compatible SDK picotool is available. Ramp assistance and the peak decoder default ON. For a shadow experiment set RAMP_ASSIST_ACTIVE=OFF and/or BARCODE_PEAK_ACTIVE=OFF and identify those options in the build manifest; do not overwrite the published active artifact.
+Output: `build_make/robopico_buddy1_4_rtos_v0_2_0.uf2`.
+The Windows workspace helper is `tools/rtos_migration/build_release.sh` from
+Git Bash; it uses the existing sibling .buddy2-tools installation. Other
+machines can use the make command with their own toolchain/SDK paths.
 
-If the matching picotool is unavailable, configure with `-DPICO_NO_PICOTOOL=1`, build the ELF/BIN and use `python tools/firmware/package_release.py --build-dir <build-buddy1_4>`. The release tool verifies the standard RP2040 UF2 blocks, flash limits, linker stack/heap layout, no-local-credentials build configuration and complete bundle contents. See its help. It never flashes a device.
+APP=rtos_imu_wifi remains the USB-supervised Step5 checkpoint; the production
+profile additionally defines APP_RTOS_RELEASE. The package gate requires its
+wireless export/runtime symbols, source fingerprints, reserved-flash bounds,
+static RAM headroom and checked stack frames. No embedded Wi-Fi password.
+Settings and calibration reside beyond the code's enforced1MiB flash ceiling.
 
-Public builds use no config/wifi_config.local.h. The runtime provisioner loads saved Wi-Fi from its reserved flash sector. Build products, local credentials and captured dashboard sessions are gitignored. Run [offline tests](testing.md) before packaging. Build artifacts and checksums are under firmware/integration/buddy1_4/artifacts/. The release manifest records actual compile options, SDK/compiler identity, checks and provisional status; hardware acceptance remains pending.
+[The old SDK/CMake build](sdk_reference_build.md) is retained for comparison.
+The SDK artifacts at v0.1 are historical, not the current main runtime.

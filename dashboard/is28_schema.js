@@ -367,6 +367,26 @@
       groups: u16(p, 22) };
   }
   function decodeSource15(p) {
+    if (p.length === 12 && p[0] === 0xC2) {
+      if ((p[2] & 0x80) || (p[3] & 0xe0) || !(p[3] & 3)) return {error:'invalid release metadata'};
+      const levels = [];
+      for (let k=0;k<4;k++) {
+        let n=0; for(let b=0;b<12;b++) n |= ((p[4+Math.floor((12*k+b)/8)] >>> ((12*k+b)%8))&1)<<b;
+        levels.push(n);
+      }
+      return {kind:'release',version:`${p[1]&15}.${p[1]>>>4}.${p[2]&15}`,
+        wireless:!!(p[2]&16),storedLogs:!!(p[2]&32),calibrationValid:!!(p[2]&64),
+        profile:p[3]&3,calibrationOrigin:(p[3]>>>2)&3,recordedCalibration:!!(p[3]&16),
+        white:levels.slice(0,2),black:levels.slice(2),runId:u16(p,10)};
+    }
+    if (p.length === 60 && p[0] === 0xC3) {
+      if ((p[58]&0xc0) || (p[59]&0x80) || (p[57]&15)>10 || (p[57]>>>4)>10) return {error:'invalid RTOS runtime flags'};
+      const keys=['uptimeMs','reads','failed','lateGaps','fifoOverruns','fifoBudget','initBudget',
+        'controlCount','controlLate','holds','recoveries','disarms','earlyClears','epoch'];
+      const d={kind:'runtime'}; keys.forEach((k,i)=>d[k]=u32(p,1+4*i));
+      return Object.assign(d,{clearReason:p[57]&15,failureReason:p[57]>>>4,
+        holdReason:p[58]&3,qualificationFlags:(p[58]>>>2)&15,controlFlags:p[59]});
+    }
     if (p.length === 21 && p[4] === 0xC1) {
       if ((p[5] & ~15) || p[6] > 200 || u16(p,7) > 6000 || u16(p,9) > 1000 || p[19] > 5 || p[20] > 200)
         return {error: 'invalid coordinator ramp-target fields'};
@@ -377,6 +397,25 @@
     if (p.length === 28) return decodeRampAssist(p);
     if (p.length === 24 && p[4] === 0xB1) return decodeBarcodePeak(p);
     return { error: 'unknown source-15 layout (payload ' + p.length + ' bytes' + (p.length > 4 ? ', byte4 0x' + p[4].toString(16) : '') + ')' };
+  }
+  function decodeStoredLine(r) {
+    if(r.length!==56) return {error:'RTOS controller row must be 56 bytes'};
+    const a=u32(r,12),b=u32(r,16),m=u32(r,36),x=u32(r,44),y=u32(r,48);
+    const angle=(y>>>18)&8191,route=[0,65,70,90];
+    return {sequence:u32(r,40),ms:u32(r,0),ticks_l:(u32(r,4)|0),ticks_r:(u32(r,8)|0),
+      speed_l_x10:i16(r,20),speed_r_x10:i16(r,22),target_l:i16(r,24),target_r:i16(r,26),
+      pwm_l:i16(r,28),pwm_r:i16(r,30),adc_l:a&4095,adc_r:(a>>>12)&4095,
+      adc_side:(a>>>24)|((b&15)<<8),level_l:(b>>>4)&1023,level_r:(b>>>14)&1023,
+      phase:(b>>>24)&15,decision:m&63,reason:(m>>>6)&63,side_black:(m>>>12)&1,
+      busy:(m>>>13)&1,white:(m>>>14)&1,search:(m>>>15)&1,pending:route[(m>>>16)&3],
+      action:route[(m>>>18)&3],dt_us:u16(r,32),cost_us:u16(r,34),filtered_l:x&4095,
+      filtered_r:(x>>>12)&4095,optical_target_l:i16(r,52),optical_target_r:i16(r,54),
+      steer_gain_milli:(x>>>24)|((y&3)<<8),damping_milli:(y>>>2)&1023,
+      stop_reason:(m>>>20)&15,control_flags:(m>>>24)&127,
+      turn_degrees_x10:angle&4096?angle-8192:angle,junction_both_white:(y>>>12)&1,
+      junction_prior_white:(y>>>13)&1,junction_departure_ready:(y>>>14)&1,
+      junction_branch_accepted:(y>>>15)&1,junction_accepted_without_white:(y>>>16)&1,
+      junction_accept_event:(y>>>17)&1};
   }
   function decodeLogChunk(bytes) {
     const b = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
@@ -433,6 +472,7 @@
     const d = f.data;
     if (f.src === SRC.WIFI) return d.uptimeS * 1000;
     if (f.src >= 9 && f.src <= 14 && f.src !== SRC.LOG_CHUNK && Number.isFinite(d.uptimeMs)) return d.uptimeMs;
+    if (f.src === 15 && Number.isFinite(d.uptimeMs)) return d.uptimeMs;
     return null;
   }
   function frameRunId(f) {
@@ -523,7 +563,7 @@
                 decodeB1, decodeB2Motion, decodeImu, decodeLine, decodeB5, decodeNav,
                 decodeSafety, decodeMapping, decodeMotion, decodeLineEvent, decodeNavEvent,
                 decodeSummary, decodeDiagnostics, decodeLogChunk, decodeRampAssist, decodeBarcodePeak,
-                decodeSource15, picoUptimeMs, frameRunId,
+                decodeSource15, decodeStoredLine, picoUptimeMs, frameRunId,
                 detectProfile, effectiveProfile };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.IS28 = api;

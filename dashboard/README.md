@@ -1,3 +1,10 @@
+# Provisional Buddy1–4 RTOS dashboard
+
+The main v0.2.0 production profile supports powerbank operation, release/calibration
+identity, runtime counters and stopped wireless history downloads. Buddy5 is NOT
+integrated. Start with docs/setup.md. Legacy SDK and migration frames remain
+compatible; firmware capability metadata enables the new RTOS history format.
+
 # Provisional Buddy1–4 dashboard
 
 Run `python tools/dashboard/run_dashboard.py` from repository root or double-click Start dashboard.cmd. The helper serves this folder, starts a local Mosquitto broker if available and keeps its broker log under dashboard_session/. Existing listeners are checked, not silently replaced. Install Mosquitto separately.

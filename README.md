@@ -1,25 +1,34 @@
-# INF2004 RoboPico
+# RoboPico — provisional Buddy 1–4 RTOS integration
 
-## Experimental micro T-Kernel migration branch
+**Current main release: v0.2.0, micro T-Kernel SMP. Buddy 5 is NOT integrated.**
 
-`codex/micro-tkernel-migration` starts from the working main baseline and follows
-the [staged RTOS migration plan](firmware/migration/micro_tkernel/README.md).
-The current checkpoint is [Step4 connected barcode](firmware/migration/micro_tkernel/step_04_barcode/README.md):
-Continuous V2 profile1, kernel-owned Wi-Fi/MQTT, both reference barcode decoders
-and live mapped junction actions. **USB supervision is required; new network
-and Step4 hardware acceptance is pending.** The bundle includes a barcode-free
-Step3B network comparison image. User reports Step3B v0.1.1 motion/safety tests
-passed; Step2 extended-mat L/R/bends remain pending. IMU/ramp is Step5 and Buddy5
-is deferred. This branch is not a final Buddy1–4/5 release.
-The SDK integration below remains the behaviour reference; it does not fulfil
-the project's micro T-Kernel requirement by itself.
+[Download firmware and full bundle](firmware/integration/buddy1_4/artifacts/v0_2_0_rtos/)
+ · [Setup / powerbank / log downloads](docs/setup.md)
+ · [Validation and pending circuit checks](firmware/integration/buddy1_4/STATUS.md)
+ · [Architecture and interfaces](docs/architecture.md)
 
-## SDK behaviour reference: PROVISIONAL Buddy1–4 integration
+This promotes the hardware-tested Step 5 v0.1.5 baseline on the user's instruction.
+It retains Continuous V2 Profile 1 at 45 mm/s, both barcode decoders, live A–Z mappings,
+junction actions, motion/encoders and Buddy 4 IMU/ramp assistance. The new production
+profile supports powerbank operation with Wi-Fi/MQTT supervision and stopped
+wireless history downloads. Motors stay OFF on boot; Start is explicit.
 
-**Buddy5 obstacle avoidance is NOT integrated. This is not a confirmed final build.**
+The RTOS baseline passed flat/Pause/Resume/Stop and one nominal 10 mm one-sided ramp:
+0 flat humps; 1 accepted ramp/13 mm maximum; assistance active; 50 Hz IMU/100 Hz control;
+no new motion-window acquisition/timing/logging faults. This is one ramp success,
+not repeatability certification. Powerbank policy/download additions have software
+and build checks; their physical check and full circuit test remain pending.
+Sharp bends and complete left/right line reacquisition need sufficient mats.
 
-Start with [firmware/integration/buddy1_4](firmware/integration/buddy1_4/README.md), [setup](docs/setup.md) and [integration status](firmware/integration/buddy1_4/STATUS.md). Download the UF2 and complete source/dashboard/setup bundle from its [artifacts folder](firmware/integration/buddy1_4/artifacts/). Feature folders each explain their logic and evidence.
+Run [the complete package](firmware/integration/buddy1_4/README.md). Python and an
+installed Mosquitto broker are needed on the laptop; the ARM compiler is needed
+only for rebuilding. Saved front calibration/Wi-Fi are preserved. Buddy 1 owns
+network messaging; Buddy 3/Buddy 4 requests use the shared nav coordinator and one
+motor writer. All application networking goes through copied bounded buffers to
+the kernel Wi-Fi service. New fields use compact representations and protected
+snapshots; see [data representation](docs/data_representation.md).
 
-[Recorded Buddy2/Buddy4 evidence](testing/evidence/README.md) is archived with pinned source commits and hashes. It documents earlier builds; current validation is recorded separately.
-
-The original micro T-Kernel project remains at app_program/, kernel/, lib/, config/, device/ and build_make/. It is a separate build with [its original setup guide](docs/rtos_setup.md). Those existing team files are preserved.
+The [SDK v0.1 reference](firmware/integration/buddy1_4/SDK_REFERENCE.md) and its
+artifacts remain available for comparison. Migration checkpoints under
+firmware/migration/ are historical validation stages. Main's active build is
+`APP=rtos_buddy1_4`, not the SDK superloop or the template example.

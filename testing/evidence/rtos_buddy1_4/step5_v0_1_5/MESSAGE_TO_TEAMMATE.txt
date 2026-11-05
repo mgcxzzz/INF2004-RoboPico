@@ -1,0 +1,7 @@
+Step5 v0.1.5 flat + same10mm one-sided ramp:
+FLAT negative control: Start/Pause/Resume accepted; final humps0,max_height0, assistactivations0. Actual drive intervals after countdown~2.75s and~5.11s, pause3.30s (initial5s target was shorter). IMU~50Hz, no new failure/late/FIFO/budget/log-drop/control-late increments in the motion bracket.
+RAMP: user confirms completely unaided crossing and about2s level driving after descent beforeStop. Final accepted humps1,rejected0,max accepted height13mm. This is +3mm versus nominal10mm on one run; not general accuracy/repeatability evidence.
+Motion bracket (beforeStart to>=10safterStop):1150reads/22.99982s=50.00039Hz; failed reads0, late_gaps0, FIFO overruns0, aborts/timeouts0, budget failures0, logging dropped/oversize0 and CONTROL late0. Generated ramp capture clock/timing result PASS (~100.008Hz control, no issues).
+Assistance activated (count2); latest episode active_ms2039, final end2=DESCENT. This is latest-episode duration, not a proven sum of both activations. We do not infer assistance caused the crossing.
+Note: the beginning of USB capture includes stale buffered diagnostics from before reopening. Use the exact preStart/postStop snapshots in RAMP_REVIEW, not the first buffered line, for motion deltas. Lifetime startup nonzero totals remain preserved.
+Calibration unchangedwhite122/138 black246/267; savedWiFi used unchanged. Capture closed, ramp line export COMPLETE, no barcode export requested for this test. Full flat/ramp connected folders and line export attached.
