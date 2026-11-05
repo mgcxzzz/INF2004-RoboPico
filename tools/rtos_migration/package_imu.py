@@ -5,8 +5,8 @@ import package_motor_bringup as common
 from package_line_following import linked_checks
 ROOT=common.ROOT
 CHECKPOINT=ROOT/'firmware/migration/micro_tkernel/step_05_imu'
-ART=CHECKPOINT/'firmware/v0_1_3'
-NAME='robopico_rtos_connected_imu_v0_1_3'
+ART=CHECKPOINT/'firmware/v0_1_4'
+NAME='robopico_rtos_connected_imu_v0_1_4'
 common.ART=ART
 def main():
     ART.mkdir(parents=True,exist_ok=True)
@@ -31,7 +31,9 @@ def main():
         'calibration_priority':['CRC-valid RTOS saved0x1a9000','CRC-valid SDK record28 at0x1d0000','original fallback'],
         'expected_current_car_calibration':'white122,138 black246,267 origin1; read back actual car; no forced overwrite',
         'step4_parent':'78c42c050d6bbd464a3ceef255ce1ec597b60ada',
-        'features':['core1 priority16 sole I2C1 GP2/3 owner, below safety/nav/motion; fixed20ms releases; original50Hz service and400Hz FIFO; copied odometry/tilt',
+        'features':['core0 priority2 sole I2C1 GP2/3 owner, ahead of USB3/kernel WiFi4; motor14/nav10/safety6 remain core1; fixed20ms releases; original50Hz service and400Hz FIFO',
+            'aggregate8ms FIFO and20ms init elapsed deadlines;2ms reset-ready bound; no post-expiry I2C commands; full ticks over8ms diagnostic only',
+            'copied IMU_PHASE/IMU_BUDGET wall-time diagnostics and SIDE_SERVICE all-due ADC/decoder/planner profiling; unchanged binary message sizes',
             'per-epoch calibration progress/best/counts, exact axis/speed restart reasons and rejected spans retained after fault; original2s/10s/40mg guards unchanged',
             'core0 kernel service radio/timers/MQTT elapsed-wall-time diagnostics via copied application mailbox, never direct subsystem network calls',
             'RTOS-only preemption-safe transfer completion/deadline recheck; bounded2ms per wait, abort-source diagnostics, no post-timeout queue writes',
@@ -50,10 +52,15 @@ def main():
             '640 copied100Hz line rows;2048 ten-byte raw rows frozen at first decode;192 reference barcode events',
             'stopped USB exports, mandatory USB DTR and network-loss stop/no automatic restart'],
         'deferred':['Buddy5','powerbank/untethered supervision (deferred until final integration)','dashboard stored-row downloads'],
-        'software_checks':['37 strict C regression programs including actual calibration restart/timeout/recovery diagnostics, task/service Reset, USB record bounds, timing buckets, transport failures and barcode regression',
-            'Python capture/export/provisioning checks plus pinned upstream TCP allocation experiment',
-            'ARM Step4/Step5; source parity/UF2/stack/RAM gates; dashboard Step5 profile/IMU packet checks; network controls unchanged from Step4'],
-        'hardware_checks':'Step4 barcode/dispatch user-reported working; L/R rejoin needs mat. Step5 v0.1.2 passed reads/Reset but had17/20 late gaps and an unexplained stationary cold-calibration timeout; v0.1.3 requires cold-boot/two-window retest before driving/ramp.',
+        'software_checks':['6 focused strict C programs: test_imu_i2c, test_imu_task_reset, test_imu_service_rtos, test_imu_calibration_diagnostics, test_rtos_ramp_bridge, test_rtos_ramp',
+            '24 focused Python capture/line-export/barcode-export tests; default SDK preprocessed token parity for imu_service/imu_proc/lsm303_driver',
+            'ARM Step5 build; UF2/stack/RAM/source and bundle-integrity gates; unchanged algorithm suites not rerun'],
+        'hardware_checks':'Step4 dispatch working; full L/R rejoin still needs mat. Step5 v0.1.3 passed stationary cold boot/Reset and functional flat Pause/Resume/Stop, but motion starved IMU (about15-20Hz, late gaps/FIFO overruns). v0.1.4 physical timing unverified: short stationary then flat motion/USB/network check required before ramp.',
+        'ram_comparison':{'baseline':'Step5 v0.1.3 same ARM build profile',
+            'baseline_static_ram_end':'0x2002e630',
+            'static_ram_growth_bytes':int(linked['static_ram_end'],16)-0x2002e630,
+            'binary_message_growth_bytes':0,
+            'scope':'Linker static image; not dynamic task-stack high-water or a complete Tribunal audit.'},
         'linked_checks':linked}
     for name,data in [('BUILD_MANIFEST.json',manifest),('SOURCE_SHA256.json',hashes)]:
         (ART/name).write_text(json.dumps(data,indent=2)+'\n',encoding='utf-8',newline='\n')
@@ -62,7 +69,8 @@ def main():
         for p in paths:z.write(p,p.relative_to(ROOT).as_posix())
         for p in (firmware,ART/'BUILD_MANIFEST.json',ART/'SOURCE_SHA256.json'):z.write(p,p.relative_to(ROOT).as_posix())
         z.write(firmware,'firmware/'+firmware.name)
-        z.writestr('START_HERE.md',(CHECKPOINT/'README.md').read_text(encoding='utf-8').replace('../../../../app_program/','app_program/').replace('firmware/v0_1_2/','firmware/'))
+        z.writestr('START_HERE.md',(CHECKPOINT/'README.md').read_text(encoding='utf-8').replace('../../../../app_program/','app_program/').replace('firmware/v0_1_4/','firmware/'))
+        z.write(CHECKPOINT/'UPDATE_V0_1_4.md','UPDATE_V0_1_4.md')
         for title,script in [('Start dashboard.cmd','tools/dashboard/run_dashboard.py'),
             ('Setup Wi-Fi.cmd','tools/rtos_migration/provision_network.py'),
             ('Capture connected test.cmd','tools/rtos_migration/capture_connected_line.py'),

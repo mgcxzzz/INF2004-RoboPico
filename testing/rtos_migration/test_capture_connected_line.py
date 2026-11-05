@@ -57,5 +57,16 @@ class CaptureTests(unittest.TestCase):
         self.assertEqual(r['imu_calibration_faults'][0]['last_reason'],2)
         self.assertEqual(r['imu_calibration_last']['progress'],100)
         self.assertEqual(r['network_service_last']['max_total_us'],15000)
+    def test_v014_phase_budget_and_all_poll_snapshots_are_retained(self):
+        rows=[{'kind':'IMU_PHASE','read_us':1700,'process_us':400},
+              {'kind':'IMU_PHASE','read_us':1900,'process_us':450},
+              {'kind':'IMU_BUDGET','fifo_exhausted':1},
+              {'kind':'SIDE_SERVICE','polls':500,'poll_total_us':80000}]
+        r=summarize(rows,[],[])
+        self.assertEqual(r['imu_phase_first']['read_us'],1700)
+        self.assertEqual(r['imu_phase_last']['process_us'],450)
+        self.assertEqual(r['imu_budget_last']['fifo_exhausted'],1)
+        self.assertEqual(r['side_service_last']['polls'],500)
+        self.assertEqual(r['result'],'REVIEW_PHYSICAL_TEST')
 
 if __name__=='__main__':unittest.main()

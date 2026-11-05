@@ -44,9 +44,9 @@ def verify_shared_sources(hashes):
                                   "current_sha256": hashes[relative], "change": "RTOS-only verified TIMER shim and stddef include; SDK timer branch retained."}
             continue
         if relative == prefix + "src/imu/imu_service.c":
-            assert hashes[relative] == "c97a4510b26acd0e971870b7efe6b6ee2cdcf755dc3c2ecb475256980750934f", relative
+            assert hashes[relative] == "c68685a2c75c7162955ae5ec275b91a3feb48f787712d2efa2d4d45e96e7f863", relative
             reviewed[relative] = {"baseline_sha256": hashlib.sha256(original).hexdigest(),
-                                  "current_sha256": hashes[relative], "change": "RTOS-only console suppression, acquisition hook and passive per-epoch calibration evidence; estimator/service numeric logic unchanged."}
+                                  "current_sha256": hashes[relative], "change": "RTOS-only bounded init/FIFO acquisition, wall-time hooks, console suppression and passive calibration evidence; default SDK tokens and estimator decisions unchanged."}
             continue
         if relative == prefix + "src/imu/imu_proc.c":
             assert hashes[relative] == "8e4e34c8816396b0a1af61b3b944bfc5e23f6bd1caee74271134ab8ec5732043", relative
@@ -54,9 +54,9 @@ def verify_shared_sources(hashes):
                                   "current_sha256": hashes[relative], "change": "APP_RTOS_IMU passive exact calibration restart-reason hook; no change to guard arithmetic, state decisions or default SDK tokens."}
             continue
         if relative == prefix + "src/imu/lsm303_driver.c":
-            assert hashes[relative] == "ec597798435b938a236e7d6dadc22cbece000495c9cccef0af8e7c3223e6323f", relative
+            assert hashes[relative] == "424f5a5e335ea6f0745c097f2c10658e6d5ba6a4af87bc0f89915e1cba2e6911", relative
             reviewed[relative] = {"baseline_sha256": hashlib.sha256(original).hexdigest(),
-                                  "current_sha256": hashes[relative], "change": "APP_RTOS_IMU excludes only the legacy transport/wait helper; sensor setup and FIFO logic retained. SDK branch unchanged."}
+                                  "current_sha256": hashes[relative], "change": "RTOS transport selection and 2ms reset-ready bound; original sensor/FIFO settings and default SDK tokens retained."}
             continue
         if relative == prefix + "src/barcode/barcode_nav.h":
             # Exact reviewed source fingerprint: default SDK behaviour retained;

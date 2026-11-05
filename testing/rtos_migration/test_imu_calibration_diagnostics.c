@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include "src/imu/imu_service.h"
+#include "app_program/imu_navigation/imu_acquisition.h"
 #include "app_program/imu_navigation/calibration_diagnostics.h"
 uint32_t host_now_us = 1000000;
 uint64_t board_time_us(void) {
@@ -14,6 +15,22 @@ void ri_acquisition_record(uint32_t gap, bool ok, bool overrun) {
     (void)gap;
     (void)ok;
     (void)overrun;
+}
+void ri_acquisition_fifo_begin(void) {}
+bool ri_acquisition_fifo_end(uint8_t batch_n) {
+    (void)batch_n;
+    return true;
+}
+void ri_acquisition_init_begin(void) {}
+bool ri_acquisition_init_end(void) {
+    return true;
+}
+void ri_acquisition_record_reset_timeout(void) {}
+void ri_acquisition_record_processor(uint32_t wall_us) {
+    (void)wall_us;
+}
+void ri_acquisition_record_tick(uint32_t wall_us) {
+    (void)wall_us;
 }
 static bool send_frame(const uint8_t *f, uint32_t n) {
     (void)f;

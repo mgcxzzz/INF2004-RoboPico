@@ -25,6 +25,9 @@ def summarize(rows, frames, interruptions):
     logging = [r for r in rows if r['kind']=='LOGGING']
     calibration = [r for r in rows if r['kind']=='IMU_CAL']
     service = [r for r in rows if r['kind']=='NET_SERVICE']
+    phase = [r for r in rows if r['kind']=='IMU_PHASE']
+    budget = [r for r in rows if r['kind']=='IMU_BUDGET']
+    side = [r for r in rows if r['kind']=='SIDE_SERVICE']
     return {'result':'REVIEW_PHYSICAL_TEST', 'clock':clock, 'heartbeats':len(beats),
             'max_heartbeat_gap_s':max(gaps,default=None), 'motion_frames':len(motion),
             'network_first':net[0] if net else None, 'network_last':net[-1] if net else None,
@@ -47,6 +50,12 @@ def summarize(rows, frames, interruptions):
             'imu_calibration_faults':[r for r in calibration if r.get('fault',0)],
             'network_service_first':service[0] if service else None,
             'network_service_last':service[-1] if service else None,
+            'imu_phase_first':phase[0] if phase else None,
+            'imu_phase_last':phase[-1] if phase else None,
+            'imu_budget_first':budget[0] if budget else None,
+            'imu_budget_last':budget[-1] if budget else None,
+            'side_service_first':side[0] if side else None,
+            'side_service_last':side[-1] if side else None,
             'barcode_decodes':[r for r in rows if r['kind']=='BARCODE_DECODE'],
             'monitor_interruptions':interruptions,
             'scope':'Clock and passive receive evidence only. Review video and stopped USB line log for tracking/stops; intentional outage gaps are not a baseline heartbeat pass.'}

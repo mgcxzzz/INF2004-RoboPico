@@ -145,7 +145,17 @@ static void init_sensor(void) /* task_imu.c init_sensor() */
 {
     b4_chip_t chip = B4_CHIP_NONE;
     bool b_mag = false;
+#ifdef APP_RTOS_IMU
+    ri_acquisition_init_begin();
+#endif
     bool b_ok = b4_drv_init(&chip, &b_mag);
+#ifdef APP_RTOS_IMU
+    if (!ri_acquisition_init_end()) {
+        b_ok = false;
+        chip = B4_CHIP_NONE;
+        b_mag = false;
+    }
+#endif
     b4_out_t out;
 #ifndef APP_RTOS_IMU
     if (g_console) {
@@ -250,9 +260,18 @@ void b4v23_tick(uint64_t now_us, b4v23_mission_t mission, const b4v23_odo_t *odo
     g_last_us = now;
     if ((g_ctx.state != IMU_ST_INIT) && (g_ctx.state != IMU_ST_FAULT)) {
         uint32_t i;
+#ifdef APP_RTOS_IMU
+        uint32_t processor_start_us;
+        g_in.n = 0U;
+        g_in.b_overrun = false;
+        ri_acquisition_fifo_begin();
+#endif
         g_in.b_read_ok = b4_drv_read_fifo(g_raw, (uint8_t)B4_FIFO_DEPTH, &g_in.n, &g_in.b_overrun);
 #ifdef APP_RTOS_IMU
+        if (!ri_acquisition_fifo_end(g_in.n))
+            g_in.b_read_ok = false;
         ri_acquisition_record(g_in.gap_us, g_in.b_read_ok, g_in.b_overrun);
+        processor_start_us = sys_time_us();
 #endif
         for (i = 0U; i < (uint32_t)g_in.n; i++)
             to_car(&g_raw[i], &g_in.s[i]);
@@ -295,6 +314,9 @@ void b4v23_tick(uint64_t now_us, b4v23_mission_t mission, const b4v23_odo_t *odo
         g_calibration.fault = g_ctx.fault;
 #endif
         b4_diag_accumulate(&g_side_diag, &g_ctx);
+#ifdef APP_RTOS_IMU
+        ri_acquisition_record_processor(sys_time_us() - processor_start_us);
+#endif
         processed = g_in.b_read_ok;
     }
     /* ramp-assist v0.1: publish this period's tilt view (observer data). */
@@ -314,6 +336,9 @@ void b4v23_tick(uint64_t now_us, b4v23_mission_t mission, const b4v23_odo_t *odo
         g_last_state = g_ctx.state;
     }
     g_tick_us = sys_time_us() - t_begin;
+#ifdef APP_RTOS_IMU
+    ri_acquisition_record_tick(g_tick_us);
+#endif
     if (g_tick_us > g_tick_max_us)
         g_tick_max_us = g_tick_us;
 }

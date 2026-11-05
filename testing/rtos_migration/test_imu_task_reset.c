@@ -6,6 +6,7 @@
 #include <assert.h>
 #include <setjmp.h>
 #include <stdio.h>
+#include "app_program/imu_navigation/imu_acquisition.h"
 #include "src/motion/motion_port.h"
 typedef unsigned UINT;
 typedef unsigned char UB;
@@ -16,6 +17,8 @@ uint32_t host_now_us = 1000000;
 static jmp_buf finished;
 static bool requested, checked_calibrating;
 static unsigned sleeps;
+static RiAcquisition acq;
+static uint32_t fifo_start_us, init_start_us;
 static int ISpinLock(T_SPLOCK *p, UINT *key) {
     (void)p;
     *key = 0;
@@ -41,7 +44,7 @@ uint32_t board_kernel_ms(void) {
 }
 static int tk_dly_tsk(uint32_t ms);
 static int tk_get_prc(void) {
-    return 2;
+    return 1;
 }
 bool rn_drive_telemetry_enabled(void) {
     return true;
@@ -65,7 +68,6 @@ void ri_ramp_report(void) {
     assert(!depth);
 }
 #include "app_program/imu_navigation/imu_service.c"
-static RiAcquisition acq;
 void ri_acquisition_record(uint32_t gap, bool ok, bool overrun) {
     assert(!depth);
     ++acq.reads;
@@ -76,6 +78,44 @@ void ri_acquisition_record(uint32_t gap, bool ok, bool overrun) {
 void ri_acquisition_snapshot(RiAcquisition *out) {
     assert(!depth);
     *out = acq;
+}
+void ri_acquisition_fifo_begin(void) {
+    assert(!depth);
+    fifo_start_us = host_now_us;
+}
+bool ri_acquisition_fifo_end(uint8_t batch_n) {
+    assert(!depth);
+    uint32_t elapsed = host_now_us - fifo_start_us;
+    acq.fifo_batch_n = batch_n > 32U ? 32U : batch_n;
+    acq.last_fifo_read_wall_us = elapsed;
+    if (elapsed > acq.max_fifo_read_wall_us)
+        acq.max_fifo_read_wall_us = elapsed;
+    return elapsed < RI_FIFO_BUDGET_US;
+}
+void ri_acquisition_init_begin(void) {
+    assert(!depth);
+    init_start_us = host_now_us;
+}
+bool ri_acquisition_init_end(void) {
+    assert(!depth);
+    return host_now_us - init_start_us < RI_INIT_BUDGET_US;
+}
+void ri_acquisition_record_reset_timeout(void) {
+    assert(!depth);
+    ++acq.reset_timeouts;
+}
+void ri_acquisition_record_processor(uint32_t wall_us) {
+    assert(!depth);
+    acq.last_processor_wall_us = wall_us;
+    if (wall_us > acq.max_processor_wall_us)
+        acq.max_processor_wall_us = wall_us;
+}
+void ri_acquisition_record_tick(uint32_t wall_us) {
+    assert(!depth);
+    acq.last_tick_wall_us = wall_us;
+    if (wall_us > acq.max_tick_wall_us)
+        acq.max_tick_wall_us = wall_us;
+    acq.ticks_over_8ms += wall_us > RI_FIFO_BUDGET_US;
 }
 static int tk_dly_tsk(uint32_t ms) {
     assert(!depth && ms >= 1 && ms <= 20);
@@ -93,10 +133,13 @@ static int tk_dly_tsk(uint32_t ms) {
     }
     if (host_now_us >= 7500000) {
         assert(checked_calibrating && shared.ready_epoch == 2 && shared.init_epoch == 2);
-        assert(shared.core == 1);
+        assert(shared.core == 0);
         assert(shared.tlm.state == IMU_ST_IDLE && !shared.tlm.fault);
         assert(!acq.failed_reads && !acq.late_gaps && !acq.fifo_overruns);
         assert(acq.reads > 300 && shared.ticks > 300 && sleeps < 400);
+        assert(acq.fifo_batch_n == 8 && acq.max_tick_wall_us >= acq.last_tick_wall_us);
+        assert(!acq.fifo_budget_overruns && !acq.init_budget_overruns && !acq.reset_timeouts);
+        assert(!acq.ticks_over_8ms); /* host fixture advances only between releases */
         assert(!shared.running);
         ri_report();
         longjmp(finished, 1);

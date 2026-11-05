@@ -37,7 +37,7 @@ static ER start(FP entry, PRI priority, UW processor, const char *name) {
 void bringup_help(void) {
 #if defined(APP_RTOS_IMU)
     tm_printf(
-        (UB *)"\nROBOPICO RTOS CONNECTED IMU v0.1.3 | Step5 EXPERIMENTAL | micro T-Kernel SMP\n");
+        (UB *)"\nROBOPICO RTOS CONNECTED IMU v0.1.4 | Step5 EXPERIMENTAL | micro T-Kernel SMP\n");
     tm_printf((
         UB *)"Based on Step4 v0.1.2 (physical acceptance pending). Buddy1-4; Buddy5 NOT integrated.\n");
     tm_printf((

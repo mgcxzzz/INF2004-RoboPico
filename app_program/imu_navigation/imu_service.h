@@ -2,8 +2,10 @@
 #define RTOS_IMU_SERVICE_H
 #include "../rtos_bringup/bringup.h"
 #include "imu_motion.h"
-#define RI_TASK_PRIORITY 16
-#define RI_TASK_PROCESSOR TP_PRC2
+/* Short 50Hz acquisition work precedes background USB3/WiFi4 on core0.
+ * Motor/navigation/safety priorities and sole output owner stay on core1. */
+#define RI_TASK_PRIORITY 2
+#define RI_TASK_PROCESSOR TP_PRC1
 void ri_init(void);
 void ri_task(INT code, void *exinf);
 void ri_report(void);

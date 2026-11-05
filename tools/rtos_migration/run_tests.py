@@ -4,6 +4,7 @@ import os
 import shlex
 import subprocess
 import sys
+import argparse
 
 ROOT = Path(__file__).resolve().parents[2]
 CORE = ROOT / "firmware/integration/buddy1_4"
@@ -51,6 +52,15 @@ checks.extend([
     (CORE / "tests/unit/test_wifi_packets.c", [CORE / "src/network/wifi_packets.c"]),
     (CORE / "tests/unit/test_wifi_protocol.c", [CORE / "src/network/wifi_protocol.c"]),
     (CORE / "tests/unit/test_wifi_settings.c", [])])
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--only', nargs='+', help='Run only named production-C programs (file stems).')
+parser.add_argument('--skip-python', action='store_true', help='Run selected Python checks separately.')
+args = parser.parse_args()
+if args.only:
+    unknown = set(args.only) - {source.stem for source, _ in checks}
+    if unknown:
+        parser.error('Unknown programs: ' + ', '.join(sorted(unknown)))
+    checks = [(source, extra) for source, extra in checks if source.stem in args.only]
 for source, extra in checks:
     exe = OUT / (source.stem + (".exe" if os.name == "nt" else ""))
     profile_flags = ["-DAPP_RTOS_IMU=1"] if source.stem in ("test_imu_service_rtos", "test_imu_task_reset", "test_imu_calibration_diagnostics") else []
@@ -60,12 +70,9 @@ for source, extra in checks:
                     "-DCIRCUIT_SWEEP_SEARCH=1", "-I" + str(ROOT), "-I" + str(CORE), "-I" + str(CORE / "config"),
                     source, *extra, "-lm", "-o", exe], check=True)
     subprocess.run([exe], check=True, cwd=OUT if source.stem in ("test_imu_service_rtos", "test_ramp_assist") else ROOT)
-subprocess.run([sys.executable, ROOT / "testing/rtos_migration/test_capture_bringup.py"], check=True)
-subprocess.run([sys.executable, ROOT / "testing/rtos_migration/test_export_line_log.py"], check=True)
-subprocess.run([sys.executable, ROOT / "testing/rtos_migration/test_capture_adc_readiness.py"], check=True)
-subprocess.run([sys.executable, ROOT / "testing/rtos_migration/test_provision_network.py"], check=True)
-subprocess.run([sys.executable, ROOT / "testing/rtos_migration/test_capture_network_bench.py"], check=True)
-subprocess.run([sys.executable, ROOT / "testing/rtos_migration/test_capture_connected_line.py"], check=True)
-subprocess.run([sys.executable, ROOT / "testing/rtos_migration/test_export_barcode_log.py"], check=True)
-subprocess.run([sys.executable, ROOT / "testing/rtos_migration/test_tcp_allocation.py"], check=True)
-print(f"PASS: {len(checks)} production-C regression programs plus capture/export/provisioning checks. Hardware test is still required.")
+if not args.skip_python:
+    for name in ('test_capture_bringup', 'test_export_line_log', 'test_capture_adc_readiness',
+                 'test_provision_network', 'test_capture_network_bench', 'test_capture_connected_line',
+                 'test_export_barcode_log', 'test_tcp_allocation'):
+        subprocess.run([sys.executable, ROOT / 'testing/rtos_migration' / (name + '.py')], check=True)
+print(f"PASS: {len(checks)} production-C regression programs; Python checks {'run' if not args.skip_python else 'selected separately'}. Hardware test is still required.")

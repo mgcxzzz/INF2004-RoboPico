@@ -4,11 +4,28 @@ Experimental Step5, based on Step4 v0.1.2. Physical acceptance of both the
 new gate and this IMU port is pending. Buddy5 and powerbank driving remain
 deferred. SDK main and the published Step4 artifacts are unchanged.
 
-Step5 v0.1.3 moves the sole IMU task to core1 priority16, below safety6,
-navigation10 and motor control14. USB/Wi-Fi remain core0 owners. The motor
-task sleeps between releases and can preempt IMU I2C work; no I/O is moved
-inside a shared lock. `IMU_CAL core` reports the actual executing core, and
-the configured priority is printed alongside it.
+Step5 v0.1.4 moves the sole IMU task to core0 priority2, ahead of USB3
+and kernel Wi-Fi4. Core1 safety6, navigation10 and motor14 are unchanged.
+v0.1.3's core1 priority16 placement passed stationary tests but starved IMU
+under motion. `IMU_CAL core` reports the actual executing core and priority.
+The 20ms release target remains50Hz. Hardware timing acceptance is pending.
+
+FIFO acquisition has an8ms aggregate elapsed deadline checked on successful
+progress as well as wait paths. Initialization has a separate20ms budget;
+controller reset-ready polling is bounded2ms. Expiry prevents further I2C
+commands and follows existing acquisition/init failure handling. These limits
+are not a hard cap on the whole tick: conversion and bounded32-sample
+processing follow the read. `IMU_PHASE` separates read/processor/tick wall
+time and FIFO batch; `IMU_BUDGET` records exhaustion, excess time, reset
+timeouts and whole ticks over8ms. No estimator/ramp threshold was relaxed.
+
+`SIDE_SERVICE` in the line service profiles every due side ADC attempt,
+including polls between motor ticks, and decoder/planner work. uint32 totals
+wrap modulo32bits (about71.6minutes of accumulated microseconds); own
+recording overhead is excluded. All timings include waits/preemption, not
+exclusive CPU. Snapshots are copied before printing. See
+[compact field domains](../../docs/data_representation.md) and the Step5
+build manifest for static RAM growth; binary MQTT payload sizes are unchanged.
 
 Step5 v0.1.2 removes whole-format interrupt masking in the USB-only console:
 each tm_printf formats/expands CRLF in local768-byte storage, then uses one
@@ -24,7 +41,7 @@ for each hardware phase, records abort sources and stops queuing commands
 after failure. Interrupts/dispatch remain enabled. The reference SDK driver
 transport is retained behind the opposite compile-time branch.
 
-`ri_task` owns the GY-511/LSM303 on I2C1 GP2/GP3, core1 priority16. It runs
+`ri_task` owns the GY-511/LSM303 on I2C1 GP2/GP3, core0 priority2. It runs
 the existing `b4v23_tick` service every20ms, using its400Hz FIFO, axis mapping,
 2second stationary calibration, powered acceptance and detector6 parameters.
 The `imu_proc.c` numeric/state decisions, `b4_config.h`, FIFO processing/
@@ -49,7 +66,7 @@ are lifetime32bit counters and remain across Reset; the legacy six-bit
 telemetry error count can wrap or restart after IMU reinitialisation.
 
 The task sleeps to the next fixed20ms release (rebases after a full missed
-period), below core1 motor/safety/navigation and separate from core0 USB/Wi-Fi.
+period), ahead of core0 USB/Wi-Fi; core1 motor/safety/navigation stay separate.
 `IMU_ACQ` separates failed FIFO reads, gaps>30ms and sensor FIFO overruns,
 with max gap/wake lateness. `IMU_I2C` reports TX/STOP/RX timeout counts,
 abort count/source/address, rescued deadline checks and maximum transfer

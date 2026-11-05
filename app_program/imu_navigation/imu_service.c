@@ -7,7 +7,7 @@
 #include "calibration_diagnostics.h"
 #include <string.h>
 
-/* One I2C/estimator writer on core1, below motor/safety/navigation priority.
+/* One I2C/estimator writer on core0, ahead of background USB/Wi-Fi.
  * Motion supplies observations;
  * all cross-task data are copied under this short lock. No I/O under lock. */
 static T_SPLOCK copy_lock;
@@ -186,6 +186,18 @@ void ri_report(void) {
         acq.last_gap_us, acq.last_late_us, acq.last_late_read, acq.window_seq, acq.window_reads,
         acq.window_late, acq.window_max_gap_us, acq.previous_reads, acq.previous_late,
         acq.previous_max_gap_us);
+    tm_printf(
+        (UB *)"IMU_PHASE units=wall_us read_us=%u process_us=%u tick_us=%u max_read_us=%u max_process_us=%u max_tick_us=%u fifo_n=%u\n",
+        acq.last_fifo_read_wall_us, acq.last_processor_wall_us, acq.last_tick_wall_us,
+        acq.max_fifo_read_wall_us, acq.max_processor_wall_us, acq.max_tick_wall_us,
+        acq.fifo_batch_n);
+    tm_printf(
+        (UB *)"IMU_BUDGET fifo_limit_us=%u fifo_exhausted=%u fifo_last_overrun_us=%u fifo_max_overrun_us=%u init_limit_us=%u init_exhausted=%u init_last_overrun_us=%u init_max_overrun_us=%u reset_ready_us=%u reset_timeouts=%u full_tick_over_8ms=%u\n",
+        RI_FIFO_BUDGET_US, acq.fifo_budget_overruns, acq.last_fifo_budget_overrun_us,
+        acq.max_fifo_budget_overrun_us, RI_INIT_BUDGET_US, acq.init_budget_overruns,
+        acq.last_init_budget_overrun_us, acq.max_init_budget_overrun_us,
+        RI_RESET_READY_TIMEOUT_US, acq.reset_timeouts,
+        acq.ticks_over_8ms);
     tm_printf(
         (UB *)"IMU_I2C transfers=%u aborts=%u timeout_tx=%u timeout_stop=%u timeout_rx=%u rescued=%u max_transfer_us=%u last_phase=%u address=0x%x abort_source=0x%x\n",
         acq.transfers, acq.aborts, acq.timeout_tx, acq.timeout_stop, acq.timeout_rx, acq.rescued,

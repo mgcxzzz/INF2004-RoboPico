@@ -47,6 +47,10 @@ static struct {
     uint32_t junction_aux;
     RlAdcDiagnostics adc_diag;
     uint32_t adc_retries, adc_recoveries, adc_frames;
+#ifdef APP_RTOS_IMU
+    uint32_t side_polls, side_adc_total_us, side_adc_max_us;
+    uint32_t side_work_total_us, side_work_max_us, side_poll_total_us, side_poll_max_us;
+#endif
     unsigned adc_state : 2, adc_good : 2;
 #ifdef APP_RTOS_BARCODE
     uint32_t decoded, peak_decodes, peak_applied, conflicts, gaps, max_gap, samples, max_sample;
@@ -66,6 +70,24 @@ static UINT enter(void) {
 static void leave(UINT key) {
     (void)ISpinUnlock(&copy_lock, key);
 }
+
+#ifdef APP_RTOS_IMU
+/* Count every due channel-1 read attempt, including failures. Lifetime totals wrap. */
+static void side_profile_record(uint32_t adc_us, uint32_t work_us, uint32_t poll_us) {
+    UINT key = enter();
+    ++view.side_polls;
+    view.side_adc_total_us += adc_us;
+    if (adc_us > view.side_adc_max_us)
+        view.side_adc_max_us = adc_us;
+    view.side_work_total_us += work_us;
+    if (work_us > view.side_work_max_us)
+        view.side_work_max_us = work_us;
+    view.side_poll_total_us += poll_us;
+    if (poll_us > view.side_poll_max_us)
+        view.side_poll_max_us = poll_us;
+    leave(key);
+}
+#endif
 
 static void acquisition_failed(uint64_t now) {
     adc_ok = false;
@@ -140,11 +162,27 @@ bool rtos_line_start_valid(void) {
 void rtos_line_side_poll(uint64_t now) {
     if (!adc_ok || now < side_due)
         return;
+#ifdef APP_RTOS_IMU
+    uint64_t poll_started = board_time_us();
+#endif
     side_due = now + 2000;
+#ifdef APP_RTOS_IMU
+    uint64_t adc_started = board_time_us();
+#endif
     if (!board_line_adc_read(1, 4, false, &adc[1])) {
+#ifdef APP_RTOS_IMU
+        uint32_t adc_us = (uint32_t)(board_time_us() - adc_started);
+#endif
         acquisition_failed(board_time_us());
+#ifdef APP_RTOS_IMU
+        side_profile_record(adc_us, 0, (uint32_t)(board_time_us() - poll_started));
+#endif
         return;
     }
+#ifdef APP_RTOS_IMU
+    uint32_t adc_us = (uint32_t)(board_time_us() - adc_started);
+    uint32_t work_us = 0;
+#endif
     if (was_active
 #ifdef APP_RTOS_NETWORK
         && !rn_drive_paused()
@@ -152,14 +190,21 @@ void rtos_line_side_poll(uint64_t now) {
     ) {
         BringupStatus safety;
         bringup_get_status(&safety);
-        if (!(safety.flags & BR_ACTIVE))
+        if (!(safety.flags & BR_ACTIVE)) {
+#ifdef APP_RTOS_IMU
+            side_profile_record(adc_us, 0, (uint32_t)(board_time_us() - poll_started));
+#endif
             return;
+        }
         /* Between 10 ms encoder drains, interpolate at the last measured
          * velocity, as a bounded-distance edge estimate, never a PWM change. */
         double wheel[2];
         double elapsed = now >= input.now ? (double)(now - input.now) / 1000000 : 0;
         for (unsigned w = 0; w < 2; ++w)
             wheel[w] = input.wheel[w] + input.speed[w] * elapsed;
+#ifdef APP_RTOS_IMU
+        uint64_t work_started = board_time_us();
+#endif
 #ifdef APP_RTOS_BARCODE
         uint64_t started = board_time_us();
         planner.nav.mapping = rn_mapping_snapshot();
@@ -172,7 +217,13 @@ void rtos_line_side_poll(uint64_t now) {
 #else
         rl_side(&planner, adc[1], now, wheel);
 #endif
+#ifdef APP_RTOS_IMU
+        work_us = (uint32_t)(board_time_us() - work_started);
+#endif
     }
+#ifdef APP_RTOS_IMU
+    side_profile_record(adc_us, work_us, (uint32_t)(board_time_us() - poll_started));
+#endif
 }
 
 bool rtos_line_ready(void) {
@@ -620,8 +671,20 @@ void rtos_line_report(void) {
     RlAdcDiagnostics diag = view.adc_diag;
     unsigned health = view.adc_state, good = view.adc_good;
     uint32_t retries = view.adc_retries, recoveries = view.adc_recoveries, frames = view.adc_frames;
+#ifdef APP_RTOS_IMU
+    uint32_t side_polls = view.side_polls, side_adc_total = view.side_adc_total_us,
+             side_adc_max = view.side_adc_max_us, side_work_total = view.side_work_total_us,
+             side_work_max = view.side_work_max_us, side_poll_total = view.side_poll_total_us,
+             side_poll_max = view.side_poll_max_us;
+#endif
     LineLogRow junction = {.aux = {0, view.junction_aux}};
     leave(key);
+#ifdef APP_RTOS_IMU
+    tm_printf(
+        (UB *)"SIDE_SERVICE timing=wall polls=%u adc_total_us=%u adc_max_us=%u decoder_planner_total_us=%u decoder_planner_max_us=%u poll_total_us=%u poll_max_us=%u\n",
+        side_polls, side_adc_total, side_adc_max, side_work_total, side_work_max, side_poll_total,
+        side_poll_max);
+#endif
     tm_printf(
         (UB *)"LINE profile=1 phase=%u decision=%u reason=%u pending=%u action=%u flags=0x%x raw=%u,%u,%u level=%u,%u rows=%u overwritten=%u\n",
         phase, decision, reason, pending, action, flags, raw[0], raw[1], raw[2], levels[0],

@@ -13,6 +13,9 @@
  * include lines (kernel/sys_hal replaced by the SDK register shim). */
 #include "src/imu/pico_registers.h"
 #include "src/imu/drv_lsm303.h"
+#ifdef APP_RTOS_IMU
+#include "app_program/imu_navigation/imu_acquisition.h"
+#endif
 
 /* ------------------------------------------------------------------------
  * RP2040 I2C1
@@ -115,6 +118,7 @@ static bool wait_until(uint32_t addr, uint32_t mask, uint32_t want, uint32_t sta
 }
 #endif
 
+#ifndef APP_RTOS_IMU
 static void bus_setup(void) {
     /* Reset the block so a bus left half-way by a fault starts clean. */
     set_w(RESETS_RESET, RESETS_RESET_I2C1);
@@ -140,6 +144,39 @@ static void bus_setup(void) {
     out_w(IC_TX_TL, 0U);
     out_w(IC_INTR_MASK, 0U); /* polled: no interrupts      */
 }
+#else
+static bool bus_setup(void) {
+    uint32_t start_us = sys_time_us();
+
+    /* Reset the block so a bus left half-way by a fault starts clean. */
+    set_w(RESETS_RESET, RESETS_RESET_I2C1);
+    clr_w(RESETS_RESET, RESETS_RESET_I2C1);
+
+    while ((in_w(RESETS_RESET_DONE) & RESETS_RESET_I2C1) == 0U) {
+        if ((uint32_t)(sys_time_us() - start_us) >= RI_RESET_READY_TIMEOUT_US) {
+            ri_acquisition_record_reset_timeout();
+            return false;
+        }
+    }
+
+    out_w(GPIO_CTRL(B4_I2C_SDA_PIN), GPIO_CTRL_FUNCSEL_I2C);
+    out_w(GPIO(B4_I2C_SDA_PIN), GPIO_IE | GPIO_DRIVE_4MA | GPIO_PUE | GPIO_SHEMITT);
+    out_w(GPIO_CTRL(B4_I2C_SCL_PIN), GPIO_CTRL_FUNCSEL_I2C);
+    out_w(GPIO(B4_I2C_SCL_PIN), GPIO_IE | GPIO_DRIVE_4MA | GPIO_PUE | GPIO_SHEMITT);
+
+    out_w(IC_ENABLE, 0U);
+    out_w(IC_CON,
+          CON_MASTER | CON_SPEED_FAST | CON_RESTART_EN | CON_SLAVE_DISABLE | CON_TX_EMPTY_CTRL);
+    out_w(IC_FS_SCL_HCNT, SCL_HCNT);
+    out_w(IC_FS_SCL_LCNT, SCL_LCNT);
+    out_w(IC_FS_SPKLEN, SCL_SPKLEN);
+    out_w(IC_SDA_HOLD, SDA_HOLD);
+    out_w(IC_RX_TL, 0U);
+    out_w(IC_TX_TL, 0U);
+    out_w(IC_INTR_MASK, 0U); /* polled: no interrupts      */
+    return true;
+}
+#endif
 
 /**
  * Write wlen bytes then (repeated start) read rlen bytes, STOP at the end.
@@ -261,8 +298,18 @@ bool b4_drv_init(b4_chip_t *p_chip, bool *p_b_mag) {
     uint8_t check = 0U;
     bool b_ok;
 
+#ifndef APP_RTOS_IMU
     bus_setup();
     g_chip = B4_CHIP_NONE;
+#else
+    g_chip = B4_CHIP_NONE;
+    g_b_mag = false;
+    if (!bus_setup()) {
+        *p_chip = B4_CHIP_NONE;
+        *p_b_mag = false;
+        return false;
+    }
+#endif
 
     b_ok = b4_i2c_read_reg(B4_ACC_ADDR, ACC_WHO_AM_I, &id, 1U) && (id == ACC_ID);
 
