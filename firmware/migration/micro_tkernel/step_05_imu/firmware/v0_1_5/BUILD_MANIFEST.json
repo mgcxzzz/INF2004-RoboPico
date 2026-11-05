@@ -1,0 +1,982 @@
+{
+  "name": "robopico_rtos_connected_imu_v0_1_5",
+  "status": "EXPERIMENTAL Step5 Buddy1-4; Step4 v0.1.2 and Step5 physical acceptance pending; Buddy5 NOT integrated",
+  "branch": "codex/micro-tkernel-migration",
+  "source_commit": "92b3f1ca7421a564631b7124a56de44d10b3cd82",
+  "baseline_tested_step3b": "ba7cfe08ef26775d3305108a75bb5b05978c7f48",
+  "reference_main_commit": "7843f45fbe45d5a774bc18c93be9bb11084d1b64",
+  "build_profile": "APP=rtos_imu_wifi SMP=1 CONSOLE=usb_cdc WIFI=cyw43 NET=lwip MQTT=1 CRASH_REPORT=0 TEST=0",
+  "uf2_sha256": "4132654b10efe09607ee5ac6aa8484a72e2acd9df459504b0bfc9fde0c9a41e7",
+  "uf2_bytes": 954368,
+  "uf2_layout": {
+    "blocks": 1864,
+    "first_xip": "0x10000000",
+    "end_xip_exclusive": "0x10074800",
+    "flash_ceiling": "0x10100000"
+  },
+  "compiler": "arm-none-eabi-gcc.exe (Arm GNU Toolchain 14.2.Rel1 (Build arm-14.52)) 14.2.1 20241119",
+  "sdk_commit": "a1438dff1d38bd9c65dbd693f0e5db4b9ae91779",
+  "elf_sha256": "89ad43f4a916c2cec4733d0ac2ee21453ec540305959377ff0309482df10a674",
+  "source_files": 979,
+  "unchanged_shared_files_verified": 94,
+  "reviewed_shared_changes": {
+    "firmware/integration/buddy1_4/src/barcode/barcode_analog.h": {
+      "baseline_sha256": "2de1add84d4fd5cfce2f1306bfbc6d2a8b246967f40161a5cd19b0629b07a769",
+      "current_sha256": "838d41dda2f330d1e8878e8e3c51909ab88a6574e39506af7605add728ce49c9",
+      "change": "Only external-cross opt-out; all63-bank decode thresholds and decisions unchanged."
+    },
+    "firmware/integration/buddy1_4/src/barcode/barcode_nav.h": {
+      "baseline_sha256": "594c3d35383a4ded62471293f27bb15eff0e65fb40391429108851bfa93f3511",
+      "current_sha256": "74e4854db9aa99d611f81cfb0d49cb07f9d99462504527a6e3c9127038828796",
+      "change": "Opt-in sensor geometry/external-cross ownership and confirmation-time gate with explicit rejection bits; SDK defaults unchanged."
+    },
+    "firmware/integration/buddy1_4/src/barcode/uturn_logic.h": {
+      "baseline_sha256": "a73bae1ed4de0be2114420a24dcbb5714bd90dd4ae2fbdbf40ffb151a1cc87f2",
+      "current_sha256": "ff7073f9cb37f3c8abb77346cf7490d1cffd32d158eec714a2ce846aee2f641f",
+      "change": "Only opt-in departure guard; default0 retains reference white requirement."
+    },
+    "firmware/integration/buddy1_4/src/imu/imu_proc.c": {
+      "baseline_sha256": "6f9660bb57538f308416920eb56ae2fbbca9e1013791089753403c0070455b53",
+      "current_sha256": "885521f0cd1378201e516c09149f504247b99cce6203ac9aa07615fd2d192c0a",
+      "change": "RTOS-only bounded odometry-gap qualification recovery, bounded heading requalification and passive diagnostics; default SDK tokens unchanged."
+    },
+    "firmware/integration/buddy1_4/src/imu/imu_proc.h": {
+      "baseline_sha256": "ffadbb73eac007313bf27870a2c45aef1f1e1e0a714af598f0455140b122a20d",
+      "current_sha256": "5fd7d5e0ef2b4abd37bf7643eaf0aa25589aeb137771dae2eb4236c9eb66f766",
+      "change": "RTOS-only packed gap/heading qualification state and diagnostics; default SDK tokens unchanged."
+    },
+    "firmware/integration/buddy1_4/src/imu/imu_service.c": {
+      "baseline_sha256": "e26a4b27ba8869c76baa21cff5a24ec9c25468b45365354a66c7ec5cb80289c3",
+      "current_sha256": "d405e8b45de3e8de0bdd660080f0c642fa82e5431c7b3b85bdfa2d146de314ed",
+      "change": "RTOS-only bounded acquisition, copied qualification/calibration diagnostics and console suppression; default SDK tokens unchanged."
+    },
+    "firmware/integration/buddy1_4/src/imu/lsm303_driver.c": {
+      "baseline_sha256": "85f67b8a8ef32e6458a92d334ee0383d5a0396da0f5de1174a1afd9f74a360f3",
+      "current_sha256": "424f5a5e335ea6f0745c097f2c10658e6d5ba6a4af87bc0f89915e1cba2e6911",
+      "change": "RTOS transport selection and 2ms reset-ready bound; original sensor/FIFO settings and default SDK tokens retained."
+    },
+    "firmware/integration/buddy1_4/src/imu/pico_registers.h": {
+      "baseline_sha256": "82b7bc9c31e59015fdf4e485c5a52ba6a1265279e90fb527f2ca113293529798",
+      "current_sha256": "73fb9058c6e3ac24786ebf6b81cda774a1cd56c0904722ef9751d126c956d1ce",
+      "change": "RTOS-only verified TIMER shim and stddef include; SDK timer branch retained."
+    },
+    "firmware/integration/buddy1_4/src/navigation/junction_logic.h": {
+      "baseline_sha256": "0e25df230522ed50be542b7f48429a7469d95a19cd7e5cd3d8b41b7b58f28597",
+      "current_sha256": "34849cca1c713c61171365ece66fd472fd3a821d99e5de0a6742bbfd0bffafa8",
+      "change": "Only opt-in departure guard; default0 retains reference white requirement."
+    }
+  },
+  "calibration_priority": [
+    "CRC-valid RTOS saved0x1a9000",
+    "CRC-valid SDK record28 at0x1d0000",
+    "original fallback"
+  ],
+  "expected_current_car_calibration": "white122,138 black246,267 origin1; read back actual car; no forced overwrite",
+  "step4_parent": "78c42c050d6bbd464a3ceef255ce1ec597b60ada",
+  "features": [
+    "core0 priority2 sole I2C1 GP2/3 owner, ahead of USB3/kernel WiFi4; motor14/nav10/safety6 remain core1; fixed20ms releases; original50Hz service and400Hz FIFO",
+    "aggregate8ms FIFO and20ms init elapsed deadlines;2ms reset-ready bound; no post-expiry I2C commands; full ticks over8ms diagnostic only",
+    "RTOS-only bounded100ms dirty-odometry hold/recovery; unchanged200ms level/return,5mm60ms rise,10mm trusted travel and25% exclusion cap; no outage travel/invalid peak credit",
+    "copied IMU_HUMP counters/latched reasons; low-priority periodic diagnostics paced in10ms groups; manual reports unchanged",
+    "copied IMU_PHASE/IMU_BUDGET wall-time diagnostics and SIDE_SERVICE all-due ADC/decoder/planner profiling; unchanged binary message sizes",
+    "per-epoch calibration progress/best/counts, exact axis/speed restart reasons and rejected spans retained after fault; original2s/10s/40mg guards unchanged",
+    "core0 kernel service radio/timers/MQTT elapsed-wall-time diagnostics via copied application mailbox, never direct subsystem network calls",
+    "RTOS-only preemption-safe transfer completion/deadline recheck; bounded2ms per wait, abort-source diagnostics, no post-timeout queue writes",
+    "full32bit lifetime acquisition counters separate failed reads, late gaps and FIFO overruns; wake/transfer maxima; legacy MQTT formats retained",
+    "Step5 USB-only printf formats outside locks; bounded768-byte atomic ring records, whole-record drops, copy critical-section duration diagnostics",
+    "recent IMU last/late gaps and10-second current/previous timing buckets; small bucket counters use9-bit fields; full counters remain lifetime",
+    "stopped Reset reinitialises IMU even from Idle; calibration epoch and ready_epoch distinguish acceptance from calibration completion",
+    "original detector6 ramp requests via Buddy4 nav API with50ms TTL; ordinary drive/limits retained",
+    "source2/4 original binary packets, source15 ramp/C1 share sequence with peak; copied USB IMU/ramp diagnostics",
+    "unchanged reference63-bank + peak Code39 decisions; independent verified-frame midpoint junction classifier with5% hysteresis",
+    "fresh4mm white re-arm after decode/Resume;2ms debounce;11..30mm stripe and4mm trailing white; confirmation-time visibility/search/clearance gate; explicit rejection flags; no300ms/3deg/min-wheel-speed dwell",
+    "measured GP27 forward axle offset110mm; SDK/other steps keep92mm; track width/55mm rolling offset unchanged",
+    "Buddy3 coordinator approval; frozen action/map revision at decode; next separate junction",
+    "dashboard live A-Z mapping and decoded/queued/dispatch/completed events; separate source sequence ownership",
+    "Continuous V2/profile1/line calibration/Step2 junction experiment retained",
+    "kernel-only networking; TCP_OVERSIZE=0 SINGLE_PBUF=0; heap/delivery diagnostics",
+    "640 copied100Hz line rows;2048 ten-byte raw rows frozen at first decode;192 reference barcode events",
+    "stopped USB exports, mandatory USB DTR and network-loss stop/no automatic restart"
+  ],
+  "deferred": [
+    "Buddy5",
+    "powerbank/untethered supervision (deferred until final integration)",
+    "dashboard stored-row downloads"
+  ],
+  "software_checks": [
+    "6 focused strict C programs: test_hump_odo_grace, test_imu_task_reset, test_imu_service_rtos, test_usb_printf, test_rtos_ramp_bridge, test_rtos_ramp",
+    "25 focused Python capture/line-export/barcode-export tests; default SDK preprocessed token parity for imu_service/imu_proc/imu_proc.h/b4_config.h/lsm303_driver",
+    "ARM Step5 build; UF2/stack/RAM/source and bundle-integrity gates; unchanged algorithm suites not rerun"
+  ],
+  "hardware_checks": "Step4 dispatch working; full L/R rejoin still needs mat. Step5 v0.1.4 motion/ramp IMU about50Hz with no new timing/read faults and assist1959ms/descent; accepted humps remained0 and USB records dropped. v0.1.5 qualification recovery/paced logging is physically unverified: flat zero-hump control then one complete ramp required.",
+  "ram_comparison": {
+    "baseline": "Step5 v0.1.4 same ARM build profile",
+    "baseline_static_ram_end": "0x2002e6c8",
+    "static_ram_growth_bytes": 56,
+    "binary_message_growth_bytes": 0,
+    "scope": "Linker static image; not dynamic task-stack high-water or a complete Tribunal audit."
+  },
+  "linked_checks": {
+    "flash_ram_addresses": {
+      "rl_flash_park": "0x20000270",
+      "rl_flash_write": "0x200002a8"
+    },
+    "static_ram_end": "0x2002e700",
+    "ram_remaining_before_dynamic_kernel_stacks": 71936,
+    "application_stack_frames": {
+      "port_now": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "port_off": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "start": {
+        "bytes": 64,
+        "kind": "static"
+      },
+      "bringup_report_impl": {
+        "bytes": 240,
+        "kind": "static"
+      },
+      "bringup_status_task": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "bringup_help": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "bringup_report": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "usermain": {
+        "bytes": 64,
+        "kind": "static"
+      },
+      "gpio_dispatch": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "board_motion_lock": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "board_motion_unlock": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "board_time_us": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "board_kernel_ms": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "board_button_pressed": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "board_motor_off": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "board_motor_init": {
+        "bytes": 12,
+        "kind": "static"
+      },
+      "board_motor_write": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "board_gpio_init": {
+        "bytes": 56,
+        "kind": "static"
+      },
+      "board_encoder_drain": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "board_clock_registers_ok": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "board_clock_report": {
+        "bytes": 56,
+        "kind": "static"
+      },
+      "rl_levels": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "apply_outputs": {
+        "bytes": 40,
+        "kind": "static"
+      },
+      "bringup_get_status": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "bringup_zero_status": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "bringup_can_start": {
+        "bytes": 40,
+        "kind": "static"
+      },
+      "bringup_clear_latch": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "bringup_stop_from": {
+        "bytes": 56,
+        "kind": "static"
+      },
+      "bringup_stop": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "bringup_create_objects": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "bringup_control_task": {
+        "bytes": 944,
+        "kind": "static"
+      },
+      "bringup_safety_task": {
+        "bytes": 88,
+        "kind": "static"
+      },
+      "bringup_nav_task": {
+        "bytes": 152,
+        "kind": "static"
+      },
+      "bringup_console_task": {
+        "bytes": 56,
+        "kind": "static"
+      },
+      "rl_flash_park": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "rl_flash_write": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "adc_failure": {
+        "bytes": 56,
+        "kind": "static"
+      },
+      "adc_once": {
+        "bytes": 56,
+        "kind": "static"
+      },
+      "board_line_adc_diagnostics": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "board_motor_levels": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "board_motor_current": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "board_line_adc_init": {
+        "bytes": 48,
+        "kind": "static"
+      },
+      "board_line_adc_read": {
+        "bytes": 64,
+        "kind": "static"
+      },
+      "board_line_flash_worker": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "board_line_save": {
+        "bytes": 136,
+        "kind": "static"
+      },
+      "side_profile_record": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "barcode_event_packet": {
+        "bytes": 112,
+        "kind": "static"
+      },
+      "barcode_reader_edge": {
+        "bytes": 296,
+        "kind": "static"
+      },
+      "bp_window": {
+        "bytes": 248,
+        "kind": "static"
+      },
+      "barcode_line_packet": {
+        "bytes": 64,
+        "kind": "static"
+      },
+      "junction_wheel_step": {
+        "bytes": 56,
+        "kind": "static"
+      },
+      "acquisition_failed": {
+        "bytes": 128,
+        "kind": "static"
+      },
+      "acquire_frame": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "symmetric_demand.constprop": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "j_acquire.constprop": {
+        "bytes": 104,
+        "kind": "static"
+      },
+      "junction_step.constprop": {
+        "bytes": 120,
+        "kind": "static"
+      },
+      "circuit_line_demand": {
+        "bytes": 72,
+        "kind": "static"
+      },
+      "rtos_line_init": {
+        "bytes": 112,
+        "kind": "static"
+      },
+      "rtos_line_command": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "rtos_line_cancel": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "rtos_line_start_valid": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "rtos_line_side_poll": {
+        "bytes": 688,
+        "kind": "static"
+      },
+      "rtos_line_ready": {
+        "bytes": 12,
+        "kind": "static"
+      },
+      "rtos_line_pending": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "rtos_line_request_fresh": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "rtos_line_request_start": {
+        "bytes": 40,
+        "kind": "static"
+      },
+      "rtos_line_resume": {
+        "bytes": 64,
+        "kind": "static"
+      },
+      "rtos_line_telemetry": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "rtos_line_prepare": {
+        "bytes": 376,
+        "kind": "static"
+      },
+      "rtos_line_begin": {
+        "bytes": 72,
+        "kind": "static"
+      },
+      "rtos_line_follow": {
+        "bytes": 304,
+        "kind": "static"
+      },
+      "rtos_line_feedback": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "rtos_line_power": {
+        "bytes": 216,
+        "kind": "static"
+      },
+      "rtos_line_actual_output": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "rtos_line_record": {
+        "bytes": 248,
+        "kind": "static"
+      },
+      "rtos_line_report": {
+        "bytes": 432,
+        "kind": "static"
+      },
+      "rtos_line_dump_if_requested": {
+        "bytes": 432,
+        "kind": "static"
+      },
+      "rtos_line_flash_task": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "pause_line": {
+        "bytes": 112,
+        "kind": "static"
+      },
+      "rn_drive_set_telemetry": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "rn_drive_telemetry_enabled": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "rn_drive_init": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "rn_drive_enqueue": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "rn_drive_online": {
+        "bytes": 104,
+        "kind": "static"
+      },
+      "rn_drive_paused": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "rn_drive_cancel": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "rn_drive_begin": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "rn_drive_process": {
+        "bytes": 424,
+        "kind": "static"
+      },
+      "rn_drive_telemetry": {
+        "bytes": 136,
+        "kind": "static"
+      },
+      "rn_app_last_ms": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "rn_service_sample": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "rn_mapping_snapshot": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "rn_next_sequence": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "rn_init": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "rn_ready": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "rn_tx_push": {
+        "bytes": 120,
+        "kind": "static"
+      },
+      "rn_tx_take_budget": {
+        "bytes": 136,
+        "kind": "static"
+      },
+      "rn_tx_take": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "rn_rx_push": {
+        "bytes": 88,
+        "kind": "static"
+      },
+      "rn_command_result": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "rn_barrier": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "rn_take_urgent": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "rn_take_pause": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "rn_status_update": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "rn_status": {
+        "bytes": 48,
+        "kind": "static"
+      },
+      "rn_publish_result": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "rn_report": {
+        "bytes": 184,
+        "kind": "static"
+      },
+      "rn_app_task": {
+        "bytes": 400,
+        "kind": "static"
+      },
+      "record_budget_expiry": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "budget_check": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "wait_ready": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "transfer.part.0": {
+        "bytes": 48,
+        "kind": "static"
+      },
+      "ri_acquisition_snapshot": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "ri_acquisition_record": {
+        "bytes": 48,
+        "kind": "static"
+      },
+      "ri_acquisition_fifo_begin": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "ri_acquisition_fifo_end": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "ri_acquisition_init_begin": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "ri_acquisition_init_end": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "ri_acquisition_record_reset_timeout": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "ri_acquisition_record_processor": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "ri_acquisition_record_tick": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "b4_i2c_read_reg": {
+        "bytes": 40,
+        "kind": "static"
+      },
+      "b4_i2c_write_reg": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "send_frame": {
+        "bytes": 56,
+        "kind": "static"
+      },
+      "ri_init": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "ri_reset_request": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "ri_new_run": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "ri_observe": {
+        "bytes": 80,
+        "kind": "static"
+      },
+      "ri_tilt_snapshot": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "ri_task": {
+        "bytes": 376,
+        "kind": "static"
+      },
+      "ri_report": {
+        "bytes": 472,
+        "kind": "static"
+      },
+      "publish": {
+        "bytes": 64,
+        "kind": "static"
+      },
+      "ramp_assist_step.constprop": {
+        "bytes": 56,
+        "kind": "static"
+      },
+      "ri_ramp_step": {
+        "bytes": 192,
+        "kind": "static"
+      },
+      "ri_ramp_halt": {
+        "bytes": 96,
+        "kind": "static"
+      },
+      "ri_ramp_report": {
+        "bytes": 96,
+        "kind": "static"
+      },
+      "imu_tlm_pack": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "imu_tlm_unpack": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "imu_state_name": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "imu_motion_name": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "imu_evt_name": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "imu_reject_name": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "emit": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "side_reject": {
+        "bytes": 40,
+        "kind": "static"
+      },
+      "update_motion": {
+        "bytes": 88,
+        "kind": "static"
+      },
+      "enter_fault.part.0": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "b4_side_geometry": {
+        "bytes": 136,
+        "kind": "static"
+      },
+      "b4_asin_dd": {
+        "bytes": 12,
+        "kind": "static"
+      },
+      "b4_isqrt": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "b4_nfr02_ok": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "b4_reset": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "b4_init_done": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "b4_mission": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "b4_tick": {
+        "bytes": 304,
+        "kind": "static"
+      },
+      "b4_fill_tlm": {
+        "bytes": 12,
+        "kind": "static"
+      },
+      "handle": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "init_sensor": {
+        "bytes": 72,
+        "kind": "static"
+      },
+      "b4v23_hump_qualification": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "b4v23_calibration": {
+        "bytes": 12,
+        "kind": "static"
+      },
+      "ri_calibration_restart": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "b4v23_init": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "b4v23_due": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "b4v23_last_tick_us": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "b4v23_max_tick_us": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "b4v23_tilt": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "b4v23_tick": {
+        "bytes": 224,
+        "kind": "static"
+      },
+      "b4_drv_init": {
+        "bytes": 48,
+        "kind": "static"
+      },
+      "b4_drv_read_fifo": {
+        "bytes": 48,
+        "kind": "static"
+      },
+      "b4_drv_read_mag": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "libtm_init": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "tm_getchar": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "tm_getline": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "tm_putchar": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "tm_putstring": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "out_buf": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "out_record": {
+        "bytes": 20,
+        "kind": "static"
+      },
+      "tm_vsprintf": {
+        "bytes": 96,
+        "kind": "static"
+      },
+      "tm_printf": {
+        "bytes": 800,
+        "kind": "static"
+      },
+      "tm_sprintf": {
+        "bytes": 28,
+        "kind": "static"
+      },
+      "usb_service_task": {
+        "bytes": 136,
+        "kind": "static"
+      },
+      "tm_usb_console_get": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "tm_usb_state": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "tm_usb_pending": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "tm_usb_diag_level": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "tm_usb_console_start": {
+        "bytes": 56,
+        "kind": "static"
+      },
+      "tm_usb_console_put": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "tm_usb_console_record": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "tm_usb_log_snapshot": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "tud_descriptor_device_cb": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "tud_descriptor_configuration_cb": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "tud_descriptor_string_cb": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "usb_irq_dispatch": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "irq_add_shared_handler": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "irq_remove_handler": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "irq_set_enabled": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "rp2040_chip_version": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "hard_assertion_failure": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "panic": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "tusb_time_millis_api": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "tm_tusb_init": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "tm_tusb_service": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "tm_tusb_event_ready": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "tm_tusb_mounted": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "tm_tusb_connected": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "tm_tusb_write_available": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "tm_tusb_write_char": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "tm_tusb_write_flush": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "tm_tusb_discard_input": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "tm_tusb_read_char": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "tm_tusb_diag_controller_en": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "tm_tusb_diag_pullup_en": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "tm_tusb_diag_bus_seen": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "tm_tusb_diag_inte": {
+        "bytes": 0,
+        "kind": "static"
+      }
+    },
+    "note": "Static stack frames are not a measured call-chain high-water mark; hardware checks remain required."
+  }
+}
