@@ -1,0 +1,38 @@
+Robot must already be stopped. Close PuTTY; keep USB power connected.
+Sending d only; exporting history. No Start, reset or calibration command is sent.
+BARCODE decoded=0 peak=0 applied=0 conflicts=0 last_ascii=0 pending_action=0 revision=0 min=187 max=2659 threshold=212 bank=11 samples=1554 max_gap_us=13216 gaps_over10ms=65 max_sample_us=3370 raw_frozen=0
+JUNCTION_SENSOR offset_mm=110 threshold=0 hysteresis=0 valid=0 armed=0 black=0
+JUNCTION_GATE policy=confirmation clear_mm=150 reject_bits=1:legacy,2:clearance,4:line_lost,8:not_visible,16:search
+SIDE_SERVICE timing=wall polls=75790 adc_total_us=3768667 adc_max_us=607 decoder_planner_total_us=2968314 decoder_planner_max_us=3374 poll_total_us=7893631 poll_max_us=3693
+LINE profile=1 phase=10 decision=0 reason=0 pending=0 action=0 flags=0x3 raw=185,220,194 level=516,635 rows=640 overwritten=301
+CAL_FRONT white=122,138 black=246,267 mask=7 valid=1 origin=1 (0=preset 1=SDK28 2=RTOS_saved 3=RAM)
+JUNCTION policy=angle_only angle_x10=0 both_white=0 prior_white=0 departure_ready=0 branch_accepted=0 accepted_without_white=0
+ADC state=2 good=3 frames=25394 conversions=2054954 avoided_timeout=232 timeouts=0 errors=0 init_errors=0 bad_arguments=0 retries=0 recoveries=0 ch0=25394 ch1=75790 ch2=25394 fail0=0 fail1=0 fail2=0
+ADC_FIRST reason=none code=0 channel=0 stage=0 sample=0 cs=0x0 elapsed_us=0 timer_us=0 clk_ctrl=0x0 clk_div=0x0 adc_div=0x0 reset_done=0x0
+ADC_LAST reason=none code=0 channel=0 stage=0 sample=0 cs=0x0 elapsed_us=0 timer_us=0 clk_ctrl=0x0 clk_div=0x0 adc_div=0x0 reset_done=0x0
+LINE_LOG_BEGIN version=2 rows=640 overwritten=301
+LINE_LOG_CAL white=122,138 black=246,267 origin=1
+LINE_LOG_POLICY name=angle_only departure_deg_gt=10 departure_us=30000 branch_us=30000
+sequence,ms,ticks_l,ticks_r,speed_l_x10,speed_r_x10,target_l,target_r,pwm_l,pwm_r,adc_l,adc_r,adc_side,level_l,level_r,phase,decision,reason,side_black,busy,white,search,pending,action,dt_us,cost_us,filtered_l,filtered_r,optical_target_l,optical_target_r,steer_gain_milli,damping_milli,stop_reason,control_flags,turn_degrees_x10,junction_both_white,junction_prior_white,junction_departure_ready,junction_branch_accepted,junction_accepted_without_white,junction_accept_event
+LINE_LOG_END rows=640
+{
+  "result": "COMPLETE",
+  "issues": [],
+  "rows": 640,
+  "overwritten": 301,
+  "run_calibration": "LINE_LOG_CAL white=122,138 black=246,267 origin=1",
+  "log_version": 2,
+  "junction_policy": "LINE_LOG_POLICY name=angle_only departure_deg_gt=10 departure_us=30000 branch_us=30000",
+  "scope": "Copied diagnostic history; COMPLETE means export integrity, not driving acceptance.",
+  "first_ms": 3010,
+  "last_ms": 9401,
+  "max_dt_us": 14133,
+  "max_control_cost_us": 12585,
+  "late_over_15ms": 0,
+  "search_rows": 0,
+  "phases": [
+    10
+  ],
+  "junction_acceptances": []
+}
+Send the three files in /Users/skyler/SIT/Y2T1/Embedded/bench_tools/rtos/step_05_imu_v0_1_5/rtos_line_session/C_ramp10_v015_first/attempt1 and the run video for review.

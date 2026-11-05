@@ -26,6 +26,8 @@ def collect_sources():
                      and not any(s in common.EXCLUDED for s in p.parts)
                      and p.suffix not in {'.pyc', '.exe', '.zip'}
                      and p.name != 'wifi_secrets.h' and '.local.' not in p.name)
+    paths.update(p for p in (ROOT / 'testing/evidence/rtos_buddy1_4').rglob('*')
+                 if p.is_file() and p.suffix in {'.md', '.txt', '.csv', '.json'})
     paths.update(p for p in CORE.glob('*.md'))
     paths.add(CORE / 'artifacts/README.md')
     return sorted(paths)

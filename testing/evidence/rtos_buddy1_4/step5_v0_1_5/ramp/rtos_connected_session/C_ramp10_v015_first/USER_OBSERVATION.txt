@@ -1,0 +1,1 @@
+User confirms complete ramp crossing without pushing/lifting, followed by about2s level driving before Stop. Intended same nominal10mm one-sided ramp.

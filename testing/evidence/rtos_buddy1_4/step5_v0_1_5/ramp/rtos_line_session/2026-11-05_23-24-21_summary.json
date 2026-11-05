@@ -1,0 +1,20 @@
+{
+  "result": "COMPLETE",
+  "issues": [],
+  "rows": 640,
+  "overwritten": 301,
+  "run_calibration": "LINE_LOG_CAL white=122,138 black=246,267 origin=1",
+  "log_version": 2,
+  "junction_policy": "LINE_LOG_POLICY name=angle_only departure_deg_gt=10 departure_us=30000 branch_us=30000",
+  "scope": "Copied diagnostic history; COMPLETE means export integrity, not driving acceptance.",
+  "first_ms": 3010,
+  "last_ms": 9401,
+  "max_dt_us": 14133,
+  "max_control_cost_us": 12585,
+  "late_over_15ms": 0,
+  "search_rows": 0,
+  "phases": [
+    10
+  ],
+  "junction_acceptances": []
+}
