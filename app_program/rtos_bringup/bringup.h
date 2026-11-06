@@ -11,6 +11,7 @@
 #include <tm/tmonitor.h>
 
 #include "bringup_policy.h"
+#include "encoder_fault.h"
 #include "src/motion/motion_port.h"
 
 typedef struct {
@@ -52,6 +53,7 @@ bool bringup_can_start(void);
 bool bringup_clear_latch(void);
 void bringup_zero_status(void);
 void bringup_get_status(BringupStatus *out);
+void bringup_encoder_fault_packet(uint8_t seq, uint8_t out[BR_ENCODER_FAULT_PACKET_BYTES]);
 void bringup_report(void);
 void bringup_help(void);
 ER bringup_create_objects(void);

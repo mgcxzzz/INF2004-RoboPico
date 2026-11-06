@@ -11,6 +11,7 @@ void rtos_line_resume(void);
 #endif
 #ifdef APP_RTOS_RELEASE
 void rtos_line_release_info(uint8_t seq, uint8_t out[15]);
+void rtos_line_barcode_attempt_info(uint8_t seq, uint32_t now_ms, uint8_t out[30]);
 uint8_t rtos_line_log_reply(const WifiCommand *command);
 #endif
 bool rtos_line_request_fresh(uint32_t received_us);

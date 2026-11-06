@@ -1,4 +1,4 @@
-# Provisional Buddy 1–4 RTOS v0.2.0 status
+# Provisional Buddy 1–4 RTOS v0.2.1 status
 
 Main is intentionally promoted before the remaining full-circuit checks, per
 user instruction. Buddy 5 remains a blank integration point, not a working feature.
@@ -10,7 +10,7 @@ user instruction. Buddy 5 remains a blank integration point, not a working featu
 | Buddy 2 motion/encoder API | Motor/Stop/ESTOP and flat Pause/Resume passed; normal control algorithm retained |
 | Buddy 3 line/barcode/junction | Straight, U-turn, decode/mapped dispatch passed; full L/R rejoin and sharp bends pending |
 | Buddy 4 IMU/ramp | Step 5v0.1.5 flat0 humps; same 10 mm one-sided ramp1 accepted/13 mm maximum; assistance active; clean measured motion timing |
-| Main powerbank policy and wireless stored exports | Focused production software/browser/build checks; first physical powerbank check pending |
+| Main powerbank policy and wireless stored exports | v0.2.0 user powerbank runs/downloads confirmed; v0.2.1 added diagnostics need one physical check |
 | Buddy 5 avoidance | NOT integrated |
 
 The successful ramp was one run. User declined another repeat before main
@@ -26,7 +26,21 @@ service loss or stale delivery stops motion; reconnect never restarts it.
 This acknowledges TCP delivery activity, not application-level execution.
 Heartbeat/release metadata continue when ordinary telemetry is off.
 
-Before tuning: short untethered Start/Pause/Resume/Stop and network-loss check,
+Before tuning: collect the v0.2.1 same-route diagnostic run,
 then the circuit with enough mat for sensors/wheels throughout bends and turns.
 Preserve failed runs and export before another Start. Further tuning versions
 can branch from this main baseline without changing the archived checkpoints.
+
+## Diagnostic update v0.2.1
+
+User wireless runs of v0.2.0 confirmed actual powerbank driving. Run2 ended
+with encoder reason9/bit0x40 during left-reverse U-turn. Later run3 decoded
+Y/Z/F and completed all actions; later third groups often had14 bars, one had17.
+Run10 ended by GP21 Stop after an F group was rejected. Raw export covered its
+first Y only. Run19 ended with network reason12 after the turn returned to
+tracking; the broker showed a real delivery gap and later keepalive timeout.
+
+v0.2.1 adds latest reportable raw capture, first encoder-trip and first network
+stop snapshots, compact wire codecs and dashboard exports. It leaves the
+causes untuned. Physical validation of these new diagnostics is pending one
+same-route run; full-circuit/sharp-bend tuning and Buddy5 remain separate.

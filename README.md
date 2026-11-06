@@ -1,8 +1,8 @@
 # RoboPico — provisional Buddy 1–4 RTOS integration
 
-**Current main release: v0.2.0, micro T-Kernel SMP. Buddy 5 is NOT integrated.**
+**Current main release: v0.2.1, micro T-Kernel SMP. Buddy 5 is NOT integrated.**
 
-[Download firmware and full bundle](firmware/integration/buddy1_4/artifacts/v0_2_0_rtos/)
+[Download firmware and full bundle](firmware/integration/buddy1_4/artifacts/v0_2_1_rtos/)
  · [Setup / powerbank / log downloads](docs/setup.md)
  · [Validation and pending circuit checks](firmware/integration/buddy1_4/STATUS.md)
  · [Architecture and interfaces](docs/architecture.md)
@@ -16,8 +16,9 @@ wireless history downloads. Motors stay OFF on boot; Start is explicit.
 The RTOS baseline passed flat/Pause/Resume/Stop and one nominal 10 mm one-sided ramp:
 0 flat humps; 1 accepted ramp/13 mm maximum; assistance active; 50 Hz IMU/100 Hz control;
 no new motion-window acquisition/timing/logging faults. This is one ramp success,
-not repeatability certification. Powerbank policy/download additions have software
-and build checks; their physical check and full circuit test remain pending.
+not repeatability certification. v0.2.0 powerbank driving and wireless downloads
+were subsequently user-tested. v0.2.1 adds diagnostic snapshots, whose first
+physical comparison remains pending. The full circuit test is still outstanding.
 Sharp bends and complete left/right line reacquisition need sufficient mats.
 
 Run [the complete package](firmware/integration/buddy1_4/README.md). Python and an
@@ -32,3 +33,9 @@ The [SDK v0.1 reference](firmware/integration/buddy1_4/SDK_REFERENCE.md) and its
 artifacts remain available for comparison. Migration checkpoints under
 firmware/migration/ are historical validation stages. Main's active build is
 `APP=rtos_buddy1_4`, not the SDK superloop or the template example.
+
+
+[v0.2.1 diagnostic test and required downloads](docs/diagnostics_v0_2_1.md):
+latest barcode attempt raw samples, latched encoder trip and latched network-stop
+reason/ages. This build preserves the guards and does not claim to fix missing
+barcode peaks, signal errors or delivery outages before their cause is verified.

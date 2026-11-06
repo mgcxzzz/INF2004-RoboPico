@@ -1,3 +1,7 @@
+Main v0.2.1 adds readable latched encoder/network-stop reports and exact
+latest-barcode raw metadata. Use the new full bundle and hard-refresh the page.
+See [the diagnostic test/download guide](../docs/diagnostics_v0_2_1.md).
+
 # Provisional Buddy1–4 RTOS dashboard
 
 The main v0.2.0 production profile supports powerbank operation, release/calibration

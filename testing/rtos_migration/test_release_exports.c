@@ -64,7 +64,7 @@ int main(void) {
         .optical_target={43,44}};
     rows[1]=rows[0];rows[1].ms=133;rows[1].sequence=43;
     uint8_t info[15],line[56];rtos_line_release_info(9,info);save("release_metadata.bin",info,15);
-    assert(info[0]==0xf2 && info[1]==12 && info[3]==0xc2 && info[5]==0x70);
+    assert(info[0]==0xf2 && info[1]==12 && info[3]==0xc2 && info[5]==0x71);
     assert(reply(1,0)==WP_ACK_ACCEPTED && pushes==2 && rl_export_busy(&wireless_export,now_us));
     assert(lengths[0]==64 && lengths[1]==22 && packets[0][10]==2);
     memcpy(line,packets[0]+15,49);memcpy(line+49,packets[1]+15,7);

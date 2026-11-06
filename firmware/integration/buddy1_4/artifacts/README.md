@@ -1,10 +1,12 @@
 # Firmware artifacts
 
-**Current: [Buddy1–4 RTOS v0.2.0](v0_2_0_rtos/).** Powerbank/network-supervised,
-Profile1; Buddy5 NOT integrated. Download the full bundle and use START_HERE.md.
-Source/build/physical status are recorded with that version.
+Current: [v0.2.1 combined RTOS diagnostics](v0_2_1_rtos/).
+Previous main: [v0.2.0 RTOS](v0_2_0_rtos/), retained for rollback.
 
-## Historical SDK release — retained for comparison
+v0.2.1 preserves tested Profile1/calibration/decoder/guard decisions and adds
+latest-attempt raw capture plus latched encoder/network-stop reports. It is a
+diagnostic build, not a claimed cure for missing barcode peaks or network loss.
+Buddy5 remains NOT integrated. See the main setup guide and STATUS.md.
 
 # Provisional firmware and complete package
 

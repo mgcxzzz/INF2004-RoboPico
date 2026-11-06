@@ -64,6 +64,9 @@ static struct {
     unsigned cross_valid : 1, cross_armed : 1, cross_black : 1;
     uint8_t bank, last_code, pending_action, pending_revision, executing_action, executing_revision;
     unsigned scanning : 1, raw_frozen : 1;
+#ifdef APP_RTOS_RELEASE
+    RbAttemptInfo attempt;
+#endif
 #endif
 } view;
 
@@ -585,6 +588,9 @@ void rtos_line_record(const BringupStatus *s, const AnalogDemand *d, uint32_t co
     view.executing_revision = planner.nav.executing_revision;
     view.scanning = barcode.analog.scanning;
     view.raw_frozen = barcode.raw_frozen;
+#ifdef APP_RTOS_RELEASE
+    view.attempt = barcode.attempt;
+#endif
 #endif
     if (recording) {
         row.sequence = ++row_sequence;
@@ -803,4 +809,14 @@ void rtos_line_flash_task(INT code, void *exinf) {
 
 #ifdef APP_RTOS_RELEASE
 #include "release_exports.inc"
+#endif
+
+#ifdef APP_RTOS_RELEASE
+void rtos_line_barcode_attempt_info(uint8_t seq, uint32_t now_ms, uint8_t out[30]) {
+    UINT key = enter();
+    RbAttemptInfo attempt = view.attempt;
+    uint16_t run = telemetry.run_id;
+    leave(key);
+    rb_attempt_pack(&attempt, now_ms, run, seq, out);
+}
 #endif

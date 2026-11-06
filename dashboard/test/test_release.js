@@ -4,7 +4,7 @@ const s=require('../is28_schema.js');
 const base=path.resolve(__dirname,'../../testing/rtos_migration/build-host');
 const meta=s.decodeFrame(fs.readFileSync(path.join(base,'release_metadata.bin')));
 assert(!meta.error,meta.error);assert.equal(meta.data.kind,'release');
-assert.equal(meta.data.version,'0.2.0');assert(meta.data.wireless&&meta.data.storedLogs);
+assert.equal(meta.data.version,'0.2.1');assert(meta.data.wireless&&meta.data.storedLogs);
 assert.deepEqual(meta.data.white,[122,138]);assert.deepEqual(meta.data.black,[246,267]);
 assert.equal(meta.data.runId,7);assert.equal(meta.data.calibrationOrigin,2);
 const line=s.decodeStoredLine(fs.readFileSync(path.join(base,'release_line.bin')));

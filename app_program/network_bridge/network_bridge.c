@@ -411,6 +411,19 @@ void rn_app_task(int32_t code, void *exinf) {
             uint8_t info[15];
             rtos_line_release_info(rn_next_sequence(15), info);
             (void)rn_tx_push(RN_TLM, info, sizeof(info), now);
+            /* Always retain fault visibility, including ordinary telemetry-off.
+             * These APIs copy owner snapshots; no live decoder access here. */
+            uint8_t encoder_fault[BR_ENCODER_FAULT_PACKET_BYTES];
+            bringup_encoder_fault_packet(rn_next_sequence(15), encoder_fault);
+            (void)rn_tx_push(RN_TLM, encoder_fault, sizeof(encoder_fault), now);
+            uint8_t network_stop[RN_NETWORK_STOP_PACKET_BYTES];
+            rn_network_stop_packet(rn_next_sequence(15), network_stop);
+            (void)rn_tx_push(RN_TLM, network_stop, sizeof(network_stop), now);
+            if (rn_drive_telemetry_enabled()) {
+                uint8_t attempt[30];
+                rtos_line_barcode_attempt_info(rn_next_sequence(15), now, attempt);
+                (void)rn_tx_push(RN_TLM, attempt, sizeof(attempt), now);
+            }
 #ifdef APP_RTOS_IMU
             if (rn_drive_telemetry_enabled()) {
                 uint8_t diagnostics[63];

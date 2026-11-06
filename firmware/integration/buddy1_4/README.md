@@ -1,4 +1,4 @@
-# Buddy 1–4 RTOS integration v0.2.0
+# Buddy 1–4 RTOS integration v0.2.1
 
 **PROVISIONAL. Buddy 5 obstacle avoidance is NOT integrated.**
 
@@ -11,7 +11,7 @@ while micro T-Kernel owns task scheduling and the kernel Wi-Fi service.
 - [Release status / hardware evidence](STATUS.md)
 - [Build](../../../docs/build.md) and [focused checks](../../../docs/testing.md)
 - [Architecture](../../../docs/architecture.md) and include/interfaces/
-- [Current UF2 + full bundle](artifacts/v0_2_0_rtos/)
+- [Current UF2 + full bundle](artifacts/v0_2_1_rtos/)
 - [Historical SDK reference](SDK_REFERENCE.md)
 
 Profile 1 stays fixed at 45 mm/s. Runtime A–Z routing, barcode/line/junction

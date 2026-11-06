@@ -34,6 +34,9 @@ for name, extra in [("test_continuous_drive", []), ("test_interface", sources),
                     ("test_uturn", [])]:
     checks.append((CORE / "tests/unit" / (name + ".c"), extra))
 checks.extend([
+    (ROOT / "testing/rtos_migration/test_encoder_fault.c", []),
+    (ROOT / "testing/rtos_migration/test_network_stop.c", []),
+    (ROOT / "testing/rtos_migration/test_barcode_attempt.c", sources + [CORE / "src/network/wifi_protocol.c"]),
     (ROOT / "testing/rtos_migration/test_release_imu.c", [CORE / "tests/imu/fake_drv.c", CORE / "src/imu/imu_service.c", CORE / "src/imu/imu_proc.c", CORE / "src/imu/b4_pack.c", CORE / "src/telemetry/b2_pack.c"]),
     (ROOT / "testing/rtos_migration/test_release_policy.c", []),
     (ROOT / "testing/rtos_migration/test_release_exports.c", sources + [CORE / "src/network/wifi_packets.c", CORE / "src/network/wifi_protocol.c"]),

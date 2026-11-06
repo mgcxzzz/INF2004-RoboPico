@@ -1,3 +1,6 @@
+Current main v0.2.1 adds copied diagnostic snapshots around this unchanged
+feature logic. See [the diagnostic guide](../../../../../docs/diagnostics_v0_2_1.md).
+
 # Wi-Fi and MQTT — Buddy 1 transport
 
 Main v0.2.0 uses the micro T-Kernel production profile. Active task/ownership

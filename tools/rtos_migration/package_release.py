@@ -11,8 +11,8 @@ from package_line_following import linked_checks
 
 ROOT = common.ROOT
 CORE = ROOT / 'firmware/integration/buddy1_4'
-ART = CORE / 'artifacts/v0_2_0_rtos'
-NAME = 'robopico_buddy1_4_rtos_v0_2_0'
+ART = CORE / 'artifacts/v0_2_1_rtos'
+NAME = 'robopico_buddy1_4_rtos_v0_2_1'
 TESTED = '75325f29ad604c75a9d9ab8111658aa1536543d5'
 common.ART = ART
 
@@ -38,7 +38,7 @@ def algorithm_checks():
     folders = ('firmware/integration/buddy1_4/src/', 'firmware/integration/buddy1_4/include/',
                'firmware/integration/buddy1_4/config/')
     models = ('app_program/line_navigation/line_model.h',
-              'app_program/barcode_navigation/barcode_model.h',
+              'app_program/rtos_bringup/encoder_quality.h',
               'app_program/barcode_navigation/junction_sensor.h',
               'app_program/imu_navigation/hump_odo_policy.h',
               'app_program/imu_navigation/ramp_bridge.c')
@@ -50,6 +50,10 @@ def algorithm_checks():
             assert (ROOT / name).read_bytes() == original, 'Tested algorithm changed: ' + name
             preserved.append(name)
     assert len(preserved) > 50
+    for name in ('app_program/rtos_bringup/bringup_policy.h', 'app_program/network_bridge/connected_policy.h'):
+        original = subprocess.check_output(['git','show',f'f4a367eaacbeb6afb7418aabc507687349613437:{name}'],cwd=ROOT)
+        assert (ROOT/name).read_bytes()==original, 'Main supervision policy changed: '+name
+        preserved.append(name)
     return preserved
 
 
@@ -66,10 +70,12 @@ def main():
     firmware = ART / built.name
     shutil.copyfile(built, firmware)
     manifest = {
-        'name': NAME, 'version': '0.2.0', 'target_branch': 'main',
+        'name': NAME, 'version': '0.2.1', 'target_branch': 'main',
         'status': 'PROVISIONAL Buddy1-4 RTOS; Buddy5 NOT integrated',
         'source_commit': common.command('git', 'rev-parse', 'HEAD'),
         'tested_step5_baseline': TESTED, 'previous_sdk_main': common.BASE,
+        'previous_rtos_main': 'f4a367eaacbeb6afb7418aabc507687349613437',
+        'diagnostic_boundary': 'barcode_model raw capture/preroll/metadata only; pure Code39 decoders, control models, encoder quality thresholds unchanged',
         'build_profile': 'APP=rtos_buddy1_4 SMP=1 CONSOLE=usb_cdc WIFI=cyw43 NET=lwip MQTT=1 CRASH_REPORT=0 TEST=0',
         'compiler': common.command(ROOT.parent / '.buddy2-tools/arm-gcc/bin/arm-none-eabi-gcc.exe', '--version').splitlines()[0],
         'sdk_commit': common.command('git', '-C', ROOT.parent / '.buddy2-tools/pico-sdk', 'rev-parse', 'HEAD'),
@@ -90,23 +96,23 @@ def main():
                                    'diagnostics': '56-byte RTOS LineLogRow explicit LE',
                                    'raw_sensors': '10 bytes time/signed position/GP27 ADC',
                                    'navigation': '31-byte coordinator event'},
-                          'capacity': '640 line rows,2048 raw rows frozen at first decode, bounded navigation history',
-                          'new_source15': 'C2 release/calibration15 bytes; C3 runtime63 bytes;1Hz, C3 telemetry-enabled only'},
-        'software_checks': ['6 focused strict native C programs: legacy/release policy, real release exports, legacy/release bridge, release IMU',
-                            '28 focused Python observer/connected/line-export/barcode-export tests',
-                            '17 existing Node schema regressions and actual C-to-browser release fixtures',
+                          'capacity': '640 line rows,2048 raw rows for latest reportable attempt,512-row preroll, diagnostic5ms decimation, bounded navigation history',
+                          'new_source15': 'C2 release/calibration15,C3 runtime63,C4 encoder fault48,C5 barcode attempt30,C6 network stop32 bytes;1Hz; C3/C5 ordinary telemetry enabled only'},
+        'software_checks': ['Focused native C encoder latch/codec, network snapshot/equivalence, sequential barcode capture, frozen export and release bridge checks',
+                            'Focused Python observer and binary export checks',
+                            'Node schema compatibility and C-to-browser C4/C5/C6 fixture checks',
                             'Headless browser stopped56-byte row transfer and binary/CSV/JSON metadata integrity',
                             'ARM release build, UF2 bounds/RAM flash code/stack gates, source fingerprint and ZIP integrity'],
         'hardware_evidence': 'Step5v0.1.5: flat0 humps; one nominal10mm one-sided ramp1 accepted/13mm max; assist active; about50Hz IMU/100Hz control; no new measured motion-window timing/acquisition/logging faults. Not a repeatability claim.',
-        'pending': ['First physical powerbank Start/Pause/Resume/Stop and network-loss check',
+        'pending': ['Physical v0.2.1 diagnostic capture validation; source behavior retained, no claimed decoder/encoder/network cure',
                     'Full supported-mat left/right outgoing-line rejoin and sharp bends', 'Buddy5 integration'],
         'source_files': len(paths), 'unchanged_shared_vs_sdk': len(preserved),
         'reviewed_shared_vs_sdk': reviewed,
         'tested_executable_files_unchanged': algorithms,
-        'ram_comparison': {'baseline': 'Step5v0.1.5 same ARM toolchain',
-                           'baseline_static_ram_end': '0x2002e700',
-                           'static_ram_growth_bytes': int(linked['static_ram_end'],16) - 0x2002e700,
-                           'message_extensions_bytes_per_second': 78,
+        'ram_comparison': {'baseline': 'Main RTOS v0.2.0 same ARM toolchain',
+                           'baseline_static_ram_end': '0x2002e710',
+                           'static_ram_growth_bytes': int(linked['static_ram_end'],16) - 0x2002e710,
+                           'message_extensions_bytes_per_second': 188,
                            'scope': 'Linked static RAM only, not dynamic stack high-water or whole-firmware Tribunal completion'},
         'linked_checks': linked,
     }
@@ -120,6 +126,7 @@ def main():
             z.write(p, p.relative_to(ROOT).as_posix())
         z.write(firmware, 'firmware/' + firmware.name)
         z.writestr('START_HERE.md', (ROOT / 'docs/setup.md').read_text(encoding='utf-8'))
+        z.writestr('TEST_DIAGNOSTICS.md', (ROOT/'docs/diagnostics_v0_2_1.md').read_text(encoding='utf-8'))
         commands = [('Start dashboard.cmd', 'tools/dashboard/run_dashboard.py', ''),
                     ('Setup Wi-Fi.cmd', 'tools/rtos_migration/provision_network.py', ''),
                     ('Capture wireless test.cmd', 'tools/rtos_migration/capture_wireless.py', ''),

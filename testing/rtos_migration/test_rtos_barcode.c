@@ -159,9 +159,10 @@ int main(void) {
     begin(mapping());
     for (unsigned n = 0; n < RB_RAW_ROWS + 5; ++n)
         step(n * .09, 175);
-    assert(d.raw_count == RB_RAW_ROWS && d.raw_overwritten == 5);
-    const uint8_t *raw = d.raw[d.raw_head].bytes;
-    assert(rb_get32(raw) == 12 && raw[8] == 175 && raw[9] == 0);
+    assert(d.raw_count == 0 && d.raw_overwritten == 0);
+    assert(d.preroll_count == RB_RAW_PREROLL_ROWS && !d.raw_capture_active);
+    const uint8_t *raw = d.preroll[d.preroll_head].bytes;
+    assert(rb_get32(raw) > 0 && raw[8] == 175 && raw[9] == 0);
     puts(
         "PASS RTOS barcode: real failed Z/Y captures, synthetic A-Z both directions, coordinator approval, mapping freeze, unmapped letters, partial Resume and raw ring");
     return 0;

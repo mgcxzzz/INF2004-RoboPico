@@ -3,7 +3,14 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-enum { RN_PACKET_MAX = 64, RN_RX_MAX = 8, RN_TLM = 0, RN_ACK = 1, RN_HB = 2 };
+enum {
+    RN_PACKET_MAX = 64,
+    RN_RX_MAX = 8,
+    RN_TLM = 0,
+    RN_ACK = 1,
+    RN_HB = 2,
+    RN_NETWORK_STOP_PACKET_BYTES = 32
+};
 enum { RN_CONFIGURED = 1, RN_CONNECTED = 2, RN_SUBSCRIBED = 4 };
 /* Incoming MQTT PUBLISH must be non-retained. A broker replay is never a
  * fresh motion request; QoS/DUP bits do not change this condition. */
@@ -60,6 +67,8 @@ bool rn_drive_paused(void);
 void rn_drive_cancel(void);
 void rn_drive_begin(void);
 bool rn_drive_online(void);
+bool rn_drive_online_record(bool record_failure);
+void rn_network_stop_packet(uint8_t seq, uint8_t out[RN_NETWORK_STOP_PACKET_BYTES]);
 void rn_drive_telemetry(uint32_t now);
 void rn_drive_set_telemetry(bool enabled);
 bool rn_drive_telemetry_enabled(void);

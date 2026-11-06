@@ -50,7 +50,9 @@ def linked_checks(elf: Path, network: bool = False, barcode: bool = False, imu: 
                      'ri_acquisition_record_tick','b4v23_hump_qualification'):
             assert name in symbols, name
     if release:
-        for name in ('rtos_line_log_reply','rtos_line_release_info','ri_release_diagnostics'):
+        for name in ('rtos_line_log_reply','rtos_line_release_info','ri_release_diagnostics',
+                     'bringup_encoder_fault_packet','rtos_line_barcode_attempt_info',
+                     'rn_network_stop_packet','rn_drive_online_record'):
             assert name in symbols, 'Release feature missing from image: ' + name
     for name in ((() if network else ("cyw43_utk_task", "mqtt_client_connect")) + ("subsystem5_start", "dev_init_adc",
                  "dev_init_ser") + (() if barcode else ("barcode_analog_sample", "barcode_peak_sample"))):

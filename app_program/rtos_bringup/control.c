@@ -18,6 +18,7 @@ static LineEnvelope committed_envelope;
 ID bringup_commands;
 static T_SPLOCK status_lock;
 static BringupStatus status;
+static BringupEncoderFaultSnapshot encoder_fault_snapshot;
 static uint32_t last_control_us, deadline_us, stopped_us;
 static int16_t bench_target[2];
 static volatile uint32_t urgent_stop;
@@ -37,6 +38,14 @@ void bringup_get_status(BringupStatus *out) {
     UINT key = status_enter();
     *out = status;
     status_leave(key);
+}
+
+void bringup_encoder_fault_packet(uint8_t seq, uint8_t out[BR_ENCODER_FAULT_PACKET_BYTES]) {
+    BringupEncoderFaultSnapshot copy;
+    UINT key = status_enter();
+    copy = encoder_fault_snapshot;
+    status_leave(key);
+    br_encoder_fault_encode(&copy, seq, out);
 }
 
 void bringup_zero_status(void) {
@@ -68,6 +77,7 @@ bool bringup_clear_latch(void) {
         bringup_irq_stop = 0;
         status.flags &= (uint16_t)~BR_LATCHED;
         stopped_us = (uint32_t)board_time_us();
+        br_encoder_fault_clear(&encoder_fault_snapshot);
     }
     status_leave(key);
 #ifdef APP_RTOS_IMU
@@ -273,7 +283,7 @@ void bringup_control_task(INT code, void *exinf) {
         }
 #ifdef APP_RTOS_NETWORK
         rn_drive_process(&feedback);
-        if (!rn_drive_online()) {
+        if (!rn_drive_online_record(active || rtos_line_pending())) {
             if (active || rtos_line_pending())
                 bringup_stop_from(BR_REASON_NETWORK, 0, MOTION_BUDDY1);
             start_line = false;
@@ -357,12 +367,37 @@ void bringup_control_task(INT code, void *exinf) {
                                           : 0;
                 if (bad_direction_us[w] >= 50000)
                     kind = BR_ENC_DIRECTION;
+                bool trip = !paused && kind != BR_ENC_OK;
+                BringupEncoderFaultSnapshot candidate = {0};
+                if (trip) {
+                    candidate.valid = 1U;
+                    candidate.kind = (uint8_t)kind;
+                    candidate.wheel = (uint8_t)(w + 1U);
+                    candidate.control_timer_us = (uint32_t)now;
+                    candidate.kernel_ms = board_kernel_ms();
+                    candidate.direction_duration_us =
+                        kind == BR_ENC_DIRECTION ? bad_direction_us[w] : 0U;
+                    candidate.recent_window_bad = encoder_quality[w].window_bad;
+                    candidate.recent_window_changes = encoder_quality[w].window_changes;
+                    for (unsigned i = 0U; i < 2U; ++i) {
+                        candidate.lifetime_edges[i] = edges[i];
+                        candidate.lifetime_invalid[i] = invalid[i];
+                        candidate.optical_target_mm_s[i] = optical.target[i];
+                        candidate.measured_speed_x10[i] =
+                            (int16_t)continuous_clampf(speed[i] * 10.0f, -32767, 32767);
+                    }
+                }
                 key = status_enter();
                 status.encoder_bad[w] = encoder_quality[w].window_bad;
                 status.encoder_changes[w] = encoder_quality[w].window_changes;
                 if (!paused && kind && !status.encoder_kind) {
                     status.encoder_kind = kind;
                     status.encoder_wheel = w + 1;
+                }
+                if (trip) {
+                    candidate.previous_pwm[0] = status.pwm[0];
+                    candidate.previous_pwm[1] = status.pwm[1];
+                    (void)br_encoder_fault_capture_once(&encoder_fault_snapshot, &candidate);
                 }
                 status_leave(key);
                 if (!paused && kind) {
@@ -549,6 +584,7 @@ static void start_pulse(unsigned selected) {
         bench_target[0] = left;
         bench_target[1] = right;
         status.flags |= BR_ACTIVE;
+        br_encoder_fault_clear(&encoder_fault_snapshot);
     }
     status_leave(key);
     if (!accepted) {
@@ -612,6 +648,7 @@ void bringup_nav_task(INT code, void *exinf) {
                 bringup_irq_stop = 0U;
                 status.flags &= (uint16_t)~BR_LATCHED;
                 stopped_us = (uint32_t)board_time_us();
+                br_encoder_fault_clear(&encoder_fault_snapshot);
             }
             status_leave(key);
             bringup_report();

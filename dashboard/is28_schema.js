@@ -32,7 +32,7 @@
                     'Obstacle (B5)', 'Navigation', 'Safety', 'Barcode mapping',
                     'Motion telemetry', 'Line/barcode event', 'Coordinator event',
                     'Run summary', 'Log data chunk', 'Diagnostics status',
-                    'Ramp assist / barcode peak'];
+                    'Source-15 diagnostics'];
   /* Which firmware emits each source. 'shared' = both families with the
    * same layout; 'rtos'/'sdk' = only that family. Sources 2/4 are RTOS
    * Buddy2/Buddy4 frames, also emitted by the v2.3 + Buddy4 add-on. */
@@ -332,12 +332,15 @@
     d.scanning=!!(d.flags&1); d.pending=!!(d.flags&2); d.frontCalibrationValid=!!(d.flags&4); d.runActive=!!(d.flags&8);
     return d;
   }
-  /* Source 15 carries TWO layouts in SDK v2.3 integration builds; dispatch is by
+  /* Source 15 carries multiple layouts in SDK v2.3 integration builds; dispatch is by
    * validated payload length and subtype, never by source number alone:
    *  - ramp assist v0.1/v0.2 (+ Buddy4 estimator marker): payload 28 bytes
    *    (ramp_assist.h ra_tlm_pack; flags bits4-6 detector, bit7 estimator v0.2);
    *  - barcode peak decoder v0.1: payload 24 bytes, payload[4] = 0xB1
-   *    (barcode_peak.h bp_tlm_pack; flags bit7 = combined Buddy1-4 build).
+   *    (barcode_peak.h bp_tlm_pack; flags bit7 = combined Buddy1-4 build);
+   *  - encoder fault snapshot v0.2.1: payload 45 bytes, payload[0] = 0xC4;
+   *  - barcode capture metadata v0.2.1: payload 27 bytes, payload[0] = 0xC5;
+   *  - network-supervision stop snapshot v0.2.1: payload 29 bytes, payload[0] = 0xC6.
    * Anything else is rejected as an unknown layout. */
   const RA_EVENT = ['periodic', 'activate', 'end', 'stall push', 'floor/hold end'];   /* 3 = v0.4 stall push started, 4 = v0.5 tilt floor / v0.6 speed hold ended */
   const RA_END = ['none', 'level', 'descent', 'invalid', 'stale', 'timeout', 'not following', 'paused', 'stopped'];
@@ -346,6 +349,7 @@
                      'run start'];
   function i8(p, i) { return p[i] & 0x80 ? p[i] - 256 : p[i]; }
   function decodeRampAssist(p) {
+    if (p[4] > 4) return { error: 'invalid ramp-assist event' };
     const fl = p[5], h = i8(p, 14), mx = i8(p, 16), mn = i8(p, 17);
     return { kind: 'ramp', uptimeMs: u32(p, 0), event: p[4], eventName: name(RA_EVENT, p[4]),
       active: !!(fl & 1), assisting: !!(fl & 2), latched: !!(fl & 4), sampleValid: !!(fl & 8),
@@ -365,6 +369,98 @@
       baseAdc: u16(p, 10), minNarrowPeak: u16(p, 12), maxWidePeak: u16(p, 14), minNarrowRise: p[16],
       maxNarrowSpaceU: p[17] / 20, minWideSpaceU: p[18] / 20, unitMm: p[19] / 50, spanMm: u16(p, 20) / 10,
       groups: u16(p, 22) };
+  }
+  function bitsLE(p, i, width) {
+    let value = 0;
+    for (let bit = 0; bit < width; bit++)
+      if (p[i + (bit >>> 3)] & (1 << (bit & 7))) value += 2 ** bit;
+    return value;
+  }
+  function signedBitsLE(p, i, width) {
+    const value = bitsLE(p, i, width), sign = 2 ** (width - 1);
+    return value >= sign ? value - 2 ** width : value;
+  }
+  function decodeEncoderFault(p) {
+    if (p.length !== 45 || p[0] !== 0xC4) return { error: 'unknown encoder-fault layout' };
+    if (p[1] !== 0x21) return { error: 'unsupported encoder-fault version' };
+    const flags = p[2], valid = !!(flags & 1), kind = (flags >>> 1) & 3, wheel = (flags >>> 3) & 3;
+    if (flags & 0xc0) return { error: 'encoder-fault reserved flag bits are nonzero' };
+    if (!valid) {
+      if (flags !== 0 || p.subarray(3).some((byte) => byte !== 0))
+        return { error: 'invalid encoder-fault clear snapshot' };
+      return { kind: 'encoder-fault', version: '0.2.1', valid: false };
+    }
+    if (kind < 1 || kind > 3) return { error: 'invalid encoder-fault kind' };
+    if (wheel !== 1 && wheel !== 2) return { error: 'invalid encoder-fault wheel' };
+    if (p[13] & 0xfe) return { error: 'encoder-fault duration reserved bits are nonzero' };
+    if (p[37] & 0xfc) return { error: 'encoder-fault target reserved bits are nonzero' };
+    if (p[40] & 0xc0) return { error: 'encoder-fault PWM reserved bits are nonzero' };
+    const directionDurationUs = bitsLE(p, 11, 17);
+    if ((kind === 3) !== (directionDurationUs !== 0))
+      return { error: 'encoder-fault direction duration does not match fault kind' };
+    if (kind === 3 && directionDurationUs < 50000)
+      return { error: 'encoder-fault direction duration is below 50000 us' };
+    /* The two 9-bit targets and two 11-bit PWM values share their packed bytes. */
+    const targetPacked = bitsLE(p, 35, 18), pwmPacked = bitsLE(p, 38, 22);
+    const targetL = signedBitsLE(p, 35, 9);
+    const targetRightValue = Math.floor(targetPacked / 512);
+    const targetR = targetRightValue >= 256 ? targetRightValue - 512 : targetRightValue;
+    const pwmLeftValue = bitsLE(p, 38, 11), pwmRightValue = Math.floor(pwmPacked / 2048);
+    const pwmL = pwmLeftValue >= 1024 ? pwmLeftValue - 2048 : pwmLeftValue;
+    const pwmR = pwmRightValue >= 1024 ? pwmRightValue - 2048 : pwmRightValue;
+    if (targetL < -180 || targetL > 180 || targetR < -180 || targetR > 180)
+      return { error: 'encoder-fault target speed is out of range' };
+    if (pwmL < -1000 || pwmL > 1000 || pwmR < -1000 || pwmR > 1000)
+      return { error: 'encoder-fault PWM is out of range' };
+    const badChanges = bitsLE(p, 14, 40);
+    return { kind: 'encoder-fault', version: '0.2.1', valid: true, saturated: !!(flags & 0x20),
+      fault: ['none', 'error burst', 'error density', 'wrong direction'][kind],
+      wheel: wheel === 1 ? 'left' : 'right', controlTimerUs: u32(p, 3), kernelMs: u32(p, 7),
+      directionDurationUs, windowBad: badChanges & 0xfffff, windowChanges: Math.floor(badChanges / 0x100000),
+      leftEdges: u32(p, 19), leftInvalid: u32(p, 23), rightEdges: u32(p, 27), rightInvalid: u32(p, 31),
+      targetLeft: targetL, targetRight: targetR, pwmLeft: pwmL, pwmRight: pwmR,
+      speedLeft: i16(p, 41) / 10, speedRight: i16(p, 43) / 10 };
+  }
+  function decodeBarcodeCapture(p) {
+    if (p.length !== 27 || p[0] !== 0xC5) return { error: 'unknown barcode-capture layout' };
+    const meta = u32(p, 23), flags = meta & 63, codeIndex = (meta >>> 6) & 31;
+    const reason = (meta >>> 11) & 15, bars = (meta >>> 15) & 31, rawCount = (meta >>> 20) & 0xfff;
+    if (codeIndex > 26) return { error: 'barcode-capture code index exceeds 26' };
+    if (reason > 10) return { error: 'barcode-capture result exceeds 10' };
+    if (bars > 24) return { error: 'barcode-capture bar count exceeds 24' };
+    if (rawCount > 2048) return { error: 'barcode-capture raw count exceeds 2048' };
+    if (reason === 10 && (meta & 4)) return { error: 'in-progress barcode capture cannot be finalized' };
+    if (!!(flags & 2) !== (codeIndex !== 0) || ((flags & 32) && !(flags & 2)))
+      return { error: 'barcode-capture known code does not match decoder flags' };
+    if (!(flags & 1) && (meta !== 0 || p.subarray(5,21).some(byte => byte !== 0)))
+      return { error: 'invalid barcode-capture clear snapshot' };
+    return { kind: 'barcode-capture', uptimeMs: u32(p, 1), attemptSequence: u32(p, 5),
+      firstRawMs: u32(p, 9), lastRawMs: u32(p, 13), rawOverwritten: u32(p, 17), runId: u16(p, 21),
+      valid: !!(flags & 1), decoded: !!(flags & 2), finalized: !!(flags & 4), truncated: !!(flags & 8),
+      startValid: !!(flags & 16), originalAccepted: !!(flags & 32),
+      code: codeIndex ? String.fromCharCode(64 + codeIndex) : '?', reason,
+      reasonName: reason === 10 ? 'in progress' : BP_REASON[reason], bars, rawCount };
+  }
+  function decodeNetworkStop(p) {
+    if (p.length !== 29 || p[0] !== 0xc6) return { error: 'unknown network-stop layout' };
+    if (p[1] !== 0x21) return { error: 'unsupported network-stop version' };
+    if (p[2] !== 0) return { error: 'network-stop reserved byte is nonzero' };
+    const meta = u16(p, 27);
+    if (meta & 0xc000) return { error: 'network-stop reserved metadata bits are nonzero' };
+    const valid = !!(meta & 0x2000), flags = meta & 7;
+    if (!valid) {
+      if (p.subarray(2).some((byte) => byte !== 0)) return { error: 'invalid network-stop clear snapshot' };
+      return { kind: 'network-stop', version: '0.2.1', valid: false };
+    }
+    let link = (meta >>> 3) & 7;
+    if (link & 4) link -= 8;
+    if (link < -3) return { error: 'network-stop link code is outside -3..3' };
+    if (((meta >>> 6) & 127) === 0) return { error: 'network-stop valid snapshot has no failure condition' };
+    return { kind: 'network-stop', version: '0.2.1', valid: true,
+      stopMs: u32(p, 3), pollAgeMs: u32(p, 7), appAgeMs: u32(p, 11), ackAgeMs: u32(p, 15),
+      connects: u32(p, 19), lastCompleteMs: u32(p, 23),
+      configured: !!(flags & 1), connected: !!(flags & 2), subscribed: !!(flags & 4),
+      link, failMask: (meta >>> 6) & 0x7f };
   }
   function decodeSource15(p) {
     if (p.length === 12 && p[0] === 0xC2) {
@@ -394,6 +490,9 @@
         boostMilli:p[6],pushPwm:u16(p,7)/100,holdMilli:u16(p,9),
         requested:[i16(p,11)/10,i16(p,13)/10],effective:[i16(p,15)/10,i16(p,17)/10],owner:p[19],ttlMs:p[20]};
     }
+    if (p.length === 45 && p[0] === 0xC4) return decodeEncoderFault(p);
+    if (p.length === 27 && p[0] === 0xC5) return decodeBarcodeCapture(p);
+    if (p.length === 29 && p[0] === 0xc6) return decodeNetworkStop(p);
     if (p.length === 28) return decodeRampAssist(p);
     if (p.length === 24 && p[4] === 0xB1) return decodeBarcodePeak(p);
     return { error: 'unknown source-15 layout (payload ' + p.length + ' bytes' + (p.length > 4 ? ', byte4 0x' + p[4].toString(16) : '') + ')' };
@@ -563,6 +662,7 @@
                 decodeB1, decodeB2Motion, decodeImu, decodeLine, decodeB5, decodeNav,
                 decodeSafety, decodeMapping, decodeMotion, decodeLineEvent, decodeNavEvent,
                 decodeSummary, decodeDiagnostics, decodeLogChunk, decodeRampAssist, decodeBarcodePeak,
+                decodeEncoderFault, decodeBarcodeCapture, decodeNetworkStop,
                 decodeSource15, decodeStoredLine, picoUptimeMs, frameRunId,
                 detectProfile, effectiveProfile };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

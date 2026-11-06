@@ -117,3 +117,36 @@ The final build manifest compares linked static RAM against Step5 v0.1.5.
 This is not dynamic stack high-water measurement or completion of the remaining
 whole-firmware Tribunal before/after audit. Full-range counters intentionally
 retain32 bits; narrowing them would lose their defined modulo domain.
+
+
+## v0.2.1 diagnostic snapshots
+
+No existing MQTT record lengths change. Shared source15 uses exact validated
+subtypes: C4 encoder48 bytes, C5 barcode-attempt30 bytes, C6 network-stop32 bytes
+(including their3-byte frame headers). With prior C2/C3, all five1Hz records
+sum188 payload/frame bytes per second before MQTT/TCP overhead; C3/C5 require
+ordinary telemetry enabled, while C2/C4/C6 still report with telemetry off.
+
+| New field | Domain | Packed representation |
+|---|---|---|
+| Encoder valid/kind/wheel |boolean /0..3 /0..2|1/2/2-bit native fields and explicit flags|
+| Direction duration |0..131071 diagnostic cap|17 bits, clamping flag|
+| Trigger-window bad/changes |ten uint16 buckets; wire0..1048575|20 bits each, clamping flag|
+| Requested wheel speed |−180..180|signed9 bits each|
+| Previous PWM |−1000..1000|signed11 bits each|
+| Measured speed |full signed16 diagnostic input|16 bits each|
+| Lifetime edges/errors, timestamps, overwrite counters |full modulo32|32 bits each|
+| Attempt raw count |0..2048|12 bits|
+| Attempt reason/bars/flags |0..10 /0..24 /six booleans|4/5/6 bits|
+| Attempt letter |wire unknown orA..Z; native ASCII0..90|5-bit wire index;7-bit native ASCII|
+| Pre-roll head/count |0..511 /0..512|9/10-bit native fields|
+| Network flags/link/failure mask/valid |three booleans /−3..3 /seven booleans /boolean|3/3/7/1 bits|
+
+Encoder and network snapshots latch once in the core1 owner path. Readers copy
+under short locks, encode after unlocking, and use existing bounded TX buffers.
+Raw capture and its packed metadata have one writer (core1); network gets a
+copied metadata view. Stopped export has an owner-side gate/Start lease. No
+new subsystem calls lwIP/MQTT, no hardware I/O occurs under the new locks,
+and no packed read-modify-write value is shared without synchronization.
+The build manifest gives linked static RAM growth. This is not a substitute
+for dynamic stack high-water or the remaining whole-firmware Tribunal audit.

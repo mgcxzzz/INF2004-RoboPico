@@ -153,6 +153,10 @@ static void bringup_stop_from(uint8_t reason, uint16_t latch, MotionOwner who);
 #ifdef APP_RTOS_RELEASE
 #include "src/network/wifi_protocol.h"
 static void rtos_line_release_info(uint8_t seq, uint8_t out[15]) { (void)seq;memset(out,0,15); }
+#include "app_program/rtos_bringup/encoder_fault.h"
+static void bringup_encoder_fault_packet(uint8_t seq, uint8_t out[BR_ENCODER_FAULT_PACKET_BYTES]) { (void)seq;memset(out,0,BR_ENCODER_FAULT_PACKET_BYTES); }
+static void rtos_line_barcode_attempt_info(uint8_t seq, uint32_t now_ms, uint8_t out[30]) { (void)seq;(void)now_ms;memset(out,0,30); }
+
 static uint8_t rtos_line_log_reply(const WifiCommand *cmd) { (void)cmd;return hardware.flags&BR_ACTIVE?WP_ACK_BUSY:WP_ACK_ACCEPTED; }
 #endif
 #include "app_program/network_bridge/network_bridge.c"

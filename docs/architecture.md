@@ -39,3 +39,10 @@ See [data representation](data_representation.md) for widths/concurrency.
 Feature logic and historical SDK adapters remain under
 firmware/integration/buddy1_4/src/. Active RTOS task adapters are documented in
 app_program/{rtos_bringup,line_navigation,barcode_navigation,network_bridge,imu_navigation}/.
+
+
+v0.2.1 adds owner-latched encoder/network-stop snapshots and a latest-barcode
+capture with bounded pre-roll. They are observation paths, not new command
+owners. Network task reads copies and publishes C4/C5/C6 using the shared
+source15 sequence allocator. GPIO/ADC/IMU ownership, priorities, coordinator
+APIs and all safety/decoder thresholds are retained. See diagnostics_v0_2_1.md.

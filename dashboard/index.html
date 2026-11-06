@@ -81,7 +81,7 @@
 </head>
 <body>
 <header>
-  <h1>RoboPico <span class="ver">PROVISIONAL Buddy 1–4 RTOS v0.2.0 · Buddy 5 NOT integrated</span></h1>
+  <h1>RoboPico <span id="releaseLabel" class="ver">RTOS release metadata pending</span></h1>
   <input id="url" type="text" aria-label="Broker WebSocket URL">
   <button id="connect" class="primary">Connect</button>
   <span id="broker" class="pill muted">not connected</span>
@@ -307,9 +307,12 @@
       <div class="metric"><label>Completed action</label><strong id="completedAction">—</strong></div>
       <div class="metric"><label>Coordinator state</label><strong id="navState">—</strong></div>
       <div class="metric"><label>Barcode peak decoder (src 15)</label><strong id="peakResult">—</strong></div>
+      <div class="metric"><label>Latest barcode raw capture (src 15 C5)</label><strong id="barcodeCapture">No attempt metadata received</strong><div id="barcodeCaptureNote" class="muted small">Waiting for per-attempt raw-capture metadata.</div></div>
       <div class="metric"><label>Ramp assist (src 15)</label><strong id="rampAssist">—</strong></div>
       <div class="metric"><label>Ramp targets: requested → effective (mm/s)</label><strong id="rampTargets">—</strong></div>
       <div class="metric"><label>Firmware build (src 15)</label><strong id="buildId">—</strong></div>
+      <div class="metric" style="grid-column:1/-1"><label>Latched encoder fault snapshot (src 15 C4)</label><strong id="encoderFault">No encoder fault reported</strong><div id="encoderFaultDetails" class="muted small">Waiting for an encoder-fault snapshot or explicit clear.</div></div>
+      <div class="metric" style="grid-column:1/-1"><label>Last recorded network stop (src 15 C6)</label><strong id="networkStop">No network stop reported</strong><div id="networkStopDetails" class="muted small">Waiting for a historical stop snapshot. It does not report current Start readiness.</div></div>
     </div>
     <h2 style="margin-top:10px">Event timeline (car events, Buddy 4 events, commands)</h2>
     <div id="eventTimeline" class="timeline" aria-live="polite"><article class="muted">Waiting for real events.</article></div>
@@ -345,7 +348,7 @@
 
 <script>
 'use strict';
-const DASHBOARD_VERSION = 'v0.2';
+const DASHBOARD_VERSION = 'v0.2.1';
 const $ = (id) => document.getElementById(id);
 const hasWindow = typeof window !== 'undefined';
 const SRC = IS28.SRC;
@@ -355,7 +358,8 @@ let client = null, cmdId = Math.floor(Math.random() * 256);
 const pending = {};                     /* id -> {time, code}, for ack latency */
 const ownCommands = [];                 /* recent own command bytes, to spot other clients */
 let activeMapping = null, lastBarcodeLetter = null, mapPending = null;
-let lastRamp15 = null, lastPeak15 = null;   /* source 15: last ramp-assist and barcode-peak frames */
+let lastRamp15 = null, lastPeak15 = null, lastBarcodeCapture = null, lastEncoderFault = null, lastNetworkStop = null;
+let encoderFaultSignature = null, networkStopSignature = null;
 let mappingQueried = false, lastUptime = null;
 /* RTOS Buddy2/Buddy4 live state (tools/dashboard logic) */
 let lastImuAt = 0, lastImuSeq = null, imuAwaitingFresh = false;
@@ -455,7 +459,9 @@ function ackName(a) {
   /* Connected Step3B uses the preserved wifi_protocol codec despite running
      micro T-Kernel. Result4 is broad BUSY, not the older RTOS queue-full code. */
   if (detectedProfile() === 'rtos-connected') {
-    if (a.result === 4) return 'rejected: busy (check open USB console/capture, readiness, buttons or pending Start)';
+    if (a.result === 4) return releaseInfo && releaseInfo.wireless ?
+      'rejected: busy (check fault, clocks, network supervision and transfer readiness)' :
+      'rejected: busy (check open USB console/capture, readiness, buttons or pending Start)';
     if (a.result === 5) return 'rejected: unsupported command or setting';
   }
   /* SDK v2.3 reuses the result codes with different causes (wifi_protocol.h). */
@@ -494,11 +500,24 @@ function logDatasetInfo(id) {
   }
   return d;
 }
+function rawCaptureNote(release, capture) {
+  if (capture) {
+    const state = capture.valid ? (capture.finalized ? 'finalized' : 'still collecting') : 'no valid attempt reported';
+    return `Metadata is frozen from the latest source-15 report when this download began (attempt ${capture.attemptSequence}, ${state}); it describes the last reported attempt, not a live view of any newer attempt.`;
+  }
+  if (release && release.version === '0.2.0')
+    return 'Firmware v0.2.0 keeps only its first automatic raw barcode snapshot and sends no per-attempt metadata.';
+  return 'No per-attempt metadata was received before this download; the raw rows’ attempt association is unknown.';
+}
 function startLogDownload() {
   if (coordinatorMode !== 7 || coordinatorOffSince === null || now()-coordinatorOffSince<5000) { $('logDownloadStatus').textContent = 'Manual stop is required. Wait 5 s after coordinator reports Off before requesting stored logs.'; return; }
   if (!client || !client.connected) { $('logDownloadStatus').textContent = 'Connect to the broker before downloading.'; return; }
+  const releaseSnapshot = releaseInfo ? JSON.parse(JSON.stringify(releaseInfo)) : null;
+  const captureSnapshot = lastBarcodeCapture ? JSON.parse(JSON.stringify(lastBarcodeCapture)) : null;
   Object.assign(logDownload, { active:true, dataset:Number($('logDataset').value), requestId:null,
-    release:releaseInfo ? JSON.parse(JSON.stringify(releaseInfo)) : null, rowIndex:0, totalRows:null, parts:null, partCount:0, retries:0, rows:[], status:'requesting' });
+    release:releaseSnapshot, barcodeCapture:captureSnapshot,
+    barcodeCaptureNote:rawCaptureNote(releaseSnapshot, captureSnapshot),
+    rowIndex:0, totalRows:null, parts:null, partCount:0, retries:0, rows:[], status:'requesting' });
   $('logDownloadStatus').textContent = `Requesting ${logDatasetInfo(logDownload.dataset).name} rows…`;
   addEvent(`Stored-data download started: ${logDatasetInfo(logDownload.dataset).label}`, null, 'download');
   updateLogDownloadControl(); requestNextLogRow();
@@ -523,7 +542,7 @@ function publishLogRowRequest() {
 }
 function retryLogRow(reason) {
   if (!logDownload.active) return;
-  if (logDownload.retries >= 3) { finishLogDownload(false, `Row ${logDownload.rowIndex} incomplete after 3 retries (${reason}). No complete export was produced.`); return; }
+  if (logDownload.retries >= 3) { finishLogDownload(false, `Row ${logDownload.rowIndex+1} incomplete after 3 retries (${reason}). No complete export was produced.`); return; }
   logDownload.retries++;
   logDownload.parts = null; logDownload.partCount = 0;
   publishLogRowRequest();
@@ -534,7 +553,7 @@ function onLogChunk(d) {
     log('is28/tlm', `ignored unmatched log chunk dataset ${d.dataset}, row ${d.rowIndex}, id ${d.requestId}`); return;
   }
   if (d.totalRows===0 && d.rowIndex===0 && d.status===3) { logDownload.totalRows=0; finishLogDownload(true,''); return; }
-  if (d.status !== 0) { finishLogDownload(false, `Firmware rejected dataset ${d.dataset} row ${d.rowIndex} with status ${d.status}.`); return; }
+  if (d.status !== 0) { finishLogDownload(false, `Firmware rejected dataset ${d.dataset} row ${d.rowIndex+1} with status ${d.status}.`); return; }
   if (logDownload.totalRows === null) logDownload.totalRows = d.totalRows;
   if (d.totalRows !== logDownload.totalRows || d.rowIndex >= d.totalRows) {
     retryLogRow('inconsistent row count or index'); return;
@@ -549,7 +568,6 @@ function onLogChunk(d) {
     const expected=logDatasetInfo(logDownload.dataset).rowBytes;
     if (row.length !== expected) { retryLogRow(`row length ${row.length}, expected ${expected}`); return; }
     clearTimeout(logDownload.timer); logDownload.rows.push(row); logDownload.rowIndex++;
-    $('logDownloadStatus').textContent = `Received ${logDownload.rowIndex}${logDownload.totalRows===null?'':` / ${logDownload.totalRows}`} ${logDatasetInfo(logDownload.dataset).name} rows.`;
     setTimeout(requestNextLogRow, 20);
   }
 }
@@ -565,6 +583,12 @@ function joinRows(rows) {
   rows.forEach((r)=>{out.set(r,at);at+=r.length;}); return out;
 }
 function hexRow(row) { return Array.from(row,(b)=>b.toString(16).padStart(2,'0')).join(''); }
+function barcodeCaptureMatchesRows(capture, release, rows) {
+  return !!(capture && capture.valid && release && capture.runId === release.runId &&
+    capture.rawCount === rows.length && rows.length &&
+    IS28.u32(rows[0],0) === capture.firstRawMs &&
+    IS28.u32(rows[rows.length-1],0) === capture.lastRawMs);
+}
 function exportLogDownload() {
   const ds=logDatasetInfo(logDownload.dataset), filename=`is28_${ds.name}_${stamp()}`;
   const raw=joinRows(logDownload.rows);
@@ -587,12 +611,22 @@ function exportLogDownload() {
   }
   const csv=[header,...rows].map((r)=>r.map(csvCell).join(',')).join('\r\n')+'\r\n';
   download(`${filename}.csv`,csv,'text/csv');
-  download(`${filename}.json`,JSON.stringify({dataset:logDownload.dataset,name:ds.name,rowCount:logDownload.rows.length,rowBytes:ds.rowBytes,format,release:logDownload.release,uptimeBasis:logDownload.dataset===0?'per-row flags bit 7 (run-relative when set)':'not interpreted',exportedAt:new Date().toISOString(),dashboard:DASHBOARD_VERSION,rawFile:`${filename}.bin`,csvFile:`${filename}.csv`},null,2)+'\n','application/json');
+  const metadata={dataset:logDownload.dataset,name:ds.name,rowCount:logDownload.rows.length,rowBytes:ds.rowBytes,format,release:logDownload.release,
+    uptimeBasis:logDownload.dataset===0?'per-row flags bit 7 (run-relative when set)':'not interpreted',exportedAt:new Date().toISOString(),dashboard:DASHBOARD_VERSION,
+    rawFile:`${filename}.bin`,csvFile:`${filename}.csv`};
+  if (logDownload.dataset===2) {
+    metadata.barcodeCapture=logDownload.barcodeCapture;
+    metadata.barcodeCaptureNote=logDownload.barcodeCaptureNote;
+    metadata.barcodeCaptureMatchesRows=barcodeCaptureMatchesRows(logDownload.barcodeCapture,logDownload.release,logDownload.rows);
+    if (logDownload.barcodeCapture && !metadata.barcodeCaptureMatchesRows)
+      metadata.barcodeCaptureNote+=' Metadata does not match the downloaded run/count/time range; attempt association is unverified.';
+  }
+  download(`${filename}.json`,JSON.stringify(metadata,null,2)+'\n','application/json');
 }
 function handleLogAck(ack) {
   if (!logDownload.active || ack.id!==logDownload.requestId || ack.code!==IS28.CMD.GET_LOG) return;
   if (!ack.accepted) finishLogDownload(false, `GET_LOG request rejected: ${ackName(ack)}.`);
-  else $('logDownloadStatus').textContent = `GET_LOG accepted for row ${logDownload.rowIndex}; waiting for matching source-13 chunks.`;
+  else $('logDownloadStatus').textContent = `GET_LOG accepted · row ${logDownload.rowIndex+1}${logDownload.totalRows===null?'':` / ${logDownload.totalRows}`} · waiting for matching source-13 chunks.`;
 }
 function cancelLogDownload(reason) { if(logDownload.active) finishLogDownload(false,reason); }
 function updateLogDownloadControl() {
@@ -662,7 +696,7 @@ function detectedProfile() {
 }
 function currentProfile() { const p = detectedProfile(); return p === 'rtos-connected' ? 'rtos' : IS28.effectiveProfile(p, 'auto'); }
 function profileText(p) {
-  if (releaseInfo && p==='rtos-connected') return `RTOS Buddy1-4 v${releaseInfo.version} - ${releaseInfo.wireless?'network supervised':'USB supervised'} - provisional`;
+  if (releaseInfo && p==='rtos-connected') return `RTOS Buddy 1–4 v${releaseInfo.version} · ${releaseInfo.wireless?'network supervised':'USB supervised'}`;
   return p === 'rtos-connected' ? (connectedImuSeen ? 'RTOS connected IMU/ramp (micro T-Kernel · Step5 · experimental)' : connectedBarcodeSeen ? 'RTOS connected barcode (micro T-Kernel · Step4)' : 'RTOS connected line (micro T-Kernel · Step3B)') :
          p === 'sdk' ? 'SDK v2.3' + (seenSources.has(SRC.IMU) || seenSources.has(SRC.MOTION) ? ' + Buddy4 add-on' : '') :
          p === 'rtos' ? 'RTOS (micro T-Kernel)' : p === 'rtos-inferred' ? 'RTOS (inferred from Buddy 2/4 frames without SDK telemetry)' : p === 'mixed' ? 'MIXED (RTOS and SDK frames)' : 'unknown';
@@ -674,6 +708,9 @@ function updateProfile() {
   const t = now();
   setPill($('profilePill'), 'firmware: ' + (seenSources.size ? profileText(det) : 'unknown'),
           det === 'mixed' ? 'bad' : eff === 'unknown' ? 'muted' : 'ok');
+  $('releaseLabel').textContent = releaseInfo ?
+    `RTOS v${releaseInfo.version} · ${releaseInfo.wireless ? 'network supervised' : 'USB supervised'}` :
+    (seenSources.size ? profileText(det) : 'Firmware/release metadata pending');
   $('profilePill').title = seenSources.size ? 'Sources since connect/boot: ' + Array.from(seenSources.entries()).sort((a, b) => a[0] - b[0])
     .map(([s, at]) => `${s} ${IS28.SRC_NAME[s] || '?'} (${((t - at) / 1000).toFixed(1)} s)`).join(', ') : 'No frames since connect/boot';
   $('steerBtn').disabled = eff !== 'rtos'; $('driveBtn').disabled = eff !== 'rtos';
@@ -735,7 +772,9 @@ function onMessage(topic, payload, packet) {
       refreshOpState();
     }
     if (a.code === IS28.CMD.START && a.result === 4 && detectedProfile() === 'rtos-connected') {
-      $('cmdNote').textContent = 'Step3B requires an OPEN USB serial connection. Leave PuTTY or the capture actively reading; a finished capture window does not hold supervision open. Check USB usb=3 and CLOCK PASS with n.';
+      $('cmdNote').textContent = releaseInfo && releaseInfo.wireless ?
+        'Network-supervised release rejected Start. Check the latched encoder fault, clock status, Wi-Fi/network connection, and transfer readiness before retrying.' :
+        'Step3B requires an OPEN USB serial connection. Leave PuTTY or the capture actively reading; a finished capture window does not hold supervision open. Check USB usb=3 and CLOCK PASS with n.';
     }
     handleLogAck(a);
     if (own && mapPending && mapPending.id === a.id && !a.accepted) {
@@ -977,6 +1016,9 @@ function summary(f) {
       if(d.kind==='runtime') return `RTOS reads ${d.reads}, read failures ${d.failed}, late ${d.lateGaps}, FIFO ${d.fifoOverruns}`;
       return d.kind === 'ramp-targets' ? `ramp requested ${d.requested.join('/')} → effective ${d.effective.join('/')} mm/s, hold ${d.holdActive ? 'on' : 'off'}` : d.kind === 'peak' ?
       `barcode peak v0.${d.version} ${d.reasonName}, code ${d.code}, bars ${d.bars}${d.applied ? ', applied' : ''}${d.originalConflict ? ', CONFLICT' : ''}` :
+      d.kind === 'barcode-capture' ? `barcode raw attempt ${d.attemptSequence}, ${d.reasonName}, code ${d.code}, ${d.rawCount} rows${d.finalized ? ', finalized' : ', unfinalized'}` :
+      d.kind === 'encoder-fault' ? (d.valid ? `${d.wheel} encoder ${d.fault} fault snapshot` : 'encoder fault snapshot clear') :
+      d.kind === 'network-stop' ? (d.valid ? `network Start-guard stop, fail mask 0x${d.failMask.toString(16)}` : 'network Start-guard snapshot clear') :
       `ramp assist ${d.eventName}, ${d.assisting ? 'assisting' : 'idle'}, added PWM ${d.addedPwm.join('/')}, height ${d.heightMm === null ? 'invalid' : d.heightMm + ' mm'}`;
     default: return '';
   }
@@ -1193,7 +1235,7 @@ function actionName(action) {
 }
 function srcLabel(k) { return Number(k) === 17 ? 'Ramp targets (src 15)' : Number(k) === 15 ? 'Ramp assist (src 15)' : Number(k) === 16 ? 'Barcode peak (src 15)' : IS28.SRC_NAME[k]; }
 function showBuildId() {
-  if(releaseInfo) { $('buildId').textContent=`PROVISIONAL Buddy1-4 RTOS v${releaseInfo.version} - Buddy5 NOT integrated`; return; }
+  if(releaseInfo) { $('buildId').textContent=`Buddy 1–4 RTOS v${releaseInfo.version} · ${releaseInfo.wireless?'network supervised':'USB supervised'}`; return; }
   const parts = [];
   if (lastPeak15) parts.push(lastPeak15.combinedBuild ? 'combined Buddy1-4 + peak' : 'standalone peak (no Buddy4/ramp)',
                              `peak v0.${lastPeak15.version} ${lastPeak15.active ? 'active' : 'shadow'}`);
@@ -1203,8 +1245,9 @@ function showBuildId() {
 function showSource15(d, f) {
   if(d.kind==='release') {
     releaseInfo=d; releaseSeenAt=now(); updateProfile(); updateLogDownloadControl();
-    $('buildId').textContent=`PROVISIONAL Buddy1-4 RTOS v${d.version} - Buddy5 NOT integrated`;
+    $('buildId').textContent=`Buddy 1–4 RTOS v${d.version} · ${d.wireless?'network supervised':'USB supervised'}`;
     $('releaseCal').textContent=`${d.recordedCalibration?'Run':'Current'} calibration: white ${d.white.join('/')} - black ${d.black.join('/')} - Profile ${d.profile}`;
+    renderBarcodeCapture();
     return;
   }
   if(d.kind==='runtime') {
@@ -1216,6 +1259,71 @@ function showSource15(d, f) {
   if (d.kind === 'ramp-targets') {
     $('rampTargets').textContent = `${d.requested.join('/')} → ${d.effective.join('/')} · ${d.holdActive ? 'hold active' : 'hold off'} · owner Buddy ${d.owner}`;
     showBuildId();
+    return;
+  }
+  if (d.kind === 'encoder-fault') {
+    const receivedAt = new Date().toISOString();
+    if (!d.valid) {
+      const wasLatched = !!lastEncoderFault;
+      const alreadyClear = $('encoderFault').textContent.includes('explicit firmware clear');
+      lastEncoderFault = null;
+      encoderFaultSignature = null;
+      if (wasLatched || !alreadyClear) {
+        $('encoderFault').textContent = 'No latched encoder fault (explicit firmware clear received)';
+        $('encoderFaultDetails').textContent = `Clear snapshot received ${new Date(receivedAt).toLocaleString()} · source-15 sequence ${f.seq}.`;
+        if (wasLatched) addEvent('Encoder fault snapshot explicitly cleared by firmware', { ...d, receivedAt }, 'encoder-fault-clear', f);
+      }
+      return;
+    }
+    const signature = JSON.stringify(d);
+    if (encoderFaultSignature === signature) return;
+    encoderFaultSignature = signature;
+    lastEncoderFault = { ...d, receivedAt, seq:f.seq };
+    $('encoderFault').textContent = `${d.wheel[0].toUpperCase()+d.wheel.slice(1)} encoder: ${d.fault} · latched`;
+    const duration = d.fault === 'wrong direction' ? ` · direction window ${d.directionDurationUs} µs` : '';
+    const saturation = d.saturated ? ' · one or more packed counters/values saturated' : '';
+    $('encoderFaultDetails').textContent = `Trip observed ${new Date(receivedAt).toLocaleString()} · control timer ${d.controlTimerUs} µs · kernel uptime ${d.kernelMs} ms${duration}. Frozen target L/R ${d.targetLeft}/${d.targetRight} mm/s, measured ${d.speedLeft.toFixed(1)}/${d.speedRight.toFixed(1)} mm/s, previous PWM ${d.pwmLeft}/${d.pwmRight}; triggering-wheel window bad/changes ${d.windowBad}/${d.windowChanges}; lifetime invalid/edges L ${d.leftInvalid}/${d.leftEdges}, R ${d.rightInvalid}/${d.rightEdges}${saturation}.`;
+    addEvent(`Latched ${d.wheel} encoder ${d.fault} fault`, lastEncoderFault, 'encoder-fault', f);
+    return;
+  }
+  if (d.kind === 'barcode-capture') {
+    const previous = lastBarcodeCapture;
+    lastBarcodeCapture = { ...d, receivedAt:new Date().toISOString(), seq:f.seq };
+    renderBarcodeCapture();
+    if (!previous || previous.attemptSequence !== d.attemptSequence || previous.finalized !== d.finalized ||
+        previous.truncated !== d.truncated || previous.code !== d.code || previous.reason !== d.reason)
+      addEvent(`Barcode raw attempt ${d.attemptSequence}: ${d.decoded ? 'decoded ' + d.code : 'no known code'} · ${d.reasonName} · ${d.rawCount} rows`, lastBarcodeCapture, 'barcode-capture', f);
+    return;
+  }
+  if (d.kind === 'network-stop') {
+    const receivedAt = new Date().toISOString();
+    if (!d.valid) {
+      const wasLatched = !!lastNetworkStop;
+      const alreadyClear = $('networkStop').textContent.includes('explicit firmware clear');
+      lastNetworkStop = null;
+      networkStopSignature = null;
+      if (wasLatched || !alreadyClear) {
+        $('networkStop').textContent = 'No latched network Start-guard stop (explicit firmware clear received)';
+        $('networkStopDetails').textContent = `Clear snapshot received ${new Date(receivedAt).toLocaleString()} · source-15 sequence ${f.seq}.`;
+        if (wasLatched) addEvent('Network Start-guard stop snapshot explicitly cleared by firmware', { ...d, receivedAt }, 'network-stop-clear', f);
+      }
+      return;
+    }
+    const signature = JSON.stringify(d);
+    if (networkStopSignature === signature) return;
+    networkStopSignature = signature;
+    lastNetworkStop = { ...d, receivedAt, seq:f.seq };
+    const reasons = [
+      'network link is not operational', 'network client is disconnected', 'broker subscription is missing',
+      'network polls are missing or older than 250 ms', 'application activity is older than 250 ms',
+      'TCP ACK is older than 3000 ms', 'last completed transfer predates this connection'
+    ].filter((_, bit) => (d.failMask >>> bit) & 1);
+    const lastComplete = d.lastCompleteMs === 0 ? 'not reported' :
+      `${d.lastCompleteMs} ms uptime (${(d.stopMs - d.lastCompleteMs) >>> 0} ms before stop)`;
+    $('networkStop').textContent = `Last recorded network stop at uptime ${d.stopMs} ms · latched`;
+    const pollAge = d.pollAgeMs === 0xffffffff ? 'no service poll recorded' : `${d.pollAgeMs} ms`;
+    $('networkStopDetails').textContent = `Historical first-stop snapshot received ${new Date(receivedAt).toLocaleString()}; it records conditions at the stop, not current Start readiness. ${reasons.length ? 'Reasons: ' + reasons.join('; ') + '.' : 'No reason bits set.'} At stop: ${d.configured?'configured':'not configured'} / ${d.connected?'connected':'disconnected'} / ${d.subscribed?'subscribed':'not subscribed'} / link ${d.link===3?'operational (3)':'code '+d.link}; poll age ${pollAge}, app age ${d.appAgeMs} ms, TCP ACK age ${d.ackAgeMs} ms; connects ${d.connects}; last completed transfer ${lastComplete}.`;
+    addEvent(`Latched network Start-guard stop: ${reasons.join('; ') || 'no reason bits set'}`, lastNetworkStop, 'network-stop', f);
     return;
   }
   if (d.kind === 'ramp') {
@@ -1232,6 +1340,22 @@ function showSource15(d, f) {
     }
   }
   showBuildId();
+}
+function renderBarcodeCapture() {
+  if (!lastBarcodeCapture) {
+    $('barcodeCapture').textContent = releaseInfo && releaseInfo.version === '0.2.0' ?
+      'No per-attempt metadata (v0.2.0)' : 'No attempt metadata received';
+    $('barcodeCaptureNote').textContent = releaseInfo && releaseInfo.version === '0.2.0' ?
+      'Firmware v0.2.0 keeps only its first automatic raw barcode snapshot.' :
+      'Raw rows are associated with the latest reported source-15 attempt when available.';
+    return;
+  }
+  const d = lastBarcodeCapture;
+  const state = !d.valid ? 'no valid attempt' : d.finalized ? 'finalized' : 'unfinalized / collecting';
+  $('barcodeCapture').textContent = d.valid ?
+    `Attempt ${d.attemptSequence} · run ${d.runId} · ${d.decoded ? `code ${d.code}` : 'no known code'} · ${d.reasonName} · ${d.bars} bars · ${d.rawCount} raw rows · ${state}${d.truncated ? ' · truncated' : ''}` :
+    `No valid attempt reported · run ${d.runId}`;
+  $('barcodeCaptureNote').textContent = `Latest source-15 report received ${new Date(d.receivedAt).toLocaleString()}; raw rows correspond to the last reported attempt, not necessarily a newer attempt currently collecting.${d.originalAccepted ? ' The original decoder accepted this attempt.' : ''}${d.startValid ? ' Pre-roll rows were present.' : ''}${d.rawOverwritten ? ` ${d.rawOverwritten} rows overwritten.` : ''}`;
 }
 function showLineEvent(d, f) {
   if (!staleShown.sdkLine) { $('progressStatus').textContent = 'Live.'; $('progressStatus').className = 'ok small'; }

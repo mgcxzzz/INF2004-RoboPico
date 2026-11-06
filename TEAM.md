@@ -1,7 +1,7 @@
 # Team and subsystems
 
 Main's active production profile is **APP=rtos_buddy1_4**, Buddy 1–4 RTOS
-v0.2.0. Buddy 5 is not integrated. User authorized the migration/shared changes
+v0.2.1. Buddy 5 is not integrated. User authorized the migration/shared changes
 and promotion to main. [Active ownership and priorities](docs/architecture.md)
 replace the example task table for this profile. Smaller priority numbers run
 first; all ownership is retained from tested Step 5v0.1.5.

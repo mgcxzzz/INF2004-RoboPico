@@ -2,6 +2,7 @@
 #if defined(APP_RTOS_LINE) && defined(APP_RTOS_NETWORK)
 #include "../line_navigation/line_service.h"
 #include "network_bridge.h"
+#include "network_stop.h"
 #include "connected_policy.h"
 #include "src/network/wifi_packets.h"
 #include "src/network/wifi_protocol.h"
@@ -9,7 +10,26 @@ static ID requests;
 static volatile uint32_t paused;
 static uint32_t lease;
 static uint32_t seen_connects, connected_since;
+static T_SPLOCK network_stop_lock;
+static RnNetworkStopSnapshot network_stop_snapshot;
 static volatile uint32_t telemetry_enabled = 1;
+
+static UINT network_stop_enter(void) {
+    UINT key;
+    (void)ISpinLock(&network_stop_lock, &key);
+    return key;
+}
+static void network_stop_leave(UINT key) {
+    (void)ISpinUnlock(&network_stop_lock, key);
+}
+
+void rn_network_stop_packet(uint8_t seq, uint8_t out[RN_NETWORK_STOP_PACKET_BYTES]) {
+    RnNetworkStopSnapshot copy;
+    UINT key = network_stop_enter();
+    copy = network_stop_snapshot;
+    network_stop_leave(key);
+    rn_network_stop_encode(&copy, seq, out);
+}
 void rn_drive_set_telemetry(bool enabled) {
     __atomic_store_n(&telemetry_enabled, enabled ? 1U : 0U, __ATOMIC_RELEASE);
 }
@@ -28,14 +48,27 @@ int32_t rn_drive_init(void) {
 bool rn_drive_enqueue(const uint8_t message[RN_RX_BYTES]) {
     return tk_snd_mbf(requests, message, RN_RX_BYTES, TMO_POL) == E_OK;
 }
-bool rn_drive_online(void) {
+bool rn_drive_online_record(bool record_failure) {
     RnStatus s = rn_status();
     uint32_t now = board_kernel_ms();
-    bool usable = rn_link_usable(&s, now) && now - rn_app_last_ms() <= 250U;
+    uint32_t app_last = rn_app_last_ms();
+    uint32_t current_connected_since =
+        __atomic_load_n(&connected_since, __ATOMIC_ACQUIRE);
+    bool usable = rn_link_usable(&s, now) && now - app_last <= 250U;
 #ifdef APP_RTOS_RELEASE
-    usable = usable && rn_delivery_fresh(&s, now, __atomic_load_n(&connected_since, __ATOMIC_ACQUIRE));
+    usable = usable && rn_delivery_fresh(&s, now, current_connected_since);
 #endif
+    if (!usable && record_failure) {
+        RnNetworkStopSnapshot candidate =
+            rn_network_stop_candidate(&s, now, app_last, current_connected_since);
+        UINT key = network_stop_enter();
+        (void)rn_network_stop_capture_once(&network_stop_snapshot, &candidate);
+        network_stop_leave(key);
+    }
     return usable;
+}
+bool rn_drive_online(void) {
+    return rn_drive_online_record(false);
 }
 bool rn_drive_paused(void) {
     return __atomic_load_n(&paused, __ATOMIC_ACQUIRE) != 0;
@@ -46,6 +79,9 @@ void rn_drive_cancel(void) {
 void rn_drive_begin(void) {
     lease = 0;
     rn_drive_cancel();
+    UINT key = network_stop_enter();
+    rn_network_stop_clear(&network_stop_snapshot);
+    network_stop_leave(key);
 }
 static uint32_t u32(const uint8_t *p) {
     return p[0] | (uint32_t)p[1] << 8 | (uint32_t)p[2] << 16 | (uint32_t)p[3] << 24;

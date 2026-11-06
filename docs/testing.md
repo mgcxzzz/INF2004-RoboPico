@@ -1,4 +1,4 @@
-# Focused checks for Buddy 1–4 RTOS v0.2.0
+# Focused checks for Buddy 1–4 RTOS v0.2.1
 
 The tested hardware baseline is Step 5 v0.1.5. This release changes supervision,
 wireless exports and dashboard/capture support, not the tracker/decoder/control/
@@ -8,13 +8,13 @@ keeps circuit and new powerbank checks distinct from software checks.
 With CC pointing to a host C compiler, from repository root:
 
 ```bash
-python tools/rtos_migration/run_tests.py --only test_bringup_policy test_connected_bridge test_release_policy test_release_bridge test_release_exports test_release_imu --skip-python
+python tools/rtos_migration/run_tests.py --only test_bringup_policy test_connected_bridge test_release_policy test_release_bridge test_release_exports test_release_imu test_encoder_fault test_network_stop test_barcode_attempt --skip-python
 python testing/rtos_migration/test_capture_wireless.py
 python testing/rtos_migration/test_capture_connected_line.py
 python testing/rtos_migration/test_export_line_log.py
 python testing/rtos_migration/test_export_barcode_log.py
 node dashboard/test/test_release.js
-node --test dashboard/test/test_source15.js dashboard/test/test_ramp_targets.js dashboard/test/test_merged_schema.js
+node --test dashboard/test/test_diagnostics_v021.js dashboard/test/test_source15.js dashboard/test/test_ramp_targets.js dashboard/test/test_merged_schema.js
 ```
 
 The C export/IMU fixtures produce binary vectors consumed by the browser-codec
