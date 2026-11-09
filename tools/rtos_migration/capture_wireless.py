@@ -62,6 +62,22 @@ def decode_release(frame):
         values=struct.unpack_from('<6I',p,3)
         return dict(kind='network-stop',valid=True,flags=meta&7,link=link,fail_mask=fail,
             **dict(zip(('stop_ms','poll_age_ms','app_age_ms','ack_age_ms','connects','last_complete_ms'),values)))
+    if len(p)==17 and p[0]==0xc7 and not p[13]&240:
+        threshold=int.from_bytes(p[11:13],'little')&4095
+        hysteresis=(p[12]>>4)|((p[13]&15)<<4);flags=p[16]
+        if flags&7>5 or hysteresis>205:return None
+        return dict(kind='junction-decision',uptime_ms=int.from_bytes(p[1:5],'little'),
+          decision_serial=int.from_bytes(p[5:9],'little'),run_id=int.from_bytes(p[9:11],'little'),
+          threshold=threshold,hysteresis=hysteresis,width_mm=int.from_bytes(p[14:16],'little',signed=True)/100,
+          result=flags&7,valid=bool(flags&8),armed=bool(flags&16),pending=bool(flags&32),saturated=bool(flags&128))
+    if len(p)==15 and p[0]==0xc8 and p[1]==0x22:
+        meta=int.from_bytes(p[8:10],'little');a=int.from_bytes(p[10:12],'little');w=int.from_bytes(p[12:15],'little')
+        def signed(v,n):return v-(1<<n) if v&(1<<(n-1)) else v
+        left=signed(w&511,9);right=signed((w>>9)&511,9)
+        if meta&0xc000 or w>>19 or (meta>>2)&3>2 or (meta>>4)&127>100 or a&7>4 or abs(left)>180 or abs(right)>180:return None
+        return dict(kind='drive-state',uptime_ms=int.from_bytes(p[2:6],'little'),run_id=int.from_bytes(p[6:8],'little'),
+          bend_phase=meta&3,bend_side=(meta>>2)&3,bend_percent=(meta>>4)&127,recovery_phase=(meta>>11)&7,
+          sweep_stage=a&7,recovery_yaw_deg=signed(a>>3,13)/10,target_left=left,target_right=right,saturated=bool(w&(1<<18)))
     return None
 
 def summarize(frames,interruptions):
@@ -88,7 +104,7 @@ def summarize(frames,interruptions):
       'release_first':releases[0] if releases else None,'release_last':releases[-1] if releases else None,
       'runtime_first':rows[0] if rows else None,'runtime_last':rows[-1] if rows else None,
       'runtime_windows':windows,'monitor_interruptions':interruptions,
-      'diagnostic_latest':{k:next((d for d in reversed(diagnostics) if d['kind']==k),None) for k in ('encoder-fault','barcode-attempt','network-stop')},
+      'diagnostic_latest':{k:next((d for d in reversed(diagnostics) if d['kind']==k),None) for k in ('encoder-fault','barcode-attempt','network-stop','junction-decision','drive-state')},
       'scope':'Passive laptop receipt evidence. Closing this observer does not stop the robot. Stop first; download stored rows before a new Start or power cycle. No automatic physical or clock certification.'}
 
 def main():

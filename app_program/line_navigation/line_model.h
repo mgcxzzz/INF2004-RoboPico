@@ -15,6 +15,7 @@
 #include "src/line_following/circuit_capture.h"
 #include "src/line_following/circuit_load.h"
 #include "src/motion/maneuver_power.h"
+#include "src/motion/line_recovery_power.h"
 #include "src/motion/ramp_profile.h"
 #include "src/barcode/barcode_record.h"
 #include "config/calibration_presets.h"
@@ -166,6 +167,7 @@ typedef struct {
     ContinuousDrive drive[2];
     SignedWheel wheel[2];
     ManeuverPower maneuver[2];
+    LineRecoveryWheel recovery[2];
     CircuitCapture capture;
     CircuitLoad load;
     int32_t output[2];
@@ -177,7 +179,7 @@ typedef struct {
 typedef struct {
     int32_t output[2];
     uint64_t until[2];
-    unsigned continuous : 1, maneuver : 1, reverse : 1;
+    unsigned continuous : 1, maneuver : 1, reverse : 1, recovery : 1;
     unsigned loaded : 2;
 } LineEnvelope;
 
@@ -193,8 +195,14 @@ static inline LineEnvelope rl_power(LinePower *s, const LinePlanner *p, const Ci
     const CircuitTracker *tracker = c->phase == J_ACQUIRE ? &c->joining : &c->follower;
     bool recovering = tracker->core.white;
     int capture = circuit_capture_outer(&s->capture, i, c->phase, d);
+#if defined(CIRCUIT_STATIONARY_SEARCH) || defined(LINE_STATIONARY_SEARCH)
+    bool recovery = tracker->search.active && recovering && !d->stop;
+    int search = -1;
+#else
+    bool recovery = false;
     int search = line_search_outer(tracker->search.active && recovering && !d->stop, d->target[0],
                                    d->target[1]);
+#endif
     bool maneuver = (turning && barcode_nav_action(&p->nav, p->nav.action) == 'U') || search >= 0;
     if (recovering)
         capture = -1;
@@ -212,6 +220,7 @@ static inline LineEnvelope rl_power(LinePower *s, const LinePlanner *p, const Ci
                                           : 0;
     LineEnvelope e = {.continuous = continuous,
                       .maneuver = maneuver,
+                      .recovery = recovery,
                       .reverse =
                           barcode_nav_action(&p->nav, p->nav.action) == 'U' && c->phase == J_TURN};
 #ifdef APP_RTOS_IMU
@@ -232,32 +241,39 @@ static inline LineEnvelope rl_power(LinePower *s, const LinePlanner *p, const Ci
 #endif
         if (!maneuver)
             maneuver_leave(&s->maneuver[w], &s->wheel[w], d->target[w]);
+        if (!recovery)
+            s->recovery[w] = (LineRecoveryWheel){0};
     }
     if (!maneuver && effort >= 0 && assist_code != s->assist_code)
         circuit_capture_prepare(&s->wheel[effort]);
     s->assist_code = assist_code;
     for (unsigned w = 0; w < 2; ++w) {
-        e.output[w] =
-            continuous ? continuous_drive_step(&s->drive[w], &s->wheel[w], w, d->target[w],
-                                               i->speed[w], dt, i->now, s->output[w])
-            : maneuver ? maneuver_wheel_step(&s->maneuver[w], &s->wheel[w], w, d->target[w],
-                                             i->speed[w], dt, i->now)
-                       : circuit_wheel_step(&s->wheel[w], w, d->target[w], i->speed[w], dt, i->now,
-                                            (e.loaded & (1U << w)) != 0, RL_PROFILE);
+        e.output[w] = recovery ? line_recovery_wheel_step(&s->recovery[w], w, d->target[w],
+                                                          i->speed[w], dt, i->now, s->output[w])
+                       : continuous ? continuous_drive_step(&s->drive[w], &s->wheel[w], w,
+                                                            d->target[w], i->speed[w], dt, i->now,
+                                                            s->output[w])
+                       : maneuver ? maneuver_wheel_step(&s->maneuver[w], &s->wheel[w], w,
+                                                        d->target[w], i->speed[w], dt, i->now)
+                                  : circuit_wheel_step(&s->wheel[w], w, d->target[w], i->speed[w],
+                                                       dt, i->now,
+                                                       (e.loaded & (1U << w)) != 0, RL_PROFILE);
         e.until[w] = (maneuver ? s->wheel[w].peak_active : turning) ? s->wheel[w].peak_end_us : 0;
     }
     return e;
 }
 
 static inline int32_t rl_cap(const LineEnvelope *e, unsigned w, uint64_t now) {
-    return e->continuous ? continuous_output_cap(e->output[w])
+    return e->recovery ? line_recovery_output_cap(e->output[w])
+           : e->continuous ? continuous_output_cap(e->output[w])
            : e->maneuver ? maneuver_output_cap(e->output[w], e->until[w], now)
                          : barcode_output_cap(e->output[w], false, e->until[w], now);
 }
 
 static inline DualLevels rl_levels(const LineEnvelope *e, unsigned w, uint64_t now) {
     int32_t output = rl_cap(e, w, now);
-    return e->continuous ? continuous_output_levels(w, output)
+    return e->recovery ? line_recovery_levels(w, output)
+           : e->continuous ? continuous_output_levels(w, output)
            : e->maneuver ? maneuver_levels(w, output, e->reverse)
            : e->reverse
                ? boosted_junction_levels(w, output, true)

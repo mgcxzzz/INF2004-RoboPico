@@ -25,7 +25,7 @@ def command(*args):
     return subprocess.check_output(list(map(str, args)), cwd=ROOT, text=True, encoding="utf-8").strip()
 
 
-def verify_shared_sources(hashes):
+def verify_shared_sources(hashes, release_review=None):
     """Fail on unreviewed drift; allow only exact, opt-in migration boundaries."""
     preserved, reviewed = [], {}
     prefix = "firmware/integration/buddy1_4/"
@@ -41,6 +41,12 @@ def verify_shared_sources(hashes):
             reviewed[relative] = {"baseline_sha256": hashlib.sha256(original).hexdigest(),
                                   "current_sha256": hashes[relative],
                                   "change": "Documentation: identify active RTOS wrappers; executable source checks remain strict."}
+            continue
+        if release_review and relative in release_review:
+            entry = release_review[relative]
+            assert hashes[relative] == entry['sha256'], 'Reviewed release fingerprint changed: ' + relative
+            reviewed[relative] = {'baseline_sha256': hashlib.sha256(original).hexdigest(),
+                                  'current_sha256': hashes[relative], 'change': entry['change']}
             continue
         expected = original.decode("utf-8")
         if relative == prefix + "src/imu/pico_registers.h":

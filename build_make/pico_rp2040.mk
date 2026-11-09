@@ -147,7 +147,7 @@ endif
 ifneq ($(filter $(APP),rtos_imu_wifi rtos_buddy1_4),)
 EXE_FILE := robopico_rtos_connected_imu_v0_1_5
 ifeq ($(APP),rtos_buddy1_4)
-EXE_FILE := robopico_buddy1_4_rtos_v0_2_1
+EXE_FILE := robopico_buddy1_4_rtos_v0_2_2
 endif
 endif
 endif
@@ -234,7 +234,7 @@ CFLAGS += -DAPP_RTOS_IMU=1
 INCPATH += -I..
 endif
 ifeq ($(APP),rtos_buddy1_4)
-CFLAGS += -DAPP_RTOS_RELEASE=1
+CFLAGS += -DAPP_RTOS_RELEASE=1 -DCONTINUOUS_BEND_ASSIST=1 -DCIRCUIT_STATIONARY_SEARCH=1 -DRTOS_JUNCTION_MIN_MM=7
 endif
 CFLAGS  += -DTM_CONSOLE_UART=$(CRASH_REPORT)
 ifeq ($(CRASH_REPORT),0)
@@ -270,7 +270,7 @@ endif
 
 PROFILE_ID := $(APP)-smp$(SMP)-$(CONSOLE)-wifi$(WIFI)-net$(NET)-mqtt$(MQTT)-crash$(CRASH_REPORT)-test$(TEST)
 ifeq ($(APP),rtos_buddy1_4)
-PROFILE_ID := $(PROFILE_ID)-network_policy_v1-diag_capture_v1
+PROFILE_ID := $(PROFILE_ID)-network_policy_v1-drive_refinement_v1
 endif
 PROFILE_FILE := .build_profile
 

@@ -46,3 +46,17 @@ capture with bounded pre-roll. They are observation paths, not new command
 owners. Network task reads copies and publishes C4/C5/C6 using the shared
 source15 sequence allocator. GPIO/ADC/IMU ownership, priorities, coordinator
 APIs and all safety/decoder thresholds are retained. See diagnostics_v0_2_1.md.
+
+
+v0.2.2 keeps the same tasks, priorities and owners. The core1 tracker can emit
+signed counter-rotating search requests through Buddy3's existing coordinator
+API. Only the explicit stationary-search envelope permits their signed motor
+outputs; ordinary forward tracking and U-turn envelopes keep their boundaries.
+Wheel-direction changes cross a zero-output encoder-still dwell. No subsystem
+writes motor pins or calls lwIP directly.
+
+C7 width decisions freeze their measured threshold/hysteresis and result across
+later label learning. C8 is live bend/search state; both are copied under the
+existing owner lock and encoded outside it, published with ordinary telemetry.
+The controller rows retain their 56-byte ABI and use two spare bits for the
+full-rate bend phase. Binary fields and source IDs remain compatible.

@@ -1,5 +1,11 @@
 # Line following — Buddy 3
 
+Active main v0.2.2 adds production-only bend assistance and bounded stationary
+line recovery, plus a 7 mm junction minimum. Archived default/SDK builds retain
+the previous behaviour unless explicitly opted in. The historical descriptions
+below are supplemented by [the current test guide](../../../../../docs/drive_refinements_v0_2_2.md).
+
+
 Main v0.2.0 uses the micro T-Kernel production profile. Active task/ownership
 adapters: [app_program/line_navigation](../../../../../app_program/line_navigation/README.md).
 See [RTOS architecture](../../../../../docs/architecture.md) and

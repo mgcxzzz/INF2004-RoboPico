@@ -311,6 +311,8 @@
       <div class="metric"><label>Ramp assist (src 15)</label><strong id="rampAssist">—</strong></div>
       <div class="metric"><label>Ramp targets: requested → effective (mm/s)</label><strong id="rampTargets">—</strong></div>
       <div class="metric"><label>Firmware build (src 15)</label><strong id="buildId">—</strong></div>
+      <div class="metric"><label>Latest junction measurement</label><strong id="junctionDecision">No stripe measurement received</strong><div id="junctionDecisionDetails" class="muted small">Waiting for source-15 C7.</div></div>
+      <div class="metric"><label>Bend / recovery state</label><strong id="driveState">Waiting for source-15 C8</strong><div id="driveStateDetails" class="muted small">Live state; physical corner/recovery validation is pending.</div></div>
       <div class="metric" style="grid-column:1/-1"><label>Latched encoder fault snapshot (src 15 C4)</label><strong id="encoderFault">No encoder fault reported</strong><div id="encoderFaultDetails" class="muted small">Waiting for an encoder-fault snapshot or explicit clear.</div></div>
       <div class="metric" style="grid-column:1/-1"><label>Last recorded network stop (src 15 C6)</label><strong id="networkStop">No network stop reported</strong><div id="networkStopDetails" class="muted small">Waiting for a historical stop snapshot. It does not report current Start readiness.</div></div>
     </div>
@@ -348,7 +350,7 @@
 
 <script>
 'use strict';
-const DASHBOARD_VERSION = 'v0.2.1';
+const DASHBOARD_VERSION = 'v0.2.2';
 const $ = (id) => document.getElementById(id);
 const hasWindow = typeof window !== 'undefined';
 const SRC = IS28.SRC;
@@ -360,6 +362,8 @@ const ownCommands = [];                 /* recent own command bytes, to spot oth
 let activeMapping = null, lastBarcodeLetter = null, mapPending = null;
 let lastRamp15 = null, lastPeak15 = null, lastBarcodeCapture = null, lastEncoderFault = null, lastNetworkStop = null;
 let encoderFaultSignature = null, networkStopSignature = null;
+let lastJunctionDecision=null,lastDriveState=null,junctionDecisionSignature=null,driveStateSignature=null;
+let driveSeenAt=0;
 let mappingQueried = false, lastUptime = null;
 /* RTOS Buddy2/Buddy4 live state (tools/dashboard logic) */
 let lastImuAt = 0, lastImuSeq = null, imuAwaitingFresh = false;
@@ -516,6 +520,8 @@ function startLogDownload() {
   const captureSnapshot = lastBarcodeCapture ? JSON.parse(JSON.stringify(lastBarcodeCapture)) : null;
   Object.assign(logDownload, { active:true, dataset:Number($('logDataset').value), requestId:null,
     release:releaseSnapshot, barcodeCapture:captureSnapshot,
+    junctionDecision:lastJunctionDecision?JSON.parse(JSON.stringify(lastJunctionDecision)):null,
+    driveState:lastDriveState?JSON.parse(JSON.stringify(lastDriveState)):null,
     barcodeCaptureNote:rawCaptureNote(releaseSnapshot, captureSnapshot),
     rowIndex:0, totalRows:null, parts:null, partCount:0, retries:0, rows:[], status:'requesting' });
   $('logDownloadStatus').textContent = `Requesting ${logDatasetInfo(logDownload.dataset).name} rows…`;
@@ -613,7 +619,9 @@ function exportLogDownload() {
   download(`${filename}.csv`,csv,'text/csv');
   const metadata={dataset:logDownload.dataset,name:ds.name,rowCount:logDownload.rows.length,rowBytes:ds.rowBytes,format,release:logDownload.release,
     uptimeBasis:logDownload.dataset===0?'per-row flags bit 7 (run-relative when set)':'not interpreted',exportedAt:new Date().toISOString(),dashboard:DASHBOARD_VERSION,
-    rawFile:`${filename}.bin`,csvFile:`${filename}.csv`};
+    rawFile:`${filename}.bin`,csvFile:`${filename}.csv`,
+    junctionDecision:logDownload.junctionDecision,driveState:logDownload.driveState,
+    driveSnapshotNote:'Latest received snapshots frozen at download request; historical context, not exact per-row associations.'};
   if (logDownload.dataset===2) {
     metadata.barcodeCapture=logDownload.barcodeCapture;
     metadata.barcodeCaptureNote=logDownload.barcodeCaptureNote;
@@ -836,6 +844,7 @@ function updateCarLink(t) {
 
 function tick() {
   const t = now();
+  if(driveSeenAt && t-driveSeenAt>2500) $('driveState').textContent='Stale — waiting for bend/recovery telemetry';
   if (lastImuAt) {
     const imuAge = (t - lastImuAt) / 1000;
     $('imuAge').textContent = `${imuAge.toFixed(1)} s ago`;
@@ -888,6 +897,9 @@ function groupFresh(k) {
 /* Disconnect, last will or car restart: clear live readings (retained
  * export history is kept) so nothing from before looks current. */
 function invalidateLive(reason) {
+  driveSeenAt=0;lastDriveState=null;driveStateSignature=null;
+  $('driveState').textContent='Waiting for fresh bend/recovery telemetry';
+  $('driveStateDetails').textContent=`Cleared: ${reason}.`;
   lastMotionAt = 0; motionAwaitingFresh = lastMotionSeq !== null;
   clearMotion('waiting for fresh Buddy 2 telemetry after ' + reason);
   lastImuAt = 0; imuAwaitingFresh = lastImuSeq !== null; lastAcceptedImuPeak = null;
@@ -1014,6 +1026,8 @@ function summary(f) {
     case 14: return `barcode threshold ${d.thresholdAdc}, bank ${d.bank}, decoded ${d.decodedTotal}, bad frames ${d.badFrames}`;
     case 15: if(d.kind==='release') return `RTOS release ${d.version}, Profile ${d.profile}, powerbank ${d.wireless?'supported':'off'}`;
       if(d.kind==='runtime') return `RTOS reads ${d.reads}, read failures ${d.failed}, late ${d.lateGaps}, FIFO ${d.fifoOverruns}`;
+      if(d.kind==='junction-decision') return `junction ${d.widthMm.toFixed(2)} mm: ${d.resultName}, entry ${d.blackEntry} ADC`;
+      if(d.kind==='drive-state') return `bend phase ${d.bendPhase}, recovery phase ${d.recoveryPhase}, yaw ${d.recoveryYawDeg}°, targets ${d.targetLeft}/${d.targetRight}`;
       return d.kind === 'ramp-targets' ? `ramp requested ${d.requested.join('/')} → effective ${d.effective.join('/')} mm/s, hold ${d.holdActive ? 'on' : 'off'}` : d.kind === 'peak' ?
       `barcode peak v0.${d.version} ${d.reasonName}, code ${d.code}, bars ${d.bars}${d.applied ? ', applied' : ''}${d.originalConflict ? ', CONFLICT' : ''}` :
       d.kind === 'barcode-capture' ? `barcode raw attempt ${d.attemptSequence}, ${d.reasonName}, code ${d.code}, ${d.rawCount} rows${d.finalized ? ', finalized' : ', unfinalized'}` :
@@ -1243,6 +1257,29 @@ function showBuildId() {
   $('buildId').textContent = parts.join(' · ') || '—';
 }
 function showSource15(d, f) {
+  if(d.kind==='junction-decision') {
+    lastJunctionDecision={...d,receivedAt:new Date().toISOString()};
+    $('junctionDecision').textContent=d.decisionSerial?`${d.widthMm.toFixed(2)} mm · ${d.resultName}`:'No completed stripe measured';
+    $('junctionDecisionDetails').textContent=`Run ${d.runId}, decision ${d.decisionSerial}; recorded black entry ${d.blackEntry} ADC / white return ${d.whiteReturn} ADC; ${d.valid?'classifier valid':'classifier not learned'}, ${d.armed?'armed at measurement':'not armed at measurement'}, ${d.pending?'action currently pending':'no action currently pending'}${d.saturated?'; width clipped':''}. Range 7–30 mm, with 4 mm white before/after.`;
+    const signature=`${d.runId}:${d.decisionSerial}`;
+    if(d.decisionSerial&&signature!==junctionDecisionSignature) {
+      junctionDecisionSignature=signature;
+      addEvent(`Junction stripe ${d.widthMm.toFixed(2)} mm: ${d.resultName}`,d,'junction-decision',f);
+    }
+    return;
+  }
+  if(d.kind==='drive-state') {
+    driveSeenAt=now();
+    lastDriveState={...d,receivedAt:new Date().toISOString()};
+    const bend=['normal tracking','bend candidate','bend confirmed','bend exit'][d.bendPhase];
+    const side=['none','left','right'][d.bendSide];
+    const recovery=['tracking','settling before search','in-place sweep','settling before reversal','settling after line return','settling before resuming search','confirming line','confirming loss'][d.recoveryPhase];
+    $('driveState').textContent=`${bend} · ${recovery}`;
+    $('driveStateDetails').textContent=`Run ${d.runId}; bend ${side}, speed-reduction blend ${d.bendPercent}%; search stage ${d.sweepStage}, yaw ${d.recoveryYawDeg.toFixed(1)}°; wheel targets ${d.targetLeft}/${d.targetRight} mm/s${d.saturated?'; diagnostic clipped':''}.`;
+    const signature=`${d.runId}:${d.bendPhase}:${d.bendSide}:${d.recoveryPhase}:${d.sweepStage}`;
+    if(signature!==driveStateSignature) {driveStateSignature=signature;addEvent(`Drive state: ${bend}, recovery phase ${d.recoveryPhase}, sweep ${d.sweepStage}`,d,'drive-state',f);}
+    return;
+  }
   if(d.kind==='release') {
     releaseInfo=d; releaseSeenAt=now(); updateProfile(); updateLogDownloadControl();
     $('buildId').textContent=`Buddy 1–4 RTOS v${d.version} · ${d.wireless?'network supervised':'USB supervised'}`;

@@ -1,4 +1,4 @@
-# Buddy 1–4 RTOS integration v0.2.1
+# Buddy 1–4 RTOS integration v0.2.2
 
 **PROVISIONAL. Buddy 5 obstacle avoidance is NOT integrated.**
 
@@ -11,12 +11,13 @@ while micro T-Kernel owns task scheduling and the kernel Wi-Fi service.
 - [Release status / hardware evidence](STATUS.md)
 - [Build](../../../docs/build.md) and [focused checks](../../../docs/testing.md)
 - [Architecture](../../../docs/architecture.md) and include/interfaces/
-- [Current UF2 + full bundle](artifacts/v0_2_1_rtos/)
+- [Current UF2 + full bundle](artifacts/v0_2_2_rtos/)
 - [Historical SDK reference](SDK_REFERENCE.md)
 
-Profile 1 stays fixed at 45 mm/s. Runtime A–Z routing, barcode/line/junction
-logic,110 mm GP27-to-axle offset, current calibration and ramp assistance are
-retained. Short odometry gaps use the tested bounded qualification policy.
+Profile 1 keeps 45 mm/s nominal straight travel. v0.2.2 adds qualified bend
+slowing/authority, bounded in-place search and a 7 mm junction minimum; these
+changes await physical acceptance. Runtime A–Z routing, barcode acceptance,
+110 mm GP27-to-axle geometry, saved calibration and ramp assistance are retained. Short odometry gaps use the tested bounded qualification policy.
 Powerbank operation requires the Pico's fresh broker connection; closing a
 USB terminal no longer stops this release. GP20/GP21 and dashboard stops remain.
 

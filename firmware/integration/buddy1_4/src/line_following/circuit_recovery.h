@@ -1,7 +1,8 @@
 #ifndef CIRCUIT_RECOVERY_H
 #define CIRCUIT_RECOVERY_H
 #include "src/line_following/symmetric_logic.h"
-#ifdef CIRCUIT_SWEEP_SEARCH
+#if defined(CIRCUIT_SWEEP_SEARCH) || defined(CIRCUIT_STATIONARY_SEARCH) || \
+    defined(LINE_STATIONARY_SEARCH)
 #include "src/line_following/line_search.h"
 #endif
 
@@ -37,7 +38,8 @@ typedef struct {
     uint8_t loss_reason;
     bool weak_timing, reverse_timing, reacquire_timing, probe_timing, medium_timing, strong_timing,
         centre_timing, centre_valid, straight_recovery;
-#ifdef CIRCUIT_SWEEP_SEARCH
+#if defined(CIRCUIT_SWEEP_SEARCH) || defined(CIRCUIT_STATIONARY_SEARCH) || \
+    defined(LINE_STATIONARY_SEARCH)
     LineSearch search;
 #endif
 } CircuitTracker;
@@ -109,11 +111,24 @@ static inline void circuit_faint_targets(int error, const uint16_t level[2], int
     target[0] = (int16_t)(target[0] * 35 / maximum);
     target[1] = (int16_t)(target[1] * 35 / maximum);
 }
-static inline AnalogDemand circuit_line_demand(CircuitTracker *t, const LineCalibration *cal,
-                                               uint16_t l, uint16_t r, uint64_t now, uint32_t mm) {
+static inline AnalogDemand circuit_line_demand_motion(CircuitTracker *t, const LineCalibration *cal,
+                                                      uint16_t l, uint16_t r, uint64_t now,
+                                                      uint32_t mm, const double wheel[2],
+                                                      const float speed[2]) {
+    (void)wheel;
+    (void)speed;
     AnalogDemand d = {.decision = SYM_STRAIGHT};
     t->loss_reason = 0;
     SymmetricTracker *s = &t->core;
+#if defined(CIRCUIT_STATIONARY_SEARCH) || defined(LINE_STATIONARY_SEARCH)
+    if (!wheel || !speed || !isfinite(wheel[0]) || !isfinite(wheel[1]) ||
+        !isfinite(speed[0]) || !isfinite(speed[1])) {
+        t->loss_reason = LS_INPUT;
+        d.stop = true;
+        d.decision = AL_LOST;
+        return d;
+    }
+#endif
     if (!calibration_valid(cal)) {
         d.stop = true;
         d.decision = AL_LOST;
@@ -181,14 +196,42 @@ static inline AnalogDemand circuit_line_demand(CircuitTracker *t, const LineCali
             }
             /* Independent bands:400-threshold flicker cannot discard an
                otherwise sustained >=300 observation. */
-            if ((t->strong_timing && now - t->strong_since >= C_REACQUIRE_STRONG_US) ||
+#if defined(CIRCUIT_STATIONARY_SEARCH) || defined(LINE_STATIONARY_SEARCH)
+            bool reacquired =
+                (t->strong_timing && now - t->strong_since >= C_REACQUIRE_STRONG_US) ||
                 (t->medium_timing && now - t->medium_since >= C_REACQUIRE_WEAK_US) ||
-                (t->probe_timing && now - t->probe_since >= C_REACQUIRE_FAINT_US)) {
+                (t->probe_timing && now - t->probe_since >= C_REACQUIRE_FAINT_US);
+            if (reacquired && t->search.active) {
+
+                LineSearchDemand found = line_search_stationary_step(
+                    &t->search, now, mm, wheel,
+                    speed, t->reacquire_timing, true);
+                if (found.reason) {
+                    t->loss_reason = found.reason;
+                    d.stop = true;
+                    d.decision = AL_LOST;
+                    return d;
+                }
+                if (!found.complete) {
+                    d.target[0] = found.target[0];
+                    d.target[1] = found.target[1];
+                    d.decision = (uint8_t)(LS_DECISION_FIRST + found.stage);
+                    return d;
+                }
+            }
+#else
+            bool reacquired =
+                (t->strong_timing && now - t->strong_since >= C_REACQUIRE_STRONG_US) ||
+                (t->medium_timing && now - t->medium_since >= C_REACQUIRE_WEAK_US) ||
+                (t->probe_timing && now - t->probe_since >= C_REACQUIRE_FAINT_US);
+#endif
+            if (reacquired) {
                 s->white = false;
                 s->recovery = 0;
                 t->straight_recovery = false;
                 t->reacquire_timing = t->medium_timing = t->strong_timing = false;
-#ifdef CIRCUIT_SWEEP_SEARCH
+#if defined(CIRCUIT_SWEEP_SEARCH) || defined(CIRCUIT_STATIONARY_SEARCH) || \
+    defined(LINE_STATIONARY_SEARCH)
                 t->search = (LineSearch){0};
 #endif
             }
@@ -196,7 +239,36 @@ static inline AnalogDemand circuit_line_demand(CircuitTracker *t, const LineCali
         if (s->white) {
             uint64_t elapsed = now - s->white_since;
             uint32_t travel = mm - s->white_mm;
-#ifdef CIRCUIT_SWEEP_SEARCH
+#if defined(CIRCUIT_STATIONARY_SEARCH) || defined(LINE_STATIONARY_SEARCH)
+            (void)travel;
+            if (line_search_ready(&t->search, now, d.level[0], d.level[1])) {
+                if (!t->search.active) {
+
+                    line_search_stationary_begin(&t->search, now, mm, s->recovery,
+                                                 wheel);
+                }
+
+                LineSearchDemand seek = line_search_stationary_step(
+                    &t->search, now, mm, wheel,
+                    speed, t->reacquire_timing, false);
+                if (seek.reason) {
+                    t->loss_reason = seek.reason;
+                    d.stop = true;
+                    d.decision = AL_LOST;
+                    return d;
+                }
+                d.target[0] = seek.target[0];
+                d.target[1] = seek.target[1];
+                d.decision = (uint8_t)(LS_DECISION_FIRST + seek.stage);
+                return d;
+            }
+            /* The original brief-gap bridge remains; sustained loss waits at
+               zero until the two-second confirmation opens the bounded sweep. */
+            if (elapsed >= LS_BRIDGE_US)
+                return d;
+            if (!s->recovery && !t->straight_recovery)
+                return d;
+#elif defined(CIRCUIT_SWEEP_SEARCH)
             (void)travel;
             /* A short worn gap still uses the proven bridge below. Once the
                gap persists, replace a one-direction timeout with alternating
@@ -243,11 +315,13 @@ static inline AnalogDemand circuit_line_demand(CircuitTracker *t, const LineCali
             /* Unlike V5, do not blindly ignore a real weak return on the
                other sensor. Probe using reflectance balance at reduced speed,
                keeping the original loss deadline until confirmation succeeds. */
+#if !defined(CIRCUIT_STATIONARY_SEARCH) && !defined(LINE_STATIONARY_SEARCH)
             if (faint && t->probe_timing && now - t->probe_since >= C_PROBE_US) {
                 circuit_faint_targets(error, d.level, d.target);
                 d.decision = error > 0 ? C_PROBE_LEFT : C_PROBE_RIGHT;
                 return d;
             }
+#endif
             if (t->straight_recovery) {
                 d.target[0] = d.target[1] = 35;
                 return d;
@@ -279,5 +353,12 @@ static inline AnalogDemand circuit_line_demand(CircuitTracker *t, const LineCali
         t->bridge[1] = (int16_t)(d.target[1] * 35 / maximum);
     }
     return d;
+}
+static inline AnalogDemand circuit_line_demand(CircuitTracker *t, const LineCalibration *cal,
+                                               uint16_t l, uint16_t r, uint64_t now,
+                                               uint32_t mm) {
+    const double wheel[2] = {0, 0};
+    const float speed[2] = {0, 0};
+    return circuit_line_demand_motion(t, cal, l, r, now, mm, wheel, speed);
 }
 #endif

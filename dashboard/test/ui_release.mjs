@@ -122,9 +122,16 @@ try {
  assert.equal(await page.evaluate(b=>barcodeCaptureMatchesRows({valid:true,runId:7,rawCount:1,firstRawMs:0x04030201,lastRawMs:0x04030201},{runId:7},[Uint8Array.from(b)]),Array.from(rawRow)),true);
  assert.equal(await page.locator('#barcodeCapture').textContent().then(s=>s.includes('Attempt 56')),true);
  assert.deepEqual(rawGot.bin,rawRow);
+ const junction=await readFile(join(base,'junction_decision.bin'));
+ const drive=await readFile(join(base,'drive_diagnostics.bin'));
+ await emit(junction);await emit(drive);
+ assert.match(await page.locator('#junctionDecision').textContent(),/10\.40 mm.*white confirmed/);
+ assert.match(await page.locator('#driveState').textContent(),/bend confirmed/);
+ assert.match(await page.locator('#driveStateDetails').textContent(),/-35\/35/);
  await page.evaluate(()=>invalidateLive('simulated stale telemetry'));
  assert.match(await page.locator('#encoderFault').textContent(),/latched/);
  assert.match(await page.locator('#networkStop').textContent(),/latched/);
+ assert.match(await page.locator('#driveState').textContent(),/Waiting for fresh/);
  assert.deepEqual(errors,[]);
  console.log('PASS production browser: release/profile/calibration/runtime display, stopped wireless two-part download, binary/CSV/JSON formats; no page errors.');
 } finally {await browser.close();await new Promise(r=>server.close(r));}

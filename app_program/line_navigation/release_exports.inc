@@ -30,8 +30,8 @@ void rtos_line_release_info(uint8_t seq, uint8_t out[15]) {
     leave(key);
     memset(out, 0, 15);
     out[0] = 0xf2; out[1] = 12; out[2] = seq;
-    out[3] = 0xc2; out[4] = 0x20; /* v0.2.1; major low/minor high nibble */
-    out[5] = 0x31 | (calibration_valid(&c) ? 0x40 : 0);
+    out[3] = 0xc2; out[4] = 0x20; /* v0.2.2; major low/minor high nibble */
+    out[5] = 0x32 | (calibration_valid(&c) ? 0x40 : 0);
     out[6] = RL_PROFILE | ((origin & 3U) << 2) | (recorded ? 0x10 : 0);
     uint16_t levels[4] = {c.white[0], c.white[1], c.black[0], c.black[1]};
     for (unsigned k = 0; k < 4; ++k)

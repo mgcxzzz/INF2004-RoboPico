@@ -150,3 +150,29 @@ new subsystem calls lwIP/MQTT, no hardware I/O occurs under the new locks,
 and no packed read-modify-write value is shared without synchronization.
 The build manifest gives linked static RAM growth. This is not a substitute
 for dynamic stack high-water or the remaining whole-firmware Tribunal audit.
+
+
+## v0.2.2 drive diagnostics
+
+C7 adds a 20-byte frame: subtype8, uptime32, decision serial32, run ID16,
+threshold12, hysteresis8 (0..205), signed width16 (centi-mm, saturation flagged),
+result3 and five boolean flags. Four padding bits must be zero. Width and the
+classifier threshold/hysteresis/valid/armed evidence are frozen together;
+pending-action state is current at snapshot copy. Native categorical fields
+use bitfields. Width clips explicitly at +/-327.67 mm; classification uses the
+original double width before diagnostic quantisation.
+
+C8 adds an 18-byte frame: subtype/version8 each, uptime32, run ID16, bend
+phase2, side2, blend percentage7, recovery phase3, sweep stage3, relative yaw
+signed13 (0.1 degree), targets signed9 each and saturation1. Seven reserved
+bits are zero and checked. Continuous control arithmetic retains float32
+precision; it is quantised only for copied diagnostic messages. Timestamps and
+encoder coordinates retain their full input domains. No gain/measurement is
+quantised before controlling a motor.
+
+With all telemetry enabled, C2-C8 add 226 frame bytes/second at 1 Hz, before
+MQTT/TCP overhead. Two previously unused bits in the existing 56-byte controller
+row retain the full-rate bend phase: meta bit31 and aux[1] bit31. Other row
+fields and lengths stay unchanged; older rows decode phase0. Network readers
+never access mutable planner state directly. This is not a claim that the
+remaining whole-firmware Tribunal audit is complete.

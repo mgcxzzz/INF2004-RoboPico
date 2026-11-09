@@ -1,10 +1,10 @@
-# Set up Buddy 1–4 RTOS v0.2.1
+# Set up Buddy 1–4 RTOS v0.2.2
 
 **PROVISIONAL main release. Buddy 5 is not integrated.** Use the complete new
 bundle, not the old SDK/Step 5 helpers. Profile 1 is the tested 45 mm/s controller.
 
-[Exact combined diagnostic test and downloads](diagnostics_v0_2_1.md). Use the new
-bundle/dashboard and hard-refresh; the old dashboard cannot explain new snapshots.
+[Exact v0.2.2 driving checks and downloads](drive_refinements_v0_2_2.md). Use the new
+bundle/dashboard and hard-refresh; the old dashboard cannot explain junction/bend/recovery snapshots.
 
 ## Flash and network setup
 
@@ -12,7 +12,7 @@ bundle/dashboard and hard-refresh; the old dashboard cannot explain new snapshot
    on the laptop. For optional USB capture/export install pyserial once:
    `py -3 -m pip install pyserial`(Windows) or use the Mac commands below.
 2. With motion stopped, enter BOOTSEL and copy
-   `firmware/robopico_buddy1_4_rtos_v0_2_1.uf2` to RPI-RP2. It reboots.
+   `firmware/robopico_buddy1_4_rtos_v0_2_2.uf2` to RPI-RP2. It reboots.
    Saved Wi-Fi and front calibration are preserved. Keep the robot flat/still
    for IMU calibration. No w/l/r/k/c recalibration is needed for this update.
 3. Run **Start dashboard.cmd** and keep it open. Open http://localhost:8765/,
@@ -24,7 +24,7 @@ bundle/dashboard and hard-refresh; the old dashboard cannot explain new snapshot
    This writes a settings-only UF2 and preserves the application. Do not
    reflash the main UF2 afterward; the settings helper may close on completion.
    If existing settings work, skip this step.
-5. Confirm the dashboard identifies **RTOS Buddy 1–4 v0.2.1**, Profile 1 and
+5. Confirm the dashboard identifies **RTOS Buddy 1–4 v0.2.2**, Profile 1 and
    calibration. Expected saved values on the tested car are white122/138,
    black246/267; actual readback is authoritative. Wait for IMU calibrated
    Idle(valid1/fault0), car-online and ready clocks before Start.
@@ -47,16 +47,14 @@ bundle/dashboard and hard-refresh; the old dashboard cannot explain new snapshot
    the robot while its broker connection remains healthy. Use Stop/buttons.
    Do not remove the controller's only power source expecting RAM logs to survive.
 
-First check: a short supported straight, Start/Pause/Resume/Stop without USB.
-Then test network loss in a short supported area with GP20 accessible; stop
-Mosquitto and confirm the robot stops. Reopen the broker and confirm it stays
-stopped until a fresh Start. This exercises the new powerbank supervision;
-no ramp repeat is required for this check. Then test the full circuit with
-adequate mats, especially sharp bends and complete left/right rejoining.
+First checks: a short straight with Pause/Resume/Stop, one troublesome sharp bend,
+a supported in-place recovery, and the previously missed junction. Follow the
+[v0.2.2 test guide](drive_refinements_v0_2_2.md). No repeat ramp or full network
+reconnect sequence is required merely for this control change.
 
 ## Wireless logs — no COM port
 
-10. Before Start, run **Capture wireless test.cmd**. It subscribes passively
+10. Optionally, before Start run **Capture wireless test.cmd**. It subscribes passively
     to MQTT and sends no motion commands. Default duration300s; Ctrl+C ends
     early. Stop the robot first; ending this observer does not stop motion.
 11. After Stop, keep the Pico/powerbank and broker on. Wait 5 seconds for fresh

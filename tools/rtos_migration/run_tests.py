@@ -29,11 +29,13 @@ checks = [(ROOT / "testing/rtos_migration/test_bringup_policy.c", []),
           (ROOT / "testing/rtos_migration/test_junction_reference.c", [])]
 for name, extra in [("test_continuous_drive", []), ("test_interface", sources),
                     ("test_clock", sources), ("test_coordinator_assist", sources),
-                    ("test_continuous_steering", []), ("test_continuous_follow", []),
+                    ("test_continuous_steering", []), ("test_continuous_bend_assist", []), ("test_continuous_follow", []),
                     ("test_continuous_integration", sources), ("test_line_search", []),
+                    ("test_line_stationary_search", sources),
                     ("test_uturn", [])]:
     checks.append((CORE / "tests/unit" / (name + ".c"), extra))
 checks.extend([
+    (ROOT / "testing/rtos_migration/test_drive_diagnostics.c", []),
     (ROOT / "testing/rtos_migration/test_encoder_fault.c", []),
     (ROOT / "testing/rtos_migration/test_network_stop.c", []),
     (ROOT / "testing/rtos_migration/test_barcode_attempt.c", sources + [CORE / "src/network/wifi_protocol.c"]),
@@ -74,6 +76,8 @@ for source, extra in checks:
     profile_flags = ["-DAPP_RTOS_IMU=1"] if source.stem in ("test_release_imu", "test_hump_odo_grace", "test_imu_service_rtos", "test_imu_task_reset", "test_imu_calibration_diagnostics") else []
     if source.stem == "test_usb_printf":
         profile_flags += ["-I" + str(ROOT / "testing/rtos_migration/printf_stubs")]
+    if source.stem == "test_line_stationary_search":
+        profile_flags += ["-DCONTINUOUS_BEND_ASSIST=1"]
     subprocess.run([*cc, *host_float, *profile_flags, "-std=c11", "-Wall", "-Wextra", "-Werror", "-O2", "-UNDEBUG",
                     "-DCIRCUIT_SWEEP_SEARCH=1", "-I" + str(ROOT), "-I" + str(CORE), "-I" + str(CORE / "config"),
                     source, *extra, "-lm", "-o", exe], check=True)

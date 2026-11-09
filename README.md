@@ -1,13 +1,13 @@
 # RoboPico — provisional Buddy 1–4 RTOS integration
 
-**Current main release: v0.2.1, micro T-Kernel SMP. Buddy 5 is NOT integrated.**
+**Current main release: v0.2.2, micro T-Kernel SMP. Buddy 5 is NOT integrated.**
 
-[Download firmware and full bundle](firmware/integration/buddy1_4/artifacts/v0_2_1_rtos/)
+[Download firmware and full bundle](firmware/integration/buddy1_4/artifacts/v0_2_2_rtos/)
  · [Setup / powerbank / log downloads](docs/setup.md)
  · [Validation and pending circuit checks](firmware/integration/buddy1_4/STATUS.md)
  · [Architecture and interfaces](docs/architecture.md)
 
-This promotes the hardware-tested Step 5 v0.1.5 baseline on the user's instruction.
+This builds on the hardware-tested Step 5 v0.1.5 baseline and main v0.2.1.
 It retains Continuous V2 Profile 1 at 45 mm/s, both barcode decoders, live A–Z mappings,
 junction actions, motion/encoders and Buddy 4 IMU/ramp assistance. The new production
 profile supports powerbank operation with Wi-Fi/MQTT supervision and stopped
@@ -17,8 +17,9 @@ The RTOS baseline passed flat/Pause/Resume/Stop and one nominal 10 mm one-sided 
 0 flat humps; 1 accepted ramp/13 mm maximum; assistance active; 50 Hz IMU/100 Hz control;
 no new motion-window acquisition/timing/logging faults. This is one ramp success,
 not repeatability certification. v0.2.0 powerbank driving and wireless downloads
-were subsequently user-tested. v0.2.1 adds diagnostic snapshots, whose first
-physical comparison remains pending. The full circuit test is still outstanding.
+were subsequently user-tested. v0.2.1 diagnostics were used to identify weak
+barcode peaks and a borderline junction width. v0.2.2 changes junction qualification,
+bend response and line recovery; physical acceptance of these changes is pending.
 Sharp bends and complete left/right line reacquisition need sufficient mats.
 
 Run [the complete package](firmware/integration/buddy1_4/README.md). Python and an
@@ -35,7 +36,8 @@ firmware/migration/ are historical validation stages. Main's active build is
 `APP=rtos_buddy1_4`, not the SDK superloop or the template example.
 
 
-[v0.2.1 diagnostic test and required downloads](docs/diagnostics_v0_2_1.md):
-latest barcode attempt raw samples, latched encoder trip and latched network-stop
-reason/ages. This build preserves the guards and does not claim to fix missing
-barcode peaks, signal errors or delivery outages before their cause is verified.
+[v0.2.2 setup, focused driving tests and downloads](docs/drive_refinements_v0_2_2.md):
+7 mm junction minimum, selective bend assistance and bounded in-place line search.
+The working barcode decoders and calibration priority are unchanged. This release
+retains fault diagnostics and does not claim to cure delivery outages or all weak
+barcode signals. Buddy 5 remains outside this integration.

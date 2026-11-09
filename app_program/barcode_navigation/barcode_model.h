@@ -15,6 +15,8 @@ enum {
     RB_PEAK_RUN_START = 10,
     RB_ATTEMPT_PAYLOAD = 27,
     RB_ATTEMPT_FRAME = 30,
+    RB_JUNCTION_PAYLOAD = 17,
+    RB_JUNCTION_FRAME = 20,
     RB_ATTEMPT_IN_PROGRESS = 10
 };
 enum {
@@ -206,6 +208,37 @@ static inline void rb_attempt_pack(const RbAttemptInfo *m, uint32_t uptime_ms, u
     uint32_t meta = (m->flags & 0x3fU) | (code << 6) | (reason << 11) | (bars << 15) |
                     (count << 20);
     rb_put32(p + 23, meta);
+}
+/* source15 C7 reports only on diagnostic changes/normal telemetry cadence.
+ * Width is signed centi-mm, saturated symmetrically to +/-327.67mm. */
+static inline void rb_junction_pack(const RbJunctionSensor *q, bool pending,
+                                    uint32_t uptime_ms, uint16_t run_id, uint8_t seq,
+                                    uint8_t frame[RB_JUNCTION_FRAME]) {
+    memset(frame, 0, RB_JUNCTION_FRAME);
+    frame[0] = 0xF2;
+    frame[1] = RB_JUNCTION_PAYLOAD;
+    frame[2] = seq;
+    uint8_t *p = frame + 3;
+    p[0] = 0xC7;
+    rb_put32(p + 1, uptime_ms);
+    rb_put32(p + 5, q->decision_serial);
+    p[9] = (uint8_t)run_id;
+    p[10] = (uint8_t)(run_id >> 8);
+    unsigned threshold = q->decision_serial ? q->decision_threshold : q->threshold;
+    unsigned hysteresis = q->decision_serial ? q->decision_hysteresis : q->hysteresis;
+    bool valid = q->decision_serial ? q->decision_valid : q->valid;
+    bool armed = q->decision_serial ? q->decision_armed : q->armed;
+    p[11] = (uint8_t)threshold;
+    p[12] = (uint8_t)(((threshold >> 8) & 0x0fU) | ((hysteresis & 0x0fU) << 4));
+    p[13] = (uint8_t)((hysteresis >> 4) & 0x0fU);
+    uint16_t width = (uint16_t)q->last_width_centi_mm;
+    p[14] = (uint8_t)width;
+    p[15] = (uint8_t)(width >> 8);
+    unsigned result = q->last_result <= RB_JUNCTION_RESULT_WHITE_CANCELLED ? q->last_result : 0;
+    p[16] = (uint8_t)(result | ((valid ? 1U : 0U) << 3) |
+                      ((armed ? 1U : 0U) << 4) | ((pending ? 1U : 0U) << 5) |
+                      ((q->last_candidate ? 1U : 0U) << 6) |
+                      ((q->last_width_saturated ? 1U : 0U) << 7));
 }
 static inline void rb_raw(RbDecoder *d, const BarcodeNav *n, uint16_t adc, uint64_t now,
                           double mm) {

@@ -462,6 +462,26 @@
       configured: !!(flags & 1), connected: !!(flags & 2), subscribed: !!(flags & 4),
       link, failMask: (meta >>> 6) & 0x7f };
   }
+  function decodeJunctionDecision(p) {
+    if (p.length!==17 || p[0]!==0xc7 || (p[13]&0xf0)) return {error:'invalid junction-decision layout'};
+    const threshold=u16(p,11)&4095, hysteresis=(p[12]>>>4)|((p[13]&15)<<4), flags=p[16], result=flags&7;
+    if(result>5 || hysteresis>205) return {error:'invalid junction-decision fields'};
+    return {kind:'junction-decision',uptimeMs:u32(p,1),decisionSerial:u32(p,5),runId:u16(p,9),
+      threshold,hysteresis,blackEntry:threshold+hysteresis,whiteReturn:threshold-hysteresis,
+      widthMm:i16(p,14)/100,result,resultName:['no stripe measured','awaiting trailing white','too narrow','too wide','white confirmed','white interrupted'][result],
+      valid:!!(flags&8),armed:!!(flags&16),pending:!!(flags&32),candidate:!!(flags&64),saturated:!!(flags&128)};
+  }
+  function decodeDriveState(p) {
+    if(p.length!==15 || p[0]!==0xc8 || p[1]!==0x22) return {error:'invalid drive-state layout'};
+    const meta=u16(p,8), angular=u16(p,10), targets=p[12]|(p[13]<<8)|(p[14]<<16);
+    const side=(meta>>>2)&3,percent=(meta>>>4)&127,stage=angular&7;
+    const left=s(targets,0,9),right=s(targets,9,9);
+    if((meta&0xc000)||(targets>>>19)||side>2||percent>100||stage>4||Math.abs(left)>180||Math.abs(right)>180)
+      return {error:'invalid drive-state fields'};
+    return {kind:'drive-state',version:'0.2.2',uptimeMs:u32(p,2),runId:u16(p,6),bendPhase:meta&3,
+      bendSide:side,bendPercent:percent,recoveryPhase:(meta>>>11)&7,sweepStage:stage,
+      recoveryYawDeg:s(angular,3,13)/10,targetLeft:left,targetRight:right,saturated:!!(targets&(1<<18))};
+  }
   function decodeSource15(p) {
     if (p.length === 12 && p[0] === 0xC2) {
       if ((p[2] & 0x80) || (p[3] & 0xe0) || !(p[3] & 3)) return {error:'invalid release metadata'};
@@ -493,6 +513,8 @@
     if (p.length === 45 && p[0] === 0xC4) return decodeEncoderFault(p);
     if (p.length === 27 && p[0] === 0xC5) return decodeBarcodeCapture(p);
     if (p.length === 29 && p[0] === 0xc6) return decodeNetworkStop(p);
+    if (p.length === 17 && p[0] === 0xc7) return decodeJunctionDecision(p);
+    if (p.length === 15 && p[0] === 0xc8) return decodeDriveState(p);
     if (p.length === 28) return decodeRampAssist(p);
     if (p.length === 24 && p[4] === 0xB1) return decodeBarcodePeak(p);
     return { error: 'unknown source-15 layout (payload ' + p.length + ' bytes' + (p.length > 4 ? ', byte4 0x' + p[4].toString(16) : '') + ')' };
@@ -514,7 +536,7 @@
       turn_degrees_x10:angle&4096?angle-8192:angle,junction_both_white:(y>>>12)&1,
       junction_prior_white:(y>>>13)&1,junction_departure_ready:(y>>>14)&1,
       junction_branch_accepted:(y>>>15)&1,junction_accepted_without_white:(y>>>16)&1,
-      junction_accept_event:(y>>>17)&1};
+      junction_accept_event:(y>>>17)&1,bend_phase:((m>>>31)&1)|(((y>>>31)&1)<<1)};
   }
   function decodeLogChunk(bytes) {
     const b = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);

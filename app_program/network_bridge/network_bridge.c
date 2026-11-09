@@ -423,6 +423,11 @@ void rn_app_task(int32_t code, void *exinf) {
                 uint8_t attempt[30];
                 rtos_line_barcode_attempt_info(rn_next_sequence(15), now, attempt);
                 (void)rn_tx_push(RN_TLM, attempt, sizeof(attempt), now);
+                uint8_t junction[20], drive[18];
+                rtos_line_junction_info(rn_next_sequence(15), now, junction);
+                (void)rn_tx_push(RN_TLM, junction, sizeof(junction), now);
+                rtos_line_drive_info(rn_next_sequence(15), now, drive);
+                (void)rn_tx_push(RN_TLM, drive, sizeof(drive), now);
             }
 #ifdef APP_RTOS_IMU
             if (rn_drive_telemetry_enabled()) {

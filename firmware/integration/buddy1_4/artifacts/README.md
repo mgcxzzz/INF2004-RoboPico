@@ -1,20 +1,12 @@
 # Firmware artifacts
 
-Current: [v0.2.1 combined RTOS diagnostics](v0_2_1_rtos/).
-Previous main: [v0.2.0 RTOS](v0_2_0_rtos/), retained for rollback.
+Current: [v0.2.2 RTOS drive refinements](v0_2_2_rtos/).
+Use the complete bundle, its START_HERE.md and TEST_CHANGES.md.
 
-v0.2.1 preserves tested Profile1/calibration/decoder/guard decisions and adds
-latest-attempt raw capture plus latched encoder/network-stop reports. It is a
-diagnostic build, not a claimed cure for missing barcode peaks or network loss.
-Buddy5 remains NOT integrated. See the main setup guide and STATUS.md.
+This provisional Buddy 1–4 release adds a 7 mm junction minimum, selective bend
+assistance and bounded stationary recovery. Physical acceptance remains pending;
+Buddy 5 is not integrated. Calibration, barcode acceptance, IMU/ramp logic and
+network/safety limits are retained. Saved Wi-Fi and calibration survive flashing.
 
-# Provisional firmware and complete package
-
-**Buddy1–4 integration v0.1. Buddy5 NOT integrated. New physical acceptance pending.**
-
-- `robopico_buddy1_4_integration_v0_1.uf2`: public image with no embedded Wi-Fi credentials.
-- `robopico_buddy1_4_integration_v0_1_bundle.zip`: complete SDK integration source, tests, dashboard, setup tools/docs, selected evidence and the same UF2.
-- `BUILD_MANIFEST.json`: actual build identity/options, calibration rules, memory layout and validation limits.
-- `SOURCE_SHA256.json` and `SHA256SUMS.txt`: package/source/artifact integrity.
-
-Start with the bundle's BUNDLE_README.md and docs/setup.md. Existing saved Wi-Fi/calibration normally survive reflashing. A blank Pico still starts with the original low-height preset; the later tilted-front capture is archived evidence, not silently installed. The separate original RTOS source tree is outside the standalone bundle.
+[v0.2.1 diagnostics](v0_2_1_rtos/) and [v0.2.0 RTOS](v0_2_0_rtos/) remain available
+for rollback/comparison. Older SDK artifacts are historical references.

@@ -38,7 +38,15 @@ class WirelessTests(unittest.TestCase):
     def test_actual_c_metadata_when_available(self):
         p=Path(__file__).parent/'build-host/release_metadata.bin'
         if not p.exists():self.skipTest('Run test_release_exports first for C fixture')
-        d=decode_release(p.read_bytes());self.assertEqual(d['version'],'0.2.1')
+        d=decode_release(p.read_bytes());self.assertEqual(d['version'],'0.2.2')
         self.assertEqual(d['white'],[122,138]);self.assertEqual(d['black'],[246,267])
         self.assertTrue(d['network_supervised'] and d['stored_logs'])
+    def test_drive_and_junction_c_fixtures(self):
+        base=Path(__file__).parent/'build-host'
+        j=decode_release((base/'junction_decision.bin').read_bytes())
+        d=decode_release((base/'drive_diagnostics.bin').read_bytes())
+        self.assertEqual(j['width_mm'],10.4);self.assertEqual(j['result'],4)
+        self.assertEqual(j['threshold'],1100);self.assertEqual(j['hysteresis'],90)
+        self.assertEqual(d['target_left'],-35);self.assertEqual(d['target_right'],35)
+        self.assertEqual(d['recovery_yaw_deg'],-12.3);self.assertEqual(d['bend_phase'],2)
 if __name__=='__main__':unittest.main()

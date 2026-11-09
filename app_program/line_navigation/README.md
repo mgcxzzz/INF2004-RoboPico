@@ -1,5 +1,11 @@
 # RTOS line-navigation boundary (Step 2)
 
+Active main v0.2.2 adds production-only bend assistance and bounded stationary
+line recovery, plus a 7 mm junction minimum. Archived default/SDK builds retain
+the previous behaviour unless explicitly opted in. The historical descriptions
+below are supplemented by [the current test guide](../../docs/drive_refinements_v0_2_2.md).
+
+
 Main release APP=rtos_buddy1_4 enables the tested Buddy1–4 adapters plus
 network-supervised powerbank operation and stopped wireless exports. See
 [main setup](../../docs/setup.md) and [architecture](../../docs/architecture.md).

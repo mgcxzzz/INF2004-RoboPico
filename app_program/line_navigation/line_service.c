@@ -39,6 +39,7 @@ static bool dump_requested, dumping;
 static bool recording;
 #ifdef APP_RTOS_RELEASE
 #include "release_export.h"
+#include "drive_diagnostics.h"
 static RlExportLease wireless_export;
 static float release_run_centre;
 #endif
@@ -51,6 +52,9 @@ static struct {
     unsigned phase, decision, reason, pending, action, flags;
     uint32_t junction_aux;
     RlAdcDiagnostics adc_diag;
+#ifdef APP_RTOS_RELEASE
+    RlDriveDiagnostic drive_diagnostic;
+#endif
     uint32_t adc_retries, adc_recoveries, adc_frames;
 #ifdef APP_RTOS_IMU
     uint32_t side_polls, side_adc_total_us, side_adc_max_us;
@@ -58,6 +62,8 @@ static struct {
 #endif
     unsigned adc_state : 2, adc_good : 2;
 #ifdef APP_RTOS_BARCODE
+    RbJunctionSensor junction_sensor;
+    bool junction_pending;
     uint32_t decoded, peak_decodes, peak_applied, conflicts, gaps, max_gap, samples, max_sample;
     uint16_t barcode_min, barcode_max, barcode_adc, threshold;
     unsigned cross_threshold : 12, cross_hysteresis : 12;
@@ -541,8 +547,33 @@ void rtos_line_record(const BringupStatus *s, const AnalogDemand *d, uint32_t co
                (rl_route_bits(planner.nav.action) << 18) |
 #endif
                ((s->reason & 15U) << 20) | ((s->flags & 127U) << 24);
+#ifdef APP_RTOS_RELEASE
+    const ContinuousSteering *steering = &planner.steering;
+    unsigned bend_phase = steering->bend_exiting ? 3U : steering->bend_confirmed ? 2U
+                          : steering->bend_candidate ? 1U : 0U;
+    rl_row_bend_phase(bend_phase, &row.meta, &row.aux[1]);
+    unsigned bend_side = steering->bend_direction > 0 ? 1U : steering->bend_direction < 0 ? 2U : 0U;
+    float reduction = (1.0f - steering->bend_speed_scale) * 500.0f;
+    unsigned bend_percent = steering->active && isfinite(reduction)
+                                ? (unsigned)lroundf(clampf(reduction, 0, 100)) : 0U;
+    unsigned recovery_phase = 0, stage = 0;
+    float yaw = 0;
+#if CIRCUIT_STATIONARY_SEARCH
+    recovery_phase = (s->flags & BR_ACTIVE) && tracker->core.white
+                         ? (tracker->search.phase ? tracker->search.phase : 7U) : 0U;
+    stage = tracker->search.stage;
+    yaw = tracker->search.relative_yaw_deg;
+#endif
+    int yaw_x10 = isfinite(yaw) ? (int)lroundf(clampf(yaw*10, -32767, 32767)) : 0;
+    RlDriveDiagnostic drive_diagnostic = rl_drive_diag_make(bend_phase, bend_side, bend_percent,
+        recovery_phase, stage, yaw_x10, s->target[0], s->target[1]);
+    if(!isfinite(yaw)) drive_diagnostic.saturated = true;
+#endif
     UINT key = enter();
     view.cal = calibration;
+#ifdef APP_RTOS_RELEASE
+    view.drive_diagnostic = drive_diagnostic;
+#endif
     view.cal_origin = cal_origin;
     memcpy(view.adc, raw, sizeof(raw));
     for (unsigned w = 0; w < 2; ++w)
@@ -580,6 +611,8 @@ void rtos_line_record(const BringupStatus *s, const AnalogDemand *d, uint32_t co
     view.cross_valid = barcode.junction.valid;
     view.cross_armed = barcode.junction.armed;
     view.cross_black = barcode.junction.black;
+    view.junction_sensor = barcode.junction;
+    view.junction_pending = planner.nav.pending != 0;
     view.bank = barcode.analog.selected;
     view.last_code = planner.nav.last_code;
     view.pending_action = planner.nav.pending_action;
@@ -818,5 +851,20 @@ void rtos_line_barcode_attempt_info(uint8_t seq, uint32_t now_ms, uint8_t out[30
     uint16_t run = telemetry.run_id;
     leave(key);
     rb_attempt_pack(&attempt, now_ms, run, seq, out);
+}
+void rtos_line_junction_info(uint8_t seq, uint32_t now_ms, uint8_t out[20]) {
+    UINT key = enter();
+    RbJunctionSensor sensor = view.junction_sensor;
+    bool pending = view.junction_pending;
+    uint16_t run = telemetry.run_id;
+    leave(key);
+    rb_junction_pack(&sensor, pending, now_ms, run, seq, out);
+}
+void rtos_line_drive_info(uint8_t seq, uint32_t now_ms, uint8_t out[18]) {
+    UINT key = enter();
+    RlDriveDiagnostic diagnostic = view.drive_diagnostic;
+    uint16_t run = telemetry.run_id;
+    leave(key);
+    rl_drive_diag_pack(&diagnostic, now_ms, run, seq, out);
 }
 #endif
