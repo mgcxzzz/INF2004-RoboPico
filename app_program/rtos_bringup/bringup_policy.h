@@ -22,7 +22,8 @@ enum {
     BR_STALL = 16U,
     BR_LATE = 32U,
     BR_ENCODER = 64U,
-    BR_LATCHED = BR_ESTOP | BR_STALL | BR_LATE | BR_ENCODER
+    BR_IMU = 128U,
+    BR_LATCHED = BR_ESTOP | BR_STALL | BR_LATE | BR_ENCODER | BR_IMU
 };
 enum {
     BR_REASON_BOOT,
@@ -37,7 +38,10 @@ enum {
     BR_REASON_ENCODER,
     BR_REASON_API,
     BR_REASON_ADC,
-    BR_REASON_NETWORK
+    BR_REASON_NETWORK,
+    BR_REASON_IMU_LIFT = 13U,
+    BR_REASON_IMU_OVERTURN = 14U,
+    BR_REASON_IMU_UNAVAILABLE = 15U
 };
 
 enum { BR_GAP_NONE, BR_GAP_REVALIDATE, BR_GAP_STOP };
@@ -72,6 +76,19 @@ static inline bool br_can_start(uint16_t flags, uint32_t now, uint32_t stopped, 
     return (flags & (BR_READY | BR_CLOCK_OK | BR_ACTIVE | BR_LATCHED)) ==
                (BR_READY | BR_CLOCK_OK) &&
            now - stopped >= BR_REST_US && br_usb_supervised(usb) && buttons_released;
+}
+
+/* The release IMU guard is a copied cross-core observation. Keep it separate
+ * from BR_LATCHED so a stale/unready sensor can inhibit motion without
+ * manufacturing a sticky lifted/overturned latch. */
+static inline bool br_safety_allows_motion(uint16_t flags, bool imu_blocked) {
+    return (flags & BR_LATCHED) == 0U && !imu_blocked;
+}
+
+static inline bool br_can_clear_latch(uint16_t flags, bool buttons_released,
+                                      bool imu_reset_allowed) {
+    return (flags & BR_ACTIVE) == 0U && (flags & BR_CLOCK_OK) != 0U && buttons_released &&
+           imu_reset_allowed;
 }
 
 static inline bool br_command_fresh(uint32_t now, uint32_t received) {

@@ -1,3 +1,29 @@
+# Focused checks for Buddy 1–4 RTOS v0.2.3
+
+This release adds IMU end-run safety while retaining v0.2.2 controls. Purposeful
+checks cover the new detector/service path, safety gates, packet/dashboard and
+release compatibility, plus one retained legacy IMU/ramp fixture after the
+release-only collision opt-out. No unrelated exhaustive suites are needed.
+
+```bash
+python tools/rtos_migration/run_tests.py --only test_bringup_policy test_imu_lift_guard test_imu_lift_packet test_release_imu test_release_bridge test_release_exports test_imu_service_rtos --skip-python
+node --test dashboard/test/test_imu_lift_v023.js
+node dashboard/test/test_release.js
+node dashboard/test/ui_release.mjs
+```
+
+Generate the native C fixtures before browser checks. The real production service
+check compiles APP_RTOS_RELEASE in every translation unit: a header-local macro
+alone cannot exercise the release-only FIFO hook. The host fixture checks latched
+lift with the actual transformed FIFO, no production Impact transition, blocked
+raw reset,500 ms upright readiness, stale evidence rejection and recalibration
+handoff. The browser uses simulated MQTT; it does not command the robot.
+
+Physical lift/overturn discrimination, wheel-stop latency, and ramp false-positive
+acceptance remain to test. See [the guide](imu_end_run_v0_2_3.md).
+
+The earlier v0.2.2 checks below remain historical evidence for retained code.
+
 # Focused checks for Buddy 1–4 RTOS v0.2.2
 
 The hardware baseline is Step 5 v0.1.5 and main v0.2.1. This release changes

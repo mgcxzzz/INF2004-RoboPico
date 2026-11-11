@@ -807,6 +807,7 @@ static void side_terrain(b4_ctx_t *p_ctx, b4_in_t const *p_in, bool b_quality, b
 #endif /* B4_SIDE_RAMP_MODE */
 
 /* Leave Hump Processing or Impact / Shock for wherever the mission says. */
+#ifndef APP_RTOS_RELEASE
 static void back_to_sampling(b4_ctx_t *p_ctx) {
     if (p_ctx->b_mission) {
         enter_tracking(p_ctx);
@@ -815,6 +816,7 @@ static void back_to_sampling(b4_ctx_t *p_ctx) {
         p_ctx->state = IMU_ST_IDLE;
     }
 }
+#endif
 
 #if !B4_SIDE_RAMP_MODE
 static void reject_hump(b4_ctx_t *p_ctx, imu_reject_t why, uint32_t t_us, b4_out_t *p_out) {
@@ -1581,7 +1583,9 @@ void b4_tick(b4_ctx_t *p_ctx, b4_in_t const *p_in, b4_out_t *p_out) {
         uint32_t max_d2 = 0U;
         uint32_t spread = 0U;
         uint32_t spread_range = 0U;
+#ifndef APP_RTOS_RELEASE
         uint32_t at = 0U;
+#endif
         int32_t s_min[3] = {INT32_MAX, INT32_MAX, INT32_MAX};
         int32_t s_max[3] = {INT32_MIN, INT32_MIN, INT32_MIN};
         int32_t g[3];
@@ -1602,7 +1606,9 @@ void b4_tick(b4_ctx_t *p_ctx, b4_in_t const *p_in, b4_out_t *p_out) {
 
             if (d2 > max_d2) {
                 max_d2 = d2;
+#ifndef APP_RTOS_RELEASE
                 at = i;
+#endif
             }
 
             spread = (sx > spread) ? sx : spread;
@@ -1683,7 +1689,37 @@ void b4_tick(b4_ctx_t *p_ctx, b4_in_t const *p_in, b4_out_t *p_out) {
         }
 #endif
 
-        if ((max_d2 > (uint32_t)(B4_SHOCK_MG * B4_SHOCK_MG)) && (p_ctx->state != IMU_ST_IMPACT)) {
+#ifdef APP_RTOS_RELEASE
+        /* Release safety uses the separate lift/upset guard. A brief
+         * high-dynamic sample is still excluded from terrain measurement,
+         * but it must not become a collision event or an IMU state transition. */
+        if (max_d2 > (uint32_t)(B4_SHOCK_MG * B4_SHOCK_MG)) {
+#if B4_SIDE_RAMP_MODE
+            if (p_ctx->side_candidate) {
+                side_reject(p_ctx, IMU_REJ_SHOCK, p_in->t_us, p_out);
+            }
+#ifdef APP_RTOS_IMU
+            else if (p_ctx->side_level_ready || (p_ctx->side_level_us != 0U)) {
+                side_diag_disarm(p_ctx, B4_SIDE_CLEAR_SHOCK);
+                p_ctx->side_level_ready = false;
+                p_ctx->side_level_us = 0U;
+            } else {
+                /* no qualification to disarm */
+            }
+            p_ctx->side_odo_gap_run_us = 0U;
+            p_ctx->side_odo_gap_disarmed = 0U;
+            p_ctx->side_odo_rate_guard_active = 0U;
+#endif
+#else
+            if (p_ctx->state == IMU_ST_HUMP)
+                reject_hump(p_ctx, IMU_REJ_SHOCK, p_in->t_us, p_out);
+#endif
+            p_ctx->b_side_valid = false;
+            p_ctx->side_quality_reason |= B4_Q_IMPACT;
+        }
+#else
+        if ((max_d2 > (uint32_t)(B4_SHOCK_MG * B4_SHOCK_MG)) &&
+            (p_ctx->state != IMU_ST_IMPACT)) {
             uint32_t mg = b4_isqrt(max_d2);
 
             /* A shock invalidates a partial hump: never a false peak. */
@@ -1733,6 +1769,7 @@ void b4_tick(b4_ctx_t *p_ctx, b4_in_t const *p_in, b4_out_t *p_out) {
         } else {
             /* no shock */
         }
+#endif
 
         /* 3. Terrain */
         for (i = 0U; i < 3U; i++) {

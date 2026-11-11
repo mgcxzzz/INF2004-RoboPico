@@ -60,3 +60,18 @@ later label learning. C8 is live bend/search state; both are copied under the
 existing owner lock and encoded outside it, published with ordinary telemetry.
 The controller rows retain their 56-byte ABI and use two spare bits for the
 full-rate bend phase. Binary fields and source IDs remain compatible.
+
+## IMU end-of-run safety (v0.2.3)
+
+Core0 acquisition feeds the calibrated raw FIFO to a bounded integer guard.
+Its single-writer state is copied under the IMU spinlock; calculations and I2C
+are outside that lock. Core1 safety polls the sticky result, cancels countdown/
+line requests, and invokes Buddy4 Stop through the shared motion API/coordinator.
+Commit/output gates also inhibit unsafe/stale IMU data. No new normal PWM writer,
+RTOS task, I2C client or lwIP caller is introduced.
+
+Core1 Reset revalidates fresh upright evidence under the copy lock while the
+supervisor latch is protected, and queues a reset instead of editing a concurrent
+core0 calculation. Pending reinitialization inhibits outputs/Start immediately.
+The acquisition task consumes that request and recalibrates. No automatic restart
+occurs. Historical collision classification remains only in legacy profiles.

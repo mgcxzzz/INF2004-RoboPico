@@ -340,7 +340,10 @@
    *    (barcode_peak.h bp_tlm_pack; flags bit7 = combined Buddy1-4 build);
    *  - encoder fault snapshot v0.2.1: payload 45 bytes, payload[0] = 0xC4;
    *  - barcode capture metadata v0.2.1: payload 27 bytes, payload[0] = 0xC5;
-   *  - network-supervision stop snapshot v0.2.1: payload 29 bytes, payload[0] = 0xC6.
+   *  - network-supervision stop snapshot v0.2.1: payload 29 bytes, payload[0] = 0xC6;
+   *  - junction decision v0.2.2: payload 17 bytes, payload[0] = 0xC7;
+   *  - drive state v0.2.2: payload 15 bytes, payload[0] = 0xC8;
+   *  - IMU lift/overturn safety snapshot v0.2.3: payload 27 bytes, payload[0] = 0xC9.
    * Anything else is rejected as an unknown layout. */
   const RA_EVENT = ['periodic', 'activate', 'end', 'stall push', 'floor/hold end'];   /* 3 = v0.4 stall push started, 4 = v0.5 tilt floor / v0.6 speed hold ended */
   const RA_END = ['none', 'level', 'descent', 'invalid', 'stale', 'timeout', 'not following', 'paused', 'stopped'];
@@ -482,6 +485,27 @@
       bendSide:side,bendPercent:percent,recoveryPhase:(meta>>>11)&7,sweepStage:stage,
       recoveryYawDeg:s(angular,3,13)/10,targetLeft:left,targetRight:right,saturated:!!(targets&(1<<18))};
   }
+  const IMU_STOP_REASON = ['none', 'lifted', 'overturn', 'unavailable'];
+  function decodeImuLiftSafety(p) {
+    if (p.length !== 27 || p[0] !== 0xc9) return { error: 'unknown IMU lift-safety layout' };
+    if (p[1] !== 0x23) return { error: 'unsupported IMU lift-safety version' };
+    if ((p[17] & 0xe0) || (p[19] & 0xf0) || (p[20] & 0x80) ||
+        (p[21] & 0xe0) || (p[22] & 0xc0) || (p[24] & 0xfe))
+      return { error: 'IMU lift-safety reserved bits are nonzero' };
+    const reason = p[20] & 3;
+    const upDwellMs = p[21], tiltDwellMs = p[22], uprightMs = u16(p, 23);
+    if (reason > 3 || upDwellMs > 30 || tiltDwellMs > 50 || uprightMs > 500)
+      return { error: 'IMU lift-safety value is out of range' };
+    let upProjection = u16(p, 16) & 0x1fff;
+    if (upProjection & 0x1000) upProjection -= 0x2000;
+    const flags = p[20];
+    return { kind: 'imu-lift-safety', version: '0.2.3', uptimeMs: u32(p, 2),
+      tripMs: u32(p, 6), lastSampleMs: u32(p, 10), eventCount: u16(p, 14),
+      upProjection, normMg: u16(p, 18) & 0x0fff,
+      reason, reasonName: IMU_STOP_REASON[reason], latched: !!(flags & 0x04),
+      armed: !!(flags & 0x08), fresh: !!(flags & 0x10), canReset: !!(flags & 0x20),
+      saturated: !!(flags & 0x40), upDwellMs, tiltDwellMs, uprightMs, runId: u16(p, 25) };
+  }
   function decodeSource15(p) {
     if (p.length === 12 && p[0] === 0xC2) {
       if ((p[2] & 0x80) || (p[3] & 0xe0) || !(p[3] & 3)) return {error:'invalid release metadata'};
@@ -496,12 +520,13 @@
         white:levels.slice(0,2),black:levels.slice(2),runId:u16(p,10)};
     }
     if (p.length === 60 && p[0] === 0xC3) {
-      if ((p[58]&0xc0) || (p[59]&0x80) || (p[57]&15)>10 || (p[57]>>>4)>10) return {error:'invalid RTOS runtime flags'};
+      if ((p[58]&0xc0) || (p[57]&15)>10 || (p[57]>>>4)>10) return {error:'invalid RTOS runtime flags'};
       const keys=['uptimeMs','reads','failed','lateGaps','fifoOverruns','fifoBudget','initBudget',
         'controlCount','controlLate','holds','recoveries','disarms','earlyClears','epoch'];
       const d={kind:'runtime'}; keys.forEach((k,i)=>d[k]=u32(p,1+4*i));
       return Object.assign(d,{clearReason:p[57]&15,failureReason:p[57]>>>4,
-        holdReason:p[58]&3,qualificationFlags:(p[58]>>>2)&15,controlFlags:p[59]});
+        holdReason:p[58]&3,qualificationFlags:(p[58]>>>2)&15,controlFlags:p[59],
+        imuStop:!!(p[59]&0x80)});
     }
     if (p.length === 21 && p[4] === 0xC1) {
       if ((p[5] & ~15) || p[6] > 200 || u16(p,7) > 6000 || u16(p,9) > 1000 || p[19] > 5 || p[20] > 200)
@@ -515,6 +540,7 @@
     if (p.length === 29 && p[0] === 0xc6) return decodeNetworkStop(p);
     if (p.length === 17 && p[0] === 0xc7) return decodeJunctionDecision(p);
     if (p.length === 15 && p[0] === 0xc8) return decodeDriveState(p);
+    if (p.length === 27 && p[0] === 0xc9) return decodeImuLiftSafety(p);
     if (p.length === 28) return decodeRampAssist(p);
     if (p.length === 24 && p[4] === 0xB1) return decodeBarcodePeak(p);
     return { error: 'unknown source-15 layout (payload ' + p.length + ' bytes' + (p.length > 4 ? ', byte4 0x' + p[4].toString(16) : '') + ')' };
@@ -598,7 +624,8 @@
   }
   function frameRunId(f) {
     if (!f || !f.data) return null;
-    return (f.src === SRC.SDK_MOTION || f.src === SRC.SUMMARY) ? f.data.runId : null;
+    return (f.src === SRC.SDK_MOTION || f.src === SRC.SUMMARY ||
+            (f.src === SRC.SOURCE15 && f.data.kind === 'imu-lift-safety')) ? f.data.runId : null;
   }
 
   function encodeCommand(code, id, arg) {
@@ -684,7 +711,7 @@
                 decodeB1, decodeB2Motion, decodeImu, decodeLine, decodeB5, decodeNav,
                 decodeSafety, decodeMapping, decodeMotion, decodeLineEvent, decodeNavEvent,
                 decodeSummary, decodeDiagnostics, decodeLogChunk, decodeRampAssist, decodeBarcodePeak,
-                decodeEncoderFault, decodeBarcodeCapture, decodeNetworkStop,
+                decodeEncoderFault, decodeBarcodeCapture, decodeNetworkStop, decodeImuLiftSafety,
                 decodeSource15, decodeStoredLine, picoUptimeMs, frameRunId,
                 detectProfile, effectiveProfile };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

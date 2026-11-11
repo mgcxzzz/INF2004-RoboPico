@@ -22,7 +22,7 @@ typedef struct {
     uint32_t edges[2], invalid[2];
     uint32_t encoder_bad[2], encoder_changes[2];
     int16_t speed_x10[2], target[2], pwm[2];
-    unsigned flags : 7, clock_good : 2, reason : 4;
+    unsigned flags : 8, clock_good : 2, reason : 4;
     unsigned encoder_kind : 2, encoder_wheel : 2;
 } BringupStatus;
 
@@ -49,6 +49,12 @@ void bringup_console_task(INT code, void *exinf);
 void bringup_status_task(INT code, void *exinf);
 void bringup_stop(uint8_t reason, uint16_t latch);
 void bringup_stop_from(uint8_t reason, uint16_t latch, MotionOwner requester);
+#if defined(APP_RTOS_RELEASE) && defined(APP_RTOS_IMU)
+/* Buddy4 safety event. Reasons are ri_safety_reason(): 1 lift, 2 overturn,
+ * 3 sensor not ready/stale. Lift/overturn always cancel and latch; an IMU
+ * availability failure stops only active or pending motion. */
+void bringup_imu_safety_trip(unsigned reason);
+#endif
 bool bringup_can_start(void);
 bool bringup_clear_latch(void);
 void bringup_zero_status(void);

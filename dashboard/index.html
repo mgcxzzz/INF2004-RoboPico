@@ -1,8 +1,8 @@
 <!doctype html>
 <!--
-  IS28 merged dashboard v0.2 (v0.1 simplified: Recording and the Firmware profile card removed).
+  IS28 merged dashboard v0.2.3 (v0.1 simplified: Recording and the Firmware profile card removed).
   One page for both firmware families on the same broker:
-    - RTOS (micro T-Kernel) Buddy1/Buddy4 build: sources 1-8 (tools/dashboard).
+    - RTOS (micro T-Kernel) Buddy1/Buddy4 build: sources 1-8 plus release snapshots (source 15).
     - SDK v2.3 Buddy2/Buddy3 build (+ optional Buddy4 add-on): sources 1, 2, 4, 8, 9-14
       (testing/subsystem2/interface_wifi_v2_3/dashboard).
   Panels and logic are ported from those two dashboards; both originals are
@@ -15,7 +15,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>RoboPico — Provisional Buddy 1–4 integration</title>
+<title>RoboPico — Buddy 1–4 RTOS v0.2.3</title>
 <script src="vendor/mqtt.min.js"></script>
 <script src="is28_schema.js"></script>
 <style>
@@ -103,6 +103,8 @@
       <dt>Safety (RTOS)</dt><dd id="safety">–</dd>
       <dt>Fault mask (RTOS)</dt><dd id="faults">–</dd>
       <dt>Last stop time (RTOS)</dt><dd id="stopms">–</dd>
+      <dt>IMU end-of-run</dt><dd id="imuStop" class="muted">Waiting for fresh C9 status</dd>
+      <dt>IMU stop details</dt><dd id="imuStopDetails" class="muted small">A fresh, latched C9 snapshot is required to name an IMU stop. Heartbeat Fault is a generic state.</dd>
     </dl>
   </section>
 
@@ -350,7 +352,7 @@
 
 <script>
 'use strict';
-const DASHBOARD_VERSION = 'v0.2.2';
+const DASHBOARD_VERSION = 'v0.2.3';
 const $ = (id) => document.getElementById(id);
 const hasWindow = typeof window !== 'undefined';
 const SRC = IS28.SRC;
@@ -364,6 +366,7 @@ let lastRamp15 = null, lastPeak15 = null, lastBarcodeCapture = null, lastEncoder
 let encoderFaultSignature = null, networkStopSignature = null;
 let lastJunctionDecision=null,lastDriveState=null,junctionDecisionSignature=null,driveStateSignature=null;
 let driveSeenAt=0;
+let lastImuStop=null,imuStopSeenAt=0,lastImuStopSeq=null,imuStopSignature=null;
 let mappingQueried = false, lastUptime = null;
 /* RTOS Buddy2/Buddy4 live state (tools/dashboard logic) */
 let lastImuAt = 0, lastImuSeq = null, imuAwaitingFresh = false;
@@ -447,13 +450,14 @@ $('connect').onclick = () => {
 
 /* Broker link gone: nothing shown live can be trusted any more. */
 function liveActive() {
-  return hb.seen || !!lastMotionAt || !!lastImuAt || coordinatorMode !== null ||
+  return hb.seen || !!lastMotionAt || !!lastImuAt || !!lastImuStop || coordinatorMode !== null ||
          Object.keys(fresh).some((k) => fresh[k] && !staleShown[k]);
 }
 function linkLost(reason) {
   if (liveActive()) invalidateLive(reason);
   hb.seen = false; hb.lastSeq = null; hb.lastUptime = null;
   lastUptime = null;
+  refreshImuStop();
   cancelLogDownload('Broker disconnected. No complete export was produced.');
   updateLogDownloadControl(); updateCarLink(now());
 }
@@ -710,7 +714,11 @@ function profileText(p) {
          p === 'rtos' ? 'RTOS (micro T-Kernel)' : p === 'rtos-inferred' ? 'RTOS (inferred from Buddy 2/4 frames without SDK telemetry)' : p === 'mixed' ? 'MIXED (RTOS and SDK frames)' : 'unknown';
 }
 function noteSource(src) { const t = now(), isNew = !seenSources.has(src); seenSources.set(src, t); if (!firstSeen.has(src)) firstSeen.set(src, t); if (isNew) updateProfile(); }
-function clearSeen() { releaseInfo=releaseRuntime=null; releaseSeenAt=releaseRuntimeSeenAt=0; seenSources.clear(); firstSeen.clear(); connectedDriveSeen = sdkDriveSeen = connectedBarcodeSeen = connectedImuSeen = false; }
+function clearSeen() {
+  releaseInfo=releaseRuntime=null; releaseSeenAt=releaseRuntimeSeenAt=0; seenSources.clear(); firstSeen.clear();
+  connectedDriveSeen = sdkDriveSeen = connectedBarcodeSeen = connectedImuSeen = false;
+  lastImuStop=null; imuStopSeenAt=0; lastImuStopSeq=null; imuStopSignature=null; refreshImuStop();
+}
 function updateProfile() {
   const det = detectedProfile(), eff = currentProfile();
   const t = now();
@@ -796,6 +804,7 @@ function onMessage(topic, payload, packet) {
     mappingUnknown('Car offline. Its mapping needs a fresh readback when it returns.');
     if (liveActive()) invalidateLive('car offline (broker last will)');
     hb.seen = false; hb.lastSeq = null; lastUptime = null;
+    refreshImuStop();
     log(topic, 'broker reports the car went offline');
   } else if (topic === 'is28/cmd') {
     const own = isOwnCommand(b);
@@ -826,6 +835,7 @@ function heartbeat(f) {
   $('hbgap').textContent = `${hb.lastGap.toFixed(2)} s / ${hb.maxGap.toFixed(2)} s`;
   $('hbage').textContent = '0.0 s ago'; $('hbage').className = 'ok';
   setPill($('carlink'), 'car: online', 'ok');
+  refreshImuStop();
 }
 
 function updateCarLink(t) {
@@ -845,6 +855,7 @@ function updateCarLink(t) {
 function tick() {
   const t = now();
   if(driveSeenAt && t-driveSeenAt>2500) $('driveState').textContent='Stale — waiting for bend/recovery telemetry';
+  refreshImuStop();
   if (lastImuAt) {
     const imuAge = (t - lastImuAt) / 1000;
     $('imuAge').textContent = `${imuAge.toFixed(1)} s ago`;
@@ -904,6 +915,7 @@ function invalidateLive(reason) {
   clearMotion('waiting for fresh Buddy 2 telemetry after ' + reason);
   lastImuAt = 0; imuAwaitingFresh = lastImuSeq !== null; lastAcceptedImuPeak = null;
   clearImu('waiting for fresh Buddy 4 telemetry after ' + reason);
+  lastImuStop=null; imuStopSeenAt=0; lastImuStopSeq=null; imuStopSignature=null;
   for (const k of Object.keys(GROUPS)) { fresh[k] = 0; staleShown[k] = false; }
   nav6 = null; safetyData = null; sdkNav = null; hb.state = null; faultSince = null;
   coordinatorMode = null; coordinatorOffSince = null;
@@ -919,6 +931,7 @@ function invalidateLive(reason) {
   $('progressStatus').textContent = `Cleared: ${reason}.`; $('progressStatus').className = 'warn small';
   $('navDetails').textContent = 'waiting for coordinator telemetry'; $('sdkFault').textContent = '—'; $('owner').textContent = '–';
   $('hbState').textContent = '–'; $('s3').textContent = 'no frames'; $('s5').textContent = 'no frames';
+  refreshImuStop();
   for (const id of ['net','pub','cmds','connects','fill','uptime']) $(id).textContent = '–';
   motionChartRows = []; imuChartHeight = []; imuChartPitch = [];
   clearSeen();
@@ -967,10 +980,10 @@ function refreshOpState() {
 function refreshSafety() {
   if(releaseInfo) {
     const fresh=releaseRuntime && now()-releaseRuntimeSeenAt<3500;
-    const flags=fresh?releaseRuntime.controlFlags:0, fault=flags&(2|16|32|64);
+    const flags=fresh?releaseRuntime.controlFlags:0, fault=flags&(2|16|32|64|128);
     $('safety').textContent=!fresh?'Runtime status stale':fault?'Latched stop':flags&1?'Running':(flags&12)===12?'Ready':'Initializing';
     $('safety').className=fault?'bad':fresh?'ok':'muted';
-    $('faults').textContent=!fresh?'unavailable':fault?'0x'+fault.toString(16):'none';
+    $('faults').textContent=!fresh?'unavailable':fault?`0x${fault.toString(16)}${flags&128?' (IMU safety bit; cause only named by fresh C9)':''}`:'none';
     $('stopms').textContent='Stop latency is not measured by this runtime packet';
     return;
   }
@@ -1003,6 +1016,46 @@ function refreshSafety() {
   $('safety').className = stateClass(d.stateName);
   $('faults').textContent = d.faultMask ? d.faultNames.join(', ') : 'none'; $('faults').className = '';
   $('stopms').textContent = `${d.lastStopMs} ms (worst ${d.maxStopMs} ms, limit 100)`; $('stopms').className = '';
+}
+function heartbeatStopNote() {
+  if (!hb.seen) return 'Heartbeat: no heartbeat received; operating state is unknown.';
+  const age = now() - hb.last;
+  if (age > 2000) return `Heartbeat stale (${(age / 1000).toFixed(1)} s); no current operating state.`;
+  const state = hbStateName(hb.state);
+  return `Heartbeat fresh: ${state}${hb.state === 6 ? ' (generic Fault state; it does not identify the trip cause)' : ''}.`;
+}
+function refreshImuStop() {
+  const status = $('imuStop'), details = $('imuStopDetails');
+  if (!status || !details) return;
+  const hbNote = heartbeatStopNote();
+  if (!lastImuStop) {
+    status.textContent = 'No fresh IMU safety snapshot'; status.className = 'muted';
+    details.textContent = `Waiting for source-15 C9. ${hbNote}`;
+    return;
+  }
+  const age = now() - imuStopSeenAt, d = lastImuStop;
+  if (age > 2500) {
+    status.textContent = 'Stale — no current IMU stop status'; status.className = 'warn';
+    details.textContent = `C9 is ${(age / 1000).toFixed(1)} s old; its previous reason is not shown as current. ${hbNote}`;
+    return;
+  }
+  if (!d.latched && (!d.fresh || !d.armed || d.reason === 3)) {
+    status.textContent = 'IMU not ready — motion inhibited'; status.className = 'warn';
+  } else if (!d.latched) {
+    status.textContent = 'No IMU safety stop latched'; status.className = 'ok';
+  } else if (!d.fresh) {
+    status.textContent = 'IMU stop latched — sample freshness not confirmed'; status.className = 'bad';
+  } else if (d.reason === 1) {
+    status.textContent = 'Run ended — lifted'; status.className = 'bad';
+  } else if (d.reason === 2) {
+    status.textContent = 'Overturn stop'; status.className = 'bad';
+  } else if (d.reason === 3) {
+    status.textContent = 'IMU safety stop — reason unavailable'; status.className = 'bad';
+  } else {
+    status.textContent = 'Latched stop — C9 reports no IMU trip reason'; status.className = 'warn';
+  }
+  const reason = d.latched && d.fresh && d.reason > 0 ? `Reason ${d.reasonName}; ` : '';
+  details.textContent = `Run ${d.runId}; ${reason}event ${d.eventCount}; trip uptime ${d.tripMs} ms; last sample ${d.lastSampleMs} ms; raw up projection ${d.upProjection}; norm ${d.normMg} mg; dwell up/tilt/upright ${d.upDwellMs}/${d.tiltDwellMs}/${d.uprightMs} ms; ${d.armed?'armed':'not armed'}; reset ${d.canReset?'permitted':'not permitted'}${d.saturated?'; packed value saturated':''}. Status only: no automatic reset or restart. ${hbNote}`;
 }
 
 function summary(f) {
@@ -1257,6 +1310,20 @@ function showBuildId() {
   $('buildId').textContent = parts.join(' · ') || '—';
 }
 function showSource15(d, f) {
+  if(d.kind==='imu-lift-safety') {
+    if(lastImuStop && lastImuStopSeq===f.seq && lastImuStop.uptimeMs===d.uptimeMs) return;
+    lastImuStop={...d,receivedAt:new Date().toISOString(),seq:f.seq};
+    imuStopSeenAt=now(); lastImuStopSeq=f.seq;
+    refreshImuStop();
+    const signature=`${d.runId}:${d.eventCount}:${d.reason}:${d.tripMs}`;
+    if(d.latched&&d.reason!==0&&signature!==imuStopSignature) {
+      imuStopSignature=signature;
+      const label=d.reason===1?'Run ended — lifted':d.reason===2?'Overturn stop':'IMU safety stop — reason unavailable';
+      addEvent(`${label} · run ${d.runId} · trigger ${d.eventCount} · trip uptime ${d.tripMs} ms · ${d.fresh?'IMU sample fresh':'IMU sample freshness not confirmed'}`,
+        lastImuStop,'imu-lift-safety',f);
+    }
+    return;
+  }
   if(d.kind==='junction-decision') {
     lastJunctionDecision={...d,receivedAt:new Date().toISOString()};
     $('junctionDecision').textContent=d.decisionSerial?`${d.widthMm.toFixed(2)} mm · ${d.resultName}`:'No completed stripe measured';
@@ -1291,6 +1358,7 @@ function showSource15(d, f) {
     releaseRuntime=d; releaseRuntimeSeenAt=now(); $('rtosRuntimeCard').hidden=false;
     $('rtosRuntime').textContent=`IMU reads ${d.reads} - failed ${d.failed} - late ${d.lateGaps} - FIFO overruns ${d.fifoOverruns} - control late ${d.controlLate}`;
     $('rtosHump').textContent=`Qualification flags ${d.qualificationFlags} - holds/recovered ${d.holds}/${d.recoveries} - clears ${d.disarms} - last failure ${d.failureReason}`;
+    refreshSafety();
     return;
   }
   if (d.kind === 'ramp-targets') {
@@ -1606,7 +1674,9 @@ function framesCsv(rows) {
     r.picoUptimeMs, r.runId, r.latestRunId, r.firmwareProfile, r.error, r.hex, r.data === null ? '' : JSON.stringify(r.data)]));
 }
 function telemetryJson() {
-  return JSON.stringify({ capture: captureInfo(), motion: motionHistory, events: eventRows, buddy4: b4Rows }, null, 2) + '\n';
+  const imuSafety = frames.filter((r) => r.src === SRC.SOURCE15 && r.data && r.data.kind === 'imu-lift-safety');
+  return JSON.stringify({ capture: captureInfo(), motion: motionHistory, events: eventRows, buddy4: b4Rows,
+    imuSafety }, null, 2) + '\n';
 }
 function eventsJson() { return JSON.stringify({ capture: captureInfo(), events: eventRows }, null, 2) + '\n'; }
 function framesJson() {

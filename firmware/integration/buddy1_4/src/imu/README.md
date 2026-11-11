@@ -1,3 +1,16 @@
+## Active release v0.2.3: lift/overturn safety
+
+The production IMU FIFO additionally feeds an independent integer lift guard,
+using calibrated gravity projection and sustained steep orientation. It can stop
+while tracking, turning, paused or in the Start countdown, independently of hump
+quality/odometry. The acquisition task copies state; core1 safety cancels through
+the Buddy 4 motion API/coordinator. It never writes PWM from acquisition or MQTT.
+A qualified event is sticky; fresh upright evidence plus explicit Reset is required.
+Old Impact enum values remain compatible, but production collision classification
+is disabled; transient high dynamics still invalidate terrain measurements.
+See docs/imu_end_run_v0_2_3.md for thresholds, limits, setup and purposeful tests.
+The sections below describe the retained terrain/height baseline.
+
 # IMU and ramp estimation — Buddy 4
 
 Main v0.2.0 uses the micro T-Kernel production profile. Active task/ownership

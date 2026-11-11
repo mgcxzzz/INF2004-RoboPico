@@ -21,6 +21,14 @@
 #include "src/imu/imu_proc.h"
 #include "src/imu/b4_diagnostics.h"
 #include "src/telemetry/sys_tlm.h"
+#ifdef APP_RTOS_RELEASE
+#include "src/imu/imu_lift_guard.h"
+/* Implemented by the RTOS mailbox owner. Samples are copied/processed before
+ * the normal hump-quality gates and outside the wrapper's cross-core lock. */
+void ri_lift_guard_samples(int16_t const baseline_mg[3], int32_t gravity_mg,
+                           imu_lift_vec_t const *samples, uint8_t n,
+                           uint32_t sample_period_us, bool fresh_batch);
+#endif
 #ifdef APP_RTOS_IMU
 #include "app_program/imu_navigation/imu_acquisition.h"
 #include "app_program/imu_navigation/calibration_diagnostics.h"
@@ -265,6 +273,9 @@ void b4v23_tick(uint64_t now_us, b4v23_mission_t mission, const b4v23_odo_t *odo
     uint32_t now = (uint32_t)now_us;
     uint32_t t_begin = sys_time_us();
     bool processed = false;
+#ifdef APP_RTOS_RELEASE
+    bool lift_fresh_batch = false;
+#endif
     g_next_us = (g_next_us == 0U || now_us - g_next_us > (uint64_t)B4_PERIOD_MS * 1000U)
                     ? now_us + (uint64_t)B4_PERIOD_MS * 1000U     /* (re)start the schedule */
                     : g_next_us + (uint64_t)B4_PERIOD_MS * 1000U; /* fixed rate, no drift  */
@@ -272,6 +283,11 @@ void b4v23_tick(uint64_t now_us, b4v23_mission_t mission, const b4v23_odo_t *odo
         g_odo = *odo;
     if (mission != B4V23_NONE)
         b4_mission(&g_ctx, map_mission(mission), now, &imu_out);
+#ifdef APP_RTOS_RELEASE
+    bool lift_calibrated = (g_ctx.state != IMU_ST_INIT) &&
+                           (g_ctx.state != IMU_ST_CALIBRATING) &&
+                           (g_ctx.state != IMU_ST_FAULT);
+#endif
     g_in.t_us = now;
     g_in.gap_us = now - g_last_us;
     g_last_us = now;
@@ -318,6 +334,13 @@ void b4v23_tick(uint64_t now_us, b4v23_mission_t mission, const b4v23_odo_t *odo
             g_calibration.fifo_overruns += g_in.b_overrun;
         }
 #endif
+#ifdef APP_RTOS_RELEASE
+        /* Keep the guard independent of estimator validity. It sees every
+         * fresh FIFO batch after car-axis conversion, including idle and
+         * samples that the hump geometry/MAD filters will reject. */
+        lift_fresh_batch = lift_calibrated && g_in.b_read_ok && (g_in.n > 0U) &&
+                           !g_in.b_overrun && (g_in.gap_us <= B4_LATE_US);
+#endif
         b4_tick(&g_ctx, &g_in, &imu_out);
 #ifdef APP_RTOS_IMU
         if (calibrating) {
@@ -336,6 +359,12 @@ void b4v23_tick(uint64_t now_us, b4v23_mission_t mission, const b4v23_odo_t *odo
 #endif
         processed = g_in.b_read_ok;
     }
+#ifdef APP_RTOS_RELEASE
+    lift_fresh_batch = lift_fresh_batch && (g_ctx.state != IMU_ST_INIT) &&
+                       (g_ctx.state != IMU_ST_CALIBRATING) && (g_ctx.state != IMU_ST_FAULT);
+    ri_lift_guard_samples(g_ctx.base, g_ctx.g_mg, g_in.s, g_in.n, B4_SAMPLE_US,
+                          lift_fresh_batch);
+#endif
     /* ramp-assist v0.1: publish this period's tilt view (observer data). */
     g_tilt.seq++;
     g_tilt.t_us = now_us;

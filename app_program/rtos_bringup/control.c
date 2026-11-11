@@ -24,6 +24,14 @@ static int16_t bench_target[2];
 static volatile uint32_t urgent_stop;
 static void start_pulse(unsigned selected);
 
+static bool imu_release_blocked(void) {
+#if defined(APP_RTOS_RELEASE) && defined(APP_RTOS_IMU)
+    return ri_safety_blocked();
+#else
+    return false;
+#endif
+}
+
 static UINT status_enter(void) {
     UINT key;
     (void)ISpinLock(&status_lock, &key);
@@ -59,9 +67,11 @@ void bringup_zero_status(void) {
     board_motion_unlock(NULL, api_key);
 }
 bool bringup_can_start(void) {
+    bool imu_blocked = imu_release_blocked();
     UINT key = status_enter();
     bool ok = br_can_start(status.flags, (uint32_t)board_time_us(), stopped_us, tm_usb_state(),
                            !board_button_pressed(20) && !board_button_pressed(21)) &&
+              br_safety_allows_motion(status.flags, imu_blocked) &&
               !bringup_irq_stop;
     status_leave(key);
 #ifdef APP_RTOS_RELEASE
@@ -70,9 +80,20 @@ bool bringup_can_start(void) {
     return ok;
 }
 bool bringup_clear_latch(void) {
+#if defined(APP_RTOS_RELEASE) && defined(APP_RTOS_IMU)
+    bool imu_reset_allowed = ri_safety_can_reset();
+#else
+    bool imu_reset_allowed = true;
+#endif
     UINT key = status_enter();
-    bool ok = !(status.flags & BR_ACTIVE) && !board_button_pressed(20) &&
-              !board_button_pressed(21) && (status.flags & BR_CLOCK_OK);
+    bool buttons_released = !board_button_pressed(20) && !board_button_pressed(21);
+    bool ok = br_can_clear_latch(status.flags, buttons_released, imu_reset_allowed);
+#if defined(APP_RTOS_RELEASE) && defined(APP_RTOS_IMU)
+    /* Recheck under the IMU copy lock while the bring-up latch is protected.
+     * The IMU task drops that lock before requesting this stop path. */
+    if (ok && (status.flags & BR_IMU))
+        ok = ri_safety_reset_latch();
+#endif
     if (ok) {
         bringup_irq_stop = 0;
         status.flags &= (uint16_t)~BR_LATCHED;
@@ -115,6 +136,34 @@ void bringup_stop_from(uint8_t reason, uint16_t latch, MotionOwner requester) {
                   reason, latch);
 }
 
+#if defined(APP_RTOS_RELEASE) && defined(APP_RTOS_IMU)
+void bringup_imu_safety_trip(unsigned reason) {
+    uint8_t stop_reason;
+    if (reason == 1U)
+        stop_reason = BR_REASON_IMU_LIFT;
+    else if (reason == 2U)
+        stop_reason = BR_REASON_IMU_OVERTURN;
+    else if (reason == 3U)
+        stop_reason = BR_REASON_IMU_UNAVAILABLE;
+    else
+        return;
+
+    BringupStatus current;
+    bringup_get_status(&current);
+    bool pending = false;
+#ifdef APP_RTOS_LINE
+    pending = rtos_line_pending();
+#endif
+    bool motion_in_progress = (current.flags & BR_ACTIVE) != 0U || pending;
+    if (reason == 3U && !motion_in_progress)
+        return; /* Readiness still blocks Start, without a false run-stop latch. */
+    if ((current.flags & BR_IMU) != 0U)
+        return; /* Preserve the first cause until explicit Reset. */
+
+    bringup_stop_from(stop_reason, BR_IMU, MOTION_BUDDY4);
+}
+#endif
+
 ER bringup_create_objects(void) {
     T_CMBF definition = {0};
     definition.mbfatr = TA_TFIFO;
@@ -135,8 +184,9 @@ static void apply_outputs(void *raw) {
 #else
     const int32_t *pwm = raw;
 #endif
+    bool imu_blocked = imu_release_blocked();
     UINT key = status_enter();
-    bool allowed = urgent_stop == 0U &&
+    bool allowed = !imu_blocked && urgent_stop == 0U &&
                    br_outputs_allowed(status.flags, bringup_irq_stop != 0U, tm_usb_state(),
                                       !board_button_pressed(20U) && !board_button_pressed(21U));
 #if defined(APP_RTOS_LINE) && defined(APP_RTOS_NETWORK)
@@ -486,6 +536,15 @@ void bringup_safety_task(INT code, void *exinf) {
         urgent_stop = 0U;
         status_leave(key);
         uint32_t now = (uint32_t)board_time_us();
+#if defined(APP_RTOS_RELEASE) && defined(APP_RTOS_IMU)
+        unsigned imu_reason = ri_safety_reason();
+        bool pending = rtos_line_pending();
+        if (imu_reason == 1U || imu_reason == 2U ||
+            (imu_reason == 3U && (((snapshot.flags & BR_ACTIVE) != 0U) || pending))) {
+            bringup_imu_safety_trip(imu_reason);
+            bringup_get_status(&snapshot);
+        }
+#endif
         bool active = (snapshot.flags & BR_ACTIVE) != 0U;
 #ifdef APP_RTOS_NETWORK
         unsigned net_urgent = rn_take_urgent();
@@ -518,7 +577,7 @@ void bringup_safety_task(INT code, void *exinf) {
         uintptr_t api_key = board_motion_lock(NULL);
         key = status_enter();
         if ((status.flags & BR_ACTIVE) && !bringup_irq_stop) {
-            bool allowed =
+            bool allowed = !imu_release_blocked() &&
                 br_outputs_allowed(status.flags, bringup_irq_stop != 0U, tm_usb_state(),
                                    !board_button_pressed(20U) && !board_button_pressed(21U));
             for (unsigned w = 0; w < 2; ++w) {
@@ -557,7 +616,7 @@ static void start_pulse(unsigned selected) {
 #endif
     if (!br_can_start(snapshot.flags, (uint32_t)now, stopped, tm_usb_state(),
                       !board_button_pressed(20U) && !board_button_pressed(21U)) ||
-        bringup_irq_stop) {
+        !br_safety_allows_motion(snapshot.flags, imu_release_blocked()) || bringup_irq_stop) {
         tm_printf((
             UB *)"REQUEST rejected: wait for CLOCK PASS, release buttons, clear a latch with x, and allow 1s rest.\n");
         return;
@@ -572,7 +631,8 @@ static void start_pulse(unsigned selected) {
     }
     key = status_enter();
     bool accepted =
-        bringup_irq_stop == 0U && urgent_stop == 0U && (status.flags & BR_LATCHED) == 0U;
+        bringup_irq_stop == 0U && urgent_stop == 0U &&
+        br_safety_allows_motion(status.flags, imu_release_blocked());
 #ifdef APP_RTOS_LINE
     accepted = accepted && rtos_line_start_valid();
 #endif
@@ -642,6 +702,10 @@ void bringup_nav_task(INT code, void *exinf) {
         else if (command == 's' || command == 'e')
             bringup_stop(BR_REASON_SERIAL, command == 'e' ? BR_ESTOP : 0U);
         else if (command == 'x') {
+#if defined(APP_RTOS_RELEASE) && defined(APP_RTOS_IMU)
+            if (!bringup_clear_latch())
+                tm_printf((UB *)"RESET rejected: keep the car upright and still, release buttons, and retry when IMU is fresh.\n");
+#else
             UINT key = status_enter();
             if ((status.flags & BR_ACTIVE) == 0U && !board_button_pressed(20U) &&
                 !board_button_pressed(21U) && (status.flags & BR_CLOCK_OK) != 0U) {
@@ -651,6 +715,7 @@ void bringup_nav_task(INT code, void *exinf) {
                 br_encoder_fault_clear(&encoder_fault_snapshot);
             }
             status_leave(key);
+#endif
             bringup_report();
         }
 #ifdef APP_RTOS_LINE

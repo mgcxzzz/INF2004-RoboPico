@@ -176,3 +176,24 @@ row retain the full-rate bend phase: meta bit31 and aux[1] bit31. Other row
 fields and lengths stay unchanged; older rows decode phase0. Network readers
 never access mutable planner state directly. This is not a claim that the
 remaining whole-firmware Tribunal audit is complete.
+
+## v0.2.3 IMU end-of-run guard
+
+C9 is a 30-byte binary frame (27-byte payload): subtype/version8 each, uptime32,
+first-event timestamp32, last-good-sample timestamp32, saturating event count16,
+signed gravity projection13, magnitude12, reason2, five one-bit flags, upward
+qualification5 milliseconds (0..30), tilt qualification6 (0..50), upright dwell9
+(0..500), and current run ID16. Explicit reserved bits are zero/validated. Native
+guard counters saturate at12/20/200 samples (4/5/8 bits); categorical states and
+metric ranges are bounded. No acceleration is quantised before the detector.
+The supervisor gains one IMU-latch bit (flags7 ->8 bits); reason remains4 bits.
+C3 carries that bit without changing its length. The old 56-byte controller rows
+retain their7-bit legacy flag view; C3/C9 supply the full new safety condition.
+
+The IMU task is the sole detector writer. Computation occurs outside its copy
+lock. Cross-core reads and reset requests use bounded snapshots/locked packed
+updates; reset requests cannot erase a concurrent event or energize outputs.
+C9 is emitted at1Hz including telemetry-off; C2-C9 total256 frame bytes/s at their
+1Hz cadence, excluding other telemetry/MQTT/TCP. Before/after linked RAM evidence
+is in the build manifest. This remains scoped evidence, not completion of the
+remaining whole-firmware Tribunal audit.

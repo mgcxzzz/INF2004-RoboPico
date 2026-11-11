@@ -6,6 +6,9 @@
 #include "connected_policy.h"
 #include "src/network/wifi_packets.h"
 #include "src/network/wifi_protocol.h"
+#if defined(APP_RTOS_RELEASE) && defined(APP_RTOS_IMU)
+#include "../imu_navigation/imu_service.h"
+#endif
 static ID requests;
 static volatile uint32_t paused;
 static uint32_t lease;
@@ -13,6 +16,14 @@ static uint32_t seen_connects, connected_since;
 static T_SPLOCK network_stop_lock;
 static RnNetworkStopSnapshot network_stop_snapshot;
 static volatile uint32_t telemetry_enabled = 1;
+
+static bool imu_safety_blocked(void) {
+#if defined(APP_RTOS_RELEASE) && defined(APP_RTOS_IMU)
+    return ri_safety_blocked();
+#else
+    return false;
+#endif
+}
 
 static UINT network_stop_enter(void) {
     UINT key;
@@ -139,7 +150,8 @@ void rn_drive_process(void *raw) {
                 break;
             case WP_CMD_RESUME:
                 if (!rn_drive_online() || !rn_drive_paused() || !(s.flags & BR_ACTIVE) ||
-                    (s.flags & BR_LATCHED) || bringup_irq_stop || !br_usb_supervised(tm_usb_state()) ||
+                    !br_safety_allows_motion(s.flags, imu_safety_blocked()) || bringup_irq_stop ||
+                    !br_usb_supervised(tm_usb_state()) ||
                     board_button_pressed(20) || board_button_pressed(21) || !rtos_line_ready() ||
                     motion_resume_line(MOTION_BUDDY1, lease, false) != MOTION_OK) {
                     result = WP_ACK_BUSY;

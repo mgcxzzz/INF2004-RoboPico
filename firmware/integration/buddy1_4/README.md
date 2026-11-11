@@ -1,4 +1,4 @@
-# Buddy 1–4 RTOS integration v0.2.2
+# Buddy 1–4 RTOS integration v0.2.3
 
 **PROVISIONAL. Buddy 5 obstacle avoidance is NOT integrated.**
 
@@ -11,12 +11,12 @@ while micro T-Kernel owns task scheduling and the kernel Wi-Fi service.
 - [Release status / hardware evidence](STATUS.md)
 - [Build](../../../docs/build.md) and [focused checks](../../../docs/testing.md)
 - [Architecture](../../../docs/architecture.md) and include/interfaces/
-- [Current UF2 + full bundle](artifacts/v0_2_2_rtos/)
+- [Current UF2 + full bundle](artifacts/v0_2_3_rtos/)
 - [Historical SDK reference](SDK_REFERENCE.md)
 
 Profile 1 keeps 45 mm/s nominal straight travel. v0.2.2 adds qualified bend
-slowing/authority, bounded in-place search and a 7 mm junction minimum; these
-changes await physical acceptance. Runtime A–Z routing, barcode acceptance,
+slowing/authority, bounded in-place search and a 7 mm junction minimum; junction turns have improved in user testing. Bend acceptance and recovery
+diagnostics remain pending. Runtime A–Z routing, barcode acceptance,
 110 mm GP27-to-axle geometry, saved calibration and ramp assistance are retained. Short odometry gaps use the tested bounded qualification policy.
 Powerbank operation requires the Pico's fresh broker connection; closing a
 USB terminal no longer stops this release. GP20/GP21 and dashboard stops remain.
@@ -29,3 +29,7 @@ These histories are RAM-only and bounded; export before another Start/reboot.
 The existing CMake SDK target remains a legacy comparison build. Use the
 RTOS make profile in docs/build.md for this release. Public images contain
 no Wi-Fi password. The manifest pins the tested baseline and build inputs.
+
+The [v0.2.3 IMU safety addition](../../../docs/imu_end_run_v0_2_3.md) replaces
+collision classification with a latched lift/overturn stop. It does not tune the
+line/barcode/ramp controllers. Use the complete new dashboard bundle.

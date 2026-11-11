@@ -68,7 +68,7 @@ void ri_ramp_report(void) {
     assert(!depth);
 }
 #ifdef APP_RTOS_RELEASE
-typedef struct { uint32_t control_count, late_count; unsigned flags; } BringupStatus;
+typedef struct { uint32_t control_count, late_count; unsigned flags, reason; } BringupStatus;
 static void bringup_get_status(BringupStatus *s) {
     assert(!depth); *s=(BringupStatus){.control_count=1234,.late_count=0,.flags=12};
 }
@@ -165,4 +165,5 @@ int main(void) {
 #endif
     puts(
         "PASS actual IMU task/service: stationary calibration, fresh stopped Reset calibration epoch, lifetime counters, deadline waits and unlocked I/O.");
+    return 0;
 }

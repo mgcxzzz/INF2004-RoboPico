@@ -1,4 +1,4 @@
-# Provisional Buddy 1–4 RTOS v0.2.2 status
+# Provisional Buddy 1–4 RTOS v0.2.3 status
 
 Main is intentionally promoted before the remaining full-circuit checks, per
 user instruction. Buddy 5 remains a blank integration point, not a working feature.
@@ -60,3 +60,15 @@ cutoffs remain unchanged. C8 shows bend/recovery state. Straight parity and
 focused native/browser/build checks are software evidence; supported-mat sharp
 bends, reverse search effort/reacquisition and junction acceptance still require
 the next physical run. See ../../../docs/drive_refinements_v0_2_2.md.
+
+## IMU end-of-run safety v0.2.3
+
+Professor revision removes IMU collision detection and requires lifted/overturned
+stopping. Release-only raw acceleration qualification now sets a sticky safety
+condition, handled by Buddy 4 through the existing coordinator Stop path. New
+C9 diagnostics remain available with ordinary telemetry off. Hardware acceptance
+of the lift/overturn gesture, output stop and ramp false-positive checks is pending.
+
+User update: v0.2.2 junction width change never missed a junction in the reported
+test. Bends were not tested. Recovery reportedly did not visibly sweep; no logs
+are currently available, so this release leaves those algorithms unchanged.

@@ -1,8 +1,8 @@
 # RoboPico — provisional Buddy 1–4 RTOS integration
 
-**Current main release: v0.2.2, micro T-Kernel SMP. Buddy 5 is NOT integrated.**
+**Current main release: v0.2.3, micro T-Kernel SMP. Buddy 5 is NOT integrated.**
 
-[Download firmware and full bundle](firmware/integration/buddy1_4/artifacts/v0_2_2_rtos/)
+[Download firmware and full bundle](firmware/integration/buddy1_4/artifacts/v0_2_3_rtos/)
  · [Setup / powerbank / log downloads](docs/setup.md)
  · [Validation and pending circuit checks](firmware/integration/buddy1_4/STATUS.md)
  · [Architecture and interfaces](docs/architecture.md)
@@ -41,3 +41,9 @@ firmware/migration/ are historical validation stages. Main's active build is
 The working barcode decoders and calibration priority are unchanged. This release
 retains fault diagnostics and does not claim to cure delivery outages or all weak
 barcode signals. Buddy 5 remains outside this integration.
+
+[v0.2.3 IMU end-of-run setup and checks](docs/imu_end_run_v0_2_3.md): lifted/overturned
+detection now latches all motors off through the safety/coordinator path; Reset
+requires eligible IMU evidence, and Start remains explicit. Production collision
+classification is removed. The user reports improved v0.2.2 junction detection;
+bends remain untested and recovery awaits diagnostic logs.

@@ -11,11 +11,11 @@ from package_line_following import linked_checks
 
 ROOT = common.ROOT
 CORE = ROOT / 'firmware/integration/buddy1_4'
-ART = CORE / 'artifacts/v0_2_2_rtos'
-NAME = 'robopico_buddy1_4_rtos_v0_2_2'
+ART = CORE / 'artifacts/v0_2_3_rtos'
+NAME = 'robopico_buddy1_4_rtos_v0_2_3'
 TESTED = '75325f29ad604c75a9d9ab8111658aa1536543d5'
-PREVIOUS = '7bcb5610cfa2109d1c01efb066b9c6eab8a61faf'
-# Exact fingerprints for the reviewed v0.2.2 change boundary. Other tested
+PREVIOUS = '6e594e2ae2207f8538ce7103bfb21acd8aea2d03'
+# Exact fingerprints for the reviewed v0.2.3 change boundary. Other tested
 # algorithms must remain identical to their accepted baseline.
 REVIEWED = {'firmware/integration/buddy1_4/src/line_following/continuous_steering.h': {'sha256': '417a0af222cb156fb0dea0b8e38197d167a7eb8ee6007b84e69239eae88a3dce',
                                                                             'change': 'Production '
@@ -23,60 +23,69 @@ REVIEWED = {'firmware/integration/buddy1_4/src/line_following/continuous_steerin
                                                                                       'sustained-demand '
                                                                                       'bend '
                                                                                       'qualification, '
-                                                                                      'encoder '
-                                                                                      'turn '
+                                                                                      'encoder turn '
                                                                                       'corroboration, '
                                                                                       'bounded '
                                                                                       'speed/authority '
-                                                                                      'blends; '
-                                                                                      'default '
+                                                                                      'blends; default '
                                                                                       'straight '
                                                                                       'controller '
                                                                                       'preserved.'},
  'firmware/integration/buddy1_4/src/line_following/line_search.h': {'sha256': '65b1542d3b277473af769b662ad37638e7fd87e6fc782f97796dd7a3461c26f7',
-                                                                    'change': 'Production opt-in '
-                                                                              'signed in-place '
-                                                                              'search, stationary '
+                                                                    'change': 'Production opt-in signed '
+                                                                              'in-place search, '
+                                                                              'stationary '
                                                                               'reversals/reacquisition, '
                                                                               'explicit '
                                                                               'input/angle/path/time/stall '
-                                                                              'limits; legacy '
-                                                                              'rolling search '
-                                                                              'retained for '
+                                                                              'limits; legacy rolling '
+                                                                              'search retained for '
                                                                               'default builds.'},
  'firmware/integration/buddy1_4/src/line_following/circuit_recovery.h': {'sha256': 'd2b5f184f17e0618cbee5ac80fbcfdf9eaa418a463720afa878b1bbf2a340601',
                                                                          'change': 'Production '
-                                                                                   'stationary '
-                                                                                   'search '
+                                                                                   'stationary search '
                                                                                    'orchestration; '
                                                                                    'original '
                                                                                    'brief-gap/loss '
-                                                                                   'confirmation '
-                                                                                   'and optical '
+                                                                                   'confirmation and '
+                                                                                   'optical '
                                                                                    'reacquisition '
                                                                                    'durations '
                                                                                    'retained.'},
  'firmware/integration/buddy1_4/src/line_following/circuit_logic.h': {'sha256': 'a03d4da7b20d50bec405aa38454d2cb1378d8f241e07c04b38fc04ec22e5c7c5',
                                                                       'change': 'Opt-in measured '
-                                                                                'wheel/speed '
-                                                                                'recovery inputs '
-                                                                                'with fail-closed '
-                                                                                'validation and '
-                                                                                'existing '
-                                                                                'compatibility '
-                                                                                'entry point.'},
+                                                                                'wheel/speed recovery '
+                                                                                'inputs with '
+                                                                                'fail-closed validation '
+                                                                                'and existing '
+                                                                                'compatibility entry '
+                                                                                'point.'},
  'app_program/line_navigation/line_model.h': {'sha256': 'b5ec8acd32d06569c95726eb165f6b6fdcbfad20dd65dea3fde96b3e789ce4e9',
-                                              'change': 'RTOS adapter selects signed recovery '
-                                                        'wrapper over existing continuous wheel '
-                                                        'controller, bounded300 cap, copied '
-                                                        'bend/recovery state; single motor writer '
-                                                        'retained.'},
+                                              'change': 'RTOS adapter selects signed recovery wrapper '
+                                                        'over existing continuous wheel controller, '
+                                                        'bounded300 cap, copied bend/recovery state; '
+                                                        'single motor writer retained.'},
  'app_program/barcode_navigation/junction_sensor.h': {'sha256': '7405da62dbfa7649671c709e3196acba5376d2b9d47c2f08e041034a30a62444',
                                                       'change': 'Production7mm minimum width, '
                                                                 'unchanged30mm maximum/fresh-white '
                                                                 'gates; frozen bounded '
-                                                                'width/threshold/reason C7 '
-                                                                'snapshot.'}}
+                                                                'width/threshold/reason C7 snapshot.'},
+ 'firmware/integration/buddy1_4/src/imu/imu_service.c': {'sha256': 'fa94ef1b261130cfcfa40a8fb70a08039958221521c9b8fba02adfc61f64e1a7',
+                                                         'change': 'Production-only calibrated raw FIFO '
+                                                                   'hook feeds independent lift guard '
+                                                                   'even idle; historical SDK/migration '
+                                                                   'service path retained.'},
+ 'firmware/integration/buddy1_4/src/imu/imu_proc.c': {'sha256': '995007231edecc95d5b6c92a80988d2dcd6534352da263a2ecf0ae08302c71d8',
+                                                      'change': 'Production removes collision Impact '
+                                                                'classification, retains high-dynamic '
+                                                                'terrain exclusion and all baseline '
+                                                                'height/ramp thresholds; legacy '
+                                                                'collision branch remains default.'},
+ 'app_program/rtos_bringup/bringup_policy.h': {'sha256': '966634c0995a510365e0c252f4015db4a94550c8908a02e1e3445648ae908f4e',
+                                               'change': 'Add packed eighth supervisor bit and '
+                                                         'lift/overturn/unavailable reasons with safety '
+                                                         'reset/motion gates; original '
+                                                         'clock/motor/network limits unchanged.'}}
 common.ART = ART
 
 
@@ -117,6 +126,9 @@ def algorithm_checks():
             preserved.append(name)
     assert len(preserved) > 50
     for name in ('app_program/rtos_bringup/bringup_policy.h', 'app_program/network_bridge/connected_policy.h'):
+        if name in REVIEWED:
+            assert common.digest(ROOT/name)==REVIEWED[name]['sha256'], 'Reviewed safety policy changed: '+name
+            continue
         original = subprocess.check_output(['git','show',f'f4a367eaacbeb6afb7418aabc507687349613437:{name}'],cwd=ROOT)
         assert (ROOT/name).read_bytes()==original, 'Main supervision policy changed: '+name
         preserved.append(name)
@@ -130,7 +142,7 @@ def main():
     layout = common.validate_uf2(built.read_bytes())
     linked = linked_checks(elf, network=True, barcode=True, imu=True, release=True)
     nm = common.command(ROOT.parent / '.buddy2-tools/arm-gcc/bin/arm-none-eabi-nm.exe', '-g', elf)
-    required = ('rtos_line_junction_info', 'rtos_line_drive_info')
+    required = ('rtos_line_junction_info', 'rtos_line_drive_info', 'ri_lift_guard_samples', 'ri_safety_packet', 'ri_safety_reset_latch')
     names = {line.split()[-1] for line in nm.splitlines() if line.split()}
     for name in required:
         assert name in names, 'Release diagnostic missing from image: ' + name
@@ -142,13 +154,13 @@ def main():
     firmware = ART / built.name
     shutil.copyfile(built, firmware)
     manifest = {
-        'name': NAME, 'version': '0.2.2', 'target_branch': 'main',
+        'name': NAME, 'version': '0.2.3', 'target_branch': 'main',
         'status': 'PROVISIONAL Buddy1-4 RTOS; Buddy5 NOT integrated',
         'source_commit': common.command('git', 'rev-parse', 'HEAD'),
         'tested_step5_baseline': TESTED, 'previous_sdk_main': common.BASE,
         'previous_rtos_main': PREVIOUS,
         'reviewed_release_algorithms': REVIEWED,
-        'change_boundary': 'Production opt-in 7mm junction qualification, selective bend assistance and bounded stationary line search; decoder acceptance, calibration, RTOS ownership and safety cutoffs unchanged',
+        'change_boundary': 'Add release-only IMU lift/overturn latch, authoritative reset gate and C9 evidence; remove production collision classification. Retain v0.2.2 junction/bend/recovery and existing calibration/decoder/ramp/network thresholds.',
         'build_profile': 'APP=rtos_buddy1_4 SMP=1 CONSOLE=usb_cdc WIFI=cyw43 NET=lwip MQTT=1 CRASH_REPORT=0 TEST=0',
         'compiler': common.command(ROOT.parent / '.buddy2-tools/arm-gcc/bin/arm-none-eabi-gcc.exe', '--version').splitlines()[0],
         'sdk_commit': common.command('git', '-C', ROOT.parent / '.buddy2-tools/pico-sdk', 'rev-parse', 'HEAD'),
@@ -157,9 +169,10 @@ def main():
         'calibration_priority': ['CRC-valid RTOS save at0x1a9000', 'CRC-valid SDK record28 at0x1d0000',
                                  'fallback white163,160 black3457,3700'],
         'expected_tested_car_calibration': 'white122,138 black246,267; existing saves preserved, not forced',
-        'profile': 'Profile1 normal45mm/s; provisional selective bend slowing/authority and stationary search; no global power/decoder/ramp tuning',
+        'profile': 'Profile1 normal45mm/s; v0.2.2 bend/recovery retained; IMU lift/overturn end-run safety; no power/decoder/ramp tuning',
         'supervision': ['No USB/DTR requirement in production; explicit Start with existing2s countdown',
                         'Kernel MQTT link/subscription and poll/app freshness required',
+                        'Release IMU requires fresh calibrated data; qualified lift/overturn latches and cancels all motion; explicit eligible Reset and new Start',
                         'Recent TCP publish-ACK activity within3000ms and from current connection',
                         'Network loss/stale delivery stops; reconnect never automatically restarts',
                         'Boot OFF, GP20 ESTOP/GP21 Stop, existing clocks/ADC/late/encoder/coordinator guards'],
@@ -170,14 +183,14 @@ def main():
                                    'raw_sensors': '10 bytes time/signed position/GP27 ADC',
                                    'navigation': '31-byte coordinator event'},
                           'capacity': '640 line rows,2048 raw rows for latest reportable attempt,512-row preroll, diagnostic5ms decimation, bounded navigation history',
-                          'new_source15': 'C2 release/calibration15,C3 runtime63,C4 encoder fault48,C5 barcode attempt30,C6 network stop32,C7 junction20,C8 drive18 bytes;1Hz; C3/C5/C7/C8 ordinary telemetry enabled only'},
-        'software_checks': ['Focused native C bend/straight parity, stationary signed search/settle/bounds, junction width/white gating, frozen export and coordinator bridge checks',
-                            'Focused Python observer and binary export checks',
-                            'Node schema compatibility and C-to-browser C2/C4/C5/C6/C7/C8 fixture checks',
-                            'Headless browser stopped56-byte row transfer and binary/CSV/JSON metadata integrity',
-                            'ARM release build, UF2 bounds/RAM flash code/stack gates, source fingerprint and ZIP integrity'],
+                          'new_source15': 'C2 release/calibration15,C3 runtime63,C4 encoder fault48,C5 barcode attempt30,C6 network stop32,C7 junction20,C8 drive18,C9 IMU lift30 bytes;1Hz; C3/C5/C7/C8 ordinary telemetry enabled only; C9 always'},
+        'software_checks': ['Seven focused native C programs: qualification, C9 codec, safety policy, real production IMU hook/reset, release bridge/export, retained legacy service/ramp',
+                            'Four Node C9 malformed/range/C3-flag checks plus actual C release/runtime decoder fixture',
+                            'Headless browser simulated-MQTT lift/overturn/unready/stale panels and stopped export compatibility',
+                            'ARM image, required safety symbols, UF2 flash bounds, stack/RAM, protected source fingerprints and ZIP integrity'],
         'hardware_evidence': 'Step5v0.1.5: flat0 humps; one nominal10mm one-sided ramp1 accepted/13mm max; assist active; about50Hz IMU/100Hz control; no new measured motion-window timing/acquisition/logging faults. Not a repeatability claim.',
-        'pending': ['Physical v0.2.2 straight/bend/stationary-search/junction acceptance; host checks cannot certify physical success',
+        'pending': ['Physical IMU lift/overturn stop and no-false-positive ramp acceptance; software checks cannot certify lift discrimination or physical stop latency',
+                    'Bend untested; stationary recovery reported not sweeping, awaiting logs; v0.2.2 logic retained',
                     'Full supported-mat left/right outgoing-line rejoin and sharp bends', 'Buddy5 integration'],
         'source_files': len(paths), 'unchanged_shared_vs_sdk': len(preserved),
         'reviewed_shared_vs_sdk': reviewed,
@@ -185,7 +198,9 @@ def main():
         'ram_comparison': {'baseline': 'Main RTOS v0.2.0 same ARM toolchain',
                            'baseline_static_ram_end': '0x2002e710',
                            'static_ram_growth_bytes': int(linked['static_ram_end'],16) - 0x2002e710,
-                           'message_extensions_bytes_per_second': 226,
+                           'previous_v022_static_ram_end': '0x2002fd90',
+                           'growth_vs_v022_bytes': int(linked['static_ram_end'],16) - 0x2002fd90,
+                           'message_extensions_bytes_per_second': 256,
                            'scope': 'Linked static RAM only, not dynamic stack high-water or whole-firmware Tribunal completion'},
         'linked_checks': linked,
     }
@@ -199,7 +214,7 @@ def main():
             z.write(p, p.relative_to(ROOT).as_posix())
         z.write(firmware, 'firmware/' + firmware.name)
         z.writestr('START_HERE.md', (ROOT / 'docs/setup.md').read_text(encoding='utf-8'))
-        z.writestr('TEST_CHANGES.md', (ROOT/'docs/drive_refinements_v0_2_2.md').read_text(encoding='utf-8'))
+        z.writestr('TEST_CHANGES.md', (ROOT/'docs/imu_end_run_v0_2_3.md').read_text(encoding='utf-8'))
         commands = [('Start dashboard.cmd', 'tools/dashboard/run_dashboard.py', ''),
                     ('Setup Wi-Fi.cmd', 'tools/rtos_migration/provision_network.py', ''),
                     ('Capture wireless test.cmd', 'tools/rtos_migration/capture_wireless.py', ''),

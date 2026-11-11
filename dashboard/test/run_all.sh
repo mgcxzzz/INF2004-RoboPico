@@ -10,6 +10,7 @@ run() { echo "== $*"; "$@" || { echo "FAILED: $*"; fails=$((fails + 1)); }; }
 run node --test "$D/test_merged_schema.js"
 run node --test "$D/compat/v23_test_schema.js"
 run node --test "$D/test_source15.js"
+run node --test "$D/test_imu_lift_v023.js"
 run node "$D/compat/rtos_check_speed_dashboard.mjs"
 run node "$D/compat/rtos_check_dashboard.mjs"
 if command -v cc >/dev/null 2>&1 && command -v python3 >/dev/null 2>&1; then

@@ -30,6 +30,16 @@ int main(void) {
             assert(!br_outputs_allowed(ready | BR_ACTIVE | latch, false, 3U, true));
         }
     }
+    assert((BR_LATCHED & BR_IMU) != 0U);
+    assert(!br_can_start(ready | BR_IMU, 2000000U, 0U, 3U, true));
+    assert(!br_outputs_allowed(ready | BR_ACTIVE | BR_IMU, false, 3U, true));
+    assert(!br_safety_allows_motion(ready, true)); /* Freshness/attitude guard. */
+    assert(!br_safety_allows_motion(ready | BR_IMU, false)); /* Explicit-reset latch. */
+    assert(br_safety_allows_motion(ready, false));
+    assert(!br_can_clear_latch(ready | BR_IMU, true, false)); /* Still lifted/unready. */
+    assert(br_can_clear_latch(ready | BR_IMU, true, true));  /* Fresh, safe, explicit Reset. */
+    assert(!br_can_clear_latch(ready | BR_ACTIVE | BR_IMU, true, true));
+    assert(!br_can_clear_latch(ready | BR_IMU, false, true));
     assert(!br_can_start(ready, 999999U, 0U, 3U, true));
     assert(!br_can_start(ready, 2000000U, 0U, 2U, true));
     assert(!br_can_start(ready, 2000000U, 0U, 3U, false));

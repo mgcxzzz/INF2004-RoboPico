@@ -1,7 +1,7 @@
 # Build main's Buddy1–4 RTOS release
 
 Ready-to-flash UF2 and full bundle are in
-firmware/integration/buddy1_4/artifacts/v0_2_2_rtos/. Building is optional.
+firmware/integration/buddy1_4/artifacts/v0_2_3_rtos/. Building is optional.
 Main uses micro T-Kernel SMP with the Pico SDK's low-level USB/radio/lwIP
 libraries; it is not the SDK CMake superloop. The build manifest pins actual
 compiler and SDK commits. Populate the SDK's USB/Wi-Fi/lwIP submodules.
@@ -12,7 +12,7 @@ With ARM GNU gcc/make available and PICO_SDK_PATH set, from build_make/:
 make -j4 APP=rtos_buddy1_4 SMP=1 CONSOLE=usb_cdc WIFI=cyw43 NET=lwip MQTT=1 CRASH_REPORT=0 TEST=0
 ```
 
-Output: `build_make/robopico_buddy1_4_rtos_v0_2_2.uf2`.
+Output: `build_make/robopico_buddy1_4_rtos_v0_2_3.uf2`.
 The Windows workspace helper is `tools/rtos_migration/build_release.sh` from
 Git Bash; it uses the existing sibling .buddy2-tools installation. Other
 machines can use the make command with their own toolchain/SDK paths.

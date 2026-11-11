@@ -27,6 +27,7 @@ const emit=(bytes,topic='is28/tlm')=>page.evaluate(([b,t])=>window.__m.emit(t,b)
 const base=resolve(root,'../testing/rtos_migration/build-host');
 const metadata=await readFile(join(base,'release_metadata.bin'));
 const runtime=await readFile(join(base,'release_runtime.bin'));
+const lift=await readFile(join(base,'imu_lift.bin'));
 const row=await readFile(join(base,'release_line.bin'));
 const fault=await readFile(join(base,'encoder_fault.bin'));
 const faultClear=await readFile(join(base,'encoder_fault_clear.bin'));
@@ -47,9 +48,22 @@ try {
  await page.locator('#connect').click();await page.waitForFunction(()=>window.__m.connected);
  await emit(motion);await emit(nav);await emit(metadata);await emit(runtime);
  const releaseVersion=`${metadata[4]&15}.${metadata[4]>>>4}.${metadata[5]&15}`;
+ assert.equal(releaseVersion,'0.2.3','the main release metadata advertises v0.2.3');
  assert.match(await page.locator('#profilePill').textContent(),new RegExp(`v${releaseVersion.replaceAll('.','\\.')}`));
  assert.equal(await page.locator('#rtosRuntimeCard').isVisible(),true);
  assert.match(await page.locator('#releaseCal').textContent(),/122\/138/);
+ await emit(lift);
+ assert.equal(await page.locator('#imuStop').textContent(),'Run ended — lifted');
+ assert.match(await page.locator('#imuStopDetails').textContent(),/reset permitted/);
+ const upside=Buffer.from(lift);upside[2]++;upside[23]=(upside[23]&~3)|2;
+ await emit(upside);assert.equal(await page.locator('#imuStop').textContent(),'Overturn stop');
+ const unavailable=Buffer.from(lift);unavailable[2]+=2;unavailable[23]=3;
+ await emit(unavailable);assert.match(await page.locator('#imuStop').textContent(),/not ready/);
+ await emit(lift);
+ await page.waitForTimeout(2700);
+ assert.match(await page.locator('#imuStop').textContent(),/Stale/);
+ await emit(motion);await emit(nav);await emit(metadata);await emit(runtime);
+
  await emit(fault);
  assert.equal(await page.locator('#encoderFault').textContent(),'Right encoder: error density · latched');
  assert.match(await page.locator('#encoderFaultDetails').textContent(),/Frozen target L\/R -45\/70 mm\/s/);

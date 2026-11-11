@@ -18,6 +18,8 @@ sources = [CORE / "src/navigation" / (n + ".c") for n in ("motion_api", "nav_coo
 sources.append(CORE / "src/motion/motion_executor.c")
 
 checks = [(ROOT / "testing/rtos_migration/test_bringup_policy.c", []),
+          (ROOT / "testing/rtos_migration/test_imu_lift_guard.c", []),
+          (ROOT / "testing/rtos_migration/test_imu_lift_packet.c", []),
           (ROOT / "testing/rtos_migration/test_imu_i2c.c", []),
           (ROOT / "testing/rtos_migration/test_usb_printf.c", []),
           (ROOT / "testing/rtos_migration/test_encoder_quality.c", []),
@@ -74,6 +76,8 @@ if args.only:
 for source, extra in checks:
     exe = OUT / (source.stem + (".exe" if os.name == "nt" else ""))
     profile_flags = ["-DAPP_RTOS_IMU=1"] if source.stem in ("test_release_imu", "test_hump_odo_grace", "test_imu_service_rtos", "test_imu_task_reset", "test_imu_calibration_diagnostics") else []
+    if source.stem == "test_release_imu":
+        profile_flags += ["-DAPP_RTOS_RELEASE=1"]
     if source.stem == "test_usb_printf":
         profile_flags += ["-I" + str(ROOT / "testing/rtos_migration/printf_stubs")]
     if source.stem == "test_line_stationary_search":
