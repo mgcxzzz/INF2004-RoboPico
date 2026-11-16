@@ -1,5 +1,5 @@
 'use strict';
-/* v0.2.3 source-15 C9 IMU lift/overturn safety codec. */
+/* Source-15 C9 IMU lift/overturn codec, including the legacy 0x23 layout. */
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -21,9 +21,9 @@ function frame(payload, seq = 9) {
 function imuLiftSafety({ reason = 1, latched = true, armed = true, fresh = true,
                          canReset = true, saturated = false, upProjection = -1536,
                          normMg = 1024, upDwellMs = 25, tiltDwellMs = 42,
-                         uprightMs = 500 } = {}) {
+                         uprightMs = 500, codec = 0x23 } = {}) {
   const p = new Uint8Array(27);
-  p[0] = 0xc9; p[1] = 0x23;
+  p[0] = 0xc9; p[1] = codec;
   putU32(p, 2, 123456); putU32(p, 6, 123400); putU32(p, 10, 123390);
   putU16(p, 14, 7); putBits(p, 16 * 8, 13, upProjection);
   putBits(p, 18 * 8, 12, normMg);
@@ -41,12 +41,22 @@ test('C9 decodes the firmware-generated lift-stop snapshot', () => {
   assert.equal(f.error, undefined, f.error);
   assert.equal(f.src, IS28.SRC.SOURCE15); assert.equal(f.len, 27);
   assert.deepEqual(f.data, {
-    kind: 'imu-lift-safety', version: '0.2.3', uptimeMs: 123456, tripMs: 123400,
+    kind: 'imu-lift-safety', version: '0.2.5', codec: 0x25, uptimeMs: 123456, tripMs: 123400,
     lastSampleMs: 123390, eventCount: 7, upProjection: -1536, normMg: 1024,
     reason: 1, reasonName: 'lifted', latched: true, armed: true, fresh: true,
-    canReset: true, saturated: false, upDwellMs: 25, tiltDwellMs: 42,
+    canReset: true, saturated: false, upDwellMs: 25, tiltDwellMs: 100,
     uprightMs: 500, runId: 0x1234
   });
+});
+
+test('C9 keeps legacy codec 0x23 and accepts up to 100 ms tilt dwell in 0x25', () => {
+  const legacy = IS28.decodeFrame(frame(imuLiftSafety({ codec: 0x23, tiltDwellMs: 42 }))).data;
+  assert.equal(legacy.version, '0.2.3'); assert.equal(legacy.codec, 0x23); assert.equal(legacy.tiltDwellMs, 42);
+  const current = IS28.decodeFrame(frame(imuLiftSafety({ codec: 0x25, tiltDwellMs: 100 }))).data;
+  assert.equal(current.version, '0.2.5'); assert.equal(current.tiltDwellMs, 100);
+  const invalidHigh = imuLiftSafety({ codec: 0x25, tiltDwellMs: 100 }); invalidHigh[22] |= 0x80;
+  assert.match(IS28.decodeFrame(frame(invalidHigh)).error, /reserved/);
+  assert.match(IS28.decodeFrame(frame(imuLiftSafety({ codec: 0x25, tiltDwellMs: 101 }))).error, /range/);
 });
 
 test('C9 reports overturn separately and preserves the signed projection and run identity', () => {

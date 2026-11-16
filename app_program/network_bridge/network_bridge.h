@@ -72,5 +72,7 @@ void rn_network_stop_packet(uint8_t seq, uint8_t out[RN_NETWORK_STOP_PACKET_BYTE
 void rn_drive_telemetry(uint32_t now);
 void rn_drive_set_telemetry(bool enabled);
 bool rn_drive_telemetry_enabled(void);
+uint8_t rn_drive_request_speed_mode(unsigned mode);
+void rn_drive_speed_mode_snapshot(uint8_t *requested_mode, uint8_t *last_result);
 #endif
 #endif

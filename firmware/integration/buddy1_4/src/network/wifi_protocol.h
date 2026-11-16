@@ -24,6 +24,7 @@ enum {
     WP_CMD_STEER = 12u,
     WP_CMD_DRIVE = 13u,
     WP_CMD_TURN = 14u,
+    WP_CONFIG_DRIVE_MODE_KEY = 2u,
     WP_ACK_ACCEPTED = 0u,
     WP_ACK_PROHIBITED = 1u,
     WP_ACK_UNKNOWN = 2u,

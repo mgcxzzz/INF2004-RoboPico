@@ -3,6 +3,7 @@
 
 #include <math.h>
 #include "src/barcode/barcode_nav.h"
+#include "src/motion/drive_mode.h"
 
 /* Opt in for the provisional, sensor-qualified bend assist in production.
  * Default-off preserves the original Continuous V2 output path and baseline
@@ -162,9 +163,9 @@ static inline void continuous_steering_update_bend(ContinuousSteering *s, float 
 }
 #endif
 
-static inline AnalogDemand continuous_steering_step(ContinuousSteering *s, AnalogDemand d,
-                                                    Circuit *c, const CircuitInput *i,
-                                                    bool scanning, unsigned profile, float dt) {
+static inline AnalogDemand continuous_steering_step_with_cruise(
+    ContinuousSteering *s, AnalogDemand d, Circuit *c, const CircuitInput *i, bool scanning,
+    unsigned profile, float dt, unsigned cruise_speed_mm_s) {
     bool ordinary = d.decision == SYM_STRAIGHT || d.decision == SYM_LEFT ||
                     d.decision == SYM_RIGHT || d.decision == C_FAST;
     bool eligible =
@@ -188,11 +189,23 @@ static inline AnalogDemand continuous_steering_step(ContinuousSteering *s, Analo
     float measured_mean = (measured_left + measured_right) * 0.5f;
 #endif
 
-    /* Retain the established profile speeds; a lower requested ceiling is
-     * reached through the mean slew below. */
-    float ceiling = scanning ? 45.0f : profile == 3 ? 135.0f : 55.0f;
+    /* Runtime speed modes opt into higher ordinary cruise only. A zero or
+     * near-zero inside wheel marks a correcting turn and keeps the reference
+     * profile's targets unchanged. Barcode activity also retains45mm/s. */
+    bool scaled_cruise = profile == 1 && !scanning && cruise_speed_mm_s > 45U &&
+                         d.target[0] > 10 && d.target[1] > 10;
+    float ceiling = scanning ? 45.0f
+                    : profile == 3 ? 135.0f
+                    : scaled_cruise ? (float)cruise_speed_mm_s
+                                    : 55.0f;
     desired_mean = clampf(desired_mean, 0.0f, ceiling);
     original_half = clampf(original_half, -desired_mean, desired_mean);
+    if (scaled_cruise) {
+        float scale = (float)cruise_speed_mm_s / 45.0f;
+        desired_mean = clampf(desired_mean * scale, 0.0f, ceiling);
+        original_half *= scale;
+        original_half = clampf(original_half, -desired_mean, desired_mean);
+    }
 
     bool entering = !s->active;
     if (entering) {
@@ -274,6 +287,14 @@ static inline AnalogDemand continuous_steering_step(ContinuousSteering *s, Analo
     c->fast = !scanning && (d.target[0] > 55 || d.target[1] > 55);
     d.decision = scanning ? 24 : 25;
     return d;
+}
+
+/* Existing callers keep the profile's historical speeds by default. */
+static inline AnalogDemand continuous_steering_step(ContinuousSteering *s, AnalogDemand d,
+                                                    Circuit *c, const CircuitInput *i,
+                                                    bool scanning, unsigned profile, float dt) {
+    return continuous_steering_step_with_cruise(s, d, c, i, scanning, profile, dt,
+                                                DRIVE_MODE_BASELINE_SPEED);
 }
 
 #endif

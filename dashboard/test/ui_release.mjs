@@ -21,7 +21,7 @@ const server=createServer(async(req,res)=>{
 await new Promise(r=>server.listen(0,'127.0.0.1',r));
 const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_PATH||undefined});
 const page=await browser.newPage({acceptDownloads:true,viewport:{width:1400,height:1000}});
-const errors=[];page.on('pageerror',e=>errors.push(e.message));
+const errors=[];page.on('pageerror',e=>{errors.push(e.message);console.error('PAGE ERROR:',e.message);});
 await page.route('**/vendor/mqtt.min.js',r=>r.fulfill({contentType:'text/javascript',body:mock}));
 const emit=(bytes,topic='is28/tlm')=>page.evaluate(([b,t])=>window.__m.emit(t,b),[Array.from(bytes),topic]);
 const base=resolve(root,'../testing/rtos_migration/build-host');
@@ -48,8 +48,9 @@ try {
  await page.locator('#connect').click();await page.waitForFunction(()=>window.__m.connected);
  await emit(motion);await emit(nav);await emit(metadata);await emit(runtime);
  const releaseVersion=`${metadata[4]&15}.${metadata[4]>>>4}.${metadata[5]&15}`;
- assert.equal(releaseVersion,'0.2.4','the main release metadata advertises v0.2.4');
+ assert.equal(releaseVersion,'0.2.5','the main release metadata advertises v0.2.5');
  assert.match(await page.locator('#profilePill').textContent(),new RegExp(`v${releaseVersion.replaceAll('.','\\.')}`));
+ await page.locator('#dashboardTabs [data-view="diagnostics"]').click();
  assert.equal(await page.locator('#rtosRuntimeCard').isVisible(),true);
  assert.match(await page.locator('#releaseCal').textContent(),/122\/138/);
  await emit(lift);
@@ -60,7 +61,7 @@ try {
  const unavailable=Buffer.from(lift);unavailable[2]+=2;unavailable[23]=3;
  await emit(unavailable);assert.match(await page.locator('#imuStop').textContent(),/not ready/);
  await emit(lift);
- await page.waitForTimeout(2700);
+ await page.waitForFunction(()=>document.getElementById('imuStop').textContent.includes('Stale'), {timeout:5000});
  assert.match(await page.locator('#imuStop').textContent(),/Stale/);
  await emit(motion);await emit(nav);await emit(metadata);await emit(runtime);
 
@@ -84,6 +85,7 @@ try {
  assert.match(await page.locator('#networkStop').textContent(),/explicit firmware clear/);
  await emit(fault);await emit(networkStop);
  for(let k=0;k<11;k++){await page.waitForTimeout(500);await emit(metadata);nav[2]++;await emit(nav);}
+ await page.locator('#dashboardTabs [data-view="logs"]').click();
  await page.locator('#logDataset').selectOption('1');
  await page.waitForFunction(()=>!document.getElementById('logDownload').disabled);
  const downloads=[];page.on('download',d=>downloads.push(d));

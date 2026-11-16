@@ -355,15 +355,22 @@ static inline void rb_sample(RbDecoder *d, BarcodeNav *n, uint16_t adc, uint64_t
     }
     d->raw_frozen = true;
 }
-static inline AnalogDemand rb_follow(LinePlanner *p, RbDecoder *b, const LineCalibration *cal,
-                                     const CircuitInput *i, float dt) {
+static inline AnalogDemand rb_follow_with_cruise(LinePlanner *p, RbDecoder *b,
+                                                 const LineCalibration *cal,
+                                                 const CircuitInput *i, float dt,
+                                                 unsigned cruise_speed_mm_s) {
     unsigned before = p->circuit.phase, stage = p->nav.uturn.stage;
     SmoothFollow legacy = {0}; /* Profile1 never uses the legacy profile2 adapter. */
-    AnalogDemand d = continuous_follow_step(&p->circuit, &p->nav, cal, i, RL_PROFILE, &legacy,
-                                            &b->analog, &p->scan, &p->steering, dt);
+    AnalogDemand d = continuous_follow_step_with_cruise(
+        &p->circuit, &p->nav, cal, i, RL_PROFILE, &legacy, &b->analog, &p->scan, &p->steering,
+        dt, cruise_speed_mm_s);
     rl_junction_observe(p, cal, i, before, stage);
     p->optical = d;
     return d;
+}
+static inline AnalogDemand rb_follow(LinePlanner *p, RbDecoder *b, const LineCalibration *cal,
+                                     const CircuitInput *i, float dt) {
+    return rb_follow_with_cruise(p, b, cal, i, dt, DRIVE_MODE_BASELINE_SPEED);
 }
 /* Preserve completed events/counts and the action/revision captured at decode;
  * discard partial frames, cross edges and interrupted tracking state. */

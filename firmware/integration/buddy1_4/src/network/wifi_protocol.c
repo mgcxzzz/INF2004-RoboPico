@@ -58,6 +58,10 @@ uint8_t wp_parse(const uint8_t *p, size_t original_len, WifiCommand *cmd) {
     case WP_CMD_PING:
         return WP_ACK_ACCEPTED;
     case WP_CMD_CONFIG:
+        /* Stopped drive mode: low byte key2, high byte mode0..2. The legacy
+         * telemetry1 nibble encoding0x1000/0x1001 remains unchanged. */
+        if ((cmd->arg & 0xffu) == WP_CONFIG_DRIVE_MODE_KEY)
+            return (cmd->arg >> 8) <= 2u ? WP_ACK_ACCEPTED : WP_ACK_FORMAT;
         param = (uint32_t)cmd->arg >> 12;
         value = (uint32_t)cmd->arg & 0x0fffu;
         if (param != 1u)

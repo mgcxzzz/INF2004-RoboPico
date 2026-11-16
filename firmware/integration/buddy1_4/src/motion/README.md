@@ -9,6 +9,22 @@ feature logic. See [the diagnostic guide](../../../../../docs/diagnostics_v0_2_1
 
 # Motion control — Buddy 2, with coordinator-approved ramp help
 
+## Active v0.2.5 additions
+
+The production RTOS adapter has a separate RAM cruise mode: Baseline45 (boot
+default), Normal60 and Faster-trial75 mm/s. A stopped-only request passes through
+the nav API/coordinator. Barcode scanning, junction turns and recovery retain
+their previous speed policies. A mode is not the historical Profile3.
+
+Per-wheel load reserve compares measured speed with that wheel's own reference.
+It qualifies sustained underspeed while rolling, adds PWM gradually within its
+bounded40PWM reserve, and releases at90% of its reference. A300ms cooldown and
+a new180ms underspeed dwell separate episodes. It is not a repeated startup kick or
+a blanket PWM floor for a deliberately slow inside wheel. Existing stop/stall
+guards, physical420 cap and slew still apply. Buddy4 ramp modifiers compose with
+this controller through the same output owner. See the
+[release guide and hardware checks](../../../../../docs/demo_console_v0_2_5.md).
+
 Main v0.2.0 uses the micro T-Kernel production profile. Active task/ownership
 adapters: [app_program/rtos_bringup](../../../../../app_program/rtos_bringup/README.md).
 See [RTOS architecture](../../../../../docs/architecture.md) and

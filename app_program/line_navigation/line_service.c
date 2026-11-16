@@ -1,4 +1,5 @@
 #include "line_service.h"
+#include "include/interfaces/nav_api.h"
 #ifdef APP_RTOS_BARCODE
 #include "../barcode_navigation/barcode_model.h"
 static RbDecoder barcode;
@@ -9,6 +10,8 @@ static void barcode_export(void);
 #endif
 #ifdef APP_RTOS_NETWORK
 #include "../network_bridge/network_bridge.h"
+#include "../network_bridge/drive_mode_telemetry.h"
+#include "src/network/wifi_protocol.h"
 static WifiMotionPacket telemetry;
 static uint16_t run_id;
 static uint32_t run_elapsed_ms;
@@ -61,6 +64,8 @@ static struct {
     uint32_t side_work_total_us, side_work_max_us, side_poll_total_us, side_poll_max_us;
 #endif
     unsigned adc_state : 2, adc_good : 2;
+    uint16_t load_pwm_packed;
+    bool mode_start_offered;
 #ifdef APP_RTOS_BARCODE
     RbJunctionSensor junction_sensor;
     bool junction_pending;
@@ -252,6 +257,27 @@ bool rtos_line_pending(void) {
     bool pending = (view.flags & 4U) && start_serial == cancel_serial;
     leave(key);
     return pending;
+}
+bool rtos_line_mode_change_allowed(void) {
+    UINT key = enter();
+    /* These dump/export flags and the countdown/start-offer copies are all
+     * changed under this lock; the network core does not inspect line-owner
+     * state directly. */
+    bool line_idle = !(view.flags & 4U) && !view.mode_start_offered && !dumping &&
+                     !dump_requested;
+#ifdef APP_RTOS_RELEASE
+    line_idle = line_idle && !rl_export_busy(&wireless_export, (uint32_t)board_time_us());
+#endif
+    leave(key);
+    BringupStatus supervisor;
+    bringup_get_status(&supervisor);
+    MotionSpeedModeStatus mode = motion_get_speed_mode_status();
+    bool paused = false;
+#ifdef APP_RTOS_NETWORK
+    paused = rn_drive_paused();
+#endif
+    return line_idle && !(supervisor.flags & BR_ACTIVE) && !paused && !mode.session_active &&
+           mode.stopped && mode.motion_mode == MOTION_OFF;
 }
 bool rtos_line_request_fresh(uint32_t received_us) {
     UINT key = enter();
@@ -445,6 +471,9 @@ bool rtos_line_prepare(const MotionFeedback *f, double path, float dt, bool acti
     if (start)
         countdown = 0;
     start_offered = start;
+    UINT mode_key = enter();
+    view.mode_start_offered = start;
+    leave(mode_key);
     return start;
 }
 
@@ -475,6 +504,7 @@ void rtos_line_begin(void) {
     release_run_centre = (input.wheel[0] + input.wheel[1])*.5f;
     wireless_export.active = 0;
 #endif
+    view.mode_start_offered = false;
     row_count = row_head = row_overwritten = row_sequence = 0;
     recording = true;
     leave(key);
@@ -484,11 +514,13 @@ void rtos_line_begin(void) {
 AnalogDemand rtos_line_follow(float dt) {
     previous_phase = planner.circuit.phase;
     input.side_black = planner.black;
+    unsigned cruise_speed =
+        drive_mode_speed(motion_get_speed_mode_status().mode);
 #ifdef APP_RTOS_BARCODE
     planner.nav.mapping = rn_mapping_snapshot();
-    return rb_follow(&planner, &barcode, &calibration, &input, dt);
+    return rb_follow_with_cruise(&planner, &barcode, &calibration, &input, dt, cruise_speed);
 #else
-    return rl_follow(&planner, &calibration, &input, dt);
+    return rl_follow_with_cruise(&planner, &calibration, &input, dt, cruise_speed);
 #endif
 }
 
@@ -529,6 +561,18 @@ void rtos_line_record(const BringupStatus *s, const AnalogDemand *d, uint32_t co
                       .cost_us = cost > 65535 ? 65535 : (uint16_t)cost};
     uint16_t raw[3] = {adc[0], adc[2], adc[1]};
     rl_pack_optics(&row, raw, d, planner.circuit.phase);
+    uint8_t load_pwm[2] = {0};
+    bool load_visible = (s->flags & BR_ACTIVE) != 0U;
+#ifdef APP_RTOS_NETWORK
+    load_visible = load_visible && !rn_drive_paused();
+#endif
+    if (load_visible) {
+        for (unsigned w = 0; w < 2; ++w) {
+            float load = power.drive[w].load_pwm;
+            if (isfinite(load) && load > 0.0f)
+                load_pwm[w] = (uint8_t)lroundf(clampf(load, 0.0f, DRIVE_MODE_LOAD_MAX_PWM));
+        }
+    }
     rl_pack_steering(&row, input.adc, (unsigned)(planner.steering.gain * 1000 + .5f),
                      (unsigned)(planner.steering.damp_weight * 1000 + .5f));
     rl_pack_junction(&row, &planner);
@@ -571,6 +615,8 @@ void rtos_line_record(const BringupStatus *s, const AnalogDemand *d, uint32_t co
 #endif
     UINT key = enter();
     view.cal = calibration;
+    view.load_pwm_packed = (uint16_t)(load_pwm[0] & 0x7fU) |
+                           (uint16_t)((uint16_t)(load_pwm[1] & 0x7fU) << 7U);
 #ifdef APP_RTOS_RELEASE
     view.drive_diagnostic = drive_diagnostic;
 #endif
@@ -827,6 +873,36 @@ done:
     dumping = false;
     leave(key);
 }
+
+#if defined(APP_RTOS_RELEASE) && defined(APP_RTOS_NETWORK)
+void rtos_line_drive_mode_info(uint8_t seq, uint32_t now_ms, uint8_t out[17]) {
+    uint16_t load_pwm;
+    uint8_t requested = DRIVE_MODE_NONE, result = WP_ACK_ACCEPTED;
+    UINT key = enter();
+    load_pwm = view.load_pwm_packed;
+    leave(key);
+
+    MotionSpeedModeStatus mode = motion_get_speed_mode_status();
+    rn_drive_speed_mode_snapshot(&requested, &result);
+    if (requested > DRIVE_MODE_NONE)
+        requested = DRIVE_MODE_NONE;
+    if (result > WP_ACK_UNSUPPORTED)
+        result = WP_ACK_UNSUPPORTED;
+    bool can_change = rtos_line_mode_change_allowed();
+    uint8_t load_left = (uint8_t)(load_pwm & 0x7fU);
+    uint8_t load_right = (uint8_t)((load_pwm >> 7U) & 0x7fU);
+    RnDriveModeTelemetry snapshot = {.uptime_ms = now_ms,
+                                     .revision = mode.revision,
+                                     .mode = mode.mode,
+                                     .requested_mode = requested,
+                                     .last_result = result,
+                                     .can_change = can_change,
+                                     .session_active = mode.session_active,
+                                     .load_left = load_left,
+                                     .load_right = load_right};
+    (void)rn_drive_mode_encode(&snapshot, seq, out);
+}
+#endif
 
 void rtos_line_flash_task(INT code, void *exinf) {
     (void)code;

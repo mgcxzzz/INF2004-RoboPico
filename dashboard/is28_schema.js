@@ -84,6 +84,8 @@
                     'rejected: unknown command', 'rejected: bad format',
                     'rejected: queue full', 'rejected: unsupported setting'];
   const CFG_TELEMETRY = 1;
+  const CFG_DRIVE_MODE = 2;
+  const DRIVE_MODES = ['Baseline · 45 mm/s', 'Normal · 60 mm/s', 'Faster trial · 75 mm/s'];
 
   const EVENT_NAME = ['status','run_begin','decoded','queued','junction_confirmed','dispatch','completed',
                       'recovery_wait','recovery_sweep','recovery_found','stop','map_applied',
@@ -343,7 +345,9 @@
    *  - network-supervision stop snapshot v0.2.1: payload 29 bytes, payload[0] = 0xC6;
    *  - junction decision v0.2.2: payload 17 bytes, payload[0] = 0xC7;
    *  - drive state v0.2.2: payload 15 bytes, payload[0] = 0xC8;
-   *  - IMU lift/overturn safety snapshot v0.2.3: payload 27 bytes, payload[0] = 0xC9.
+   *  - IMU lift/overturn safety snapshot v0.2.5: payload 27 bytes, payload[0] = 0xC9.
+   *  - retained IMU peak evidence: payload 25 bytes, payload[0] = 0xCA.
+   *  - drive-mode/load status v0.2.5: payload 14 bytes, payload[0] = 0xCB.
    * Anything else is rejected as an unknown layout. */
   const RA_EVENT = ['periodic', 'activate', 'end', 'stall push', 'floor/hold end'];   /* 3 = v0.4 stall push started, 4 = v0.5 tilt floor / v0.6 speed hold ended */
   const RA_END = ['none', 'level', 'descent', 'invalid', 'stale', 'timeout', 'not following', 'paused', 'stopped'];
@@ -485,26 +489,50 @@
       bendSide:side,bendPercent:percent,recoveryPhase:(meta>>>11)&7,sweepStage:stage,
       recoveryYawDeg:s(angular,3,13)/10,targetLeft:left,targetRight:right,saturated:!!(targets&(1<<18))};
   }
+  /* C9 codec 0x23 is retained for old firmware; codec 0x25 extends the
+   * accepted tilt dwell to 100 ms while preserving the rest of the layout. */
   const IMU_STOP_REASON = ['none', 'lifted', 'overturn', 'unavailable'];
   function decodeImuLiftSafety(p) {
     if (p.length !== 27 || p[0] !== 0xc9) return { error: 'unknown IMU lift-safety layout' };
-    if (p[1] !== 0x23) return { error: 'unsupported IMU lift-safety version' };
+    if (p[1] !== 0x23 && p[1] !== 0x25) return { error: 'unsupported IMU lift-safety version' };
     if ((p[17] & 0xe0) || (p[19] & 0xf0) || (p[20] & 0x80) ||
-        (p[21] & 0xe0) || (p[22] & 0xc0) || (p[24] & 0xfe))
+        (p[21] & 0xe0) || (p[22] & (p[1] === 0x25 ? 0x80 : 0xc0)) || (p[24] & 0xfe))
       return { error: 'IMU lift-safety reserved bits are nonzero' };
     const reason = p[20] & 3;
-    const upDwellMs = p[21], tiltDwellMs = p[22], uprightMs = u16(p, 23);
-    if (reason > 3 || upDwellMs > 30 || tiltDwellMs > 50 || uprightMs > 500)
+    const upDwellMs = p[21], tiltDwellMs = p[22] & 0x7f, uprightMs = u16(p, 23);
+    if (reason > 3 || upDwellMs > 30 || tiltDwellMs > (p[1] === 0x25 ? 100 : 50) || uprightMs > 500)
       return { error: 'IMU lift-safety value is out of range' };
     let upProjection = u16(p, 16) & 0x1fff;
     if (upProjection & 0x1000) upProjection -= 0x2000;
     const flags = p[20];
-    return { kind: 'imu-lift-safety', version: '0.2.3', uptimeMs: u32(p, 2),
+    return { kind: 'imu-lift-safety', version: p[1] === 0x25 ? '0.2.5' : '0.2.3', codec: p[1], uptimeMs: u32(p, 2),
       tripMs: u32(p, 6), lastSampleMs: u32(p, 10), eventCount: u16(p, 14),
       upProjection, normMg: u16(p, 18) & 0x0fff,
       reason, reasonName: IMU_STOP_REASON[reason], latched: !!(flags & 0x04),
       armed: !!(flags & 0x08), fresh: !!(flags & 0x10), canReset: !!(flags & 0x20),
       saturated: !!(flags & 0x40), upDwellMs, tiltDwellMs, uprightMs, runId: u16(p, 25) };
+  }
+  function decodeImuPeakEvidence(p) {
+    if (p.length !== 25 || p[0] !== 0xca) return { error: 'unknown IMU peak-evidence layout' };
+    if (p[1] !== 1) return { error: 'unsupported IMU peak-evidence codec' };
+    const normPacked = u16(p, 12), peakPacked = u16(p, 14), flags = p[18];
+    if ((normPacked & 0xf000) || (peakPacked & 0xe000) || (p[16] & 0x80) ||
+        (p[17] & 0xe0) || ((flags & 3) > 3) || (((flags >>> 2) & 3) > 3))
+      return { error: 'invalid IMU peak-evidence fields' };
+    let peakUp = peakPacked & 0x1fff;
+    if (peakUp & 0x1000) peakUp -= 0x2000;
+    const candidate = flags & 3, rejectReason = (flags >>> 2) & 3;
+    const peakSampleMs = u32(p, 6), windowStartMs = u32(p, 19), eventCount = u16(p, 23);
+    const minCosQ15 = i16(p, 10), normMg = normPacked & 0x0fff;
+    return { kind: 'imu-lift-peak', codec: p[1], reportMs: u32(p, 2), peakSampleMs,
+      hasPeak: !(peakSampleMs === 0 && windowStartMs === 0 && eventCount === 0),
+      minCosQ15, minCos: minCosQ15 / 32768,
+      peakAngleDeg: Math.acos(Math.max(-1, Math.min(1, minCosQ15 / 32768))) * 180 / Math.PI,
+      normMg, peakUpMg: peakUp, maxTiltDwellMs: p[16], maxUpDwellMs: p[17] & 0x1f,
+      candidate, rejectReason, lastCandidate: candidate, lastRejection: rejectReason,
+      armed: !!(flags & 0x10), currentValid: !!(flags & 0x20),
+      latched: !!(flags & 0x40), saturated: !!(flags & 0x80),
+      windowStartMs, eventCount };
   }
   function decodeSource15(p) {
     if (p.length === 12 && p[0] === 0xC2) {
@@ -541,9 +569,23 @@
     if (p.length === 17 && p[0] === 0xc7) return decodeJunctionDecision(p);
     if (p.length === 15 && p[0] === 0xc8) return decodeDriveState(p);
     if (p.length === 27 && p[0] === 0xc9) return decodeImuLiftSafety(p);
+    if (p.length === 25 && p[0] === 0xca) return decodeImuPeakEvidence(p);
+    if (p.length === 14 && p[0] === 0xcb) return decodeDriveModeStatus(p);
     if (p.length === 28) return decodeRampAssist(p);
     if (p.length === 24 && p[4] === 0xB1) return decodeBarcodePeak(p);
     return { error: 'unknown source-15 layout (payload ' + p.length + ' bytes' + (p.length > 4 ? ', byte4 0x' + p[4].toString(16) : '') + ')' };
+  }
+  function decodeDriveModeStatus(p) {
+    if (p.length !== 14 || p[0] !== 0xcb) return { error: 'unknown drive-mode status layout' };
+    if (p[1] !== 0x25) return { error: 'unsupported drive-mode status codec' };
+    if ((p[10] & 3) > 2 || ((p[10] >>> 2) & 3) > 3 || ((p[10] >>> 4) & 7) > 5 ||
+        (p[11] & 0xf8) || (p[13] & 0xc0)) return { error: 'invalid drive-mode status fields' };
+    const power = u16(p, 12);
+    return { kind: 'drive-mode-status', version: '0.2.5', uptimeMs: u32(p, 2), revision: u32(p, 6),
+      mode: p[10] & 3, requestedMode: (p[10] >>> 2) & 3, lastResult: (p[10] >>> 4) & 7,
+      canChange: !!(p[10] & 0x80), sessionActive: !!(p[11] & 1),
+      loadLeft: !!(p[11] & 2), loadRight: !!(p[11] & 4),
+      addedPwmLeft: power & 0x7f, addedPwmRight: (power >>> 7) & 0x7f };
   }
   function decodeStoredLine(r) {
     if(r.length!==56) return {error:'RTOS controller row must be 56 bytes'};
@@ -634,6 +676,12 @@
                            a & 0xff, (a >> 8) & 0xff]);
   }
   function configArg(param, value) { return ((param & 0x0f) << 12) | (value & 0x0fff); }
+  /* WP CONFIG key 2 uses (mode << 8) | key. Telemetry key 1 keeps its
+   * existing configArg encoding. */
+  function driveModeArg(mode) {
+    if (!Number.isInteger(mode) || mode < 0 || mode > 2) throw new Error('Drive mode must be 0, 1, or 2.');
+    return (mode << 8) | CFG_DRIVE_MODE;
+  }
   function getLogArg(dataset, row) { return ((dataset & 0x0f) << 12) | (row & 0x0fff); }
 
   function decodeAck(bytes) {
@@ -703,15 +751,15 @@
   }
 
   const api = { VERSION, SRC, SRC_NAME, SRC_FAMILY, MAX_FRAME, CMD, CMD_NAME, MOTION_CMDS,
-                ACK_NAME, CFG_TELEMETRY, NAV_STATE, NET_STATE, EVENT_NAME, PROFILE_NAME,
+                ACK_NAME, CFG_TELEMETRY, CFG_DRIVE_MODE, DRIVE_MODES, NAV_STATE, NET_STATE, EVENT_NAME, PROFILE_NAME,
                 SDK_MODE, SDK_OWNER, SDK_MODE_OFF, SDK_MODE_FAULT, LOG_DATASETS, PAYLOAD,
-                decodeFrame, encodeCommand, configArg, getLogArg, decodeAck, SeqTracker,
+                decodeFrame, encodeCommand, configArg, driveModeArg, getLogArg, decodeAck, SeqTracker,
                 le32, u, s, u16, u32, i16, MAP_MOVEMENTS, mappingWord, encodeMapping,
                 mappedMovement, mappingReadbackStatus, mappingTimedOut, connectivityVerdict,
                 decodeB1, decodeB2Motion, decodeImu, decodeLine, decodeB5, decodeNav,
                 decodeSafety, decodeMapping, decodeMotion, decodeLineEvent, decodeNavEvent,
                 decodeSummary, decodeDiagnostics, decodeLogChunk, decodeRampAssist, decodeBarcodePeak,
-                decodeEncoderFault, decodeBarcodeCapture, decodeNetworkStop, decodeImuLiftSafety,
+                decodeEncoderFault, decodeBarcodeCapture, decodeNetworkStop, decodeImuLiftSafety, decodeImuPeakEvidence, decodeDriveModeStatus,
                 decodeSource15, decodeStoredLine, picoUptimeMs, frameRunId,
                 detectProfile, effectiveProfile };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

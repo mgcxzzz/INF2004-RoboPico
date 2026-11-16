@@ -15,6 +15,8 @@ MotionResult nav_coordinator_route(MotionOwner owner, char code);
 MotionResult nav_coordinator_terrain(MotionOwner owner, MotionTerrain terrain);
 MotionResult nav_coordinator_navigation(MotionOwner owner, int16_t left, int16_t right);
 MotionResult nav_coordinator_fault(MotionOwner owner, unsigned bitmap, bool active);
+MotionResult nav_coordinator_speed_mode(MotionOwner owner, unsigned mode);
+MotionSpeedModeStatus nav_coordinator_speed_mode_status(void);
 MotionResult nav_coordinator_ramp_assist(MotionOwner owner, const MotionRampAssist *request);
 MotionRampAssist nav_coordinator_get_assist(void);
 MotionResult nav_coordinator_verified_barcode(MotionOwner owner, char code);

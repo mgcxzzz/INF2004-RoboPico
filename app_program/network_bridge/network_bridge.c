@@ -358,6 +358,8 @@ void rn_app_task(int32_t code, void *exinf) {
                             command.code == WP_CMD_RESUME || command.code == WP_CMD_RESET
 #ifdef APP_RTOS_RELEASE
                             || command.code == WP_CMD_GET_LOG
+                            || (command.code == WP_CMD_CONFIG &&
+                                (command.arg & 0xffU) == WP_CONFIG_DRIVE_MODE_KEY)
 #endif
                             )) {
                 if (rn_drive_enqueue(message))
@@ -372,7 +374,8 @@ void rn_app_task(int32_t code, void *exinf) {
             RnCommandPlan plan =
                 rn_bench_command(message + 5, message[4], get32(message), now, &mapping, &command);
 #ifdef APP_RTOS_LINE
-            if (!parsed && command.code == WP_CMD_CONFIG && now - get32(message) <= 500U) {
+            if (!parsed && command.code == WP_CMD_CONFIG && (command.arg >> 12) == 1U &&
+                now - get32(message) <= 500U) {
                 rn_drive_set_telemetry((command.arg & 4095U) != 0);
                 plan.result = WP_ACK_ACCEPTED;
             }
@@ -408,6 +411,9 @@ void rn_app_task(int32_t code, void *exinf) {
         static uint32_t release_last;
         if (now - release_last >= 1000U) {
             release_last = now;
+            uint8_t mode_info[17];
+            rtos_line_drive_mode_info(rn_next_sequence(15), now, mode_info);
+            (void)rn_tx_push(RN_TLM, mode_info, sizeof(mode_info), now);
             uint8_t info[15];
             rtos_line_release_info(rn_next_sequence(15), info);
             (void)rn_tx_push(RN_TLM, info, sizeof(info), now);
@@ -434,6 +440,9 @@ void rn_app_task(int32_t code, void *exinf) {
             uint16_t run = (uint16_t)info[13] | ((uint16_t)info[14] << 8);
             ri_safety_packet(rn_next_sequence(15), run, lift_stop);
             (void)rn_tx_push(RN_TLM, lift_stop, sizeof(lift_stop), now);
+            uint8_t lift_peak[28];
+            ri_safety_peak_packet(rn_next_sequence(15), lift_peak);
+            (void)rn_tx_push(RN_TLM, lift_peak, sizeof(lift_peak), now);
             if (rn_drive_telemetry_enabled()) {
                 uint8_t diagnostics[63];
                 ri_release_diagnostics(rn_next_sequence(15), now, diagnostics);

@@ -15,6 +15,7 @@ typedef int INT;
 static unsigned depth;
 uint32_t host_now_us = 1000000;
 static jmp_buf finished;
+static void (*before_lock_hook)(void);
 static bool requested, checked_calibrating;
 static unsigned sleeps;
 static uint32_t host_kernel_offset_ms;
@@ -23,6 +24,11 @@ static uint32_t fifo_start_us, init_start_us;
 static int ISpinLock(T_SPLOCK *p, UINT *key) {
     (void)p;
     *key = 0;
+    if (before_lock_hook) {
+        void (*hook)(void) = before_lock_hook;
+        before_lock_hook = 0;
+        hook();
+    }
     ++depth;
     return 0;
 }

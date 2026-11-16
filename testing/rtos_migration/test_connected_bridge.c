@@ -11,6 +11,7 @@
 #include "app_program/rtos_bringup/bringup_policy.h"
 #include "firmware/integration/buddy1_4/src/motion/motion_port.h"
 #include "firmware/integration/buddy1_4/src/network/wifi_packets.h"
+#include "app_program/network_bridge/drive_mode_telemetry.h"
 typedef int ID;
 typedef unsigned UINT;
 typedef unsigned char UB;
@@ -31,6 +32,7 @@ typedef struct {
 static BringupStatus hardware;
 static uint32_t clock_ms = 10000, last_cancel;
 static bool pending_start;
+static bool mode_change_allowed = true;
 static unsigned starts, resumes, offs;
 static int ISpinLock(T_SPLOCK *s, UINT *key) {
     (void)s;
@@ -136,6 +138,9 @@ static bool rtos_line_request_start(uint32_t received) {
 static bool rtos_line_pending(void) {
     return pending_start;
 }
+static bool rtos_line_mode_change_allowed(void) {
+    return mode_change_allowed && !(hardware.flags & BR_ACTIVE) && !pending_start;
+}
 static bool rtos_line_ready(void) {
     return true;
 }
@@ -158,6 +163,7 @@ static void bringup_encoder_fault_packet(uint8_t seq, uint8_t out[BR_ENCODER_FAU
 static void rtos_line_barcode_attempt_info(uint8_t seq, uint32_t now_ms, uint8_t out[30]) { (void)seq;(void)now_ms;memset(out,0,30); }
 static void rtos_line_junction_info(uint8_t seq, uint32_t now_ms, uint8_t out[20]) { (void)seq;(void)now_ms;memset(out,0,20); }
 static void rtos_line_drive_info(uint8_t seq, uint32_t now_ms, uint8_t out[18]) { (void)seq;(void)now_ms;memset(out,0,18); }
+static void rtos_line_drive_mode_info(uint8_t seq, uint32_t now_ms, uint8_t out[17]) { (void)seq;(void)now_ms;memset(out,0,17); }
 
 static uint8_t rtos_line_log_reply(const WifiCommand *cmd) { (void)cmd;return hardware.flags&BR_ACTIVE?WP_ACK_BUSY:WP_ACK_ACCEPTED; }
 #endif
@@ -191,7 +197,44 @@ static void request(unsigned code) {
     assert(tk_rcv_mbf(rx, msg, 0) == RN_RX_BYTES);
     assert(rn_drive_enqueue(msg));
 }
+static void request_config(unsigned mode) {
+    uint16_t arg = (uint16_t)((mode << 8U) | 2U);
+    uint8_t data[4] = {(uint8_t)((WP_CMD_CONFIG << 4) | 2), 17, (uint8_t)arg,
+                       (uint8_t)(arg >> 8U)};
+    uint8_t msg[RN_RX_BYTES];
+    assert(rn_rx_push(data, sizeof(data), sizeof(data), clock_ms));
+    assert(tk_rcv_mbf(rx, msg, 0) == RN_RX_BYTES);
+    assert(rn_drive_enqueue(msg));
+}
+static uint8_t last_ack_result(void) {
+    uint8_t topic, len, payload[RN_PACKET_MAX], result = 0xffU;
+    while (rn_tx_take(&topic, payload, &len, clock_ms))
+        if (topic == RN_ACK && len == WP_ACK_BYTES)
+            result = payload[2];
+    return result;
+}
+static void drive_mode_packet_fixture(void) {
+    const RnDriveModeTelemetry info = {.uptime_ms = 0x01020304U,
+                                       .revision = 0x11223344U,
+                                       .mode = DRIVE_MODE_FASTER_TRIAL75,
+                                       .requested_mode = DRIVE_MODE_FASTER_TRIAL75,
+                                       .last_result = WP_ACK_ACCEPTED,
+                                       .can_change = 1,
+                                       .session_active = 0,
+                                       .load_left = 23,
+                                       .load_right = 37};
+    const uint8_t expected[17] = {0xf2, 14, 0x5a, 0xcb, 0x25, 0x04, 0x03, 0x02, 0x01,
+                                  0x44, 0x33, 0x22, 0x11, 0x8a, 0x06, 0x97, 0x12};
+    uint8_t packet[17];
+    assert(rn_drive_mode_encode(&info, 0x5a, packet));
+    assert(memcmp(packet, expected, sizeof(expected)) == 0);
+    FILE *fixture = fopen("testing/rtos_migration/build-host/drive_mode.bin", "wb");
+    assert(fixture);
+    assert(fwrite(packet, 1, sizeof(packet), fixture) == sizeof(packet));
+    assert(fclose(fixture) == 0);
+}
 int main(void) {
+    drive_mode_packet_fixture();
     assert(rn_init() == 0);
     assert(rn_live_command(true, 0x30));
     assert(rn_live_command(true, 0x38));
@@ -274,6 +317,34 @@ int main(void) {
     MotionPort port = {.now_us = api_now, .outputs_off = api_off};
     motion_init(&port);
     MotionFeedback f = {.now_us = board_time_us(), .line_level = {500, 0}};
+    for (unsigned k = 0; k < 13; ++k) {
+        clock_ms += 10;
+        f.now_us = board_time_us();
+        (void)motion_update(&f);
+    }
+    assert(motion_get_status().stopped);
+    request_config(DRIVE_MODE_NORMAL60);
+    rn_drive_process(&f);
+    assert(motion_get_speed_mode_status().mode == DRIVE_MODE_NORMAL60 &&
+           motion_get_speed_mode_status().revision == 1);
+    assert(last_ack_result() == WP_ACK_ACCEPTED);
+    request_config(DRIVE_MODE_NONE);
+    rn_drive_process(&f);
+    assert(motion_get_speed_mode_status().mode == DRIVE_MODE_NORMAL60);
+    assert(last_ack_result() == WP_ACK_FORMAT);
+    uint8_t requested_mode, last_result;
+    rn_drive_speed_mode_snapshot(&requested_mode, &last_result);
+    assert(requested_mode == DRIVE_MODE_NORMAL60 && last_result == WP_ACK_ACCEPTED);
+    assert(rn_drive_request_speed_mode(DRIVE_MODE_NONE) == WP_ACK_UNSUPPORTED);
+    rn_drive_speed_mode_snapshot(&requested_mode, &last_result);
+    assert(requested_mode == DRIVE_MODE_NONE && last_result == WP_ACK_UNSUPPORTED);
+    mode_change_allowed = false;
+    request_config(DRIVE_MODE_BASELINE45);
+    rn_drive_process(&f);
+    rn_drive_speed_mode_snapshot(&requested_mode, &last_result);
+    assert(motion_get_speed_mode_status().mode == DRIVE_MODE_NORMAL60 &&
+           requested_mode == DRIVE_MODE_BASELINE45 && last_result == WP_ACK_BUSY);
+    mode_change_allowed = true;
     request(WP_CMD_START);
     rn_drive_process(&f);
     assert(starts == 0); /* Early reconnect/retained Start rejected. */
@@ -334,6 +405,6 @@ int main(void) {
     }
     assert(motions == 20 && navs == 4); /* No artificial gaps between sources. */
     puts(
-        "PASS connected bridge: state/epochs/stale/flood STOP/priority/real coordinator Pause+Resume/late Reset/independent telemetry sequences");
+        "PASS connected bridge: state/epochs/stale/flood STOP/priority/speed-mode CONFIG gating+readback/real coordinator Pause+Resume/late Reset/independent telemetry sequences");
     return 0;
 }

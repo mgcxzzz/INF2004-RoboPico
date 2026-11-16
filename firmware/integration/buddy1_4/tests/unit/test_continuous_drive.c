@@ -134,12 +134,70 @@ static void test_invalid_input_fails_safe(void) {
     assert(!s.active && p.sign == 0);
 }
 
+static int policy_step(ContinuousDrive *s, SignedWheel *p, int target, float measured, uint64_t now,
+                       int last, bool eligible) {
+    return continuous_drive_step_policy(s, p, 0, (int16_t)target, measured, 0.01f, now, last,
+                                        eligible);
+}
+
+static void test_smooth_bounded_load_reserve(void) {
+    ContinuousDrive s = {0};
+    SignedWheel p = {0};
+    int output = 0;
+    uint64_t now = 20000000;
+    for (unsigned k = 0; k < 50; ++k) {
+        output = policy_step(&s, &p, 45, 20.0f, now, output, true);
+        assert(s.load_pwm >= 0.0f && s.load_pwm <= DRIVE_MODE_LOAD_MAX_PWM);
+        now += 10000;
+    }
+    assert(s.load_active && s.load_pwm > 0.0f && s.load_pwm <= DRIVE_MODE_LOAD_MAX_PWM);
+
+    /* A qualified reserve persists through a deep dip, but a stationary
+     * wheel cannot arm a new reserve from rest. */
+    float prior = s.load_pwm;
+    for (unsigned k = 0; k < 20; ++k) {
+        output = policy_step(&s, &p, 45, 0.0f, now, output, true);
+        assert(s.load_active && s.load_pwm >= prior && s.load_pwm <= DRIVE_MODE_LOAD_MAX_PWM);
+        prior = s.load_pwm;
+        now += 10000;
+    }
+
+    /* Recovery releases the correction smoothly; a later sustained bump can
+     * re-arm after both its dwell and cooldown, with no kick pulse. */
+    float before_release = s.load_pwm;
+    output = policy_step(&s, &p, 45, 45.0f, now, output, true);
+    assert(!s.load_active && s.load_pwm < before_release && s.load_pwm > 0.0f);
+    for (unsigned k = 0; k < 65; ++k) {
+        output = policy_step(&s, &p, 45, 20.0f, now, output, true);
+        assert(s.load_pwm >= 0.0f && s.load_pwm <= DRIVE_MODE_LOAD_MAX_PWM);
+        now += 10000;
+    }
+    assert(s.load_active && s.load_pwm > 0.0f);
+
+    /* An intentional zero command is still a hard zero. */
+    assert(continuous_drive_step_policy(&s, &p, 0, 0, 20, 0.01f, now, output, true) == 0);
+    assert(s.load_pwm == 0.0f && !s.active);
+
+    /* From a fresh state, a hard stall only gets the original startup aid;
+     * load reserve never activates without measured motion. */
+    s = (ContinuousDrive){0};
+    p = (SignedWheel){0};
+    output = 0;
+    for (unsigned k = 0; k < 40; ++k) {
+        output = policy_step(&s, &p, 45, 0.0f, now, output, true);
+        assert(s.load_pwm == 0.0f && !s.load_active);
+        now += 10000;
+    }
+    assert(s.start_used);
+}
+
 int main(void) {
     test_feedforward_and_entry();
     test_observed_profile_sequences();
     test_start_assist_and_explicit_stop();
     test_stiction_and_load_models();
     test_invalid_input_fails_safe();
+    test_smooth_bounded_load_reserve();
     puts("continuous drive tests passed (software input/plant models only)");
     return 0;
 }

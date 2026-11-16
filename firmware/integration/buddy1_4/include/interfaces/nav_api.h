@@ -9,6 +9,8 @@
 #define nav_turn_relative motion_turn_relative
 #define nav_resume_line motion_resume_line
 #define nav_get_status motion_get_status
+#define nav_request_speed_mode motion_request_speed_mode
+#define nav_get_speed_mode_status motion_get_speed_mode_status
 #define nav_get_command motion_get_command
 #define nav_submit_barcode motion_submit_barcode
 #define nav_submit_navigation motion_submit_navigation

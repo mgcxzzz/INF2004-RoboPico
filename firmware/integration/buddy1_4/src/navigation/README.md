@@ -26,10 +26,21 @@ A takeover removes output immediately, then waits for measured stillness before 
 
 Request kinds10/11 identify physical barcode approval and ramp assistance. Ramp audit goal/reason0=clear,1=accepted/update,2=Stop/takeover,3=expired/ineligible on read,4=following context removed. Requests rejected for mode/owner/bounds keep their result. Accepted per-tick ramp renewals are audit-rate-limited to100ms while start/clear transitions remain recorded.
 
+Request kind12 is the v0.2.5 runtime cruise-mode request. Only Buddy1 may request
+Baseline45/Normal60/Faster-trial75 through `nav_request_speed_mode`. The request
+uses a2-bit canonical mode. The coordinator requires a fully ended, stopped OFF
+session; the production adapter also excludes pause, Start countdown/start offer
+and export leases. The applied mode and32-bit revision are copied for CB status.
+An ACK alone does not replace the dashboard's applied-mode readback.
+
 ## Audit and tests
 
 Press `z` while stopped/settled for requester, owner, request, result and target history. Dashboard navigation export carries the saved31-byte audit rows. Ramp effective-target telemetry is separate, because a requested optical target differs from the constrained target and the slewed motor reference.
 
-New tests verify TTL/bounds/serialization, Buddy3 ownership during Buddy4 assistance, wrong requesters, takeover clearing and physical barcode authorization. Existing tests retain lease, finite manoeuvre, stop-generation and resume checks. Calls are normal cooperative/task-context calls, not ISR entry points. This image remains the working Pico SDK architecture, not the separate micro T-Kernel firmware.
+Tests verify TTL/bounds/serialization, Buddy3 ownership during Buddy4 assistance,
+wrong requesters, takeover clearing and physical barcode authorization. Existing
+tests retain lease, finite manoeuvre, stop-generation and resume checks. Calls
+are task-context requests, not ISR entry points. Main uses micro T-Kernel SMP;
+the SDK adapter remains a historical comparison target.
 
 [Recorded evidence and provenance](../../../../../testing/evidence/README.md).

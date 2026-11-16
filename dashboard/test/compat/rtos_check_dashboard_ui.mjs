@@ -36,6 +36,7 @@ try {
   page.on('pageerror', (e) => errors.push(e.message));
   await page.route('**/vendor/mqtt.min.js' /* COMPAT: vendored MQTT.js */, (route) => route.fulfill({ contentType: 'application/javascript', body: mock }));
   await page.goto('file://' + join(here, '../../index.html') /* COMPAT */);
+  await page.locator('#dashboardTabs [data-view="diagnostics"]').click();
   check('UI01 four empty selectors with every A-Z option', await page.locator('[id^=mapLetter]').count() === 4 &&
     await page.locator('#mapLetter0 option').count() === 27 && await page.locator('#mapLetter0').inputValue() === '');
   await page.locator('#mapApply').click();
@@ -68,7 +69,9 @@ try {
   check('UI08 matching readback confirms exactly the applied letters',
     (await page.locator('#mapStatus').innerText()).includes('Confirmed by car') &&
     (await page.locator('[data-map-active]').allTextContents()).join('') === 'ZAMQ');
+  await page.locator('#dashboardTabs [data-view="logs"]').click();
   await page.locator('#tlmOff').click();
+  await page.locator('#dashboardTabs [data-view="diagnostics"]').click();
   await page.locator('#mapRead').click();
   const getId = await page.evaluate(() => testMqtt.sent.at(-1).bytes[1]);
   active[7] = getId;
@@ -95,6 +98,7 @@ try {
   check('UI13 disconnect invalidates previously confirmed mapping',
     (await page.locator('[data-map-active]').allTextContents()).every((x) => x === 'unknown'));
   check('UI14 no page JavaScript errors', errors.length === 0);
+  await page.locator('#dashboardTabs [data-view="logs"]').click();
   await page.locator('#testStart').click();
   await page.locator('#testStop').click();
   check('UI15 early stop is incomplete rather than PASS',

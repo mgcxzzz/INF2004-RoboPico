@@ -108,6 +108,7 @@ try {
   const log = await p.evaluate(() => document.getElementById('eventTimeline').textContent);
   check('P09 timeline has the peak read and the run-start announce', log.includes('Barcode peak read Y') && log.includes('run start'));
   /* connectivity counter must not mix the two source-15 sequences */
+  await p.locator('#dashboardTabs [data-view="logs"]').click();
   await p.locator('#testStart').click();
   for (const b of cframes) if (b[0] === 0xF2) await emit(p, 'is28/tlm', b);
   await p.locator('#testStop').click();

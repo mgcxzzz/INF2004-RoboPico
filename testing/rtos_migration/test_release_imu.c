@@ -3,6 +3,12 @@
 #include "test_imu_task_reset.c"
 #undef main
 
+static void publish_newer_sample_while_reader_waits(void) {
+    host_now_us=92679000U;
+    shared.lift_sample_ms=92679U;
+    shared.lift_have=true;
+}
+
 int main(void) {
     stationary_reset_fixture();
     printf("guard boot: blocked=%u reason=%u reset=%u armed=%u valid=%u upright=%u last=%u now=%u pending=%u\n",
@@ -10,6 +16,35 @@ int main(void) {
         shared.lift.current_valid,shared.lift.upright_samples,shared.lift_sample_ms,
         host_now_us/1000,shared.lift_reset_pending);
     assert(!ri_safety_blocked() && ri_safety_reason()==0U && ri_safety_can_reset());
+    uint32_t task_clock_us=host_now_us, task_sample_ms=shared.lift_sample_ms;
+    /* A writer publishes a sample 6 ms newer after the reader has captured its
+     * lock request. Clock-after-copy keeps it fresh without extending 100 ms. */
+    shared.lift.latched=false;
+    shared.lift.armed=true;
+    shared.lift.current_valid=true;
+    shared.lift.upright_samples=IMU_LIFT_UPRIGHT_SAMPLES;
+    shared.lift_reset_pending=false;
+    shared.lift_have=true;
+    host_now_us=92673000U;
+    shared.lift_sample_ms=92673U;
+    before_lock_hook=publish_newer_sample_while_reader_waits;
+    assert(!ri_safety_blocked());
+    assert(ri_safety_reason()==0U);
+    host_now_us=92673000U;
+    shared.lift_sample_ms=92673U;
+    before_lock_hook=publish_newer_sample_while_reader_waits;
+    assert(ri_safety_can_reset());
+    uint8_t raced[30];
+    host_now_us=92673000U;
+    shared.lift_sample_ms=92673U;
+    before_lock_hook=publish_newer_sample_while_reader_waits;
+    ri_safety_packet(16,22,raced);
+    assert(raced[23]&0x10);
+    assert(host_now_us/1000U==shared.lift_sample_ms);
+    /* Restore the real task fixture's timeline before exercising its FIFO
+     * acquisition; the independent lock-race case used a later clock epoch. */
+    host_now_us=task_clock_us;
+    shared.lift_sample_ms=task_sample_ms;
     const int16_t base[3]={0,0,1000};
     imu_lift_vec_t level[8];
     for(unsigned i=0;i<8;++i) {
@@ -38,7 +73,8 @@ int main(void) {
     uint8_t safety[30];
     host_kernel_offset_ms=137; /* hardware timer starts before kernel uptime */
     ri_safety_packet(17,22,safety);
-    assert(safety[0]==0xf2 && safety[3]==0xc9 && (safety[23]&0x3f)==0x3d);
+    assert(safety[0]==0xf2 && safety[3]==0xc9 && safety[4]==0x25 &&
+           (safety[23]&0x3f)==0x3d);
     uint32_t packet_ms=0;
     for(unsigned b=0;b<4;++b) packet_ms|=(uint32_t)safety[5+b]<<(8*b);
     assert(packet_ms==host_now_us/1000 && packet_ms!=board_kernel_ms());
@@ -46,6 +82,14 @@ int main(void) {
     host_kernel_offset_ms=(uint32_t)-137;
     ri_safety_packet(18,22,safety);
     assert((safety[23]&0x3f)==0x3d && ri_safety_blocked());
+    uint8_t peak[RI_LIFT_PEAK_PACKET_BYTES];
+    ri_safety_peak_packet(19,peak);
+    assert(peak[0]==0xf2 && peak[1]==25 && peak[2]==19 && peak[3]==0xca && peak[4]==1);
+    uint32_t peak_report_ms=0;
+    for(unsigned b=0;b<4;++b) peak_report_ms|=(uint32_t)peak[5+b]<<(8*b);
+    assert(peak_report_ms==host_now_us/1000 && peak_report_ms!=board_kernel_ms());
+    assert((peak[21]&0x70)==0x70 && peak[26]==1 && peak[27]==0);
+    assert(peak[19]<=100 && peak[20]<=30 && !(peak[19]&0x80) && !(peak[20]&0xe0));
     /* A last-good age just outside the limit must invalidate an earlier Reset check. */
     host_now_us+=101000;
     assert(!ri_safety_can_reset() && !ri_safety_reset_latch());

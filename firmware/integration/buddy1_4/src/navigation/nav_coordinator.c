@@ -21,6 +21,9 @@ static struct {
     MotionRampAssist assist;
     uint64_t assist_deadline, assist_log_us;
     bool assist_eligible;
+    unsigned speed_mode_requested : 2;
+    unsigned speed_mode_result : 4;
+    uint32_t speed_mode_revision;
 } g;
 static uintptr_t lock(void) {
     return g.port.lock ? g.port.lock(g.port.user) : 0;
@@ -155,17 +158,24 @@ void nav_coordinator_init(const MotionPort *port) {
     if (port)
         g.port = *port;
     g.status.mode = MOTION_OFF;
+    g.status.speed_mode = DRIVE_MODE_BASELINE45;
+    g.speed_mode_requested = DRIVE_MODE_NONE;
+    g.speed_mode_result = MOTION_OK;
 }
 void nav_coordinator_begin(uint64_t time) {
     uintptr_t key = lock();
     cancel();
     uint32_t generation = g.status.generation + 1, lease = g.status.lease + 1;
+    unsigned speed_mode = g.status.speed_mode;
+    uint32_t speed_mode_revision = g.status.speed_mode_revision;
     g.status = (MotionStatus){.fault = g.reported_faults,
                               .session_active = true,
                               .mode = MOTION_AUTO,
                               .owner = MOTION_BUDDY3,
                               .generation = generation,
-                              .lease = lease};
+                              .lease = lease,
+                              .speed_mode = speed_mode,
+                              .speed_mode_revision = speed_mode_revision};
     g.feedback = (MotionFeedback){.now_us = time};
     g.assist = (MotionRampAssist){0};
     g.assist_deadline = g.assist_log_us = 0;
@@ -381,6 +391,35 @@ MotionResult nav_coordinator_terrain(MotionOwner owner, MotionTerrain terrain) {
 MotionStatus nav_coordinator_status(void) {
     uintptr_t key = lock();
     MotionStatus s = g.status;
+    unlock(key);
+    return s;
+}
+MotionResult nav_coordinator_speed_mode(MotionOwner owner, unsigned mode) {
+    uintptr_t key = lock();
+    g.speed_mode_requested = drive_mode_valid(mode) ? mode : DRIVE_MODE_NONE;
+    MotionResult result = MOTION_OK;
+    if (owner != MOTION_BUDDY1 || !drive_mode_valid(mode))
+        result = MOTION_INVALID;
+    else if (g.status.session_active || g.status.mode != MOTION_OFF || !g.status.stopped)
+        result = MOTION_NOT_STOPPED;
+    else {
+        ++g.speed_mode_revision;
+        g.status.speed_mode = mode;
+        g.status.speed_mode_revision = g.speed_mode_revision;
+    }
+    g.speed_mode_result = result;
+    unlock(key);
+    return result;
+}
+MotionSpeedModeStatus nav_coordinator_speed_mode_status(void) {
+    uintptr_t key = lock();
+    MotionSpeedModeStatus s = {.mode = g.status.speed_mode,
+                               .requested_mode = g.speed_mode_requested,
+                               .revision = g.speed_mode_revision,
+                               .last_result = g.speed_mode_result,
+                               .session_active = g.status.session_active,
+                               .stopped = g.status.stopped,
+                               .motion_mode = g.status.mode};
     unlock(key);
     return s;
 }

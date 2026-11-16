@@ -170,6 +170,7 @@ try {
 
   /* clearing the visible log does not erase export history */
   const counts = await p.evaluate(() => [logLines.length, frames.length, eventRows.length]);
+  await p.locator('#dashboardTabs [data-view="logs"]').click();
   await p.locator('#logClear').click();
   const after = await p.evaluate(() => [logLines.length, frames.length, eventRows.length]);
   check('S25 Clear visible keeps message log, frames and events', after[0] >= counts[0] && after[1] === counts[1] && after[2] === counts[2] &&

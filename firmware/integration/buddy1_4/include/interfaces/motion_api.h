@@ -2,6 +2,7 @@
 #define BUDDY_SHARED_MOTION_API_H
 #include <stdbool.h>
 #include <stdint.h>
+#include "src/motion/drive_mode.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -68,16 +69,26 @@ enum {
 typedef struct {
 #ifdef INTERFACE_UNPACKED_REFERENCE
     unsigned session_active, stopped, navigation_interrupted, mode, owner, command_state, terrain,
-        fault, stop_reason;
+        fault, stop_reason, speed_mode;
 #else
     unsigned session_active : 1, stopped : 1, navigation_interrupted : 1;
     unsigned mode : 3, owner : 3, command_state : 3, terrain : 2, fault : 10, stop_reason : 6;
+    unsigned speed_mode : 2;
 #endif
-    uint32_t lease, generation, command_id;
+    uint32_t lease, generation, command_id, speed_mode_revision;
     float progress_mm, rotation_deg;
     int16_t target_mm_s[2];
     char pending_route;
 } MotionStatus;
+typedef struct {
+ #ifdef INTERFACE_UNPACKED_REFERENCE
+    unsigned mode, requested_mode, last_result, session_active, stopped, motion_mode;
+ #else
+    unsigned mode : 2, requested_mode : 2, last_result : 4;
+    unsigned session_active : 1, stopped : 1, motion_mode : 3;
+ #endif
+    uint32_t revision;
+} MotionSpeedModeStatus;
 typedef struct {
     uint32_t id;
 #ifdef INTERFACE_UNPACKED_REFERENCE
@@ -111,6 +122,10 @@ MotionResult motion_turn_relative(MotionOwner owner, uint32_t lease, float degre
  * stale turn goals; an already-decoded pending route is preserved otherwise. */
 MotionResult motion_resume_line(MotionOwner owner, uint32_t lease, bool abandon_navigation);
 MotionStatus motion_get_status(void);
+/* Runtime line cruise mode is RAM-only and may change only while the complete
+ * supervisor/motion session is stopped. */
+MotionResult motion_request_speed_mode(MotionOwner owner, unsigned mode);
+MotionSpeedModeStatus motion_get_speed_mode_status(void);
 bool motion_get_command(uint32_t id, MotionCommandStatus *status);
 /* For Buddy3's VERIFIED complete barcode result, not arbitrary sensor edges.
  * A-Z accepted in AUTO in the Wi-Fi integration; its adapter resolves the active runtime map. Unassigned letters do not queue movement. Busy during avoidance; partial optical frames are

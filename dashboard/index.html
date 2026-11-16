@@ -1,6 +1,6 @@
 <!doctype html>
 <!--
-  IS28 merged dashboard v0.2.3 (v0.1 simplified: Recording and the Firmware profile card removed).
+  IS28 merged dashboard v0.2.5 (v0.1 simplified: Recording and the Firmware profile card removed).
   One page for both firmware families on the same broker:
     - RTOS (micro T-Kernel) Buddy1/Buddy4 build: sources 1-8 plus release snapshots (source 15).
     - SDK v2.3 Buddy2/Buddy3 build (+ optional Buddy4 add-on): sources 1, 2, 4, 8, 9-14
@@ -15,25 +15,22 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>RoboPico — Buddy 1–4 RTOS v0.2.3</title>
+  <title>RoboPico Demo Console — v0.2.5</title>
 <script src="vendor/mqtt.min.js"></script>
 <script src="is28_schema.js"></script>
 <style>
-  :root { --bg:#f6f7f9; --card:#fff; --ink:#1d2330; --muted:#667085; --line:#e3e6eb;
-          --ok:#0f8a4b; --warn:#b26b00; --bad:#c62828; --accent:#2457c5; }
-  @media (prefers-color-scheme: dark) {
-    :root { --bg:#12151b; --card:#1b2029; --ink:#e7eaf0; --muted:#98a2b3; --line:#2b3240;
-            --ok:#3ecf8e; --warn:#f0b44c; --bad:#ff6b6b; --accent:#7aa2ff; } }
+  :root { --bg:#10151f; --card:#192130; --ink:#ecf1fa; --muted:#a8b5ca; --line:#303c50;
+          --ok:#64d9b1; --warn:#ffd18a; --bad:#ffa1ab; --accent:#94a5ff; --soft:#273252; }
   * { box-sizing:border-box; }
   body { margin:0; font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
          background:var(--bg); color:var(--ink); }
-  header { display:flex; flex-wrap:wrap; gap:10px; align-items:center; padding:12px 16px;
+  header { display:flex; flex-wrap:wrap; gap:10px; align-items:center; padding:10px 16px;
            border-bottom:1px solid var(--line); background:var(--card); position:sticky; top:0; z-index:2; }
   header h1 { font-size:16px; margin:0 12px 0 0; }
   header h1 .ver { font-size:12px; font-weight:600; color:var(--muted); }
   input, button, select { font:inherit; color:inherit; }
   input[type=text] { padding:6px 8px; border:1px solid var(--line); border-radius:6px;
-                     background:var(--bg); min-width:220px; }
+                     background:var(--bg); min-width:170px; }
   button { padding:7px 12px; border:1px solid var(--line); border-radius:6px; background:var(--card);
            cursor:pointer; }
   button:hover { border-color:var(--accent); }
@@ -43,7 +40,7 @@
   select { padding:5px 8px; border:1px solid var(--line); border-radius:6px; background:var(--bg); }
   .pill { padding:3px 9px; border-radius:999px; font-size:12px; font-weight:600; border:1px solid var(--line); }
   .ok { color:var(--ok); } .warn { color:var(--warn); } .bad { color:var(--bad); } .muted { color:var(--muted); }
-  main { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:12px; padding:12px 16px; }
+  main { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:12px; padding:14px 16px 24px; max-width:1560px; margin:0 auto; }
   section { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px 14px; min-width:0; }
   section h2 { font-size:13px; margin:0 0 8px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }
   section h3 { font-size:12px; margin:4px 0 6px; color:var(--muted); }
@@ -76,21 +73,154 @@
   .timeline { max-height:250px; overflow:auto; border:1px solid var(--line); border-radius:6px; }
   .timeline article { padding:6px 9px; border-bottom:1px solid var(--line); font-size:12px; }
   .timeline time { color:var(--muted); font:11px ui-monospace,Menlo,Consolas,monospace; margin-right:8px; }
+  header .brandline { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  header .connections { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin-left:auto; }
+  header h1 { letter-spacing:-.35px; }
+  .run-strip { grid-column:1/-1; flex:1 1 100%; border:1px solid var(--line); border-radius:13px; padding:10px 12px; background:#192130; }
+  .run-strip-top,.run-strip-tools,.top-controls,.overview-heading,.overview-detail,.overview-note,.overview-map { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
+  .run-strip-top { justify-content:space-between; gap:14px; }
+  .run-state { font-size:21px; line-height:1.2; font-weight:650; letter-spacing:-.4px; }
+  .top-controls { justify-content:flex-end; }
+  .run-strip-tools { justify-content:space-between; margin-top:10px; padding-top:10px; border-top:1px solid var(--line); }
+  .run-strip-tools label { display:flex; align-items:center; flex-wrap:wrap; gap:7px; }
+  .overview-tools-note { min-height:18px; }
+  .overview-grid { display:grid; grid-column:1/-1; grid-template-columns:repeat(3,minmax(0,1fr)); gap:11px; }
+  .overview-card { border:1px solid var(--line); border-radius:13px; background:#192130; padding:14px; min-width:0; }
+  .overview-heading { justify-content:space-between; margin-bottom:10px; }
+  .overview-heading h3 { margin:0; font-size:13px; font-weight:600; }
+  .overview-primary { font-size:25px; line-height:1.2; letter-spacing:-.5px; font-weight:630; margin:4px 0 8px; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+  .overview-primary .unit { font-size:12px; color:var(--muted); font-weight:400; letter-spacing:0; }
+  .overview-detail { justify-content:space-between; align-items:baseline; margin-top:5px; font-size:12px; }
+  .overview-detail span:first-child { color:var(--muted); }
+  .overview-detail span:last-child { text-align:right; font-variant-numeric:tabular-nums; }
+  .overview-note { color:var(--muted); font-size:11px; margin-top:9px; }
+  .overview-map { grid-column:1/-1; justify-content:space-between; border:1px solid var(--line); border-radius:10px; padding:9px 12px; background:#192130; }
+  .overview-map-values { color:var(--muted); font-size:12px; }
+  .pill.neutral { background:var(--soft); color:var(--muted); }
+  .view-tabs { grid-column:1/-1; display:flex; flex-wrap:wrap; gap:19px; border-bottom:1px solid var(--line); margin-top:2px; }
+  .view-tab { border:0; border-radius:0; background:transparent; color:var(--muted); padding:10px 0; }
+  .view-tab[aria-selected="true"] { color:var(--accent); box-shadow:0 2px 0 var(--accent); }
+  .detail-panel { grid-column:1/-1; display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:12px; }
+  .detail-panel[hidden] { display:none !important; }
+  .detail-panel .wide { grid-column:1/-1; }
+  button.danger { background:#c52d46; border-color:#c52d46; color:#fff; }
+  button.primary { background:#4056d6; border-color:#4056d6; color:#fff; }
+  button:focus-visible, select:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  [hidden] { display:none !important; }
+  @media(max-width:900px) { .overview-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+  @media(max-width:600px) { .overview-grid,.detail-panel { grid-template-columns:1fr; } header .connections { margin-left:0; }
+    .run-strip-top { align-items:flex-start; } .top-controls { justify-content:flex-start; } }
   @media (max-width:560px) { input[type=text] { min-width:0; width:100%; } }
 </style>
 </head>
 <body>
 <header>
-  <h1>RoboPico <span id="releaseLabel" class="ver">RTOS release metadata pending</span></h1>
-  <input id="url" type="text" aria-label="Broker WebSocket URL">
-  <button id="connect" class="primary">Connect</button>
-  <span id="broker" class="pill muted">not connected</span>
-  <span id="carlink" class="pill muted">car: no heartbeat yet</span>
-  <span id="profilePill" class="pill muted">firmware: unknown</span>
+  <div class="brandline">
+    <h1>RoboPico <span class="ver">Demo Console · v0.2.5</span></h1>
+    <span id="profilePill" class="pill muted">firmware: unknown</span>
+  </div>
+  <div class="connections">
+    <input id="url" type="text" aria-label="Broker WebSocket URL">
+    <button id="connect" class="primary">Connect</button>
+    <span id="broker" class="pill muted">not connected</span>
+    <span id="carlink" class="pill muted">car: no heartbeat yet</span>
+    <span id="releaseLabel" class="pill neutral">RTOS release metadata pending</span>
+  </div>
 </header>
 
 <main>
-  <section>
+  <section id="dashboardOverview" class="wide" aria-label="Demo overview">
+    <div class="run-strip">
+      <div class="run-strip-top">
+        <div>
+          <div id="overviewRunState" class="run-state muted">Unknown</div>
+          <div id="overviewRunDetail" class="muted small">Waiting for fresh car state telemetry.</div>
+        </div>
+        <div id="topCarControls" class="top-controls" role="group" aria-label="Car run controls">
+          <span class="muted small">Loading car controls…</span>
+        </div>
+      </div>
+      <div class="run-strip-tools">
+        <label for="driveMode">Drive mode
+          <select id="driveMode" aria-label="Drive mode" disabled>
+            <option value="0">Baseline · 45 mm/s</option>
+            <option value="1">Normal · 60 mm/s</option>
+            <option value="2">Faster trial · 75 mm/s</option>
+          </select>
+          <span id="driveModeStatus" class="muted small overview-tools-note" role="status">Waiting for a supported car readback.</span>
+        </label>
+        <button id="runExport" disabled>Export run</button>
+      </div>
+    </div>
+    <div class="overview-grid">
+      <section class="overview-card" aria-label="Line following and motion">
+        <div class="overview-heading"><h3>Line &amp; motion</h3><span id="overviewLineTag" class="pill neutral">Unknown</span></div>
+        <div class="overview-primary"><span id="overviewMeasured">—</span> <span class="unit">measured mm/s</span></div>
+        <div class="overview-detail"><span>Line state</span><span id="overviewLineState">Waiting for line telemetry</span></div>
+        <div class="overview-detail"><span>Target L / R</span><span id="overviewTarget">—</span></div>
+        <div class="overview-detail"><span>Measured L / R</span><span id="overviewWheels">—</span></div>
+        <div class="overview-detail"><span>PWM L / R</span><span id="overviewPwm">—</span></div>
+        <div class="overview-detail"><span>Load compensation</span><span id="overviewLoad">Not reported</span></div>
+      </section>
+      <section class="overview-card" aria-label="Barcode detection decode and junction action">
+        <div class="overview-heading"><h3>Barcode &amp; junction</h3><span id="overviewBarcodeTag" class="pill neutral">Unknown</span></div>
+        <div class="overview-primary"><span id="overviewBarcodeLetter">—</span> <span class="unit" id="overviewBarcodeMapped">mapped movement unknown</span></div>
+        <div class="overview-detail"><span>Detection</span><span id="overviewBarcodeDetected">Waiting for barcode telemetry</span></div>
+        <div class="overview-detail"><span>Decode</span><span id="overviewBarcodeDecoded">No fresh decode</span></div>
+        <div class="overview-detail"><span>Pending action</span><span id="overviewBarcodePending">—</span></div>
+        <div class="overview-detail"><span>Executing action</span><span id="overviewBarcodeExecuting">—</span></div>
+        <div class="overview-detail"><span>Completed action</span><span id="overviewBarcodeCompleted">—</span></div>
+        <div class="overview-note">Detection, decode, pending, executing and completion are separate states.</div>
+      </section>
+      <section class="overview-card" aria-label="Live and accepted hump measurements">
+        <div class="overview-heading"><h3>Hump &amp; ramp</h3><span id="overviewHumpTag" class="pill neutral">Unknown</span></div>
+        <div class="overview-primary"><span id="overviewHumpHighest">—</span> <span class="unit">highest accepted</span></div>
+        <div class="overview-detail"><span>Live estimate</span><span id="overviewHumpLive">—</span></div>
+        <div class="overview-detail"><span>Last accepted peak</span><span id="overviewHumpAccepted">—</span></div>
+        <div class="overview-detail"><span>Accepted / rejected</span><span id="overviewHumpCount">—</span></div>
+        <div class="overview-detail"><span>Ramp assistance</span><span id="overviewRampAssist">Not reported</span></div>
+        <div class="overview-note">A live wheel-height estimate is not an accepted hump result.</div>
+      </section>
+      <section class="overview-card" aria-label="Obstacle rubric status">
+        <div class="overview-heading"><h3>Obstacle &amp; avoidance</h3><span class="pill neutral">Buddy 5 not integrated</span></div>
+        <div class="overview-detail"><span>Obstacle detection</span><span>Not integrated</span></div>
+        <div class="overview-detail"><span>Obstacle width</span><span>Unavailable</span></div>
+        <div class="overview-detail"><span>Bypass and line rejoin</span><span>Not integrated</span></div>
+        <div class="overview-note">All three obstacle rubric items remain visible without claiming support.</div>
+      </section>
+      <section class="overview-card" aria-label="Wi-Fi MQTT broker and car heartbeat">
+        <div class="overview-heading"><h3>Wi-Fi &amp; MQTT</h3><span id="overviewMqttTag" class="pill neutral">Unknown</span></div>
+        <div class="overview-primary"><span id="overviewHeartbeat">—</span> <span class="unit">heartbeat age</span></div>
+        <div class="overview-detail"><span>Broker</span><span id="overviewBroker">Unknown</span></div>
+        <div class="overview-detail"><span>Car heartbeat</span><span id="overviewCar">Unknown</span></div>
+        <div class="overview-detail"><span>Motion telemetry</span><span id="overviewTelemetry">No fresh motion frame</span></div>
+        <div class="overview-detail"><span>Link state</span><span id="overviewNet">—</span></div>
+        <div class="overview-note">Broker connection and car heartbeat freshness are reported separately.</div>
+      </section>
+      <section class="overview-card" aria-label="IMU pickup safety and motor output evidence">
+        <div class="overview-heading"><h3>IMU &amp; pickup stop</h3><span id="overviewImuTag" class="pill neutral">Unknown</span></div>
+        <div class="overview-primary"><span id="overviewImuArmed">Armed state unknown</span></div>
+        <div class="overview-detail"><span>Actual trip</span><span id="overviewImuTrip">No fresh trip status</span></div>
+        <div class="overview-detail"><span>Motor output after trip</span><span id="overviewMotorOutput">Not confirmed</span></div>
+        <div class="overview-detail"><span>Peak since reset</span><span id="overviewImuPeak">No retained evidence</span></div>
+        <div id="overviewImuEvidence" class="overview-note">Armed status alone does not prove a pickup trip or zero motor output.</div>
+      </section>
+    </div>
+    <div class="overview-map">
+      <div><span class="muted small">Barcode mapping · </span><strong id="overviewMapStatus" class="muted">Unknown until read from car</strong><div id="overviewMapCurrent" class="overview-map-values">No confirmed mapping</div></div>
+      <button id="editMapping">Edit mapping</button>
+    </div>
+  </section>
+  <nav id="dashboardTabs" class="view-tabs" aria-label="Detailed information">
+    <button class="view-tab" data-view="telemetry" aria-selected="true">Telemetry</button>
+    <button class="view-tab" data-view="diagnostics" aria-selected="false">Diagnostics</button>
+    <button class="view-tab" data-view="logs" aria-selected="false">Logs &amp; exports</button>
+  </nav>
+  <div id="panel-telemetry" class="detail-panel" data-panel="telemetry"></div>
+  <div id="panel-diagnostics" class="detail-panel" data-panel="diagnostics" hidden></div>
+  <div id="panel-logs" class="detail-panel" data-panel="logs" hidden></div>
+
+  <section id="stateDetails">
     <h2>Operating state <span class="muted small">(confirmed by car telemetry)</span></h2>
     <div id="opstate" class="big muted">unknown</div>
     <div id="opstateSource" class="muted small">no state telemetry yet</div>
@@ -108,7 +238,7 @@
     </dl>
   </section>
 
-  <section class="cmd">
+  <section id="commandDetails" class="cmd">
     <h2>Car commands <span class="tag car">SENT TO THE CAR</span></h2>
     <div class="row">
       <button data-cmd="START" class="primary">Start</button>
@@ -132,7 +262,7 @@
     <div id="otherClients" class="muted small">No commands from other clients seen on the broker.</div>
   </section>
 
-  <section>
+  <section id="exportsDetails">
     <h2>Exports <span class="muted small">(this page session; files download to this laptop only)</span></h2>
     <div id="archiveStatus" class="muted small" role="status">This page session has received no motion samples or events.</div>
     <div id="bufferStatus" class="muted small" role="status">Nothing retained yet.</div>
@@ -147,10 +277,10 @@
       <button id="framesCsvSave">Export all frames CSV</button><button id="framesJsonSave">Export all frames JSON</button>
     </div>
     <div id="exportStatus" class="muted small" role="status"></div>
-    <p class="muted small">After Stop, request stored data from the Live motion panel. Main RTOS releases support wireless downloads. Save log is in Messages.</p>
+    <p class="muted small">After Stop, request stored data below. Main RTOS releases support wireless downloads. Save log is in Messages.</p>
   </section>
 
-  <section>
+  <section id="networkDetails">
     <h2>WiFi and MQTT (Buddy 1)</h2>
     <dl>
       <dt>Link</dt><dd id="net">–</dd>
@@ -164,7 +294,7 @@
     </dl>
   </section>
 
-  <section class="wide">
+  <section id="motionDetails" class="wide">
     <h2>Live motion telemetry (Buddy 2 / Buddy 3)</h2>
     <div id="sdkMotionStatus" class="muted small">No motion telemetry received.</div>
     <div id="sdkMotionGrid" class="metric-grid">
@@ -196,7 +326,7 @@
     <canvas id="lineChart" aria-label="Calibrated left and right line sensor levels"></canvas>
   </section>
 
-  <section>
+  <section id="barcodeDiagnosticDetails">
     <h2>Barcode diagnostics (source 14)</h2>
     <div id="diagStatus" class="muted small">No diagnostics received.</div>
     <dl>
@@ -211,14 +341,14 @@
     </dl>
   </section>
 
-  <section id="rtosRuntimeCard" hidden>
+  <section id="rtosRuntimeSection" class="wide"><div id="rtosRuntimeCard" hidden>
     <h2>RTOS runtime health</h2>
     <p id="releaseCal" class="small muted">Waiting for release metadata.</p>
     <p id="rtosRuntime" class="small">Waiting for runtime counters.</p>
     <p id="rtosHump" class="small muted">Waiting for hump qualification.</p>
-  </section>
+  </div></section>
 
-  <section>
+  <section id="subsystemsDetails">
     <h2>Subsystems (RTOS summaries)</h2>
     <dl>
       <dt>Line (B3)</dt><dd id="s3">no frames</dd>
@@ -228,7 +358,7 @@
     </dl>
   </section>
 
-  <section class="wide">
+  <section id="imuDetails" class="wide">
     <h2>Buddy 4 IMU and ramp (sources 2 and 4)</h2>
     <div id="b4Source" class="muted small">Waiting for Buddy 4 frames.</div>
     <div class="cols">
@@ -239,6 +369,7 @@
           <dt>Data validity</dt><dd id="imuValid">not received</dd>
           <dt>Motion class</dt><dd id="imuMotion">–</dd>
           <dt>Last event</dt><dd id="imuEvent">–</dd>
+          <dt>Pickup peak evidence (CA)</dt><dd id="imuPeakDetail" class="small">No retained peak evidence received.</dd>
           <dt>Wheel-distance data</dt><dd id="imuOdometry">not received</dd>
           <dt>Shock / notify time</dt><dd id="imuShock">–</dd>
           <dt>I2C errors / missed periods</dt><dd id="imuHealth">–</dd>
@@ -279,7 +410,7 @@
     <canvas id="imuChart" aria-label="Live wheel-height difference and pitch chart"></canvas>
   </section>
 
-  <section class="wide">
+  <section id="mappingDetails" class="wide">
     <h2>Barcode letter mapping</h2>
     <p class="muted">Assign the four demo letters before starting a run. The car stores this mapping in RAM; send it again after power loss.</p>
     <table>
@@ -298,7 +429,7 @@
     <p class="muted">A command ACK confirms request acceptance. The readback confirms the active map; coordinator events show when a letter is actually consumed or completed.</p>
   </section>
 
-  <section class="wide">
+  <section id="barcodeProgressDetails" class="wide">
     <h2>Barcode and junction progress (sources 10/11/12)</h2>
     <div id="progressStatus" class="muted small">No line/coordinator telemetry received.</div>
     <div class="metric-grid">
@@ -322,7 +453,7 @@
     <div id="eventTimeline" class="timeline" aria-live="polite"><article class="muted">Waiting for real events.</article></div>
   </section>
 
-  <section class="wide">
+  <section id="connectivityDetails" class="wide">
     <h2>Connectivity test (NFR-WIFI-01 ≥ 95 % delivered, NFR-WIFI-02 heartbeat gap ≤ 2 s)</h2>
     <div class="row">
       <button id="testStart" class="primary">Start 5-minute test</button>
@@ -337,7 +468,7 @@
     <div id="testVerdict" style="margin-top:8px"></div>
   </section>
 
-  <section class="wide">
+  <section id="messagesDetails" class="wide">
     <h2>Messages</h2>
     <div class="row">
       <label><input type="checkbox" id="logPause"> Pause</label>
@@ -352,7 +483,7 @@
 
 <script>
 'use strict';
-const DASHBOARD_VERSION = 'v0.2.4';
+const DASHBOARD_VERSION = 'v0.2.5';
 const $ = (id) => document.getElementById(id);
 const hasWindow = typeof window !== 'undefined';
 const SRC = IS28.SRC;
@@ -362,14 +493,14 @@ let client = null, cmdId = Math.floor(Math.random() * 256);
 const pending = {};                     /* id -> {time, code}, for ack latency */
 const ownCommands = [];                 /* recent own command bytes, to spot other clients */
 let activeMapping = null, lastBarcodeLetter = null, mapPending = null;
-let lastRamp15 = null, lastPeak15 = null, lastBarcodeCapture = null, lastEncoderFault = null, lastNetworkStop = null;
+let lastRamp15 = null, lastRamp15At = 0, lastPeak15 = null, lastBarcodeCapture = null, lastEncoderFault = null, lastNetworkStop = null;
 let encoderFaultSignature = null, networkStopSignature = null;
 let lastJunctionDecision=null,lastDriveState=null,junctionDecisionSignature=null,driveStateSignature=null;
 let driveSeenAt=0;
 let lastImuStop=null,imuStopSeenAt=0,lastImuStopSeq=null,imuStopSignature=null;
 let mappingQueried = false, lastUptime = null;
 /* RTOS Buddy2/Buddy4 live state (tools/dashboard logic) */
-let lastImuAt = 0, lastImuSeq = null, imuAwaitingFresh = false;
+let lastImuAt = 0, lastImuSeq = null, imuAwaitingFresh = false, latestImuData = null;
 let lastAcceptedImuPeak = null, lastImuEventKey = null;
 let lastMotionAt = 0, lastMotionSeq = null, motionAwaitingFresh = false;
 /* Per-group freshness for the other live panels */
@@ -401,6 +532,61 @@ const logDownload = { active:false, dataset:0, requestId:null, rowIndex:0, total
   parts:null, partCount:0, retries:0, timer:null, rows:[], status:'idle' };
 const test = { running: false, start: 0, end: 0, seq: new IS28.SeqTracker(), gaps: [],
                firstHb: 0, lastHb: 0, timer: null };
+let driveModeStatus = null, driveModeSeenAt = 0, driveModePending = null, driveModeNotice = 'Waiting for a supported car readback.';
+let overviewMotion = null, overviewLine3 = null, overviewLine3At = 0, overviewLineEvent = null, overviewLineEventAt = 0;
+let latestSdkMotion = null, imuTripEvidence = null, imuTripReceivedAt = 0;
+let imuPeakEvidence = null, imuPeakEvidenceAt = 0, imuPeakEvidenceRetained = false;
+let imuPeakSignature = null;
+
+function activateDashboardTab(name) {
+  document.querySelectorAll('#dashboardTabs [data-view]').forEach((button) => {
+    button.setAttribute('aria-selected', String(button.dataset.view === name));
+  });
+  document.querySelectorAll('.detail-panel[data-panel]').forEach((panel) => {
+    panel.hidden = panel.dataset.panel !== name;
+  });
+  if (name === 'telemetry') { drawCharts(); drawImuChart(); }
+}
+
+function setupDashboardLayout() {
+  const destinations = {
+    telemetry: ['motionDetails', 'imuDetails', 'barcodeProgressDetails'],
+    diagnostics: ['stateDetails', 'networkDetails', 'barcodeDiagnosticDetails', 'rtosRuntimeSection', 'subsystemsDetails', 'mappingDetails'],
+    logs: ['commandDetails', 'exportsDetails', 'connectivityDetails', 'messagesDetails']
+  };
+  for (const [name, ids] of Object.entries(destinations)) {
+    const panel = document.getElementById('panel-' + name);
+    for (const id of ids) {
+      const section = document.getElementById(id);
+      if (panel && section) panel.appendChild(section);
+    }
+  }
+  const runStrip = document.querySelector('#dashboardOverview .run-strip');
+  if (runStrip) document.querySelector('header').appendChild(runStrip);
+  const storedLogs = document.getElementById('logDataset').closest('.row');
+  document.getElementById('exportsDetails').appendChild(storedLogs);
+  const controls = document.getElementById('topCarControls');
+  const oldRows = document.querySelectorAll('#commandDetails .row');
+  const priority = ['START', 'PAUSE', 'RESUME', 'STOP', 'RESET', 'ESTOP'];
+  const moved = priority.map((cmd) => document.querySelector(`#commandDetails button[data-cmd="${cmd}"]`)).filter(Boolean);
+  controls.replaceChildren(...moved);
+  moved.forEach((button) => { if (button.dataset.cmd === 'ESTOP') button.classList.add('danger'); });
+  for (const row of oldRows) if (!row.children.length) row.remove();
+  document.querySelectorAll('#dashboardTabs [data-view]').forEach((button) => {
+    button.addEventListener('click', () => activateDashboardTab(button.dataset.view));
+  });
+  document.getElementById('editMapping').addEventListener('click', () => {
+    activateDashboardTab('diagnostics');
+    document.getElementById('mappingDetails').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  document.getElementById('runExport').addEventListener('click', () => {
+    if (releaseInfo && releaseInfo.storedLogs) document.getElementById('logDataset').value = '1';
+    else document.getElementById('logDataset').value = '0';
+    document.getElementById('logDownload').click();
+  });
+  activateDashboardTab('telemetry');
+}
+setupDashboardLayout();
 
 /* ---------- connection ---------- */
 const host = location.hostname || 'localhost';
@@ -430,6 +616,7 @@ $('connect').onclick = () => {
   $('connect').textContent = 'Disconnect';
   updateLogDownloadControl();
   client.on('connect', () => { setPill($('broker'), 'broker connected', 'ok');
+    driveModeStatus=null; driveModeSeenAt=0; driveModePending=null; driveModeNotice='Waiting for a supported car readback.';
     clearSeen(); updateProfile();
     client.subscribe('is28/#', (err) => {
       if (err) { log('broker', 'subscription failed: ' + err.message); return; }
@@ -707,6 +894,75 @@ function detectedProfile() {
   return IS28.detectProfile(seenSources.keys(), firstSeen, now());
 }
 function currentProfile() { const p = detectedProfile(); return p === 'rtos-connected' ? 'rtos' : IS28.effectiveProfile(p, 'auto'); }
+function driveModeName(mode) { return IS28.DRIVE_MODES[mode] || 'Unknown mode'; }
+function refreshDriveModeControl() {
+  const select = $('driveMode');
+  const age = driveModeSeenAt ? now() - driveModeSeenAt : Infinity;
+  const live = !!driveModeStatus && age <= 2500 && currentProfile() === 'rtos' && !!client && client.connected;
+  if (driveModePending && now() - driveModePending.time > 6000) {
+    const reported = driveModeStatus ? driveModeName(driveModeStatus.mode) : 'unknown';
+    driveModePending = null;
+    driveModeNotice = `No matching car readback; active mode remains ${reported}.`;
+  }
+  if (!driveModePending && driveModeStatus) select.value = String(driveModeStatus.mode);
+  select.disabled = !live || !driveModeStatus.canChange || driveModeStatus.sessionActive || !!driveModePending;
+  if (!live) {
+    driveModeNotice = driveModeStatus ? `Mode readback stale (${(age / 1000).toFixed(1)} s); waiting for a fresh car status.` :
+      currentProfile() === 'sdk' ? 'Drive mode is not supported by this firmware.' : 'Waiting for v0.2.5 drive-mode readback.';
+  } else if (!driveModePending && !driveModeNotice.startsWith('Rejected') && !driveModeNotice.startsWith('No matching')) {
+    if (!driveModeStatus.canChange || driveModeStatus.sessionActive)
+      driveModeNotice = 'Run active or car busy; stop the car before changing mode.';
+    else driveModeNotice = `Confirmed by car · ${driveModeName(driveModeStatus.mode)} · revision ${driveModeStatus.revision}.`;
+  }
+  $('driveModeStatus').textContent = driveModeNotice;
+  $('driveModeStatus').className = 'small ' + (driveModePending ? 'warn' : live && driveModeStatus ? 'muted' : 'warn');
+}
+function requestDriveMode(mode) {
+  refreshDriveModeControl();
+  const actual = driveModeStatus && driveModeSeenAt && now() - driveModeSeenAt <= 2500 ? driveModeStatus.mode : null;
+  if (actual === null || !driveModeStatus.canChange || driveModeStatus.sessionActive || !client || !client.connected) {
+    $('driveMode').value = actual === null ? '0' : String(actual);
+    driveModeNotice = actual === null ? 'No fresh car readback; drive mode was not sent.' : 'Car is not stopped and ready; drive mode was not sent.';
+    refreshDriveModeControl();
+    return;
+  }
+  if (mode === actual) {
+    driveModeNotice = `Already confirmed by car · ${driveModeName(actual)}.`;
+    $('driveMode').value = String(actual);
+    refreshDriveModeControl();
+    return;
+  }
+  const id = send(IS28.CMD.CONFIG, IS28.driveModeArg(mode));
+  if (id === null) {
+    $('driveMode').value = String(actual);
+    driveModeNotice = 'Broker is not connected; drive mode was not sent.';
+    refreshDriveModeControl();
+    return;
+  }
+  driveModePending = { id, requested: mode, time: now(), ack: null, ackAt: 0, startRevision: driveModeStatus.revision };
+  $('driveMode').value = String(mode);
+  driveModeNotice = `Sent ${driveModeName(mode)} request; waiting for ACK and fresh car readback.`;
+  refreshDriveModeControl();
+}
+function receiveDriveModeStatus(d) {
+  const receivedAt = now();
+  driveModeStatus = d; driveModeSeenAt = receivedAt;
+  const pending = driveModePending;
+  if (pending && pending.ack === true && receivedAt > pending.ackAt) {
+    if (d.mode === pending.requested && d.lastResult === 0) {
+      driveModeNotice = `Confirmed by car · ${driveModeName(d.mode)} · revision ${d.revision}.`;
+      driveModePending = null;
+    } else if (d.requestedMode === pending.requested && d.lastResult !== 0) {
+      driveModeNotice = `Rejected by car status · ${IS28.ACK_NAME[d.lastResult] || 'result ' + d.lastResult}. Active mode remains ${driveModeName(d.mode)}.`;
+      driveModePending = null;
+    }
+  }
+  if (!driveModePending && !driveModeNotice.startsWith('Rejected') && !driveModeNotice.startsWith('No matching'))
+    driveModeNotice = `Confirmed by car · ${driveModeName(d.mode)} · revision ${d.revision}.`;
+  refreshDriveModeControl();
+}
+$('driveMode').addEventListener('change', (event) => requestDriveMode(Number(event.target.value)));
+
 function profileText(p) {
   if (releaseInfo && p==='rtos-connected') return `RTOS Buddy 1–4 v${releaseInfo.version} · ${releaseInfo.wireless?'network supervised':'USB supervised'}`;
   return p === 'rtos-connected' ? (connectedImuSeen ? 'RTOS connected IMU/ramp (micro T-Kernel · Step5 · experimental)' : connectedBarcodeSeen ? 'RTOS connected barcode (micro T-Kernel · Step4)' : 'RTOS connected line (micro T-Kernel · Step3B)') :
@@ -753,10 +1009,16 @@ function onMessage(topic, payload, packet) {
     const f = IS28.decodeFrame(b);
     recordFrame(topic, b, f, retained, iso, at);
     if (f.error) { log(topic, `bad frame (${f.error}) [${hex(b)}]`); return; }
-    if (retained) { log(topic, `retained ${f.srcName} #${f.seq} ignored for live display (not a fresh frame)`); return; }
+    if (retained) {
+      log(topic, `retained ${f.srcName} #${f.seq} ignored for live display (not a fresh frame)`);
+      if (f.src === SRC.SOURCE15 && f.data && f.data.kind === 'imu-lift-peak') showRetainedPeakEvidence(f.data, f);
+      return;
+    }
     /* Source 15 carries two independently sequenced layouts: count the peak decoder under pseudo-key 16. */
     if (test.running && f.src !== SRC.BARCODE_MAP && f.src !== SRC.LOG_CHUNK)
-      test.seq.add(f.src===15 && connectedDriveSeen ? 15 : f.src === 15 && f.data && f.data.kind === 'peak' ? 16 : f.src === 15 && f.data && f.data.kind === 'ramp-targets' ? 17 : f.src, f.seq);
+      test.seq.add(f.src===15 && connectedDriveSeen ? 15 : f.src === 15 && f.data && f.data.kind === 'peak' ? 16 :
+        f.src === 15 && f.data && f.data.kind === 'ramp-targets' ? 17 : f.src === 15 && f.data && f.data.kind === 'drive-mode-status' ? 18 :
+        f.src === 15 && f.data && f.data.kind === 'imu-lift-peak' ? 19 : f.src, f.seq);
     show(f);
     if (topic === 'is28/hb') heartbeat(f);
     if ((topic === 'is28/hb' && $('logHb').checked) || (topic !== 'is28/hb' && $('logTlm').checked))
@@ -771,6 +1033,18 @@ function onMessage(topic, payload, packet) {
     if (own) delete pending[a.id];
     const ms = own ? ` in ${Math.round(now() - sent.time)} ms` : '';
     const name = ackName(a);
+    if (own && driveModePending && driveModePending.id === a.id && a.code === IS28.CMD.CONFIG) {
+      if (a.accepted) {
+        driveModePending.ack = true; driveModePending.ackAt = now();
+        driveModeNotice = `CONFIG accepted; waiting for a fresh car readback of ${driveModeName(driveModePending.requested)}.`;
+      } else {
+        const actual = driveModeStatus ? driveModeName(driveModeStatus.mode) : 'unknown';
+        driveModePending = null;
+        driveModeNotice = `Rejected by car: ${name}. Active mode remains ${actual}.`;
+        if (driveModeStatus) $('driveMode').value = String(driveModeStatus.mode);
+      }
+      refreshDriveModeControl();
+    }
     if (own || !sent) {
       $('lastack').innerHTML = '';
       const strong = document.createElement('b'); strong.textContent = a.codeName;
@@ -911,11 +1185,14 @@ function invalidateLive(reason) {
   driveSeenAt=0;lastDriveState=null;driveStateSignature=null;
   $('driveState').textContent='Waiting for fresh bend/recovery telemetry';
   $('driveStateDetails').textContent=`Cleared: ${reason}.`;
-  lastMotionAt = 0; motionAwaitingFresh = lastMotionSeq !== null;
+  lastMotionAt = 0; motionAwaitingFresh = lastMotionSeq !== null; overviewMotion=null; latestSdkMotion=null;
+  overviewLine3=null; overviewLine3At=0; overviewLineEvent=null; overviewLineEventAt=0;
   clearMotion('waiting for fresh Buddy 2 telemetry after ' + reason);
   lastImuAt = 0; imuAwaitingFresh = lastImuSeq !== null; lastAcceptedImuPeak = null;
   clearImu('waiting for fresh Buddy 4 telemetry after ' + reason);
   lastImuStop=null; imuStopSeenAt=0; lastImuStopSeq=null; imuStopSignature=null;
+  imuTripEvidence=null; imuTripReceivedAt=0;
+  driveModeStatus=null; driveModeSeenAt=0; driveModePending=null; driveModeNotice='Waiting for a supported car readback.';
   for (const k of Object.keys(GROUPS)) { fresh[k] = 0; staleShown[k] = false; }
   nav6 = null; safetyData = null; sdkNav = null; hb.state = null; faultSince = null;
   coordinatorMode = null; coordinatorOffSince = null;
@@ -925,7 +1202,7 @@ function invalidateLive(reason) {
                     'diagThreshold','diagState','diagCounts','diagErrors','diagGaps','diagDrops','diagInvalid','diagUptime',
                     'eventLetter','pendingAction','pendingRevision','executingAction','completedAction','navState',
                     'peakResult','rampAssist','rampTargets','buildId']) $(id).textContent = dash;
-  lastRamp15 = null; lastPeak15 = null;
+  lastRamp15 = null; lastRamp15At=0; lastPeak15 = null;
   $('sdkMotionStatus').textContent = `Cleared: ${reason}. Waiting for fresh frames.`; $('sdkMotionStatus').className = 'warn small'; $('sdkMotionGrid').className = 'metric-grid';
   $('diagStatus').textContent = `Cleared: ${reason}.`; $('diagStatus').className = 'warn small';
   $('progressStatus').textContent = `Cleared: ${reason}.`; $('progressStatus').className = 'warn small';
@@ -976,6 +1253,164 @@ function refreshOpState() {
   if (fault && prof === 'sdk' && lastResetAccepted && faultSince !== null && lastResetAccepted.at >= faultSince) {
     $('opNote').textContent = `Reset was accepted at ${new Date(lastResetAccepted.iso).toLocaleTimeString()}. Original v2.3 keeps showing the previous run's Fault until a new run starts; this is not a new fault.`;
   } else $('opNote').textContent = '';
+  refreshDashboardOverview();
+}
+function overviewPill(id, text, kind) {
+  const element = $(id); element.textContent = text; element.className = `pill ${kind || 'neutral'}`;
+}
+function refreshDashboardOverview() {
+  const t = now(), state = $('opstate').textContent || 'unknown';
+  $('overviewRunState').textContent = state;
+  $('overviewRunState').className = 'run-state ' + ($('opstate').className.split(' ').slice(1).join(' ') || 'muted');
+  const owner = $('owner').textContent;
+  $('overviewRunDetail').textContent = `${$('opstateSource').textContent}${owner && owner !== '–' ? ` · owner ${owner}` : ''}`;
+
+  const motionAge = overviewMotion ? t - overviewMotion.at : Infinity;
+  const motionFresh = motionAge <= 2000 && !motionAwaitingFresh;
+  const modeFresh = driveModeStatus && driveModeSeenAt && t - driveModeSeenAt <= 2500;
+  if (motionFresh) {
+    const d = overviewMotion.data;
+    if (overviewMotion.source === 9) {
+      $('overviewMeasured').textContent = `${((d.speedL + d.speedR) / 2).toFixed(1)}`;
+      $('overviewWheels').textContent = `${d.speedL} / ${d.speedR} mm/s`;
+      $('overviewTarget').textContent = `${d.targetL} / ${d.targetR} mm/s`;
+      $('overviewPwm').textContent = `${d.pwmL} / ${d.pwmR}`;
+    } else {
+      $('overviewMeasured').textContent = d.freshOdometry ? `${d.centreSpeedMmS}` : 'Unavailable';
+      $('overviewWheels').textContent = d.freshOdometry ? `${d.leftSpeedMmS} / ${d.rightSpeedMmS} mm/s` : 'Unavailable · no fresh odometry';
+      $('overviewTarget').textContent = modeFresh ? `${driveModeName(driveModeStatus.mode)} · L/R targets not reported` : 'Not reported by this firmware';
+      $('overviewPwm').textContent = 'Not reported by this firmware';
+    }
+    $('overviewMeasured').className = '';
+    if (overviewMotion.source === 9 && d.motionActive) $('overviewLineTag').textContent = 'Motion active';
+    else if (overviewLine3 && overviewLine3At && t - overviewLine3At <= 3000) $('overviewLineTag').textContent = overviewLine3.stateName;
+    else if (driveSeenAt && t - driveSeenAt <= 2500) $('overviewLineTag').textContent = $('driveState').textContent;
+    else $('overviewLineTag').textContent = 'Line state unknown';
+  } else {
+    $('overviewMeasured').textContent = motionAge < Infinity ? `Stale · ${(motionAge / 1000).toFixed(1)} s` : '—';
+    $('overviewWheels').textContent = 'No fresh motion frame';
+    $('overviewTarget').textContent = 'No fresh target readback';
+    $('overviewPwm').textContent = 'No fresh PWM telemetry';
+    $('overviewLineTag').textContent = 'Unknown';
+  }
+  if (overviewLine3 && overviewLine3At && t - overviewLine3At <= 3000) {
+    $('overviewLineState').textContent = overviewLine3.stateName;
+    $('overviewLineTag').textContent = overviewLine3.stateName;
+  } else if (driveSeenAt && t - driveSeenAt <= 2500) {
+    $('overviewLineState').textContent = $('driveState').textContent;
+    $('overviewLineTag').textContent = $('driveState').textContent;
+  } else if (motionFresh && overviewMotion.source === 9) {
+    $('overviewLineState').textContent = overviewMotion.data.motionActive ? `SDK motion active · phase ${overviewMotion.data.phase}` : 'SDK motion stopped';
+  } else {
+    $('overviewLineState').textContent = motionAge < Infinity ? 'Stale · waiting for a line/motion update' : 'Waiting for line telemetry';
+  }
+  if (modeFresh) {
+    const m = driveModeStatus;
+    $('overviewTarget').title = `Cap-derived mode ${driveModeName(m.mode)}; status revision ${m.revision}.`;
+    $('overviewLoad').textContent = `L/R ${m.loadLeft ? 'active' : 'inactive'} / ${m.loadRight ? 'active' : 'inactive'} · added PWM ${m.addedPwmLeft} / ${m.addedPwmRight}`;
+  } else {
+    $('overviewLoad').textContent = driveModeStatus ? 'Stale · waiting for CB status' : 'Not reported by this firmware';
+  }
+
+  const line3Fresh = !!(overviewLine3 && overviewLine3At && t - overviewLine3At <= 3000);
+  const lineEventFresh = !!(overviewLineEvent && overviewLineEventAt && t - overviewLineEventAt <= 3500);
+  const lineNavFresh = !!(sdkNav && fresh.sdkNav && !staleShown.sdkNav && t - fresh.sdkNav <= 3500);
+  if (line3Fresh || lineEventFresh || lineNavFresh) {
+    if (line3Fresh) {
+      $('overviewBarcodeDetected').textContent = overviewLine3.barcodeBlack ? 'Sensor reports a black bar' : 'No black bar at the sensor now';
+      $('overviewBarcodeDecoded').textContent = overviewLine3.lastChar !== '-' ? `${overviewLine3.lastChar} · ${overviewLine3.lastResult}` : `No completed letter · ${overviewLine3.lastResult}`;
+      $('overviewBarcodeLetter').textContent = overviewLine3.lastChar === '-' ? '—' : overviewLine3.lastChar;
+    } else if (lineEventFresh && overviewLineEvent.letter !== '-') {
+      $('overviewBarcodeDetected').textContent = overviewLineEvent.event === 2 ? 'Barcode decode event received' : 'Detection state not included in latest event';
+      $('overviewBarcodeDecoded').textContent = overviewLineEvent.event === 2 ? `${overviewLineEvent.letter} · decoded` : `${overviewLineEvent.letter} · ${IS28.EVENT_NAME[overviewLineEvent.event] || 'event'}`;
+      $('overviewBarcodeLetter').textContent = overviewLineEvent.letter;
+    } else if (lineNavFresh && sdkNav.letter !== '-') {
+      $('overviewBarcodeDetected').textContent = sdkNav.event === 2 ? 'Coordinator reports a decoded barcode' : 'Detection state not included in latest coordinator event';
+      $('overviewBarcodeDecoded').textContent = sdkNav.event === 2 ? `${sdkNav.letter} · decoded` : `${sdkNav.letter} · ${IS28.EVENT_NAME[sdkNav.event] || 'event'}`;
+      $('overviewBarcodeLetter').textContent = sdkNav.letter;
+    } else {
+      $('overviewBarcodeDetected').textContent = 'No detection event in latest status';
+      $('overviewBarcodeDecoded').textContent = 'No fresh decoded letter';
+      $('overviewBarcodeLetter').textContent = '—';
+    }
+    $('overviewBarcodePending').textContent = $('pendingAction').textContent || '—';
+    $('overviewBarcodeExecuting').textContent = $('executingAction').textContent || '—';
+    $('overviewBarcodeCompleted').textContent = $('completedAction').textContent || '—';
+    const mapLetter = $('overviewBarcodeLetter').textContent;
+    $('overviewBarcodeMapped').textContent = mapLetter !== '—' && activeMapping ? `→ ${IS28.mappedMovement(activeMapping, mapLetter)}` : 'mapped movement unknown';
+    overviewPill('overviewBarcodeTag', 'Live status', 'ok');
+  } else {
+    $('overviewBarcodeDetected').textContent = 'No fresh barcode status';
+    $('overviewBarcodeDecoded').textContent = 'No fresh decode';
+    $('overviewBarcodeLetter').textContent = '—';
+    $('overviewBarcodeMapped').textContent = 'mapped movement unknown';
+    $('overviewBarcodePending').textContent = 'No fresh junction status';
+    $('overviewBarcodeExecuting').textContent = 'No fresh junction status';
+    $('overviewBarcodeCompleted').textContent = 'No fresh junction status';
+    overviewPill('overviewBarcodeTag', 'Unknown / stale', 'neutral');
+  }
+
+  const imuFresh = !!(latestImuData && lastImuAt && t - lastImuAt <= 2000 && !imuAwaitingFresh);
+  const liveHeightFresh = motionFresh && overviewMotion.source === 2 && overviewMotion.data.sideEstimateValid;
+  if (imuFresh) {
+    const d = latestImuData;
+    $('overviewHumpAccepted').textContent = lastAcceptedImuPeak === null ? 'No accepted peak reported' : `${lastAcceptedImuPeak} mm`;
+    $('overviewHumpHighest').textContent = d.humps ? `${d.highestMm} mm` : 'No accepted hump';
+    $('overviewHumpCount').textContent = `${d.humps} accepted / ${d.rejected} rejected`;
+    overviewPill('overviewHumpTag', 'Buddy 4 live', 'ok');
+  } else {
+    $('overviewHumpAccepted').textContent = 'No fresh accepted-peak status';
+    $('overviewHumpHighest').textContent = '—';
+    $('overviewHumpCount').textContent = 'No fresh hump status';
+    overviewPill('overviewHumpTag', 'Unknown / stale', 'neutral');
+  }
+  $('overviewHumpLive').textContent = liveHeightFresh ? `${overviewMotion.data.rightMinusLeftHeightMm} mm · R−L estimate` : 'No fresh live height estimate';
+  $('overviewRampAssist').textContent = lastRamp15 && lastRamp15At && t - lastRamp15At <= 2500 ? $('rampAssist').textContent : 'No fresh ramp-assist status';
+
+  const brokerFresh = !!(client && client.connected);
+  const heartbeatAge = hb.seen ? (t - hb.last) / 1000 : Infinity;
+  const carFresh = heartbeatAge <= 2;
+  $('overviewBroker').textContent = brokerFresh ? 'Connected' : 'Disconnected';
+  $('overviewCar').textContent = carFresh ? 'Online' : lwtOffline ? 'Offline · broker last will' : hb.seen ? `Stale · ${heartbeatAge.toFixed(1)} s` : 'Unknown · no heartbeat';
+  $('overviewHeartbeat').textContent = heartbeatAge < Infinity ? `${heartbeatAge.toFixed(1)} s${carFresh ? '' : ' · stale'}` : '—';
+  $('overviewNet').textContent = carFresh ? $('net').textContent : hb.seen ? `Stale · last link ${$('net').textContent}` : 'No Wi-Fi status yet';
+  $('overviewTelemetry').textContent = motionFresh ? `Fresh · source ${overviewMotion.source}` : motionAge < Infinity ? `Stale · ${(motionAge / 1000).toFixed(1)} s` : 'No fresh motion frame';
+  overviewPill('overviewMqttTag', brokerFresh && carFresh ? 'Receiving' : brokerFresh ? 'Broker connected' : 'Offline / unknown', brokerFresh && carFresh ? 'ok' : 'neutral');
+
+  const c9Age = lastImuStop ? t - imuStopSeenAt : Infinity;
+  const c9Fresh = !!(lastImuStop && c9Age <= 2500);
+  if (c9Fresh) {
+    $('overviewImuArmed').textContent = lastImuStop.armed ? 'Armed · fresh C9' : 'Not armed · fresh C9';
+    $('overviewImuTrip').textContent = lastImuStop.latched ? lastImuStop.reason > 0 ? `${lastImuStop.reasonName} trip latched${lastImuStop.fresh ? '' : ' · sample freshness unconfirmed'}` : 'Stop latched · reason unavailable' : 'No actual trip latched';
+    overviewPill('overviewImuTag', lastImuStop.latched ? 'Trip latched' : lastImuStop.armed ? 'Armed · no trip' : 'Not ready', lastImuStop.latched ? 'bad' : lastImuStop.armed ? 'ok' : 'warn');
+    if (!lastImuStop.latched) $('overviewMotorOutput').textContent = 'No trip · zero-output confirmation not applicable';
+    else if (lastImuStop.fresh && imuTripEvidence && latestSdkMotion && t - latestSdkMotion.receivedAt <= 2000 && latestSdkMotion.runId === lastImuStop.runId && latestSdkMotion.receivedAt > imuTripReceivedAt) {
+      const m = latestSdkMotion;
+      if (m.emergencyStop && m.pwmL === 0 && m.pwmR === 0)
+        $('overviewMotorOutput').textContent = 'Telemetry reports PWM 0 / 0 after trip';
+      else $('overviewMotorOutput').textContent = `No zero-output confirmation · latest PWM ${m.pwmL} / ${m.pwmR}`;
+    } else $('overviewMotorOutput').textContent = 'No fresh same-run PWM telemetry after trip';
+  } else {
+    $('overviewImuArmed').textContent = lastImuStop ? `Stale armed status · ${lastImuStop.armed ? 'last armed' : 'last not armed'}` : 'Armed state unknown';
+    $('overviewImuTrip').textContent = lastImuStop && lastImuStop.latched ? 'Last trip report is stale' : 'No fresh trip status';
+    $('overviewMotorOutput').textContent = 'No fresh same-run trip/output evidence';
+    overviewPill('overviewImuTag', 'Unknown / stale', 'neutral');
+  }
+  $('overviewImuPeak').textContent = imuPeakEvidence ?
+    imuPeakEvidence.hasPeak ? `Greatest valid tilt ${imuPeakEvidence.peakAngleDeg.toFixed(1)}° · ${imuPeakEvidenceRetained ? 'retained' : 'live'} since reset` :
+      `No valid tilt sample since reset${imuPeakEvidenceRetained ? ' · retained' : ''}` : 'No retained peak history received';
+  $('overviewImuEvidence').textContent = imuPeakEvidence ?
+    `${imuPeakEvidence.hasPeak ? 'Peak' : 'No valid tilt sample'} evidence ${imuPeakEvidenceRetained ? 'retained' : 'live'} from CA since reset · event ${imuPeakEvidence.eventCount}. This is not a current-run label.` :
+    'Armed status alone does not prove a pickup trip or zero motor output.';
+
+  const mapStatus = $('mapStatus').textContent;
+  $('overviewMapStatus').textContent = mapStatus;
+  $('overviewMapStatus').className = $('mapStatus').className || 'muted';
+  $('overviewMapCurrent').textContent = activeMapping && activeMapping.configured ?
+    `Forward ${activeMapping.letters[0]} · U-turn ${activeMapping.letters[1]} · Left ${activeMapping.letters[2]} · Right ${activeMapping.letters[3]}` :
+    activeMapping && !activeMapping.configured ? 'Car reports no mapping' : 'No confirmed mapping';
+  refreshDriveModeControl();
+  $('runExport').disabled = $('logDownload').disabled;
 }
 function refreshSafety() {
   if(releaseInfo) {
@@ -1077,7 +1512,9 @@ function summary(f) {
     case 12: return `run ${d.runId}, result ${d.result}, ${d.elapsedMs} ms, ${d.distanceMm} mm`;
     case 13: return `log dataset ${d.dataset} row ${d.rowIndex}/${d.totalRows} part ${d.partIndex+1}/${d.partCount} status ${d.status}`;
     case 14: return `barcode threshold ${d.thresholdAdc}, bank ${d.bank}, decoded ${d.decodedTotal}, bad frames ${d.badFrames}`;
-    case 15: if(d.kind==='release') return `RTOS release ${d.version}, Profile ${d.profile}, powerbank ${d.wireless?'supported':'off'}`;
+    case 15: if(d.kind==='drive-mode-status') return `drive mode ${driveModeName(d.mode)}, revision ${d.revision}, ${d.sessionActive?'run active':'run stopped'}`;
+      if(d.kind==='imu-lift-peak') return d.hasPeak ? `greatest valid tilt ${d.peakAngleDeg.toFixed(1)}° since reset, event ${d.eventCount}${d.latched?', latched':''}` : 'no valid tilt sample since reset';
+      if(d.kind==='release') return `RTOS release ${d.version}, Profile ${d.profile}, powerbank ${d.wireless?'supported':'off'}`;
       if(d.kind==='runtime') return `RTOS reads ${d.reads}, read failures ${d.failed}, late ${d.lateGaps}, FIFO ${d.fifoOverruns}`;
       if(d.kind==='junction-decision') return `junction ${d.widthMm.toFixed(2)} mm: ${d.resultName}, entry ${d.blackEntry} ADC`;
       if(d.kind==='drive-state') return `bend phase ${d.bendPhase}, recovery phase ${d.recoveryPhase}, yaw ${d.recoveryYawDeg}°, targets ${d.targetLeft}/${d.targetRight}`;
@@ -1121,12 +1558,14 @@ function show(f) {
       motionAwaitingFresh = false;
       lastMotionSeq = f.seq;
       lastMotionAt = now();
+      overviewMotion = { source: 2, data: d, at: lastMotionAt };
       showB2Motion(d);
       $('s2').textContent = summary(f);
       pushImuChart(imuChartHeight, d.sideEstimateValid ? d.rightMinusLeftHeightMm : NaN);
       break;
     case 3:
       groupFresh('line3');
+      overviewLine3 = d; overviewLine3At = now();
       $('s3').textContent = summary(f);
       lastBarcodeLetter = d.lastChar;
       $('barcodeLetter').textContent = d.lastChar;
@@ -1188,6 +1627,7 @@ function clearMotion(reason) {
   $('motionRampStage').textContent = reason;
 }
 function clearImu(reason) {
+  latestImuData = null;
   for (const id of ['imuState','imuValid','imuPitch','imuMotion','imuEvent','imuOdometry','imuHeight','imuHighest','imuHumps','imuShock','imuHealth','imuFault','s4'])
     $(id).textContent = reason;
   $('imuAge').textContent = 'no frames since ' + reason.replace(/^waiting for fresh Buddy 4 telemetry after /, '');
@@ -1229,6 +1669,7 @@ function showB2Motion(d) {
 }
 function showImu(f, d) {
   lastImuAt = now();
+  latestImuData = d;
   if (!d.humps) lastAcceptedImuPeak = null;
   else if (d.event === 'status' || d.event === 'hump peak') lastAcceptedImuPeak = d.heightMm;
   $('s4').textContent = summary(f);
@@ -1258,6 +1699,8 @@ function pushImuChart(series, value) {
 
 /* ---------- SDK v2.3 sources 9-14: v2.3 dashboard logic ---------- */
 function showMotion(d, f) {
+  overviewMotion = { source: 9, data: d, at: now() };
+  latestSdkMotion = { ...d, receivedAt: now() };
   $('speedMeasured').textContent = `${d.speedL} / ${d.speedR} mm/s`;
   $('speedTarget').textContent = `${d.targetL} / ${d.targetR} mm/s`;
   $('pwm').textContent = `${d.pwmL} / ${d.pwmR}`;
@@ -1309,11 +1752,40 @@ function showBuildId() {
   if (lastRamp15) parts.push(`ramp ${lastRamp15.active ? 'active' : 'shadow'} · detector ${lastRamp15.detector} · estimator ${lastRamp15.estimator}`);
   $('buildId').textContent = parts.join(' · ') || '—';
 }
+function showPeakEvidence(d, retained, f) {
+  imuPeakEvidence = d; imuPeakEvidenceAt = now(); imuPeakEvidenceRetained = !!retained;
+  const provenance = retained ? 'retained · since reset' : 'live report · since reset';
+  const candidate = ['none yet', 'up acceleration', 'tilt', 'both'][d.lastCandidate];
+  const rejection = ['none recorded', 'out-of-band magnitude', 'invalid/late/empty batch', 'initial/no candidate'][d.lastRejection];
+  $('imuPeakDetail').textContent = d.hasPeak ?
+    `Greatest valid tilt ${d.peakAngleDeg.toFixed(1)}° (min cosine ${d.minCosQ15}/32768); max calibrated-up projection since reset ${d.peakUpMg} mg. Last candidate since reset: ${candidate}; last rejection since reset: ${rejection}; ${d.armed ? 'armed' : 'not armed'}, ${d.currentValid ? 'current sample valid' : 'current sample unavailable'}, event ${d.eventCount}; ${provenance}.` :
+    `No valid tilt sample since reset. ${d.armed ? 'Pickup guard armed' : 'Pickup guard not armed'}; no zero-degree peak is inferred. ${provenance}.`;
+  if (!retained && d.hasPeak) {
+    const key = `${d.eventCount}:${d.peakAngleDeg.toFixed(2)}:${d.latched}`;
+    if (key !== imuPeakSignature) addEvent(`IMU tilt peak since reset ${d.peakAngleDeg.toFixed(1)}° · event ${d.eventCount}${d.latched ? ' · latched' : ''}`, d, 'imu-lift-peak', f);
+    imuPeakSignature = key;
+  }
+}
+function showRetainedPeakEvidence(d, f) { showPeakEvidence(d, true, f); refreshDashboardOverview(); }
 function showSource15(d, f) {
+  if (d.kind === 'drive-mode-status') { receiveDriveModeStatus(d); return; }
+  if (d.kind === 'imu-lift-peak') {
+    showPeakEvidence(d, false, f);
+    return;
+  }
   if(d.kind==='imu-lift-safety') {
     if(lastImuStop && lastImuStopSeq===f.seq && lastImuStop.uptimeMs===d.uptimeMs) return;
     lastImuStop={...d,receivedAt:new Date().toISOString(),seq:f.seq};
     imuStopSeenAt=now(); lastImuStopSeq=f.seq;
+    if (d.latched && d.reason > 0) {
+      const key = `${d.runId}:${d.eventCount}:${d.reason}:${d.tripMs}`;
+      if (!imuTripEvidence || imuTripEvidence.key !== key) {
+        imuTripEvidence = { key, runId: d.runId, reason: d.reason, eventCount: d.eventCount };
+        imuTripReceivedAt = now();
+      }
+    } else if (!d.latched) {
+      imuTripEvidence = null; imuTripReceivedAt = 0;
+    }
     refreshImuStop();
     const signature=`${d.runId}:${d.eventCount}:${d.reason}:${d.tripMs}`;
     if(d.latched&&d.reason!==0&&signature!==imuStopSignature) {
@@ -1348,7 +1820,7 @@ function showSource15(d, f) {
     return;
   }
   if(d.kind==='release') {
-    releaseInfo=d; releaseSeenAt=now(); updateProfile(); updateLogDownloadControl();
+    releaseInfo=d; releaseSeenAt=now(); connectedDriveSeen=true; updateProfile(); updateLogDownloadControl();
     $('buildId').textContent=`Buddy 1–4 RTOS v${d.version} · ${d.wireless?'network supervised':'USB supervised'}`;
     $('releaseCal').textContent=`${d.recordedCalibration?'Run':'Current'} calibration: white ${d.white.join('/')} - black ${d.black.join('/')} - Profile ${d.profile}`;
     renderBarcodeCapture();
@@ -1432,7 +1904,7 @@ function showSource15(d, f) {
     return;
   }
   if (d.kind === 'ramp') {
-    lastRamp15 = d;
+    lastRamp15 = d; lastRamp15At = now();
     $('rampAssist').textContent = `${d.assisting ? 'assisting' : 'idle'} · added ${d.addedPwm.join('/')} PWM · height ${d.heightMm === null ? 'invalid' : d.heightMm + ' mm'} · last end ${d.lastEndName}`;
     if (d.event !== 0) addEvent(`Ramp assist ${d.eventName}${d.event === 2 ? ' (' + d.lastEndName + ')' : ''} · peak added ${d.peakAddedPwm} PWM`, d, 'ramp-assist', f);
   } else {
@@ -1463,6 +1935,7 @@ function renderBarcodeCapture() {
   $('barcodeCaptureNote').textContent = `Latest source-15 report received ${new Date(d.receivedAt).toLocaleString()}; raw rows correspond to the last reported attempt, not necessarily a newer attempt currently collecting.${d.originalAccepted ? ' The original decoder accepted this attempt.' : ''}${d.startValid ? ' Pre-roll rows were present.' : ''}${d.rawOverwritten ? ` ${d.rawOverwritten} rows overwritten.` : ''}`;
 }
 function showLineEvent(d, f) {
+  overviewLineEvent = d; overviewLineEventAt = now();
   if (!staleShown.sdkLine) { $('progressStatus').textContent = 'Live.'; $('progressStatus').className = 'ok small'; }
   if (d.letter !== '-') {
     lastBarcodeLetter = d.letter;

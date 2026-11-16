@@ -6,6 +6,7 @@
 #include <stdint.h>
 
 #include "src/motion/circuit_wheel.h"
+#include "src/motion/drive_mode.h"
 
 enum {
     CONTINUOUS_PWM_MAX = 420,
@@ -51,6 +52,13 @@ typedef struct {
     float hold_min_speed;
     float hold_i_max;
     float hold_ki;
+    /* Bounded continuous-drive load reserve. It is a single smooth episode
+     * per persistent load event, separate from Buddy4 ramp assistance. */
+    float load_pwm;
+    float load_goal_pwm;
+    uint64_t load_since_us, load_rearm_us;
+    uint8_t load_timing : 1;
+    uint8_t load_active : 1;
 } ContinuousDrive;
 
 static inline float continuous_clampf(float x, float lo, float hi) {
@@ -73,9 +81,57 @@ static inline void continuous_drive_reset(ContinuousDrive *s, SignedWheel *p) {
         *p = (SignedWheel){0};
 }
 
-static inline int32_t continuous_drive_step(ContinuousDrive *s, SignedWheel *p, unsigned wheel,
-                                            int16_t wanted, float measured, float dt, uint64_t now,
-                                            int32_t previous_output) {
+static inline void continuous_drive_load_step(ContinuousDrive *s, float commanded, float measured,
+                                             float dt, uint64_t now, bool eligible) {
+    if (!eligible) {
+        s->load_timing = false;
+        s->load_active = false;
+        s->load_goal_pwm = 0.0f;
+        s->load_pwm = 0.0f;
+        return;
+    }
+    if (measured < 3.0f) {
+        /* Do not arm reserve from rest. An already-qualified reserve remains
+         * bounded while a loaded wheel slows, leaving encoder stall checks in
+         * charge of a persistent stop. */
+        s->load_timing = false;
+    } else {
+        float desired = drive_mode_load_pwm_target(commanded, measured);
+        if (s->load_active) {
+            if (measured >= commanded * 0.90f) {
+                s->load_active = false;
+                s->load_timing = false;
+                s->load_goal_pwm = 0.0f;
+                s->load_rearm_us = now + DRIVE_MODE_LOAD_REARM_US;
+            } else {
+                s->load_goal_pwm = desired;
+            }
+        } else if (now < s->load_rearm_us) {
+            s->load_timing = false;
+        } else if (desired > 0.0f) {
+            if (!s->load_timing) {
+                s->load_timing = true;
+                s->load_since_us = now;
+            } else if (now >= s->load_since_us &&
+                       now - s->load_since_us >= DRIVE_MODE_LOAD_DWELL_US) {
+                s->load_timing = false;
+                s->load_active = true;
+                s->load_goal_pwm = desired;
+            }
+        } else {
+            s->load_timing = false;
+        }
+    }
+    float target = s->load_active ? s->load_goal_pwm : 0.0f;
+    float rate = target >= s->load_pwm ? 50.0f : 90.0f;
+    s->load_pwm += continuous_clampf(target - s->load_pwm, -rate * dt, rate * dt);
+    s->load_pwm = continuous_clampf(s->load_pwm, 0.0f, (float)DRIVE_MODE_LOAD_MAX_PWM);
+}
+
+static inline int32_t continuous_drive_step_policy(ContinuousDrive *s, SignedWheel *p,
+                                                   unsigned wheel, int16_t wanted, float measured,
+                                                   float dt, uint64_t now, int32_t previous_output,
+                                                   bool load_eligible) {
     if (!s || !p)
         return 0;
     const bool hold = s->hold_min_speed > 0.0f; /* ramp-assist v0.6 */
@@ -117,11 +173,21 @@ static inline int32_t continuous_drive_step(ContinuousDrive *s, SignedWheel *p, 
         s->reference = fmaxf(0.0f, s->reference);
     }
 
+    /* A zero requested wheel stays zero even if Buddy4's independent hold
+     * mode is active. That hold policy is applied below; load reserve is not. */
+    if (wanted > 0)
+        continuous_drive_load_step(s, s->reference, measured, dt, now, load_eligible);
+    else {
+        s->load_timing = false;
+        s->load_active = false;
+        s->load_goal_pwm = 0.0f;
+        s->load_pwm = 0.0f;
+    }
     float error = s->reference - measured;
     float ff = continuous_feedforward(wheel, s->reference);
     s->boost_pwm = continuous_clampf(ff * s->boost_frac, 0.0f, s->boost_cap) +
                    (s->boost_add > 0.0f ? s->boost_add : 0.0f);
-    float base = ff + s->boost_pwm + error;
+    float base = ff + s->boost_pwm + error + s->load_pwm;
 
     /* One bounded assistance window per positive-command segment. A stalled
      * wheel cannot re-arm it; target changes alone do not clear this latch. */
@@ -184,6 +250,15 @@ static inline int32_t continuous_drive_step(ContinuousDrive *s, SignedWheel *p, 
     p->peak_end_us = 0;
     p->kick = (LineBreakaway){0};
     return (int32_t)(output + 0.5f);
+}
+
+/* Compatibility facade: existing users retain the pre-v0.2.5 controller.
+ * The production line adapter opts into load reserve with the policy call. */
+static inline int32_t continuous_drive_step(ContinuousDrive *s, SignedWheel *p, unsigned wheel,
+                                            int16_t wanted, float measured, float dt, uint64_t now,
+                                            int32_t previous_output) {
+    return continuous_drive_step_policy(s, p, wheel, wanted, measured, dt, now, previous_output,
+                                        false);
 }
 
 #endif

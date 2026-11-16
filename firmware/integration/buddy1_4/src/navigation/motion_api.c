@@ -65,6 +65,9 @@ static MotionResult submit(const NavRequest *request, uint32_t *token) {
     case NAV_FAULT_REPORT:
         result = nav_coordinator_fault(o, r.bitmap, r.flag);
         break;
+    case NAV_SPEED_MODE:
+        result = nav_coordinator_speed_mode(o, r.speed);
+        break;
     default:
         result = MOTION_UNSUPPORTED;
         break;
@@ -119,6 +122,17 @@ MotionResult motion_resume_line(MotionOwner o, uint32_t lease, bool abandon) {
 }
 MotionStatus motion_get_status(void) {
     return nav_coordinator_status();
+}
+MotionResult motion_request_speed_mode(MotionOwner o, unsigned mode) {
+    if (!valid_owner(o))
+        return nav_coordinator_speed_mode(o, mode);
+    NavRequest r = {.kind = NAV_SPEED_MODE,
+                    .owner = o,
+                    .speed = mode <= DRIVE_MODE_NONE ? mode : DRIVE_MODE_NONE};
+    return submit(&r, NULL);
+}
+MotionSpeedModeStatus motion_get_speed_mode_status(void) {
+    return nav_coordinator_speed_mode_status();
 }
 bool motion_get_command(uint32_t id, MotionCommandStatus *s) {
     return nav_coordinator_command(id, s);

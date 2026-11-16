@@ -63,6 +63,14 @@ int main(void) {
     p[2] = 0;
     p[3] = 0x10;
     assert(wp_parse(p, 4, &c) == WP_ACK_ACCEPTED);
+    /* Runtime drive presets have distinct encoding from telemetry toggles. */
+    for (i=0;i<3;++i) {
+        p[2]=WP_CONFIG_DRIVE_MODE_KEY; p[3]=(uint8_t)i;
+        assert(wp_parse(p,4,&c)==WP_ACK_ACCEPTED && c.arg==(uint16_t)((i<<8)|2U));
+    }
+    p[3]=3; assert(wp_parse(p,4,&c)==WP_ACK_FORMAT);
+    p[3]=0xff; assert(wp_parse(p,4,&c)==WP_ACK_FORMAT);
+    p[2]=1;p[3]=0x10;assert(wp_parse(p,4,&c)==WP_ACK_ACCEPTED);
     p[0] = (uint8_t)((WP_CMD_GET << 4) | WP_VERSION);
     p[2] = p[3] = 0;
     assert(wp_parse(p, 4, &c) == WP_ACK_ACCEPTED);

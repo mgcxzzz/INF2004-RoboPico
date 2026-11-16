@@ -46,27 +46,31 @@ static void leave(UINT key) {
 #ifdef APP_RTOS_RELEASE
 /* The acquisition task is the only detector writer. Reset requests are copied;
  * it never enters the nav coordinator or touches motor registers under this lock. */
-static bool lift_fresh_locked(uint32_t now_ms) {
-    return shared.lift_have && !shared.lift_reset_pending &&
-           now_ms - shared.lift_sample_ms <= 100U;
+static bool lift_fresh_snapshot(bool have, bool reset_pending, uint32_t sample_ms,
+                               uint32_t now_ms) {
+    return have && !reset_pending && now_ms - sample_ms <= 100U;
 }
-static bool lift_reset_ready_locked(uint32_t now_ms) {
-    if (shared.lift_reset_pending) return false;
-    bool fresh = lift_fresh_locked(now_ms);
+static bool lift_reset_ready_snapshot(const imu_lift_guard_t *lift, bool have,
+                                     bool reset_pending, uint32_t sample_ms,
+                                     uint32_t now_ms) {
+    if (reset_pending) return false;
+    bool fresh = lift_fresh_snapshot(have, reset_pending, sample_ms, now_ms);
     /* Preserve Reset recovery from a sensor/calibration fault. No qualified
      * lift may use this exception, and outputs stay blocked through reinit. */
-    if (!shared.lift.latched && !fresh) return true;
-    return fresh && imu_lift_guard_reset_ready(&shared.lift);
+    if (!lift->latched && !fresh) return true;
+    return fresh && imu_lift_guard_reset_ready(lift);
 }
 void ri_lift_guard_samples(const int16_t base[3], int32_t gravity,
                            const imu_lift_vec_t *samples, uint8_t count,
                            uint32_t sample_period_us, bool fresh) {
-    uint32_t now_ms = (uint32_t)(board_time_us()/1000U);
     UINT key = enter();
     imu_lift_guard_t value = shared.lift;
     bool pending = shared.lift_reset_pending;
-    bool interrupted = shared.lift_have && now_ms - shared.lift_sample_ms > 30U;
+    bool have = shared.lift_have;
+    uint32_t previous_sample_ms = shared.lift_sample_ms;
     leave(key);
+    uint32_t now_ms = (uint32_t)(board_time_us()/1000U);
+    bool interrupted = have && now_ms - previous_sample_ms > 30U;
     if (pending) return;
     if (interrupted) imu_lift_guard_no_fresh_batch(&value);
     /* Bounded integer work occurs outside the shared spinlock. */
@@ -82,32 +86,43 @@ void ri_lift_guard_samples(const int16_t base[3], int32_t gravity,
     leave(key);
 }
 bool ri_safety_blocked(void) {
-    uint32_t now_ms = (uint32_t)(board_time_us()/1000U);
     UINT key = enter();
-    bool blocked = shared.lift.latched || !lift_fresh_locked(now_ms);
+    imu_lift_guard_t lift = shared.lift;
+    bool have = shared.lift_have, pending = shared.lift_reset_pending;
+    uint32_t sample_ms = shared.lift_sample_ms;
+    uint32_t now_ms = (uint32_t)(board_time_us()/1000U);
+    bool blocked = lift.latched || !lift_fresh_snapshot(have, pending, sample_ms, now_ms);
     leave(key);
     return blocked;
 }
 unsigned ri_safety_reason(void) {
-    uint32_t now_ms = (uint32_t)(board_time_us()/1000U);
     UINT key = enter();
-    unsigned reason = shared.lift_reset_pending ? 3U :
-                      shared.lift.latched ? shared.lift.reason :
-                      lift_fresh_locked(now_ms) ? 0U : 3U;
+    imu_lift_guard_t lift = shared.lift;
+    bool have = shared.lift_have, pending = shared.lift_reset_pending;
+    uint32_t sample_ms = shared.lift_sample_ms;
+    uint32_t now_ms = (uint32_t)(board_time_us()/1000U);
+    unsigned reason = pending ? 3U : lift.latched ? lift.reason :
+                      lift_fresh_snapshot(have, pending, sample_ms, now_ms) ? 0U : 3U;
     leave(key);
     return reason;
 }
 bool ri_safety_can_reset(void) {
-    uint32_t now_ms = (uint32_t)(board_time_us()/1000U);
     UINT key = enter();
-    bool ready = lift_reset_ready_locked(now_ms);
+    imu_lift_guard_t lift = shared.lift;
+    bool have = shared.lift_have, pending = shared.lift_reset_pending;
+    uint32_t sample_ms = shared.lift_sample_ms;
+    uint32_t now_ms = (uint32_t)(board_time_us()/1000U);
+    bool ready = lift_reset_ready_snapshot(&lift, have, pending, sample_ms, now_ms);
     leave(key);
     return ready;
 }
 bool ri_safety_reset_latch(void) {
-    uint32_t now_ms = (uint32_t)(board_time_us()/1000U);
     UINT key = enter();
-    bool ready = lift_reset_ready_locked(now_ms);
+    imu_lift_guard_t lift = shared.lift;
+    bool have = shared.lift_have, pending = shared.lift_reset_pending;
+    uint32_t sample_ms = shared.lift_sample_ms;
+    uint32_t now_ms = (uint32_t)(board_time_us()/1000U);
+    bool ready = lift_reset_ready_snapshot(&lift, have, pending, sample_ms, now_ms);
     if (ready) {
         /* Do not race a core0 batch calculation: only its task clears detector
          * state. Pending reset blocks outputs/Start immediately, through calibration. */
@@ -122,7 +137,6 @@ bool ri_safety_reset_latch(void) {
 void ri_safety_packet(uint8_t seq, uint16_t run, uint8_t out[30]) {
     /* Sample age, trip and packet uptime must share the hardware timer epoch.
      * Kernel uptime has a different origin; callers cannot supply this clock. */
-    uint32_t now_ms = (uint32_t)(board_time_us()/1000U);
     BringupStatus control;
     bringup_get_status(&control);
     bool stopped = (control.flags & BR_IMU) != 0U;
@@ -130,8 +144,11 @@ void ri_safety_packet(uint8_t seq, uint16_t run, uint8_t out[30]) {
                            control.reason == BR_REASON_IMU_OVERTURN ? 2U : 3U;
     UINT key = enter();
     imu_lift_guard_t g = shared.lift;
-    bool fresh = lift_fresh_locked(now_ms);
-    bool reset_ready = lift_reset_ready_locked(now_ms);
+    bool have = shared.lift_have, pending = shared.lift_reset_pending;
+    uint32_t sample_ms = shared.lift_sample_ms;
+    uint32_t now_ms = (uint32_t)(board_time_us()/1000U);
+    bool fresh = lift_fresh_snapshot(have, pending, sample_ms, now_ms);
+    bool reset_ready = lift_reset_ready_snapshot(&g, have, pending, sample_ms, now_ms);
     RiLiftPacket p = {.trip_ms=g.event_time_ms,.sample_ms=shared.lift_sample_ms,
         .events=g.event_count,.up_mg=g.up_projection_mg,.norm_mg=g.norm_mg,
         .reason=g.latched ? g.reason : stopped ? stop_reason : fresh ? 0U : 3U,
@@ -142,10 +159,33 @@ void ri_safety_packet(uint8_t seq, uint16_t run, uint8_t out[30]) {
     leave(key);
     ri_lift_packet_encode(&p,seq,now_ms,run,out);
 }
+void ri_safety_peak_packet(uint8_t seq, uint8_t out[RI_LIFT_PEAK_PACKET_BYTES]) {
+    UINT key = enter();
+    imu_lift_guard_t g = shared.lift;
+    bool have = shared.lift_have, pending = shared.lift_reset_pending;
+    uint32_t sample_ms = shared.lift_sample_ms;
+    uint32_t now_ms = (uint32_t)(board_time_us()/1000U);
+    bool current_valid = g.current_valid &&
+                         lift_fresh_snapshot(have, pending, sample_ms, now_ms);
+    RiLiftPeakPacket p = {
+        .report_ms=now_ms,.peak_sample_ms=g.min_cos_sample_ms,
+        .window_start_ms=g.peak_window_start_ms,.min_cos_q15=g.min_cos_q15,
+        .norm_mg=g.min_cos_norm_mg,.up_mg=g.peak_up_projection_mg,
+        .tilt_ms=g.peak_tilt_samples*5U/2U,.up_ms=g.peak_up_samples*5U/2U,
+        .events=g.event_count,.last_candidate=g.last_candidate,
+        .last_rejection=g.last_rejection,
+        .armed=g.armed,.current_valid=current_valid,.latched=g.latched,
+        .saturated=g.peak_saturated};
+    leave(key);
+    ri_lift_peak_packet_encode(&p,seq,out);
+}
 #endif
 
 void ri_init(void) {
     memset(&shared, 0, sizeof(shared));
+#ifdef APP_RTOS_RELEASE
+    imu_lift_guard_init(&shared.lift);
+#endif
     shared.init_epoch = 1U;
     /* Static-zero spinlock; initialise before either task is created. */
 }

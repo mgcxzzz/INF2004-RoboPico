@@ -229,6 +229,62 @@ static void immediate_bypass_and_reset(void) {
     assert(!s.active && s.gain == 0 && s.damp_weight == 0);
 }
 
+static void runtime_cruise_modes_are_opt_in_and_bounded(void) {
+    Circuit baseline_c, normal_c, trial_c;
+    circuit(&baseline_c);
+    circuit(&normal_c);
+    circuit(&trial_c);
+    ContinuousSteering baseline = {0}, normal = {0}, trial = {0};
+    CircuitInput i = input(45, 45);
+    AnalogDemand straight = demand(45, 45, 500, 500, SYM_STRAIGHT);
+    AnalogDemand a = {0}, b = {0}, c = {0};
+    for (unsigned k = 0; k < 65; ++k) {
+        a = continuous_steering_step(&baseline, straight, &baseline_c, &i, false, 1, .01f);
+        b = continuous_steering_step_with_cruise(&normal, straight, &normal_c, &i, false, 1,
+                                                 .01f, DRIVE_MODE_NORMAL_SPEED);
+        c = continuous_steering_step_with_cruise(&trial, straight, &trial_c, &i, false, 1,
+                                                 .01f, DRIVE_MODE_TRIAL_SPEED);
+    }
+    assert(a.target[0] == 45 && a.target[1] == 45);
+    assert(b.target[0] == 60 && b.target[1] == 60);
+    assert(c.target[0] == 75 && c.target[1] == 75);
+
+    Circuit scan_c, turn_c, high_c;
+    circuit(&scan_c);
+    turn_c = (Circuit){.phase = J_TURN};
+    circuit(&high_c);
+    ContinuousSteering scan = {0}, turn = {0}, high = {0};
+    AnalogDemand scanned = {0}, turning = {0};
+    AnalogDemand high_out = {0};
+    for (unsigned k = 0; k < 65; ++k) {
+        scanned = continuous_steering_step_with_cruise(&scan, straight, &scan_c, &i, true, 1,
+                                                       .01f, DRIVE_MODE_TRIAL_SPEED);
+        turning = continuous_steering_step_with_cruise(
+            &turn, demand(30, 45, 700, 300, SYM_LEFT), &turn_c, &i, false, 1, .01f,
+            DRIVE_MODE_TRIAL_SPEED);
+        high_out = continuous_steering_step_with_cruise(
+            &high, demand(110, 110, 500, 500, SYM_STRAIGHT), &high_c, &i, false, 1, .01f,
+            DRIVE_MODE_TRIAL_SPEED);
+    }
+    assert(scanned.target[0] == 45 && scanned.target[1] == 45 && scanned.decision == 24);
+    assert(turning.target[0] == 30 && turning.target[1] == 45);
+    assert(high_out.target[0] <= DRIVE_MODE_TRIAL_SPEED &&
+           high_out.target[1] <= DRIVE_MODE_TRIAL_SPEED);
+
+    Circuit zero_a_c, zero_b_c;
+    circuit(&zero_a_c);
+    circuit(&zero_b_c);
+    ContinuousSteering zero_a = {0}, zero_b = {0};
+    AnalogDemand pivot = demand(0, 45, 900, 100, SYM_LEFT), pivot_a = {0}, pivot_b = {0};
+    for (unsigned k = 0; k < 65; ++k) {
+        pivot_a = continuous_steering_step(&zero_a, pivot, &zero_a_c, &i, false, 1, .01f);
+        pivot_b = continuous_steering_step_with_cruise(&zero_b, pivot, &zero_b_c, &i, false, 1,
+                                                       .01f, DRIVE_MODE_TRIAL_SPEED);
+        assert(pivot_a.target[0] == pivot_b.target[0] &&
+               pivot_a.target[1] == pivot_b.target[1]);
+    }
+}
+
 int main(void) {
     initial_gain_and_full_authority();
     mirrored_and_side_dwell();
@@ -237,6 +293,7 @@ int main(void) {
     encoder_damping_only_on_return();
     bounded_changes_and_profile_limits();
     immediate_bypass_and_reset();
+    runtime_cruise_modes_are_opt_in_and_bounded();
     puts("continuous steering v2 tests passed");
     return 0;
 }

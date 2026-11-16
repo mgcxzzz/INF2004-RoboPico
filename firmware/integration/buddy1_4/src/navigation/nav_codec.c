@@ -20,11 +20,11 @@ static unsigned payload_bits(unsigned kind) {
 #else
                                     2,
 #endif
-                                    2, 18, 5,  11, 5,  39};
-    return kind < 12 ? bits[kind] : UINT32_MAX;
+                                    2, 18, 5,  11, 5,  39, 2};
+    return kind < 13 ? bits[kind] : UINT32_MAX;
 }
 unsigned nav_packet_encode(uint8_t out[NAV_PACKET_BYTES], const NavRequest *r) {
-    if (!r || r->kind > 11 || r->owner < 1 || r->owner > 5 || !isfinite(r->value))
+    if (!r || r->kind > 12 || r->owner < 1 || r->owner > 5 || !isfinite(r->value))
         return 0;
     memset(out, 0, NAV_PACKET_BYTES);
     unsigned at = 0;
@@ -97,6 +97,11 @@ unsigned nav_packet_encode(uint8_t out[NAV_PACKET_BYTES], const NavRequest *r) {
         put(out, &at, r->bitmap, 10);
         put(out, &at, r->flag, 1);
         break;
+    case NAV_SPEED_MODE:
+        if (r->speed > DRIVE_MODE_NONE)
+            return 0;
+        put(out, &at, r->speed, 2);
+        break;
     default:
         break;
     }
@@ -109,7 +114,7 @@ bool nav_packet_decode(NavRequest *r, const uint8_t *p, unsigned bytes) {
     unsigned at = 0;
     r->kind = (unsigned)get(p, &at, 4);
     r->owner = (unsigned)get(p, &at, 3);
-    if (r->kind > 11 || r->owner < 1 || r->owner > 5)
+    if (r->kind > 12 || r->owner < 1 || r->owner > 5)
         return false;
     unsigned bits = 7 + payload_bits(r->kind);
     if (bytes != (bits + 7) / 8)
@@ -162,6 +167,9 @@ bool nav_packet_decode(NavRequest *r, const uint8_t *p, unsigned bytes) {
     case NAV_FAULT_REPORT:
         r->bitmap = (unsigned)get(p, &at, 10);
         r->flag = (unsigned)get(p, &at, 1);
+        break;
+    case NAV_SPEED_MODE:
+        r->speed = (unsigned)get(p, &at, 2);
         break;
     default:
         break;

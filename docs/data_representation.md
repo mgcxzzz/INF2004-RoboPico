@@ -206,3 +206,35 @@ reads that clock internally rather than accepting kernel uptime from its caller.
 Actual safety uses that same sample-clock domain already; no threshold/flag/queue
 width changes are introduced. This changes clock consistency, not timestamp bit
 packing or the remaining Tribunal evidence scope.
+
+## v0.2.5 drive modes and IMU evidence
+
+C9 retains its30-byte frame length and hardware-clock domain. Codec0x25 expands
+the tilt dwell from6 to7 bits (0..100ms); its high bit is reserved zero. Native
+tilt dwell saturates at40 FIFO samples and uses6 bits. The dashboard continues
+to accept the historical0x23 codec and its0..50ms field.
+
+CA is a28-byte frame (payload25): subtype/version8 each, report hardware time32,
+minimum-cosine sample time32, signed cosine Q15 value16, magnitude12, signed
+upward-projection13, maximum tilt dwell7, maximum upward dwell5, last candidate2,
+last reject reason2, four boolean flags, peak-window start32 and event count16.
+Candidate/rejection histories are independent from the minimum-cosine timestamp;
+normal samples do not erase a previous candidate or norm/invalid rejection.
+Reserved bits are zero/validated. Peaks survive reads and Start; explicit Reset
+begins a new window. This avoids reader-clearing updates racing the acquisition
+task. It describes retained evidence, not an untagged claim about the current run.
+
+CB is a17-byte frame (payload14): subtype/version8 each, report time32, mode
+revision32, applied mode2, requested mode2 (3 means none), result3, can-change1,
+session-active1, two load-active booleans, and left/right added PWM7 each. Seven
+reserved bits are zero. The policy bounds added PWM to the represented range.
+Cruise speeds derive from mode0/1/2, so the wire does not duplicate them.
+CONFIG command7 uses arg low byte2 and mode high byte0..2. Legacy telemetry
+CONFIG0x1000/0x1001 remains unchanged. The coordinator gates changes while stopped;
+the owner adapter also excludes pending Start and export leases.
+
+CA/CB are sent at1Hz even with ordinary telemetry disabled. C2–CB total301 frame
+bytes/s at that cadence, before other telemetry and transport overhead. New
+snapshots use copied state under short locks and existing fixed TX queues;
+controller log rows and history capacities are unchanged. See the build manifest
+for actual linked RAM growth and the limits of this scoped Tribunal evidence.

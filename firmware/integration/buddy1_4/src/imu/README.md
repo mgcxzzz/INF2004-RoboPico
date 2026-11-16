@@ -1,4 +1,4 @@
-## Active release v0.2.3: lift/overturn safety
+## Active release v0.2.5: lift/overturn safety
 
 The production IMU FIFO additionally feeds an independent integer lift guard,
 using calibrated gravity projection and sustained steep orientation. It can stop
@@ -8,7 +8,12 @@ the Buddy 4 motion API/coordinator. It never writes PWM from acquisition or MQTT
 A qualified event is sticky; fresh upright evidence plus explicit Reset is required.
 Old Impact enum values remain compatible, but production collision classification
 is disabled; transient high dynamics still invalidate terrain measurements.
-See docs/imu_end_run_v0_2_3.md for thresholds, limits, setup and purposeful tests.
+Current qualification is45 degrees/100ms or upward+400mg/30ms. Protected freshness
+checks sample the hardware clock after acquiring the sample snapshot, retaining
+the100ms age limit. C9 codec0x25 reports current state; CA reports greatest valid
+tilt, upward projection and dwell peaks since explicit Reset. Reading diagnostic
+history never clears it. An armed guard is not proof that wheels actually stopped.
+See [v0.2.5 setup and checks](../../../../../docs/demo_console_v0_2_5.md).
 The sections below describe the retained terrain/height baseline.
 
 # IMU and ramp estimation — Buddy 4
@@ -39,9 +44,16 @@ The current ramp estimate is lateral right-minus-left height from side tilt. It 
 
 The estimator emits measurements and telemetry only. The application ramp decision adapter turns those observations into an expiring `nav_request_ramp_assist` request. The coordinator approves eligibility and the motion module applies its fixed control profile. No IMU file writes motor GPIO/PWM or private wheel-controller fields.
 
-The current SDK integration retains IMU diagnostic faults in source4. They are not automatically mapped into an unconditional global driving stop. This is an explicit limitation/policy boundary: adding a safety policy later requires agreeing warning versus stop behavior. An invalid/stale tilt still removes ramp assistance according to the existing bounded timers.
+The historical SDK integration retained diagnostic faults without a global stop.
+The active RTOS production image instead inhibits driving until fresh calibrated
+pickup-guard data is available and latches a qualified pickup/overturn through
+the safety/coordinator path. Invalid terrain tilt still removes ramp assistance
+according to its existing timers; terrain quality and pickup safety are distinct.
 
-Core0 polls the IMU just after a barcode sample where possible, with alignment preference700µs and scheduling slack2ms. I2C work remains synchronous and bounded; moving it into an RTOS task is not part of this SDK refactor. ADC/control gaps must be measured on new hardware acceptance runs.
+The older SDK adapter aligned core0 polling with barcode samples. The active RTOS
+adapter uses its dedicated20ms acquisition task and bounded I2C operations; see
+app_program/imu_navigation for the tested Step5 timing corrections. New physical
+acceptance still requires checking FIFO, late-gap and control counters.
 
 ## Evidence
 

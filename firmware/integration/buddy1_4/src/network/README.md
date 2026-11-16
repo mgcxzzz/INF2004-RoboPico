@@ -30,3 +30,14 @@ Public artifacts are built with no local Wi-Fi credentials header. Configure SSI
 Host tests compile the real transport with boundary-only SDK stubs and test connection stages, reconnect/subscription, timeout paths, queue behavior and provisioning. Helper tests mock broker/serial access. These tests do not prove the newly restructured firmware has connected on the car; new heartbeat-under-motion hardware acceptance is pending. The complete bundle includes the dashboard, vendored MQTT.js, local broker configuration and Windows launchers.
 
 [Recorded evidence and provenance](../../../../../testing/evidence/README.md).
+# v0.2.5 drive-mode control
+
+CONFIG command7 retains the existing telemetry arguments0x1000/0x1001. New
+arguments `(mode << 8) | 2` select mode0/1/2 (45/60/75 mm/s cruise). The parser
+rejects other modes. The kernel-side app queues this request to the core1 owner;
+it cannot write PWM or change a controller from an MQTT callback. The owner
+checks stopped/countdown/export state and calls the shared nav API/coordinator.
+CB source15 status returns applied/requested mode, result and revision. The
+dashboard waits for matching fresh readback rather than treating an ACK as proof
+of application. Existing Stop priority, bounded copied queues and network-loss
+guards remain. See [the release guide](../../../../../docs/demo_console_v0_2_5.md).

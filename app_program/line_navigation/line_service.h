@@ -19,6 +19,10 @@ uint8_t rtos_line_log_reply(const WifiCommand *command);
 bool rtos_line_request_fresh(uint32_t received_us);
 bool rtos_line_request_start(uint32_t received_us);
 bool rtos_line_pending(void);
+bool rtos_line_mode_change_allowed(void);
+#if defined(APP_RTOS_RELEASE) && defined(APP_RTOS_NETWORK)
+void rtos_line_drive_mode_info(uint8_t seq, uint32_t now_ms, uint8_t out[17]);
+#endif
 ER rtos_line_init(void);
 bool rtos_line_command(unsigned command, uint32_t received_us);
 void rtos_line_cancel(void);

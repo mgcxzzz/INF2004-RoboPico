@@ -14,7 +14,8 @@ typedef enum {
     NAV_ASSIST,
     NAV_FAULT_REPORT,
     NAV_VERIFIED_BARCODE,
-    NAV_RAMP_ASSIST
+    NAV_RAMP_ASSIST,
+    NAV_SPEED_MODE
 } NavKind;
 typedef struct {
     unsigned kind : 4, owner : 3, style : 1, flag : 1, speed : 7, bitmap : 10;

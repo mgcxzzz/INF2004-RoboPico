@@ -1,4 +1,4 @@
-# Provisional Buddy 1–4 RTOS v0.2.4 status
+# Provisional Buddy 1–4 RTOS v0.2.5 status
 
 Main is intentionally promoted before the remaining full-circuit checks, per
 user instruction. Buddy 5 remains a blank integration point, not a working feature.
@@ -81,3 +81,17 @@ freshness failure with137ms kernel/hardware offset. C9 now owns its hardware-clo
 read. It retains both-direction offset regression coverage. This correction does
 not certify the actual cause of every failed Start; full frames/acknowledgment
 are needed if motion remains blocked after the display becomes consistent.
+
+## Demo console / drive modes v0.2.5
+
+The approved Demo overview is connected to live telemetry. Stopped-only45/60/75
+cruise selection uses the shared coordinator; default45, calibration, barcode
+decoders and junction/recovery policies are preserved. Added bounded per-wheel
+load reserve does not replace stop/stall guards. IMU tilt45degrees/100ms and
+protected-clock ordering replace the previous60degrees/50ms check; upward
+400mg/30ms remains. Retained peak diagnostics are since explicit Reset.
+
+**Hardware acceptance pending:** revised pickup stop, ramp false-positive check,
+faster cruise behavior and load reserve. The previous successful ramp was on
+Step5v0.1.5; do not present it as validation of these new changes. See the
+[v0.2.5 checks](../../../docs/demo_console_v0_2_5.md).

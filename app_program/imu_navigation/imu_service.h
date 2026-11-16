@@ -16,6 +16,7 @@ unsigned ri_safety_reason(void); /* 0 safe, 1 lift, 2 overturn, 3 unready/stale 
 bool ri_safety_can_reset(void);
 bool ri_safety_reset_latch(void); /* authoritative atomic eligibility/request */
 void ri_safety_packet(uint8_t seq, uint16_t run, uint8_t out[30]);
+void ri_safety_peak_packet(uint8_t seq, uint8_t out[28]);
 #endif
 void ri_reset_request(void);
 void ri_observe(const MotionFeedback *f, const uint32_t invalid[2], uint32_t dt_us, bool running);

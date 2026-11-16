@@ -148,8 +148,9 @@ static inline void rl_side(LinePlanner *p, uint16_t adc, uint64_t now, const dou
 
 /* Profile 1 part of continuous_follow_step, without allocating 63 inactive
  * decoder banks. Host tests compare it against the unchanged full wrapper. */
-static inline AnalogDemand rl_follow(LinePlanner *p, const LineCalibration *cal,
-                                     const CircuitInput *i, float dt) {
+static inline AnalogDemand rl_follow_with_cruise(LinePlanner *p, const LineCalibration *cal,
+                                                  const CircuitInput *i, float dt,
+                                                  unsigned cruise_speed_mm_s) {
     unsigned before = p->circuit.phase, stage = p->nav.uturn.stage;
     AnalogDemand d = barcode_circuit_step(&p->circuit, &p->nav, cal, i, RL_PROFILE);
     rl_junction_observe(p, cal, i, before, stage);
@@ -160,7 +161,12 @@ static inline AnalogDemand rl_follow(LinePlanner *p, const LineCalibration *cal,
     bool scanning = !p->circuit.busy && !d.stop &&
                     (activity || (p->scan.scanning && i->now - p->scan.activity_us < 600000));
     p->scan.scanning = scanning;
-    return continuous_steering_step(&p->steering, d, &p->circuit, i, scanning, RL_PROFILE, dt);
+    return continuous_steering_step_with_cruise(&p->steering, d, &p->circuit, i, scanning,
+                                                RL_PROFILE, dt, cruise_speed_mm_s);
+}
+static inline AnalogDemand rl_follow(LinePlanner *p, const LineCalibration *cal,
+                                     const CircuitInput *i, float dt) {
+    return rl_follow_with_cruise(p, cal, i, dt, DRIVE_MODE_BASELINE_SPEED);
 }
 
 typedef struct {
@@ -248,11 +254,16 @@ static inline LineEnvelope rl_power(LinePower *s, const LinePlanner *p, const Ci
         circuit_capture_prepare(&s->wheel[effort]);
     s->assist_code = assist_code;
     for (unsigned w = 0; w < 2; ++w) {
+        bool load_eligible = !p->scan.scanning && !recovering && !maneuver && !d->stop &&
+                             c->phase == C_FOLLOW && !c->busy &&
+                             (d->decision == SYM_STRAIGHT || d->decision == SYM_LEFT ||
+                              d->decision == SYM_RIGHT || d->decision == C_FAST) &&
+                             d->target[0] > 10 && d->target[1] > 10;
         e.output[w] = recovery ? line_recovery_wheel_step(&s->recovery[w], w, d->target[w],
                                                           i->speed[w], dt, i->now, s->output[w])
-                       : continuous ? continuous_drive_step(&s->drive[w], &s->wheel[w], w,
-                                                            d->target[w], i->speed[w], dt, i->now,
-                                                            s->output[w])
+                       : continuous ? continuous_drive_step_policy(
+                                          &s->drive[w], &s->wheel[w], w, d->target[w], i->speed[w],
+                                          dt, i->now, s->output[w], load_eligible)
                        : maneuver ? maneuver_wheel_step(&s->maneuver[w], &s->wheel[w], w,
                                                         d->target[w], i->speed[w], dt, i->now)
                                   : circuit_wheel_step(&s->wheel[w], w, d->target[w], i->speed[w],

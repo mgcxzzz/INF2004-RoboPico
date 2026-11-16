@@ -5,11 +5,10 @@
 #include "src/line_following/continuous_steering.h"
 /* Barcode state and original optical tracker run exactly once per tick.
  * Only the ordinary visible-line output adapter is replaced. */
-static inline AnalogDemand continuous_follow_step(Circuit *c, BarcodeNav *n,
-                                                  const LineCalibration *cal, const CircuitInput *i,
-                                                  unsigned profile, SmoothFollow *legacy,
-                                                  const BarcodeAnalog *a, ScanSmooth *s,
-                                                  ContinuousSteering *t, float dt) {
+static inline AnalogDemand continuous_follow_step_with_cruise(
+    Circuit *c, BarcodeNav *n, const LineCalibration *cal, const CircuitInput *i,
+    unsigned profile, SmoothFollow *legacy, const BarcodeAnalog *a, ScanSmooth *s,
+    ContinuousSteering *t, float dt, unsigned cruise_speed_mm_s) {
     if (profile == 2) {
         continuous_steering_reset(t);
         return scan_smooth_step(c, n, cal, i, profile, legacy, a, s, dt);
@@ -30,7 +29,8 @@ static inline AnalogDemand continuous_follow_step(Circuit *c, BarcodeNav *n,
     }
     s->scanning = scanning;
     *legacy = (SmoothFollow){0};
-    d = continuous_steering_step(t, d, c, i, scanning, profile, dt);
+    d = continuous_steering_step_with_cruise(t, d, c, i, scanning, profile, dt,
+                                             cruise_speed_mm_s);
     s->mean = t->mean;
     s->half = t->half;
     s->active = t->active;
@@ -38,6 +38,15 @@ static inline AnalogDemand continuous_follow_step(Circuit *c, BarcodeNav *n,
         s->emitted[w] = t->emitted[w];
     DRIVE_DIAG_SOFT(d, t->active ? 1 : 0, scanning, t->active);
     return d;
+}
+
+static inline AnalogDemand continuous_follow_step(Circuit *c, BarcodeNav *n,
+                                                  const LineCalibration *cal, const CircuitInput *i,
+                                                  unsigned profile, SmoothFollow *legacy,
+                                                  const BarcodeAnalog *a, ScanSmooth *s,
+                                                  ContinuousSteering *t, float dt) {
+    return continuous_follow_step_with_cruise(c, n, cal, i, profile, legacy, a, s, t, dt,
+                                              DRIVE_MODE_BASELINE_SPEED);
 }
 static inline bool continuous_drive_selected(unsigned profile, unsigned phase, bool busy,
                                              bool external, bool ramp, bool maneuver, bool white,

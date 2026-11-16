@@ -104,6 +104,7 @@ async function main() {
   await page.evaluate(()=>{for(let i=0;i<260;i++)window.__mqttMock.motion(7,200000+i*50);});
   await page.waitForFunction(()=>document.querySelector('#chartSampleCount')?.textContent==='240 / 240 chart samples');
   assert.match(await page.locator('#archiveStatus').textContent(),/262\/72000 motion samples/);
+  await page.locator('#dashboardTabs [data-view="logs"]').click();
   await page.locator('#csvSave').click();
   await page.waitForFunction(()=>window.__mqttMock.emitted>=264);
   const captureDownload=files.at(-1),capturePath=join(reviewDir,'capture-over-240.csv');
@@ -113,6 +114,7 @@ async function main() {
   assert.match(captureCsv,/adc2_right_gp28/);
   const desktopPath=null; // COMPAT: no screenshot
 
+  await page.locator('#dashboardTabs [data-view="diagnostics"]').click();
   for (const [i,ch] of ['Q','R','S','T'].entries()) await page.locator(`#mapLetter${i}`).selectOption(ch);
   await page.locator('#mapApply').click();
   await page.waitForFunction(()=>document.querySelector('#mapStatus')?.textContent.includes('does not match'));
@@ -123,6 +125,7 @@ async function main() {
   assert.equal(await page.locator('#logDownload').isDisabled(),true,'Paused mode must not allow stored-log access');
   await page.evaluate(()=>window.__mqttMock.setMode(7));
   await page.waitForFunction(()=>document.querySelector('#logDownload')?.disabled===false,null,{timeout:10000});
+  await page.locator('#dashboardTabs [data-view="logs"]').click();
   await page.locator('#logDataset').selectOption('1');
   await page.locator('#logDownload').click();
   await page.waitForFunction(()=>{const s=document.querySelector('#logDownloadStatus')?.textContent||'';return /^(Complete:|Firmware rejected|Row \d+ incomplete|Coordinator left|Broker disconnected)/.test(s);},null,{timeout:20000});

@@ -191,6 +191,13 @@ static void codec(void) {
     r = (NavRequest){.kind = NAV_WHEELS, .owner = 3, .wheels = {-180, 180}};
     assert(nav_packet_encode(packet, &r) == 4 && nav_packet_decode(&decoded, packet, 4));
     assert(decoded.wheels[0] == -180 && decoded.wheels[1] == 180);
+    r = (NavRequest){.kind = NAV_SPEED_MODE, .owner = MOTION_BUDDY1,
+                     .speed = DRIVE_MODE_FASTER_TRIAL75};
+    assert(nav_packet_encode(packet, &r) == 2 && nav_packet_decode(&decoded, packet, 2));
+    assert(decoded.kind == NAV_SPEED_MODE && decoded.owner == MOTION_BUDDY1 &&
+           decoded.speed == DRIVE_MODE_FASTER_TRIAL75);
+    packet[1] |= 0x80U;
+    assert(!nav_packet_decode(&decoded, packet, 2));
     MotionEvent e = {.now_us = UINT64_MAX,
                      .id = UINT32_MAX,
                      .sequence = UINT32_MAX,
@@ -228,10 +235,41 @@ static void codec(void) {
         NAV_PACKET_BYTES, NAV_EVENT_BYTES, sizeof(MotionStatus), sizeof(MotionEvent),
         sizeof(NavRequest), sizeof(MotionCommandStatus));
 }
+static void speed_mode_lifecycle(void) {
+    begin();
+    MotionSpeedModeStatus mode = motion_get_speed_mode_status();
+    assert(mode.mode == DRIVE_MODE_BASELINE45 && mode.requested_mode == DRIVE_MODE_NONE);
+    assert(nav_request_speed_mode(MOTION_BUDDY1, DRIVE_MODE_NORMAL60) == MOTION_NOT_STOPPED);
+    mode = motion_get_speed_mode_status();
+    assert(mode.mode == DRIVE_MODE_BASELINE45 && mode.requested_mode == DRIVE_MODE_NORMAL60 &&
+           mode.last_result == MOTION_NOT_STOPPED);
+
+    motion_session_end(1);
+    for (unsigned k = 0; k < 13; ++k) {
+        clock_us += 10000;
+        feedback.now_us = clock_us;
+        output = motion_update(&feedback);
+    }
+    assert(nav_get_status().stopped && nav_get_status().mode == MOTION_OFF);
+    assert(nav_request_speed_mode(MOTION_BUDDY1, DRIVE_MODE_NORMAL60) == MOTION_OK);
+    mode = motion_get_speed_mode_status();
+    assert(mode.mode == DRIVE_MODE_NORMAL60 && mode.requested_mode == DRIVE_MODE_NORMAL60 &&
+           mode.revision == 1 && mode.last_result == MOTION_OK);
+    assert(nav_get_status().speed_mode == DRIVE_MODE_NORMAL60 &&
+           nav_get_status().speed_mode_revision == 1);
+
+    assert(nav_request_speed_mode(MOTION_BUDDY1, DRIVE_MODE_NONE) == MOTION_INVALID);
+    mode = motion_get_speed_mode_status();
+    assert(mode.mode == DRIVE_MODE_NORMAL60 && mode.requested_mode == DRIVE_MODE_NONE &&
+           mode.revision == 1 && mode.last_result == MOTION_INVALID);
+    assert(nav_request_speed_mode(MOTION_BUDDY2, DRIVE_MODE_BASELINE45) == MOTION_INVALID);
+    assert(motion_get_speed_mode_status().mode == DRIVE_MODE_NORMAL60);
+}
 int main(void) {
     workflow();
     interruption_and_failures();
     codec();
+    speed_mode_lifecycle();
     puts(
         "PASS shared coordinator ownership, stop atomicity, finite reverse/turn completion, route/terrain/fault APIs, interrupted junction resume, stale commands/leases, rejection/timeout, compact binary roundtrips and bounded audit.");
 }

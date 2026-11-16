@@ -6,6 +6,8 @@
 #include "connected_policy.h"
 #include "src/network/wifi_packets.h"
 #include "src/network/wifi_protocol.h"
+#include "include/interfaces/nav_api.h"
+#include "src/motion/drive_mode.h"
 #if defined(APP_RTOS_RELEASE) && defined(APP_RTOS_IMU)
 #include "../imu_navigation/imu_service.h"
 #endif
@@ -16,6 +18,45 @@ static uint32_t seen_connects, connected_since;
 static T_SPLOCK network_stop_lock;
 static RnNetworkStopSnapshot network_stop_snapshot;
 static volatile uint32_t telemetry_enabled = 1;
+/* One32-bit atomic snapshot keeps request/result from different commands from
+ * being combined by telemetry on the other core. Bits0..1=request,2..4=ACK. */
+static volatile uint32_t speed_mode_snapshot = DRIVE_MODE_NONE;
+
+static uint8_t speed_mode_ack(MotionResult result) {
+    switch (result) {
+    case MOTION_OK:
+        return WP_ACK_ACCEPTED;
+    case MOTION_BUSY:
+    case MOTION_INACTIVE:
+    case MOTION_NOT_OWNER:
+    case MOTION_NOT_STOPPED:
+        return WP_ACK_BUSY;
+    default:
+        return WP_ACK_UNSUPPORTED;
+    }
+}
+
+uint8_t rn_drive_request_speed_mode(unsigned mode) {
+    uint8_t requested = drive_mode_valid(mode) ? (uint8_t)mode : DRIVE_MODE_NONE;
+    uint8_t result;
+    if (!drive_mode_valid(mode))
+        result = WP_ACK_UNSUPPORTED;
+    else if (!rtos_line_mode_change_allowed())
+        result = WP_ACK_BUSY;
+    else
+        result = speed_mode_ack(nav_request_speed_mode(MOTION_BUDDY1, mode));
+    __atomic_store_n(&speed_mode_snapshot, (uint32_t)requested | ((uint32_t)result << 2U),
+                     __ATOMIC_RELEASE);
+    return result;
+}
+
+void rn_drive_speed_mode_snapshot(uint8_t *requested_mode, uint8_t *last_result) {
+    uint32_t snapshot = __atomic_load_n(&speed_mode_snapshot, __ATOMIC_ACQUIRE);
+    if (requested_mode)
+        *requested_mode = (uint8_t)(snapshot & 3U);
+    if (last_result)
+        *last_result = (uint8_t)((snapshot >> 2U) & 7U);
+}
 
 static bool imu_safety_blocked(void) {
 #if defined(APP_RTOS_RELEASE) && defined(APP_RTOS_IMU)
@@ -132,7 +173,8 @@ void rn_drive_process(void *raw) {
         if (!result && !rn_request_current(now, u32(message), u32(message + 13), rn_barrier(),
                                            u32(message + 17), net.connects))
             result = WP_ACK_BUSY;
-        if (!result && cmd.code != WP_CMD_PAUSE && !rtos_line_request_fresh(u32(message + 21)))
+        if (!result && cmd.code != WP_CMD_PAUSE && cmd.code != WP_CMD_CONFIG &&
+            !rtos_line_request_fresh(u32(message + 21)))
             result = WP_ACK_BUSY;
         if (!result) {
             switch (cmd.code) {
@@ -165,6 +207,12 @@ void rn_drive_process(void *raw) {
                     (void)motion_update(
                         feedback); /* Finish coordinator handback before new targets. */
                 }
+                break;
+            case WP_CMD_CONFIG:
+                if ((cmd.arg & 0xffU) == 2U)
+                    result = rn_drive_request_speed_mode(cmd.arg >> 8);
+                else
+                    result = WP_ACK_UNSUPPORTED;
                 break;
 #ifdef APP_RTOS_RELEASE
             case WP_CMD_GET_LOG:
