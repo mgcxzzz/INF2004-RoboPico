@@ -72,8 +72,15 @@ static void publish(uint64_t now, uint8_t event, const MotionRampAssist *approve
     max_i[0] = max_i[1] = saturated = 0;
     last_report = now;
 }
-MotionRampAssist ri_ramp_step(uint64_t now, float dt, bool following, const float speed[2],
+MotionRampAssist ri_ramp_step(float dt, bool following, const float speed[2],
                               const int16_t target[2], const ContinuousDrive drive[2]) {
+    b4v23_tilt_t tilt;
+    ri_tilt_snapshot(&tilt);
+    /* Core0 may publish during the control task's earlier ADC/planning work.
+     * A loop-start timestamp can precede this copied sample and underflow the
+     * unsigned age checks. Both values use the full64-bit hardware timer; read
+     * current time only after the protected copy, before updating any timers. */
+    const uint64_t now = board_time_us();
     if (!seen) {
         ra_reset(&state);
         seen = true;
@@ -93,8 +100,6 @@ MotionRampAssist ri_ramp_step(uint64_t now, float dt, bool following, const floa
         }
     if (sat && saturated < 255)
         ++saturated;
-    b4v23_tilt_t tilt;
-    ri_tilt_snapshot(&tilt);
     MotionStatus status = motion_get_status();
     bool was = state.assisting;
     MotionRampAssist requested =

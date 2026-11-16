@@ -1,8 +1,8 @@
 # RoboPico — provisional Buddy 1–4 RTOS integration
 
-**Current main release: v0.2.5, micro T-Kernel SMP. Buddy 5 is NOT integrated.**
+**Current main release: v0.2.6, micro T-Kernel SMP. Buddy 5 is NOT integrated.**
 
-[Download firmware and full bundle](firmware/integration/buddy1_4/artifacts/v0_2_5_rtos/)
+[Download firmware and full bundle](firmware/integration/buddy1_4/artifacts/v0_2_6_rtos/)
  · [Setup / powerbank / log downloads](docs/setup.md)
  · [Validation and pending circuit checks](firmware/integration/buddy1_4/STATUS.md)
  · [Architecture and interfaces](docs/architecture.md)
@@ -57,3 +57,8 @@ rubric overview, stopped-only 45/60/75 cruise selection, bounded per-wheel load
 reserve, 45-degree/100 ms pickup qualification and retained IMU peak diagnostics.
 The default remains Baseline 45. Faster modes and the revised pickup gesture need
 physical acceptance; Buddy 5 remains pending.
+
+[v0.2.6 ramp timing correction](docs/ramp_timing_v0_2_6.md) fixes false stale
+IMU-snapshot ages in the ramp adapter. Existing RTOS ownership, wire formats,
+speed modes and all detection/acceptance thresholds remain. Hardware acceptance
+of this timing correction is pending.

@@ -1,4 +1,4 @@
-# Provisional Buddy 1–4 RTOS v0.2.5 status
+# Provisional Buddy 1–4 RTOS v0.2.6 status
 
 Main is intentionally promoted before the remaining full-circuit checks, per
 user instruction. Buddy 5 remains a blank integration point, not a working feature.
@@ -95,3 +95,16 @@ protected-clock ordering replace the previous60degrees/50ms check; upward
 faster cruise behavior and load reserve. The previous successful ramp was on
 Step5v0.1.5; do not present it as validation of these new changes. See the
 [v0.2.5 checks](../../../docs/demo_console_v0_2_5.md).
+
+## Ramp snapshot correction v0.2.6
+
+The v0.2.5 run16 capture shows a12mm candidate rejected during acceleration
+quality exclusion, plus seven assistance activations ending STALE. This run
+recorded no TURN exclusion, no pickup latch, no new acquisition faults and a
+maximum heartbeat gap of about1.034s. A production-C reproducer confirms a
+newer sample can underflow a cached control-frame time. v0.2.6 fixes snapshot/
+clock ordering in the RTOS ramp adapter. Gains and acceptance limits remain.
+
+User reports confirm v0.2.5 pickup latching, dashboard and mode selection work;
+the supplied earlier capture also contains a12mm accepted hump. This does not
+certify the v0.2.6 edge crossing. See the [focused check](../../../docs/ramp_timing_v0_2_6.md).

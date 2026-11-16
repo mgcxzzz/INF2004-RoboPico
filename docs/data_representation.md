@@ -238,3 +238,12 @@ bytes/s at that cadence, before other telemetry and transport overhead. New
 snapshots use copied state under short locks and existing fixed TX queues;
 controller log rows and history capacities are unchanged. See the build manifest
 for actual linked RAM growth and the limits of this scoped Tribunal evidence.
+
+## v0.2.6 snapshot timing
+
+Ramp freshness now uses the local hardware time read after the protected sample
+copy. Both times remain full64-bit values; no new persistent state, native
+struct, bitfield, wire field, queue or history row is introduced. Existing
+explicit packet encoders and reserved bits are unchanged. Clock ordering fixes
+age interpretation, without compressing timestamps or weakening stale limits.
+Linked RAM/stack and source-preservation evidence remains in the manifest.

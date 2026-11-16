@@ -60,3 +60,10 @@ acceptance still requires checking FIFO, late-gap and control counters.
 The archive includes the original Buddy4 standalone host log, its branch test ledger, and the combined ramp successes/failures. The standalone log predates this integration. Current tests cover service startup/reset, copied odometry validity, packet decoding, powered acceptance and the ramp-assistance state machine. New hardware calibration should occur with the robot still; clearing the IMU calibration does not recalibrate the front IR sensors.
 
 [Recorded evidence and provenance](../../../../../testing/evidence/README.md).
+
+## Ramp timing correction v0.2.6
+
+The active ramp bridge copies the IMU view before reading its current hardware
+clock. A newer core0 sample cannot be judged against an older core1 loop time.
+Real stale limits, height quality/acceptance and pickup thresholds remain. No
+struct or packet is expanded. See the [release checks](../../../../../docs/ramp_timing_v0_2_6.md).

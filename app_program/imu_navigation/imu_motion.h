@@ -5,7 +5,8 @@
 #include "src/motion/ramp_drive.h"
 #include "include/interfaces/nav_api.h"
 void ri_new_run(void);
-MotionRampAssist ri_ramp_step(uint64_t now, float dt, bool following, const float speed[2],
+/* Snapshot the IMU first, then read hardware time internally for its age. */
+MotionRampAssist ri_ramp_step(float dt, bool following, const float speed[2],
                               const int16_t target[2], const ContinuousDrive drive[2]);
 void ri_ramp_halt(uint64_t now);
 void ri_ramp_report(void);

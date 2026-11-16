@@ -1,6 +1,6 @@
 # Firmware artifacts
 
-Current: [v0.2.5 Demo console and drive modes](v0_2_5_rtos/).
+Current: [v0.2.6 ramp snapshot timing correction](v0_2_6_rtos/).
 Use the complete bundle, its START_HERE.md and TEST_CHANGES.md.
 
 Provisional Buddy 1–4 micro T-Kernel integration; Buddy 5 is not integrated.
@@ -19,3 +19,5 @@ Older SDK artifacts are historical references.
 [v0.2.3 lift/overturn release](v0_2_3_rtos/) and
 [v0.2.4 clock correction](v0_2_4_rtos/) remain available. The v0.2.4 fix
 corrects a false diagnostic stale result; it does not weaken motor interlocks.
+
+[v0.2.5 Demo console and drive modes](v0_2_5_rtos/) remains available for rollback.

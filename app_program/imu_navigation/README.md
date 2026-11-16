@@ -155,3 +155,11 @@ port, stationary calibration,10mm side hump acceptance, reset/fault/odometry
 quality, powered acceptance, detector6 ramp/plant tests, coordinator TTL and
 profile tests. These do not measure real I2C/task cadence; compare CLOCK,
 IMU missed/cost and heartbeat/ADC timing during the physical test.
+
+## v0.2.6 ramp snapshot clock
+
+`ri_ramp_step` owns its hardware-clock read after `ri_tilt_snapshot`. Callers
+provide control dt and motion context, never a cached sample-age clock. Existing
+full64-bit sample timestamps and real60ms/200ms stale limits are retained. The
+nav coordinator still approves every Buddy4 modifier. No packet/state layout
+is added. See [the correction and tests](../../docs/ramp_timing_v0_2_6.md).

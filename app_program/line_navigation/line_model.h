@@ -231,7 +231,7 @@ static inline LineEnvelope rl_power(LinePower *s, const LinePlanner *p, const Ci
                           barcode_nav_action(&p->nav, p->nav.action) == 'U' && c->phase == J_TURN};
 #ifdef APP_RTOS_IMU
     MotionRampAssist approved =
-        ri_ramp_step(i->now, dt, continuous && !recovering, i->speed, d->target, s->drive);
+        ri_ramp_step(dt, continuous && !recovering, i->speed, d->target, s->drive);
 #endif
     for (unsigned w = 0; w < 2; ++w) {
         bool loaded = turning || effort == (int)w;

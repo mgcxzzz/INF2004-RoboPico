@@ -1,4 +1,4 @@
-# Buddy 1–4 RTOS integration v0.2.5
+# Buddy 1–4 RTOS integration v0.2.6
 
 **PROVISIONAL. Buddy 5 obstacle avoidance is NOT integrated.**
 
@@ -11,7 +11,7 @@ while micro T-Kernel owns task scheduling and the kernel Wi-Fi service.
 - [Release status / hardware evidence](STATUS.md)
 - [Build](../../../docs/build.md) and [focused checks](../../../docs/testing.md)
 - [Architecture](../../../docs/architecture.md) and include/interfaces/
-- [Current UF2 + full bundle](artifacts/v0_2_5_rtos/)
+- [Current UF2 + full bundle](artifacts/v0_2_6_rtos/)
 - [Historical SDK reference](SDK_REFERENCE.md)
 
 Profile 1 keeps 45 mm/s nominal straight travel. v0.2.2 adds qualified bend
@@ -45,3 +45,8 @@ tilt qualification to45 degrees/100 ms and exposes retained peak diagnostics.
 Use the complete new dashboard bundle. Calibration, barcode decoders, junction
 geometry/7mm gate, bend/recovery logic and RTOS ownership remain. Physical
 acceptance of the new speed/gesture settings is pending.
+
+[v0.2.6 ramp timing correction](../../../docs/ramp_timing_v0_2_6.md) reads the
+hardware clock after copying the IMU snapshot. It retains the real stale
+deadlines and all controller/measurement thresholds. No state or packet layout
+is expanded. The v0.2.5 dashboard remains compatible.
