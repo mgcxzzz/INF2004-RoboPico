@@ -1,3 +1,10 @@
+/**
+ * @file drive_diagnostics.h
+ * @brief Drive diagnostics.
+ * @details ADC/control ownership covers sensor acquisition, planning and calibration.
+ * Other tasks consume protected copies; flash and stored exports require Stop.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 #ifndef RTOS_DRIVE_DIAGNOSTICS_H
 #define RTOS_DRIVE_DIAGNOSTICS_H
 #include <stdbool.h>
@@ -16,65 +23,72 @@ enum
     RL_DRIVE_DIAG_BYTES = 18
 };
 /* Two previously unused bits retain the 56-byte controller-row ABI. */
-static inline void rl_row_bend_phase (unsigned phase, uint32_t * meta,
-                                      uint32_t * aux)
+static inline void rl_row_bend_phase (unsigned phase, uint32_t * p_meta,
+                                      uint32_t * p_aux)
 {
-    *meta = (*meta & 0x7fffffffU) | ((uint32_t)(phase & 1U) << 31);
-    *aux = (*aux & 0x7fffffffU) | ((uint32_t)((phase >> 1) & 1U) << 31);
+    *p_meta = (*p_meta & 0x7fffffffU) | ((uint32_t)(phase & 1U) << 31);
+    *p_aux = (*p_aux & 0x7fffffffU) | ((uint32_t)((phase >> 1) & 1U) << 31);
 }
 typedef struct
 {
-    unsigned bend_phase : 2, bend_side : 2, bend_percent : 7,
-        recovery_phase : 3;
+    unsigned bend_phase : 2;
+    unsigned bend_side : 2;
+    unsigned bend_percent : 7;
+    unsigned recovery_phase : 3;
     unsigned sweep_stage : 3;
-    signed yaw_x10 : 13, target_left : 9, target_right : 9;
+    signed yaw_x10 : 13;
+    signed target_left : 9;
+    signed target_right : 9;
     unsigned saturated : 1;
-} RlDriveDiagnostic;
+} rl_drive_diagnostic_t;
 
-static inline int rl_diag_clamp (int value, int lo, int hi, bool * clipped)
+static inline int rl_diag_clamp (int value, int low, int high, bool * p_clipped)
 {
-    if (value < lo)
+    if (value < low)
     {
-        *clipped = true;
-        return lo;
+        *p_clipped = true;
+        return low;
     }
-    if (value > hi)
+    if (value > high)
     {
-        *clipped = true;
-        return hi;
+        *p_clipped = true;
+        return high;
     }
     return value;
 }
-static inline RlDriveDiagnostic
+static inline rl_drive_diagnostic_t
 rl_drive_diag_make (unsigned phase, unsigned side, unsigned percent,
                     unsigned recovery, unsigned stage, int yaw_x10, int left,
                     int right)
 {
     bool clipped = false;
-    RlDriveDiagnostic d = {0};
-    d.bend_phase = (unsigned)rl_diag_clamp((int)phase, 0, 3, &clipped);
-    d.bend_side = (unsigned)rl_diag_clamp((int)side, 0, 2, &clipped);
-    d.bend_percent = (unsigned)rl_diag_clamp((int)percent, 0, 100, &clipped);
-    d.recovery_phase = (unsigned)rl_diag_clamp((int)recovery, 0, 7, &clipped);
-    d.sweep_stage = (unsigned)rl_diag_clamp((int)stage, 0, 4, &clipped);
-    d.yaw_x10 = rl_diag_clamp(yaw_x10, -4096, 4095, &clipped);
-    d.target_left = rl_diag_clamp(left, -180, 180, &clipped);
-    d.target_right = rl_diag_clamp(right, -180, 180, &clipped);
-    d.saturated = clipped;
-    return d;
+    rl_drive_diagnostic_t demand = {0};
+    demand.bend_phase = (unsigned)rl_diag_clamp((int)phase, 0, 3, &clipped);
+    demand.bend_side = (unsigned)rl_diag_clamp((int)side, 0, 2, &clipped);
+    demand.bend_percent =
+        (unsigned)rl_diag_clamp((int)percent, 0, 100, &clipped);
+    demand.recovery_phase =
+        (unsigned)rl_diag_clamp((int)recovery, 0, 7, &clipped);
+    demand.sweep_stage = (unsigned)rl_diag_clamp((int)stage, 0, 4, &clipped);
+    demand.yaw_x10 = rl_diag_clamp(yaw_x10, -4096, 4095, &clipped);
+    demand.target_left = rl_diag_clamp(left, -180, 180, &clipped);
+    demand.target_right = rl_diag_clamp(right, -180, 180, &clipped);
+    demand.saturated = clipped;
+    return demand;
 }
-static inline void rl_diag_put (uint8_t * p, unsigned bit, unsigned width,
+static inline void rl_diag_put (uint8_t * p_data, unsigned bit, unsigned width,
                                 uint32_t value)
 {
-    for (unsigned k = 0; k < width; ++k)
+    for (unsigned item_index = 0; item_index < width; ++item_index)
     {
-        if ((value >> k) & 1U)
+        if ((value >> item_index) & 1U)
         {
-            p[(bit + k) / 8] |= (uint8_t)(1U << ((bit + k) % 8));
+            p_data[(bit + item_index) / 8] |=
+                (uint8_t)(1U << ((bit + item_index) % 8));
         }
     }
 }
-static inline void rl_drive_diag_pack (const RlDriveDiagnostic * d,
+static inline void rl_drive_diag_pack (const rl_drive_diagnostic_t * p_demand,
                                        uint32_t uptime, uint16_t run,
                                        uint8_t seq,
                                        uint8_t out[RL_DRIVE_DIAG_BYTES])
@@ -83,20 +97,20 @@ static inline void rl_drive_diag_pack (const RlDriveDiagnostic * d,
     out[0] = 0xf2;
     out[1] = 15;
     out[2] = seq;
-    uint8_t * p = out + 3;
-    p[0] = 0xc8;
-    p[1] = 0x22;
-    rl_diag_put(p, 16, 32, uptime);
-    rl_diag_put(p, 48, 16, run);
-    rl_diag_put(p, 64, 2, d->bend_phase);
-    rl_diag_put(p, 66, 2, d->bend_side);
-    rl_diag_put(p, 68, 7, d->bend_percent);
-    rl_diag_put(p, 75, 3, d->recovery_phase);
-    rl_diag_put(p, 80, 3, d->sweep_stage);
-    rl_diag_put(p, 83, 13, (uint32_t)d->yaw_x10);
-    rl_diag_put(p, 96, 9, (uint32_t)d->target_left);
-    rl_diag_put(p, 105, 9, (uint32_t)d->target_right);
-    rl_diag_put(p, 114, 1, d->saturated);
+    uint8_t * p_data = out + 3;
+    p_data[0] = 0xc8;
+    p_data[1] = 0x22;
+    rl_diag_put(p_data, 16, 32, uptime);
+    rl_diag_put(p_data, 48, 16, run);
+    rl_diag_put(p_data, 64, 2, p_demand->bend_phase);
+    rl_diag_put(p_data, 66, 2, p_demand->bend_side);
+    rl_diag_put(p_data, 68, 7, p_demand->bend_percent);
+    rl_diag_put(p_data, 75, 3, p_demand->recovery_phase);
+    rl_diag_put(p_data, 80, 3, p_demand->sweep_stage);
+    rl_diag_put(p_data, 83, 13, (uint32_t)p_demand->yaw_x10);
+    rl_diag_put(p_data, 96, 9, (uint32_t)p_demand->target_left);
+    rl_diag_put(p_data, 105, 9, (uint32_t)p_demand->target_right);
+    rl_diag_put(p_data, 114, 1, p_demand->saturated);
 }
 #endif
 

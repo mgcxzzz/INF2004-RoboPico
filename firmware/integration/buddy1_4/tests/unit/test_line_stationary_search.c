@@ -8,16 +8,16 @@
 #include "app_program/line_navigation/line_model.h"
 #include "src/navigation/nav_coordinator.h"
 
-static const LineCalibration cal = {{184, 184}, {3464, 3692}, 7};
+static const line_calibration_t cal = {{184, 184}, {3464, 3692}, 7};
 
-static LineSearchDemand step(LineSearch *s, uint64_t now, uint32_t path, const double wheel[2],
+static line_search_demand_t step(line_search_t *s, uint64_t now, uint32_t path, const double wheel[2],
                              const float speed[2], bool candidate, bool confirmed) {
     return line_search_stationary_step(s, now, path, wheel, speed, candidate, confirmed);
 }
 
-static LineSearchDemand settle(LineSearch *s, uint64_t *now, uint32_t path, const double wheel[2],
+static line_search_demand_t settle(line_search_t *s, uint64_t *now, uint32_t path, const double wheel[2],
                                const float stopped[2]) {
-    LineSearchDemand d = {0};
+    line_search_demand_t d = {0};
     for (unsigned n = 0; n <= LS_STILL_US / 10000 + 1; ++n) {
         *now += 10000;
         d = step(s, *now, path, wheel, stopped, false, false);
@@ -27,9 +27,9 @@ static LineSearchDemand settle(LineSearch *s, uint64_t *now, uint32_t path, cons
     return d;
 }
 
-static LineSearchDemand move_to_endpoint(LineSearch *s, uint64_t *now, double wheel[2],
+static line_search_demand_t move_to_endpoint(line_search_t *s, uint64_t *now, double wheel[2],
                                          double *path, float speed[2]) {
-    LineSearchDemand d = {0};
+    line_search_demand_t d = {0};
     for (unsigned n = 0; n < 300; ++n) {
         d = step(s, *now, (uint32_t)*path, wheel, speed, false, false);
         if (d.phase == LS_PHASE_SETTLE_REVERSAL)
@@ -50,12 +50,12 @@ static LineSearchDemand move_to_endpoint(LineSearch *s, uint64_t *now, double wh
 static void test_sweeps(void) {
     const float stopped[2] = {0, 0};
     for (int first = -1; first <= 1; first += 2) {
-        LineSearch s = {0};
+        line_search_t s = {0};
         double wheel[2] = {0, 0}, path = 0;
         float speed[2] = {0, 0};
         uint64_t now = 1000;
         line_search_stationary_begin(&s, now, 0, first, wheel);
-        LineSearchDemand d = step(&s, now, 0, wheel, speed, false, false);
+        line_search_demand_t d = step(&s, now, 0, wheel, speed, false, false);
         assert(d.phase == LS_PHASE_SETTLE_START && !d.target[0] && !d.target[1]);
         d = settle(&s, &now, 0, wheel, stopped);
         assert(d.phase == LS_PHASE_SWEEP && d.target[0] == -first * LS_STATIONARY_SPEED &&
@@ -86,12 +86,12 @@ static void test_sweeps(void) {
 }
 
 static void test_bounded_failure(void) {
-    LineSearch s = {0};
+    line_search_t s = {0};
     double wheel[2] = {0, 0};
     float stopped[2] = {0, 0};
     uint64_t now = 1000;
     line_search_stationary_begin(&s, now, 0, 1, wheel);
-    LineSearchDemand d = step(&s, now, 0, wheel, stopped, false, false);
+    line_search_demand_t d = step(&s, now, 0, wheel, stopped, false, false);
     assert(d.phase == LS_PHASE_SETTLE_START);
     float moving[2] = {10, 10};
     double path = 0;
@@ -103,7 +103,7 @@ static void test_bounded_failure(void) {
     }
     assert(d.reason == LS_SETTLE_TIMEOUT);
 
-    s = (LineSearch){0};
+    s = (line_search_t){0};
     now = 1000;
     line_search_stationary_begin(&s, now, 0, -1, wheel);
     for (unsigned n = 0; n <= LS_STILL_US / 10000 + 1; ++n) {
@@ -114,19 +114,19 @@ static void test_bounded_failure(void) {
     d = step(&s, now + LS_STALL_US, 0, wheel, stopped, false, false);
     assert(d.reason == LS_STALL);
 
-    s = (LineSearch){0};
+    s = (line_search_t){0};
     line_search_stationary_begin(&s, 1000, 0, 1, wheel);
     wheel[0] = 25;
     wheel[1] = -25;
     d = step(&s, 2000, 0, wheel, stopped, false, false);
     assert(d.reason == LS_ANGLE);
 
-    s = (LineSearch){0};
+    s = (line_search_t){0};
     line_search_stationary_begin(&s, 1000, 0, 1, wheel);
     d = step(&s, 1000 + LS_TOTAL_US, 0, wheel, stopped, false, false);
     assert(d.reason == LS_TIMEOUT);
 
-    s = (LineSearch){0};
+    s = (line_search_t){0};
     line_search_stationary_begin(&s, 1000, 0, 1, wheel);
     float invalid_speed[2] = {NAN, 0};
     d = step(&s, 2000, 0, wheel, invalid_speed, false, false);
@@ -138,18 +138,18 @@ static void test_bounded_failure(void) {
     line_search_stationary_begin(&s, 5000, 0, 1, invalid_wheel);
     d = step(&s, 6000, 0, wheel, stopped, false, false);
     assert(d.reason == LS_INPUT);
-    CircuitTracker invalid_tracker = {0};
-    AnalogDemand invalid = circuit_line_demand_motion(&invalid_tracker, &cal, 184, 184,
+    circuit_tracker_t invalid_tracker = {0};
+    analog_demand_t invalid = circuit_line_demand_motion(&invalid_tracker, &cal, 184, 184,
         7000, 0, NULL, stopped);
     assert(invalid.stop && invalid_tracker.loss_reason == LS_INPUT);
 }
 
 static void test_production_tracker_and_handoff(void) {
-    CircuitTracker t = {0};
+    circuit_tracker_t t = {0};
     const double wheel[2] = {0, 0};
     const float stopped[2] = {0, 0};
     uint64_t now = 1000;
-    AnalogDemand d = circuit_line_demand_motion(&t, &cal, 3464, 184, now, 0, wheel, stopped);
+    analog_demand_t d = circuit_line_demand_motion(&t, &cal, 3464, 184, now, 0, wheel, stopped);
     assert(t.core.direction == 1 && !d.stop);
     now += 10000;
     d = circuit_line_demand_motion(&t, &cal, 184, 184, now, 0, wheel, stopped);
@@ -183,14 +183,14 @@ static void test_production_tracker_and_handoff(void) {
     d = circuit_line_demand_motion(&t, &cal, 3464, 184, now, 0, wheel, stopped);
     assert(!t.core.white && !t.search.active && !d.stop);
 
-    LinePlanner planner = {0};
+    line_planner_t planner = {0};
     planner.circuit.phase = C_FOLLOW;
     planner.circuit.follower.core.white = true;
     planner.circuit.follower.search.active = true;
-    LinePower power = {0};
-    CircuitInput input = {.now = now, .speed = {0, 0}};
-    AnalogDemand search = {.target = {-LS_STATIONARY_SPEED, LS_STATIONARY_SPEED}};
-    LineEnvelope env = {0};
+    line_power_t power = {0};
+    circuit_input_t input = {.now = now, .speed = {0, 0}};
+    analog_demand_t search = {.target = {-LS_STATIONARY_SPEED, LS_STATIONARY_SPEED}};
+    line_envelope_t env = {0};
     for (unsigned n = 0; n < 20; ++n) {
         env = rl_power(&power, &planner, &input, &search, C_FOLLOW, .01f);
         power.output[0] = env.output[0];
@@ -201,30 +201,30 @@ static void test_production_tracker_and_handoff(void) {
     int32_t left_pwm = rl_cap(&env, 0, now), right_pwm = rl_cap(&env, 1, now);
     assert(env.recovery && !env.maneuver && left_pwm < 0 && right_pwm > 0 &&
            abs(left_pwm) <= LINE_RECOVERY_PWM_LIMIT && right_pwm <= LINE_RECOVERY_PWM_LIMIT);
-    DualLevels left = rl_levels(&env, 0, now), right = rl_levels(&env, 1, now);
+    dual_levels_t left = rl_levels(&env, 0, now), right = rl_levels(&env, 1, now);
     assert(left.a == 0 && left.b > 0 && right.a == 0 && right.b > 0);
     search.target[0] = search.target[1] = 0;
     env = rl_power(&power, &planner, &input, &search, C_FOLLOW, .01f);
     assert(env.recovery && !env.output[0] && !env.output[1]);
     for (unsigned w = 0; w < 2; ++w)
         for (int sign = -1; sign <= 1; sign += 2) {
-            DualLevels v = line_recovery_levels(w, sign * LINE_RECOVERY_PWM_LIMIT);
+            dual_levels_t v = line_recovery_levels(w, sign * LINE_RECOVERY_PWM_LIMIT);
             assert(v.a <= LINE_RECOVERY_PWM_LIMIT && v.b <= LINE_RECOVERY_PWM_LIMIT &&
                    ((v.a == LINE_RECOVERY_PWM_LIMIT) != (v.b == LINE_RECOVERY_PWM_LIMIT)));
         }
     assert(!line_recovery_levels(2, LINE_RECOVERY_PWM_LIMIT).a &&
            !line_recovery_levels(2, LINE_RECOVERY_PWM_LIMIT).b);
-    LineRecoveryWheel invalid = {0};
+    line_recovery_wheel_t invalid = {0};
     assert(!line_recovery_wheel_step(&invalid, 2, LS_STATIONARY_SPEED, 0, .01f, now, 0));
     assert(!line_recovery_wheel_step(&invalid, 0, LS_STATIONARY_SPEED, NAN, .01f, now, 0));
 }
 
 static void test_unknown_direction_is_symmetric(void) {
-    CircuitTracker t = {0};
+    circuit_tracker_t t = {0};
     const double wheel[2] = {0, 0};
     const float stopped[2] = {0, 0};
     uint64_t now = 1000;
-    AnalogDemand d = circuit_line_demand_motion(&t, &cal, 184, 184, now, 0, wheel, stopped);
+    analog_demand_t d = circuit_line_demand_motion(&t, &cal, 184, 184, now, 0, wheel, stopped);
     assert(t.core.white && !t.search.active && !d.target[0] && !d.target[1]);
     now = t.core.white_since + LS_CONFIRM_US;
     d = circuit_line_demand_motion(&t, &cal, 184, 184, now, 0, wheel, stopped);
@@ -240,8 +240,8 @@ static void test_signed_coordinator_targets(void) {
     nav_coordinator_init(0);
     nav_coordinator_begin(1000);
     assert(nav_coordinator_navigation(MOTION_BUDDY3, -24, 24) == MOTION_OK);
-    MotionFeedback feedback = {.now_us = 1000};
-    MotionOutput output = nav_coordinator_update(&feedback);
+    motion_feedback_t feedback = {.now_us = 1000};
+    motion_output_t output = nav_coordinator_update(&feedback);
     assert(!output.external && output.target_mm_s[0] == -24 && output.target_mm_s[1] == 24);
     nav_coordinator_end(0);
 }

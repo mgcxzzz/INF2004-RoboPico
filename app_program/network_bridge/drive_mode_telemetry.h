@@ -1,3 +1,10 @@
+/**
+ * @file drive_mode_telemetry.h
+ * @brief Drive mode telemetry.
+ * @details Application tasks exchange copied, bounded command and telemetry records.
+ * The kernel Wi-Fi service owns the transport; reconnect never restarts motion.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 #ifndef RTOS_DRIVE_MODE_TELEMETRY_H
 #define RTOS_DRIVE_MODE_TELEMETRY_H
 
@@ -8,7 +15,8 @@
  * layout; rn_drive_mode_encode packs every field explicitly. */
 typedef struct
 {
-    uint32_t uptime_ms, revision;
+    uint32_t uptime_ms;
+    uint32_t revision;
     unsigned mode : 2;
     unsigned requested_mode : 2;
     unsigned last_result : 3;
@@ -16,41 +24,45 @@ typedef struct
     unsigned session_active : 1;
     unsigned load_left : 7;
     unsigned load_right : 7;
-} RnDriveModeTelemetry;
+} rn_drive_mode_telemetry_t;
 
-static inline void rn_drive_mode_put32 (uint8_t * out, uint32_t value)
+static inline void rn_drive_mode_put32 (uint8_t * p_out, uint32_t value)
 {
-    out[0] = (uint8_t)value;
-    out[1] = (uint8_t)(value >> 8U);
-    out[2] = (uint8_t)(value >> 16U);
-    out[3] = (uint8_t)(value >> 24U);
+    p_out[0] = (uint8_t)value;
+    p_out[1] = (uint8_t)(value >> 8U);
+    p_out[2] = (uint8_t)(value >> 16U);
+    p_out[3] = (uint8_t)(value >> 24U);
 }
 
-static inline bool rn_drive_mode_encode (const RnDriveModeTelemetry * in,
-                                         uint8_t seq, uint8_t out[17])
+static inline bool
+rn_drive_mode_encode (const rn_drive_mode_telemetry_t * p_in_value, uint8_t seq,
+                      uint8_t out[17])
 {
-    if (!in || !out || in->mode > 2U || in->last_result > 5U ||
-        in->load_left > 100U || in->load_right > 100U)
+    if (!p_in_value || !out || p_in_value->mode > 2U ||
+        p_in_value->last_result > 5U || p_in_value->load_left > 100U ||
+        p_in_value->load_right > 100U)
     {
         return false;
     }
-    for (unsigned i = 0; i < 17U; ++i)
+    for (unsigned index = 0; index < 17U; ++index)
     {
-        out[i] = 0U;
+        out[index] = 0U;
     }
     out[0] = 0xf2U;
     out[1] = 14U;
     out[2] = seq;
     out[3] = 0xcbU;
     out[4] = 0x25U;
-    rn_drive_mode_put32(out + 5U, in->uptime_ms);
-    rn_drive_mode_put32(out + 9U, in->revision);
-    out[13] =
-        (uint8_t)(in->mode | (in->requested_mode << 2U) |
-                  (in->last_result << 4U) | (in->can_change ? 0x80U : 0U));
-    out[14] = (uint8_t)((in->session_active ? 1U : 0U) |
-                        (in->load_left ? 2U : 0U) | (in->load_right ? 4U : 0U));
-    uint16_t pwm = (uint16_t)in->load_left | (uint16_t)(in->load_right << 7U);
+    rn_drive_mode_put32(out + 5U, p_in_value->uptime_ms);
+    rn_drive_mode_put32(out + 9U, p_in_value->revision);
+    out[13] = (uint8_t)(p_in_value->mode | (p_in_value->requested_mode << 2U) |
+                        (p_in_value->last_result << 4U) |
+                        (p_in_value->can_change ? 0x80U : 0U));
+    out[14] = (uint8_t)((p_in_value->session_active ? 1U : 0U) |
+                        (p_in_value->load_left ? 2U : 0U) |
+                        (p_in_value->load_right ? 4U : 0U));
+    uint16_t pwm = (uint16_t)p_in_value->load_left |
+                   (uint16_t)(p_in_value->load_right << 7U);
     out[15] = (uint8_t)pwm;
     out[16] = (uint8_t)(pwm >> 8U);
     return true;

@@ -1,3 +1,10 @@
+/**
+ * @file motion_api.c
+ * @brief Motion api.
+ * @details The shared facade/coordinator arbitrates ownership and generations.
+ * Acceptance is not completion; external callers never write motor registers.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 #include "include/interfaces/motion_api.h"
 #include "src/navigation/nav_coordinator.h"
 #include "src/navigation/nav_codec.h"
@@ -5,80 +12,90 @@
 #include <stddef.h>
 /* All buddy requests cross the canonical compact binary boundary before
  * coordinator policy. Convenience C arguments are not a second motor path. */
-static bool valid_owner (MotionOwner o)
+static bool valid_owner (motion_owner_t o_value)
 {
-    return o >= MOTION_BUDDY1 && o <= MOTION_BUDDY5;
+    return o_value >= MOTION_BUDDY1 && o_value <= MOTION_BUDDY5;
 }
-static MotionResult reject (MotionOwner o, unsigned kind, float value,
-                            unsigned speed, MotionResult result)
+static motion_result_t reject (motion_owner_t o_value, unsigned kind,
+                               float value, unsigned speed,
+                               motion_result_t result)
 {
-    nav_coordinator_reject(o, kind, value, speed, result);
+    nav_coordinator_reject(o_value, kind, value, speed, result);
     return result;
 }
-static MotionResult submit (const NavRequest * request, uint32_t * token)
+static motion_result_t submit (const nav_request_t * p_request,
+                               uint32_t * p_token)
 {
     uint8_t packet[NAV_PACKET_BYTES];
-    NavRequest r;
-    unsigned n = nav_packet_encode(packet, request);
-    if (!n || !nav_packet_decode(&r, packet, n))
+    nav_request_t result_value;
+    unsigned count = nav_packet_encode(packet, p_request);
+    if (!count || !nav_packet_decode(&result_value, packet, count))
     {
-        return reject((MotionOwner)request->owner, request->kind,
-                      request->value, request->speed, MOTION_INVALID);
+        return reject((motion_owner_t)p_request->owner, p_request->kind,
+                      p_request->value, p_request->speed, MOTION_INVALID);
     }
-    MotionOwner o = (MotionOwner)r.owner;
-    MotionResult result;
-    switch (r.kind)
+    motion_owner_t o_value = (motion_owner_t)result_value.owner;
+    motion_result_t result;
+    switch (result_value.kind)
     {
     case NAV_PAUSE:
-        result = nav_coordinator_pause(o, token);
+        result = nav_coordinator_pause(o_value, p_token);
         break;
     case NAV_STOP:
-        result = nav_coordinator_stop(o);
+        result = nav_coordinator_stop(o_value);
         break;
     case NAV_DRIVE:
     case NAV_TURN:
-        result = nav_coordinator_move(o, r.lease, r.value, r.speed,
-                                      r.kind == NAV_TURN,
-                                      (MotionTurnStyle)r.style, token);
+        result = nav_coordinator_move(
+            o_value, result_value.lease, result_value.value, result_value.speed,
+            result_value.kind == NAV_TURN,
+            (motion_turn_style_t)result_value.style, p_token);
         break;
     case NAV_RESUME:
-        result = nav_coordinator_resume(o, r.lease, r.flag);
+        result = nav_coordinator_resume(o_value, result_value.lease,
+                                        result_value.flag);
         break;
     case NAV_ROUTE:
 #ifdef BUDDY_RUNTIME_MAPPING
-        result = nav_coordinator_route(o, (char)('A' + (unsigned)r.value));
+        result = nav_coordinator_route(
+            o_value, (char)('A' + (unsigned)result_value.value));
         break;
 #else
-        result = nav_coordinator_route(o, r.value == 0   ? 'A'
-                                          : r.value == 1 ? 'F'
-                                                         : 'Z');
+        result =
+            nav_coordinator_route(o_value, result_value.value == 0   ? 'A'
+                                           : result_value.value == 1 ? 'F'
+                                                                     : 'Z');
         break;
 #endif
     case NAV_VERIFIED_BARCODE:
         result = nav_coordinator_verified_barcode(
-            o, (char)('A' + (unsigned)r.value));
+            o_value, (char)('A' + (unsigned)result_value.value));
         break;
     case NAV_RAMP_ASSIST:
-        result = nav_coordinator_ramp_assist(o, &r.assist);
+        result = nav_coordinator_ramp_assist(o_value, &result_value.assist);
         break;
     case NAV_ASSIST:
     {
-        MotionRampAssist a = {.boost_milli = (uint16_t)((unsigned)r.value * 10),
-                              .ttl_ms = 100};
-        result = nav_coordinator_ramp_assist(o, &a);
+        motion_ramp_assist_t first = {
+            .boost_milli = (uint16_t)((unsigned)result_value.value * 10),
+            .ttl_ms = 100};
+        result = nav_coordinator_ramp_assist(o_value, &first);
         break;
     }
     case NAV_TERRAIN:
-        result = nav_coordinator_terrain(o, (MotionTerrain)(unsigned)r.value);
+        result = nav_coordinator_terrain(
+            o_value, (motion_terrain_t)(unsigned)result_value.value);
         break;
     case NAV_WHEELS:
-        result = nav_coordinator_navigation(o, r.wheels[0], r.wheels[1]);
+        result = nav_coordinator_navigation(o_value, result_value.wheels[0],
+                                            result_value.wheels[1]);
         break;
     case NAV_FAULT_REPORT:
-        result = nav_coordinator_fault(o, r.bitmap, r.flag);
+        result = nav_coordinator_fault(o_value, result_value.bitmap,
+                                       result_value.flag);
         break;
     case NAV_SPEED_MODE:
-        result = nav_coordinator_speed_mode(o, r.speed);
+        result = nav_coordinator_speed_mode(o_value, result_value.speed);
         break;
     default:
         result = MOTION_UNSUPPORTED;
@@ -86,193 +103,214 @@ static MotionResult submit (const NavRequest * request, uint32_t * token)
     }
     /* Per-tick Buddy3 BUSY simply means it yielded to an avoidance lease;
      * do not flood the audit log with repeated control targets. */
-    if (result != MOTION_OK && !(r.kind == NAV_WHEELS && result == MOTION_BUSY))
+    if (result != MOTION_OK &&
+        !(result_value.kind == NAV_WHEELS && result == MOTION_BUSY))
     {
-        nav_coordinator_reject(o, r.kind, r.value, r.speed, result);
+        nav_coordinator_reject(o_value, result_value.kind, result_value.value,
+                               result_value.speed, result);
     }
     return result;
 }
-MotionResult motion_pause (MotionOwner o, uint32_t * lease)
+motion_result_t motion_pause (motion_owner_t o_value, uint32_t * p_lease_value)
 {
-    if (!valid_owner(o) || !lease)
+    if (!valid_owner(o_value) || !p_lease_value)
     {
-        return reject(o, NAV_PAUSE, 0, 0, MOTION_INVALID);
+        return reject(o_value, NAV_PAUSE, 0, 0, MOTION_INVALID);
     }
-    NavRequest r = {.kind = NAV_PAUSE, .owner = o};
-    return submit(&r, lease);
+    nav_request_t result = {.kind = NAV_PAUSE, .owner = o_value};
+    return submit(&result, p_lease_value);
 }
-MotionResult motion_stop (MotionOwner o)
+motion_result_t motion_stop (motion_owner_t o_value)
 {
-    if (!valid_owner(o))
+    if (!valid_owner(o_value))
     {
-        return reject(o, NAV_STOP, 0, 0, MOTION_INVALID);
+        return reject(o_value, NAV_STOP, 0, 0, MOTION_INVALID);
     }
-    NavRequest r = {.kind = NAV_STOP, .owner = o};
-    return submit(&r, NULL);
+    nav_request_t result = {.kind = NAV_STOP, .owner = o_value};
+    return submit(&result, NULL);
 }
-MotionResult motion_drive_distance (MotionOwner o, uint32_t lease, float mm,
-                                    unsigned speed, uint32_t * id)
+motion_result_t motion_drive_distance (motion_owner_t o_value, uint32_t lease,
+                                       float mm_value_value, unsigned speed,
+                                       uint32_t * p_identifier)
 {
-    if (id)
+    if (p_identifier)
     {
-        *id = 0;
+        *p_identifier = 0;
     }
-    if (!valid_owner(o) || !id || speed > 60)
+    if (!valid_owner(o_value) || !p_identifier || speed > 60)
     {
-        return reject(o, NAV_DRIVE, mm, speed, MOTION_INVALID);
+        return reject(o_value, NAV_DRIVE, mm_value_value, speed,
+                      MOTION_INVALID);
     }
-    NavRequest r = {.kind = NAV_DRIVE,
-                    .owner = o,
-                    .lease = lease,
-                    .value = mm,
-                    .speed = speed};
-    return submit(&r, id);
+    nav_request_t result = {.kind = NAV_DRIVE,
+                            .owner = o_value,
+                            .lease = lease,
+                            .value = mm_value_value,
+                            .speed = speed};
+    return submit(&result, p_identifier);
 }
-MotionResult motion_turn_relative (MotionOwner o, uint32_t lease, float degrees,
-                                   unsigned speed, MotionTurnStyle style,
-                                   uint32_t * id)
+motion_result_t motion_turn_relative (motion_owner_t o_value, uint32_t lease,
+                                      float degrees, unsigned speed,
+                                      motion_turn_style_t style,
+                                      uint32_t * p_identifier)
 {
-    if (id)
+    if (p_identifier)
     {
-        *id = 0;
+        *p_identifier = 0;
     }
-    if (!valid_owner(o) || !id || speed > 90 ||
+    if (!valid_owner(o_value) || !p_identifier || speed > 90 ||
         (style != MOTION_ROLLING && style != MOTION_IN_PLACE))
     {
-        return reject(o, NAV_TURN, degrees, speed, MOTION_INVALID);
+        return reject(o_value, NAV_TURN, degrees, speed, MOTION_INVALID);
     }
-    NavRequest r = {.kind = NAV_TURN,
-                    .owner = o,
-                    .lease = lease,
-                    .value = degrees,
-                    .speed = speed,
-                    .style = style};
-    return submit(&r, id);
+    nav_request_t result = {.kind = NAV_TURN,
+                            .owner = o_value,
+                            .lease = lease,
+                            .value = degrees,
+                            .speed = speed,
+                            .style = style};
+    return submit(&result, p_identifier);
 }
-MotionResult motion_resume_line (MotionOwner o, uint32_t lease, bool abandon)
+motion_result_t motion_resume_line (motion_owner_t o_value, uint32_t lease,
+                                    bool abandon)
 {
-    if (!valid_owner(o))
+    if (!valid_owner(o_value))
     {
-        return reject(o, NAV_RESUME, 0, 0, MOTION_INVALID);
+        return reject(o_value, NAV_RESUME, 0, 0, MOTION_INVALID);
     }
-    NavRequest r = {
-        .kind = NAV_RESUME, .owner = o, .lease = lease, .flag = abandon};
-    return submit(&r, NULL);
+    nav_request_t result = {
+        .kind = NAV_RESUME, .owner = o_value, .lease = lease, .flag = abandon};
+    return submit(&result, NULL);
 }
-MotionStatus motion_get_status (void)
+motion_status_t motion_get_status (void)
 {
     return nav_coordinator_status();
 }
-MotionResult motion_request_speed_mode (MotionOwner o, unsigned mode)
+motion_result_t motion_request_speed_mode (motion_owner_t o_value,
+                                           unsigned mode)
 {
-    if (!valid_owner(o))
+    if (!valid_owner(o_value))
     {
-        return nav_coordinator_speed_mode(o, mode);
+        return nav_coordinator_speed_mode(o_value, mode);
     }
-    NavRequest r = {.kind = NAV_SPEED_MODE,
-                    .owner = o,
-                    .speed = mode <= DRIVE_MODE_NONE ? mode : DRIVE_MODE_NONE};
-    return submit(&r, NULL);
+    nav_request_t result = {.kind = NAV_SPEED_MODE,
+                            .owner = o_value,
+                            .speed = mode <= DRIVE_MODE_NONE ? mode
+                                                             : DRIVE_MODE_NONE};
+    return submit(&result, NULL);
 }
-MotionSpeedModeStatus motion_get_speed_mode_status (void)
+motion_speed_mode_status_t motion_get_speed_mode_status (void)
 {
     return nav_coordinator_speed_mode_status();
 }
-bool motion_get_command (uint32_t id, MotionCommandStatus * s)
+bool motion_get_command (uint32_t identifier_value,
+                         motion_command_status_t * p_state)
 {
-    return nav_coordinator_command(id, s);
+    return nav_coordinator_command(identifier_value, p_state);
 }
-MotionResult motion_submit_barcode (MotionOwner o, char c)
+motion_result_t motion_submit_barcode (motion_owner_t o_value, char character)
 {
 #ifdef BUDDY_RUNTIME_MAPPING
-    if (!valid_owner(o) || c < 'A' || c > 'Z')
+    if (!valid_owner(o_value) || character < 'A' || character > 'Z')
     {
-        return reject(o, NAV_ROUTE, c, 0, MOTION_INVALID);
+        return reject(o_value, NAV_ROUTE, character, 0, MOTION_INVALID);
     }
-    NavRequest r = {.kind = NAV_ROUTE, .owner = o, .value = (float)(c - 'A')};
-    return submit(&r, NULL);
+    nav_request_t result = {
+        .kind = NAV_ROUTE, .owner = o_value, .value = (float)(character - 'A')};
+    return submit(&result, NULL);
 #else
-    if (!valid_owner(o) || (c != 'A' && c != 'F' && c != 'Z'))
+    if (!valid_owner(o_value) ||
+        (character != 'A' && character != 'F' && character != 'Z'))
     {
-        return reject(o, NAV_ROUTE, c, 0, MOTION_INVALID);
+        return reject(o_value, NAV_ROUTE, character, 0, MOTION_INVALID);
     }
-    NavRequest r = {.kind = NAV_ROUTE,
-                    .owner = o,
-                    .value = c == 'A'   ? 0
-                             : c == 'F' ? 1
-                                        : 2};
-    return submit(&r, NULL);
+    nav_request_t result = {.kind = NAV_ROUTE,
+                            .owner = o_value,
+                            .value = character == 'A'   ? 0
+                                     : character == 'F' ? 1
+                                                        : 2};
+    return submit(&result, NULL);
 #endif
 }
-MotionResult motion_submit_navigation (MotionOwner o, int16_t left,
-                                       int16_t right)
+motion_result_t motion_submit_navigation (motion_owner_t o_value, int16_t left,
+                                          int16_t right)
 {
-    if (!valid_owner(o))
+    if (!valid_owner(o_value))
     {
-        return reject(o, NAV_WHEELS, 0, 0, MOTION_INVALID);
+        return reject(o_value, NAV_WHEELS, 0, 0, MOTION_INVALID);
     }
-    NavRequest r = {.kind = NAV_WHEELS, .owner = o, .wheels = {left, right}};
-    return submit(&r, NULL);
+    nav_request_t result = {
+        .kind = NAV_WHEELS, .owner = o_value, .wheels = {left, right}};
+    return submit(&result, NULL);
 }
-MotionResult motion_report_terrain (MotionOwner o, MotionTerrain t)
+motion_result_t motion_report_terrain (motion_owner_t o_value,
+                                       motion_terrain_t sample)
 {
-    if (!valid_owner(o) || (unsigned)t > (unsigned)MOTION_DESCENDING)
+    if (!valid_owner(o_value) || (unsigned)sample > (unsigned)MOTION_DESCENDING)
     {
-        return reject(o, NAV_TERRAIN, t, 0, MOTION_INVALID);
+        return reject(o_value, NAV_TERRAIN, sample, 0, MOTION_INVALID);
     }
-    NavRequest r = {.kind = NAV_TERRAIN, .owner = o, .value = (float)t};
-    return submit(&r, NULL);
+    nav_request_t result = {
+        .kind = NAV_TERRAIN, .owner = o_value, .value = (float)sample};
+    return submit(&result, NULL);
 }
-MotionResult motion_request_speed_assist (MotionOwner o, unsigned p)
+motion_result_t motion_request_speed_assist (motion_owner_t o_value,
+                                             unsigned data)
 {
-    if (!valid_owner(o) || p > 20)
+    if (!valid_owner(o_value) || data > 20)
     {
-        return reject(o, NAV_ASSIST, (float)p, 0, MOTION_INVALID);
+        return reject(o_value, NAV_ASSIST, (float)data, 0, MOTION_INVALID);
     }
-    NavRequest r = {.kind = NAV_ASSIST, .owner = o, .value = (float)p};
-    return submit(&r, NULL);
+    nav_request_t result = {
+        .kind = NAV_ASSIST, .owner = o_value, .value = (float)data};
+    return submit(&result, NULL);
 }
-MotionResult motion_report_fault (MotionOwner o, unsigned mask, bool active)
+motion_result_t motion_report_fault (motion_owner_t o_value, unsigned mask,
+                                     bool active)
 {
-    if (!valid_owner(o) || !mask || (mask & ~NAV_FAULT_MASK))
+    if (!valid_owner(o_value) || !mask || (mask & ~NAV_FAULT_MASK))
     {
-        return reject(o, NAV_FAULT_REPORT, (float)mask, 0, MOTION_INVALID);
+        return reject(o_value, NAV_FAULT_REPORT, (float)mask, 0,
+                      MOTION_INVALID);
     }
-    NavRequest r = {
-        .kind = NAV_FAULT_REPORT, .owner = o, .bitmap = mask, .flag = active};
-    return submit(&r, NULL);
+    nav_request_t result = {.kind = NAV_FAULT_REPORT,
+                            .owner = o_value,
+                            .bitmap = mask,
+                            .flag = active};
+    return submit(&result, NULL);
 }
-const char * motion_result_name (MotionResult r)
+const char * motion_result_name (motion_result_t result_value)
 {
     static const char * const names[] = {
         "OK",          "INACTIVE",    "BUSY",      "NOT_OWNER",    "INVALID",
         "NOT_STOPPED", "UNSUPPORTED", "NEED_LINE", "NEED_RECOVERY"};
-    return (unsigned)r < sizeof(names) / sizeof(names[0]) ? names[r]
-                                                          : "UNKNOWN";
+    return (unsigned)result_value < sizeof(names) / sizeof(names[0])
+               ? names[result_value]
+               : "UNKNOWN";
 }
-void motion_init (const MotionPort * p)
+void motion_init (const motion_port_t * p_data)
 {
-    nav_coordinator_init(p);
+    nav_coordinator_init(p_data);
 }
-void motion_session_begin (uint64_t t)
+void motion_session_begin (uint64_t sample)
 {
-    nav_coordinator_begin(t);
+    nav_coordinator_begin(sample);
 }
-void motion_session_end (uint8_t r)
+void motion_session_end (uint8_t result)
 {
-    nav_coordinator_end(r);
+    nav_coordinator_end(result);
 }
-MotionOutput motion_update (const MotionFeedback * f)
+motion_output_t motion_update (const motion_feedback_t * p_flags)
 {
-    return nav_coordinator_update(f);
+    return nav_coordinator_update(p_flags);
 }
-bool motion_commit (uint32_t e, void (*f)(void *), void * u)
+bool motion_commit (uint32_t event, void (*p_flags)(void *), void * p_u_value)
 {
-    return nav_coordinator_commit(e, f, u);
+    return nav_coordinator_commit(event, p_flags, p_u_value);
 }
-bool motion_pop_event (MotionEvent * e)
+bool motion_pop_event (motion_event_t * p_event_value)
 {
-    return nav_coordinator_pop(e);
+    return nav_coordinator_pop(p_event_value);
 }
 void motion_note_navigation (unsigned phase, char decoded)
 {
@@ -286,22 +324,24 @@ unsigned motion_log_overwritten (void)
 {
     return nav_coordinator_log_overwritten();
 }
-bool motion_log_read (unsigned i, MotionEvent * e)
+bool motion_log_read (unsigned index_value, motion_event_t * p_event_value)
 {
-    return nav_coordinator_log_read(i, e);
+    return nav_coordinator_log_read(index_value, p_event_value);
 }
 
-MotionResult motion_request_ramp_assist (MotionOwner o,
-                                         const MotionRampAssist * a)
+motion_result_t
+motion_request_ramp_assist (motion_owner_t o_value,
+                            const motion_ramp_assist_t * p_first)
 {
-    if (!valid_owner(o) || !a)
+    if (!valid_owner(o_value) || !p_first)
     {
-        return reject(o, NAV_RAMP_ASSIST, 0, 0, MOTION_INVALID);
+        return reject(o_value, NAV_RAMP_ASSIST, 0, 0, MOTION_INVALID);
     }
-    NavRequest r = {.kind = NAV_RAMP_ASSIST, .owner = o, .assist = *a};
-    return submit(&r, NULL);
+    nav_request_t result = {
+        .kind = NAV_RAMP_ASSIST, .owner = o_value, .assist = *p_first};
+    return submit(&result, NULL);
 }
-MotionRampAssist motion_get_ramp_assist (void)
+motion_ramp_assist_t motion_get_ramp_assist (void)
 {
     return nav_coordinator_get_assist();
 }
@@ -309,15 +349,16 @@ void motion_assist_context (bool eligible)
 {
     nav_coordinator_assist_context(eligible);
 }
-MotionResult motion_accept_barcode (MotionOwner o, char code)
+motion_result_t motion_accept_barcode (motion_owner_t o_value, char code)
 {
-    if (!valid_owner(o) || code < 'A' || code > 'Z')
+    if (!valid_owner(o_value) || code < 'A' || code > 'Z')
     {
-        return reject(o, NAV_VERIFIED_BARCODE, code, 0, MOTION_INVALID);
+        return reject(o_value, NAV_VERIFIED_BARCODE, code, 0, MOTION_INVALID);
     }
-    NavRequest r = {
-        .kind = NAV_VERIFIED_BARCODE, .owner = o, .value = (float)(code - 'A')};
-    return submit(&r, NULL);
+    nav_request_t result = {.kind = NAV_VERIFIED_BARCODE,
+                            .owner = o_value,
+                            .value = (float)(code - 'A')};
+    return submit(&result, NULL);
 }
 
 /* End of file. */

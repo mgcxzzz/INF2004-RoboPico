@@ -1,8 +1,15 @@
+/**
+ * @file drive_diag_storage.h
+ * @brief Drive diag storage.
+ * @details Diagnostic records have explicit lengths, signed domains and reserved bits.
+ * Never substitute native structure memory for the documented byte encoding.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 #ifndef BUDDY_DRIVE_DIAG_STORAGE_H
 #define BUDDY_DRIVE_DIAG_STORAGE_H
 #include "src/telemetry/drive_diag.h"
 #include "src/navigation/nav_log_storage.h"
-static inline void diag_header (uint8_t h[DIAG_HEADER], const DriveDiag * d)
+static inline void diag_header (uint8_t h[DIAG_HEADER], const drive_diag_t * d)
 {
     memset(h, 0, DIAG_HEADER);
     memcpy(h, "DGD1", 4);
@@ -67,12 +74,13 @@ static inline bool diag_bank_valid (const uint8_t * bank)
     {
         return false;
     }
-    const DiagRow * rows = (const DiagRow *)(bank + DIAG_HEADER);
+    const diag_row_t * rows = (const diag_row_t *)(bank + DIAG_HEADER);
     uint32_t previous = 0;
     for (unsigned k = 0; k < count; ++k)
     {
-        const DiagRow * r = &rows[(head + DIAG_ROWS - count + k) % DIAG_ROWS];
-        DiagValues v;
+        const diag_row_t * r =
+            &rows[(head + DIAG_ROWS - count + k) % DIAG_ROWS];
+        diag_values_t v;
         diag_unpack(r, &v);
         if ((k && v.v[D_US] <= previous) || v.v[D_PROFILE] < 1 ||
             v.v[D_PROFILE] > 3)
@@ -88,7 +96,7 @@ static inline bool diag_bank_valid (const uint8_t * bank)
     }
     return true;
 }
-static inline void diag_restore (DriveDiag * d, const uint8_t * bank)
+static inline void diag_restore (drive_diag_t * d, const uint8_t * bank)
 {
     memset(d, 0, sizeof(*d));
     uint32_t bits = nav_rd32(bank + 8);

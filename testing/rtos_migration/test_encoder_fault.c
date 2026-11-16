@@ -39,8 +39,8 @@ static void save_fixture(const char *path, const uint8_t packet[BR_ENCODER_FAULT
 }
 
 int main(void) {
-    BringupEncoderFaultSnapshot latched = {0};
-    BringupEncoderFaultSnapshot first = {
+    bringup_encoder_fault_snapshot_t latched = {0};
+    bringup_encoder_fault_snapshot_t first = {
         .kind = BR_ENCODER_FAULT_KIND_DENSITY,
         .wheel = BR_ENCODER_FAULT_WHEEL_RIGHT,
         .control_timer_us = 0x12345678U,
@@ -56,7 +56,7 @@ int main(void) {
     assert(br_encoder_fault_capture_once(&latched, &first));
     assert(latched.valid && latched.kind == BR_ENCODER_FAULT_KIND_DENSITY);
 
-    BringupEncoderFaultSnapshot later = first;
+    bringup_encoder_fault_snapshot_t later = first;
     later.kind = BR_ENCODER_FAULT_KIND_BURST;
     later.control_timer_us++;
     assert(!br_encoder_fault_capture_once(&latched, &later));
@@ -82,7 +82,7 @@ int main(void) {
     assert((int16_t)((uint16_t)packet[46U] | ((uint16_t)packet[47U] << 8U)) == 4321);
     save_fixture("testing/rtos_migration/build-host/encoder_fault.bin", packet);
 
-    BringupEncoderFaultSnapshot saturated = first;
+    bringup_encoder_fault_snapshot_t saturated = first;
     saturated.valid = 1U;
     saturated.kind = BR_ENCODER_FAULT_KIND_DIRECTION;
     saturated.wheel = BR_ENCODER_FAULT_WHEEL_LEFT;

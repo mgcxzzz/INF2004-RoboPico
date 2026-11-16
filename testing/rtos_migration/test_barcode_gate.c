@@ -6,12 +6,12 @@
 #include <stdio.h>
 #include "app_program/barcode_navigation/barcode_model.h"
 
-static const LineCalibration cal = {{122, 138}, {246, 267}, 7};
-static void prepare(Circuit *c, BarcodeNav *n, CircuitInput *i, char action) {
-    *i = (CircuitInput){
+static const line_calibration_t cal = {{122, 138}, {246, 267}, 7};
+static void prepare(circuit_t *c, barcode_nav_t *n, circuit_input_t *i, char action) {
+    *i = (circuit_input_t){
         .now = 1000000, .wheel = {100, 100}, .path = 100, .speed = {0, 8}, .adc = {246, 267}};
     circuit_begin(c, i);
-    *n = (BarcodeNav){.start_us = i->now,
+    *n = (barcode_nav_t){.start_us = i->now,
                       .pending = 'F',
                       .pending_action = action,
                       .pending_revision = 2,
@@ -26,13 +26,13 @@ static void prepare(Circuit *c, BarcodeNav *n, CircuitInput *i, char action) {
 int main(void) {
     const char actions[] = "LRUS";
     for (unsigned k = 0; k < 4; ++k) {
-        Circuit c;
-        BarcodeNav n;
-        CircuitInput i;
+        circuit_t c;
+        barcode_nav_t n;
+        circuit_input_t i;
         prepare(&c, &n, &i, actions[k]);
         /* Gate history from earlier correction is intentionally ineligible;
          * first tick has no300ms dwell and one measured wheel below10mm/s. */
-        AnalogDemand d = barcode_circuit_step(&c, &n, &cal, &i, 1);
+        analog_demand_t d = barcode_circuit_step(&c, &n, &cal, &i, 1);
         assert(!d.stop);
         if (BARCODE_CONFIRM_GATE) {
             assert(!c.ignored && !n.pending);
@@ -46,9 +46,9 @@ int main(void) {
             assert(n.events[n.event_count - 1].flags == 0); /* SDK event parity. */
         }
     }
-    Circuit c;
-    BarcodeNav n;
-    CircuitInput i;
+    circuit_t c;
+    barcode_nav_t n;
+    circuit_input_t i;
     prepare(&c, &n, &i, 'L');
     n.cross_gate = true;
     c.clear_path = 101; /* 150mm post-turn lockout is retained. */
@@ -60,7 +60,7 @@ int main(void) {
     n.cross_ready = false;
     (void)barcode_circuit_step(&c, &n, &cal, &i, 1);
     assert(!n.busy && n.pending == 'F'); /* A decode alone never turns. */
-    AnalogDemand d = {.level = {0, 0}};
+    analog_demand_t d = {.level = {0, 0}};
     c.clear_path = i.path + 1;
     c.follower.core.white = true;
     c.follower.search.active = true;

@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include "src/barcode/barcode_analog.h"
 #include "src/barcode/barcode_record.h"
-static const LineCalibration cal = {{184, 184}, {3464, 3692}, 7};
+static const line_calibration_t cal = {{184, 184}, {3464, 3692}, 7};
 static unsigned code_pattern(char c) {
     for (unsigned p = 0; p < 512; ++p)
         if (barcode_character(p) == c)
@@ -49,9 +49,9 @@ static uint16_t adc_at(double position, double start, const double width[29], un
     return 220;
 }
 static void capture_case(char code, double narrow, double ratio, bool reverse, unsigned fault) {
-    BarcodeNav n;
-    BarcodeAnalog a;
-    CircuitInput i = {.now = 1000};
+    barcode_nav_t n;
+    barcode_analog_t a;
+    circuit_input_t i = {.now = 1000};
     barcode_nav_begin(&n, &i);
     barcode_analog_begin(&a, &n, 220, i.now, i.wheel);
     n.allow_cross = true;
@@ -87,7 +87,7 @@ static void capture_case(char code, double narrow, double ratio, bool reverse, u
                               i.now, i.wheel);
     }
     assert(n.cross_ready && n.cross_gate && n.pending == code);
-    Circuit c;
+    circuit_t c;
     i.path = i.wheel[0];
     i.adc[0] = 3464;
     i.adc[1] = 3692;
@@ -97,9 +97,9 @@ static void capture_case(char code, double narrow, double ratio, bool reverse, u
     assert(c.busy && n.action == code && !n.pending && c.phase == J_CENTRE);
 }
 static void conflict_and_signal_tests(void) {
-    BarcodeNav n;
-    BarcodeAnalog a;
-    CircuitInput i = {.now = 1000};
+    barcode_nav_t n;
+    barcode_analog_t a;
+    circuit_input_t i = {.now = 1000};
     barcode_nav_begin(&n, &i);
     barcode_analog_begin(&a, &n, 220, i.now, i.wheel);
     for (unsigned step = 1; step < 2000; ++step) {
@@ -128,15 +128,15 @@ static void conflict_and_signal_tests(void) {
     assert(!n.pending && a.conflict);
 }
 static void driving_simulation(unsigned profile) {
-    Circuit c;
-    BarcodeNav n;
-    BarcodeAnalog a;
-    CircuitInput i = {.now = 1000, .adc = {3464, 3692}};
+    circuit_t c;
+    barcode_nav_t n;
+    barcode_analog_t a;
+    circuit_input_t i = {.now = 1000, .adc = {3464, 3692}};
     circuit_begin(&c, &i);
     barcode_nav_begin(&n, &i);
     barcode_analog_begin(&a, &n, 220, i.now, i.wheel);
     double start = 100, w[29], length = frame('A', 3, 3, false, w), gap = 80;
-    AnalogDemand d = {.target = {45, 45}};
+    analog_demand_t d = {.target = {45, 45}};
     unsigned complete = 0;
     for (unsigned step = 0; step < 900000 && complete < 4; ++step) {
         for (unsigned k = 0; k < 2; ++k) {

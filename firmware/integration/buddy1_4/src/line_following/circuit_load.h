@@ -1,3 +1,10 @@
+/**
+ * @file circuit_load.h
+ * @brief Circuit load.
+ * @details The control task owns mutable steering/recovery state.
+ * Keep straight, scan, turn and recovery behavior distinct; no direct PWM here.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 #ifndef CIRCUIT_LOAD_H
 #define CIRCUIT_LOAD_H
 #include "src/line_following/circuit_logic.h"
@@ -11,54 +18,60 @@ enum
 };
 typedef struct
 {
-    uint64_t since, cooldown_until;
+    uint64_t since;
+    uint64_t cooldown_until;
     double path;
     unsigned outer;
-    bool timing, active;
-} CircuitLoad;
+    bool timing;
+    bool active;
+} circuit_load_t;
 /* Ordinary visible sharp corrections can need the same effort as branch
    capture. Qualify measured underspeed; never change the optical targets. */
-static inline int circuit_load_outer (CircuitLoad * s, const CircuitInput * i,
-                                      unsigned phase, const AnalogDemand * d,
+static inline int circuit_load_outer (circuit_load_t * p_state,
+                                      const circuit_input_t * p_index,
+                                      unsigned phase,
+                                      const analog_demand_t * p_demand,
                                       bool capture_active)
 {
-    unsigned outer = d->target[0] > d->target[1] ? 0 : 1, inner = 1 - outer;
-    bool eligible = !d->stop && !capture_active && phase == C_FOLLOW &&
-                    (d->level[0] >= 400 || d->level[1] >= 400) &&
-                    d->target[outer] >= 30 &&
-                    d->target[inner] <= (s->active ? 20 : 12);
-    if (s->active)
+    unsigned outer = p_demand->target[0] > p_demand->target[1] ? 0 : 1,
+             inner = 1 - outer;
+    bool eligible = !p_demand->stop && !capture_active && phase == C_FOLLOW &&
+                    (p_demand->level[0] >= 400 || p_demand->level[1] >= 400) &&
+                    p_demand->target[outer] >= 30 &&
+                    p_demand->target[inner] <= (p_state->active ? 20 : 12);
+    if (p_state->active)
     {
-        if (!eligible || outer != s->outer || i->now - s->since >= C_LOAD_US ||
-            i->path - s->path >= C_LOAD_MM ||
-            i->speed[outer] > d->target[outer] + 5)
+        if (!eligible || outer != p_state->outer ||
+            p_index->now - p_state->since >= C_LOAD_US ||
+            p_index->path - p_state->path >= C_LOAD_MM ||
+            p_index->speed[outer] > p_demand->target[outer] + 5)
         {
-            s->active = s->timing = false;
-            s->cooldown_until = i->now + C_LOAD_COOLDOWN_US;
+            p_state->active = p_state->timing = false;
+            p_state->cooldown_until = p_index->now + C_LOAD_COOLDOWN_US;
             return -1;
         }
         return (int)outer;
     }
-    if (!eligible || i->now < s->cooldown_until ||
-        i->speed[outer] >= 0.70f * d->target[outer])
+    if (!eligible || p_index->now < p_state->cooldown_until ||
+        p_index->speed[outer] >= 0.70f * p_demand->target[outer])
     {
-        s->timing = false;
+        p_state->timing = false;
         return -1;
     }
-    if (!s->timing || outer != s->outer)
+    if (!p_state->timing || outer != p_state->outer)
     {
-        s->timing = true;
-        s->outer = outer;
-        s->since = i->now;
+        p_state->timing = true;
+        p_state->outer = outer;
+        p_state->since = p_index->now;
     }
-    if (i->now - s->since < C_LOAD_QUALIFY_US)
+    if (p_index->now - p_state->since < C_LOAD_QUALIFY_US)
     {
         return -1;
     }
-    s->active = true;
-    s->timing = false;
-    s->since = i->now;
-    s->path = i->path;
+    p_state->active = true;
+    p_state->timing = false;
+    p_state->since = p_index->now;
+    p_state->path = p_index->path;
     return (int)outer;
 }
 #endif

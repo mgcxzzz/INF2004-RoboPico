@@ -42,14 +42,14 @@ static inline float ref_continuous_feedforward(unsigned wheel, float speed) {
     return speed * (wheel == 0 ? (150.0f / 45.0f) : (180.0f / 45.0f));
 }
 
-static inline void ref_continuous_drive_reset(RefContinuousDrive *s, SignedWheel *p) {
+static inline void ref_continuous_drive_reset(RefContinuousDrive *s, signed_wheel_t *p) {
     if (s)
         *s = (RefContinuousDrive){0};
     if (p)
-        *p = (SignedWheel){0};
+        *p = (signed_wheel_t){0};
 }
 
-static inline int32_t ref_continuous_drive_step(RefContinuousDrive *s, SignedWheel *p,
+static inline int32_t ref_continuous_drive_step(RefContinuousDrive *s, signed_wheel_t *p,
                                                 unsigned wheel, int16_t wanted, float measured,
                                                 float dt, uint64_t now, int32_t previous_output) {
     if (!s || !p)
@@ -156,7 +156,7 @@ static inline int32_t ref_continuous_drive_step(RefContinuousDrive *s, SignedWhe
     p->peak_active = false;
     p->peak_used = false;
     p->peak_end_us = 0;
-    p->kick = (LineBreakaway){0};
+    p->kick = (line_breakaway_t){0};
     return (int32_t)(output + 0.5f);
 }
 

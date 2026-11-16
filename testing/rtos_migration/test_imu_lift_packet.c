@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include "app_program/imu_navigation/imu_lift_packet.h"
 int main(void) {
-    RiLiftPacket s = {.trip_ms=123400,.sample_ms=123390,.events=7,.up_mg=-1536,
+    ri_lift_packet_t s = {.trip_ms=123400,.sample_ms=123390,.events=7,.up_mg=-1536,
         .norm_mg=1024,.reason=1,.latched=1,.armed=1,.fresh=1,.can_reset=1,
         .up_ms=25,.tilt_ms=100,.upright_ms=500};
     uint8_t frame[RI_LIFT_PACKET_BYTES];
@@ -14,7 +14,7 @@ int main(void) {
     assert(frame[28]==0x34 && frame[29]==0x12);
     FILE *f=fopen("testing/rtos_migration/build-host/imu_lift.bin","wb");
     assert(f && fwrite(frame,1,sizeof(frame),f)==sizeof(frame));fclose(f);
-    RiLiftPeakPacket peak = {.report_ms=123456,.peak_sample_ms=123390,.window_start_ms=120000,
+    ri_lift_peak_packet_t peak = {.report_ms=123456,.peak_sample_ms=123390,.window_start_ms=120000,
         .min_cos_q15=-12345,.norm_mg=1000,.up_mg=-1536,.events=7,
         .tilt_ms=100,.up_ms=30,.last_candidate=2,.last_rejection=1,
         .armed=true,.current_valid=true,.latched=true,.saturated=false};

@@ -84,8 +84,8 @@ static double adc_at(const Iv *iv, unsigned n, double x, const Optics *o) {
 }
 /* Drive the sensor over [0, len] mm; feed the decoder; return decoded codes. */
 static unsigned drive(const Iv *iv, unsigned n, double len, const Optics *o, char *codes,
-                      unsigned max, BpResult *last, unsigned *groups) {
-    BarcodePeak p;
+                      unsigned max, bp_result_t *last, unsigned *groups) {
+    barcode_peak_t p;
     bp_reset(&p);
     unsigned got = 0;
     double x = 0;
@@ -96,7 +96,7 @@ static unsigned drive(const Iv *iv, unsigned n, double len, const Optics *o, cha
             adc = 0;
         if (adc > 4095)
             adc = 4095;
-        BpResult r;
+        bp_result_t r;
         if (bp_sample(&p, (uint16_t)(adc + 0.5), x * o->scale, &r)) {
             if (r.nbars >= BP_REPORT_MIN_BARS)
                 ++*groups;
@@ -107,7 +107,7 @@ static unsigned drive(const Iv *iv, unsigned n, double len, const Optics *o, cha
         }
         if (urand() < o->stop_prob)
             for (int k = 0; k < 40; ++k) { /* stutter: 80 ms stop */
-                BpResult r2;
+                bp_result_t r2;
                 double a2 = adc_at(iv, n, x, o) + o->noise * nrand();
                 if (bp_sample(&p, (uint16_t)(a2 < 0 ? 0 : a2 + 0.5), x * o->scale, &r2) &&
                     r2.decoded && got < max)
@@ -129,9 +129,9 @@ static void tune(Optics *o, double u, double narrow_rise, double wide_rise) {
 static void test_captures(void) {
     for (unsigned i = 0; i < sizeof bp_captures / sizeof bp_captures[0]; ++i) {
         const BpCapture *c = &bp_captures[i];
-        BarcodePeak p;
+        barcode_peak_t p;
         bp_reset(&p);
-        BpResult r, got = {0};
+        bp_result_t r, got = {0};
         unsigned decodes = 0, groups = 0;
         for (unsigned k = 0; k < c->n; ++k)
             if (bp_sample(&p, c->adc[k], c->path100[k] / 100.0, &r)) {
@@ -165,7 +165,7 @@ static void test_captures(void) {
         const unsigned steps[] = {1, 1, 2, 1, 1};
         const int offs[] = {0, 0, 0, -15, 15};
         for (unsigned v = 0; v < 5; ++v) {
-            BarcodePeak q;
+            barcode_peak_t q;
             bp_reset(&q);
             unsigned d2 = 0;
             char c2 = 0;
@@ -216,7 +216,7 @@ static void test_synthetic(void) {
                 unsigned n = label(c, 40, u, rev, iv);
                 char got[4];
                 unsigned groups;
-                BpResult last;
+                bp_result_t last;
                 unsigned k = drive(iv, n, 40 + 47 * u + 60, &o, got, 4, &last, &groups);
                 ++trials;
                 if (k == 1 && got[0] == c)
@@ -254,7 +254,7 @@ static void test_harsh(void) {
         unsigned n = label(c, 40, u, t & 1, iv);
         char got[4];
         unsigned groups;
-        BpResult last;
+        bp_result_t last;
         unsigned k = drive(iv, n, 40 + 47 * u + 60, &o, got, 4, &last, &groups);
         ++trials;
         if (k == 1 && got[0] == c)
@@ -274,7 +274,7 @@ static void test_negatives(void) {
     tune(&o, 3, 35, 1800);
     char got[4];
     unsigned groups, k;
-    BpResult last;
+    bp_result_t last;
     k = drive(NULL, 0, 1000, &o, got, 4, &last, &groups);
     CHECK(k == 0 && groups == 0, "1 m of white: nothing");
     Iv j[1] = {{100, 120}};
@@ -333,12 +333,12 @@ static void test_negatives(void) {
     Iv many[30];
     for (unsigned i = 0; i < 30; ++i)
         many[i] = (Iv){40 + 6.0 * i, 43 + 6.0 * i};
-    BarcodePeak p;
+    barcode_peak_t p;
     bp_reset(&p);
     bool ovf = false;
     unsigned dec = 0;
     for (double x = 0; x < 300; x += 0.1) {
-        BpResult r;
+        bp_result_t r;
         double a = adc_at(many, 30, x, &o) + o.noise * nrand();
         if (bp_sample(&p, (uint16_t)(a + 0.5), x, &r)) {
             ovf |= r.overflow;
@@ -350,9 +350,9 @@ static void test_negatives(void) {
 
 /* ---------- E: sensor/odometry quirks ---------- */
 static void test_quirks(void) {
-    BarcodePeak p;
+    barcode_peak_t p;
     bp_reset(&p);
-    BpResult r;
+    bp_result_t r;
     bool any = false;
     for (unsigned k = 0; k < 5000; ++k)
         any |=
@@ -377,13 +377,13 @@ static void test_latency(void) {
         unsigned n = label(c, 40, 3, t & 1, iv);
         double last_edge = iv[n - 1].b;
         iv[n] = (Iv){last_edge + 30, last_edge + 48}; /* 18 mm junction 30 mm after the label */
-        BarcodePeak p;
+        barcode_peak_t p;
         bp_reset(&p);
         unsigned dec = 0;
         char got = 0;
         double at = 0;
         for (double x = 0; x < last_edge + 120; x += 0.1) {
-            BpResult r;
+            bp_result_t r;
             double a = adc_at(iv, n + 1, x, &o) + o.noise * nrand();
             if (bp_sample(&p, (uint16_t)(a + 0.5), x, &r) && r.decoded) {
                 ++dec;
@@ -405,7 +405,7 @@ static void test_latency(void) {
 
 /* ---------- F: telemetry ---------- */
 static void test_tlm(void) {
-    BpResult r = {.decoded = true,
+    bp_result_t r = {.decoded = true,
                   .reverse = true,
                   .code = 'Z',
                   .reason = BP_OK,

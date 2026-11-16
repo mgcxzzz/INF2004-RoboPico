@@ -19,7 +19,7 @@ static void (*before_lock_hook)(void);
 static bool requested, checked_calibrating;
 static unsigned sleeps;
 static uint32_t host_kernel_offset_ms;
-static RiAcquisition acq;
+static ri_acquisition_t acq;
 static uint32_t fifo_start_us, init_start_us;
 static int ISpinLock(T_SPLOCK *p, UINT *key) {
     (void)p;
@@ -75,9 +75,9 @@ void ri_ramp_report(void) {
     assert(!depth);
 }
 #ifdef APP_RTOS_RELEASE
-typedef struct { uint32_t control_count, late_count; unsigned flags, reason; } BringupStatus;
-static void bringup_get_status(BringupStatus *s) {
-    assert(!depth); *s=(BringupStatus){.control_count=1234,.late_count=0,.flags=12};
+typedef struct { uint32_t control_count, late_count; unsigned flags, reason; } bringup_status_t;
+static void bringup_get_status(bringup_status_t *s) {
+    assert(!depth); *s=(bringup_status_t){.control_count=1234,.late_count=0,.flags=12};
 }
 #endif
 #include "app_program/imu_navigation/imu_service.c"
@@ -88,7 +88,7 @@ void ri_acquisition_record(uint32_t gap, bool ok, bool overrun) {
     acq.late_gaps += gap > 30000;
     acq.fifo_overruns += overrun;
 }
-void ri_acquisition_snapshot(RiAcquisition *out) {
+void ri_acquisition_snapshot(ri_acquisition_t *out) {
     assert(!depth);
     *out = acq;
 }
@@ -135,25 +135,25 @@ static int tk_dly_tsk(uint32_t ms) {
     ++sleeps;
     host_now_us += (ms + 1) * 1000; /* real kernel's extra timer tick */
     if (!requested && host_now_us >= 4000000) {
-        assert(shared.ready_epoch == 1 && shared.tlm.state == IMU_ST_IDLE);
+        assert(g_shared.ready_epoch == 1 && g_shared.tlm.state == IMU_ST_IDLE);
         ri_reset_request();
         requested = true;
     }
     if (host_now_us >= 5000000 && !checked_calibrating) {
-        assert(shared.init_epoch == 2 && shared.ready_epoch == 1);
-        assert(shared.tlm.state == IMU_ST_CALIBRATING);
+        assert(g_shared.init_epoch == 2 && g_shared.ready_epoch == 1);
+        assert(g_shared.tlm.state == IMU_ST_CALIBRATING);
         checked_calibrating = true;
     }
     if (host_now_us >= 7500000) {
-        assert(checked_calibrating && shared.ready_epoch == 2 && shared.init_epoch == 2);
-        assert(shared.core == 0);
-        assert(shared.tlm.state == IMU_ST_IDLE && !shared.tlm.fault);
+        assert(checked_calibrating && g_shared.ready_epoch == 2 && g_shared.init_epoch == 2);
+        assert(g_shared.core == 0);
+        assert(g_shared.tlm.state == IMU_ST_IDLE && !g_shared.tlm.fault);
         assert(!acq.failed_reads && !acq.late_gaps && !acq.fifo_overruns);
-        assert(acq.reads > 300 && shared.ticks > 300 && sleeps < 400);
+        assert(acq.reads > 300 && g_shared.ticks > 300 && sleeps < 400);
         assert(acq.fifo_batch_n == 8 && acq.max_tick_wall_us >= acq.last_tick_wall_us);
         assert(!acq.fifo_budget_overruns && !acq.init_budget_overruns && !acq.reset_timeouts);
         assert(!acq.ticks_over_8ms); /* host fixture advances only between releases */
-        assert(!shared.running);
+        assert(!g_shared.running);
         ri_report();
         longjmp(finished, 1);
     }

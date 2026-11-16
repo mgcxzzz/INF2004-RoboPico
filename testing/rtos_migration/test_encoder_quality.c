@@ -3,7 +3,7 @@
 #include "app_program/rtos_bringup/encoder_quality.h"
 
 int main(void) {
-    BrEncoderQuality q = {0};
+    br_encoder_quality_t q = {0};
     uint32_t edges = 0, bad = 0, now = 0;
     br_encoder_reset(&q, now, edges, bad);
     /*100 scattered errors over100seconds do not become a lifetime fault. */

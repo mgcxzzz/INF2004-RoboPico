@@ -1,3 +1,10 @@
+/**
+ * @file motor_output.c
+ * @brief Motor output.
+ * @details Platform access obeys the configured motor/flash/interrupt owner.
+ * Hardware and kernel calling conventions are retained under CEX-02/CEX-07.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 #include "src/platform/motor_output.h"
 #include "pico/stdlib.h"
 #include "hardware/clocks.h"

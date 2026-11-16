@@ -1,3 +1,10 @@
+/**
+ * @file circuit_recovery.h
+ * @brief Circuit recovery.
+ * @details The control task owns mutable steering/recovery state.
+ * Keep straight, scan, turn and recovery behavior distinct; no direct PWM here.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 #ifndef CIRCUIT_RECOVERY_H
 #define CIRCUIT_RECOVERY_H
 #include "src/line_following/symmetric_logic.h"
@@ -32,93 +39,109 @@ enum
 };
 typedef struct
 {
-    SymmetricTracker core;
-    uint64_t weak_since, reverse_since, reacquire_since, probe_since,
-        medium_since, strong_since, centre_since, centre_us;
+    symmetric_tracker_t core;
+    uint64_t weak_since;
+    uint64_t reverse_since;
+    uint64_t reacquire_since;
+    uint64_t probe_since;
+    uint64_t medium_since;
+    uint64_t strong_since;
+    uint64_t centre_since;
+    uint64_t centre_us;
     int16_t bridge[2];
-    int8_t pending, reverse, probe_direction;
+    int8_t pending;
+    int8_t reverse;
+    int8_t probe_direction;
     uint8_t loss_reason;
-    bool weak_timing, reverse_timing, reacquire_timing, probe_timing,
-        medium_timing, strong_timing, centre_timing, centre_valid,
-        straight_recovery;
+    bool weak_timing;
+    bool reverse_timing;
+    bool reacquire_timing;
+    bool probe_timing;
+    bool medium_timing;
+    bool strong_timing;
+    bool centre_timing;
+    bool centre_valid;
+    bool straight_recovery;
 #if defined(CIRCUIT_SWEEP_SEARCH) || defined(CIRCUIT_STATIONARY_SEARCH) ||     \
     defined(LINE_STATIONARY_SEARCH)
-    LineSearch search;
+    line_search_t search;
 #endif
-} CircuitTracker;
+} circuit_tracker_t;
 /* 0 unknown/stale,1 left,2 right,3 recently centred. This is recovery
    confidence, not a delay on the ordinary optical steering targets. */
-static inline unsigned circuit_memory (const CircuitTracker * t, uint64_t now)
+static inline unsigned circuit_memory (const circuit_tracker_t * p_sample,
+                                       uint64_t now)
 {
-    const SymmetricTracker * s = &t->core;
-    if (t->centre_valid && now - t->centre_us <= C_CENTRE_MEMORY_US &&
-        (!s->direction || t->centre_us >= s->direction_us))
+    const symmetric_tracker_t * p_state = &p_sample->core;
+    if (p_sample->centre_valid &&
+        now - p_sample->centre_us <= C_CENTRE_MEMORY_US &&
+        (!p_state->direction || p_sample->centre_us >= p_state->direction_us))
     {
         return 3;
     }
-    return s->direction && now - s->direction_us <= C_MEMORY_US
-               ? (s->direction > 0 ? 1 : 2)
+    return p_state->direction && now - p_state->direction_us <= C_MEMORY_US
+               ? (p_state->direction > 0 ? 1 : 2)
                : 0;
 }
-static inline void circuit_direction (CircuitTracker * t, int error,
+static inline void circuit_direction (circuit_tracker_t * p_sample, int error,
                                       unsigned strongest, uint64_t now)
 {
-    SymmetricTracker * s = &t->core;
+    symmetric_tracker_t * p_state = &p_sample->core;
     int magnitude = error < 0 ? -error : error;
     int8_t direction = error > 0 ? 1 : -1;
     bool strong = magnitude >= 200 && strongest >= 400;
     bool weak = magnitude >= 150 && strongest >= 200;
-    if (strong && (!s->direction || direction == s->direction))
+    if (strong && (!p_state->direction || direction == p_state->direction))
     {
-        s->direction = direction;
-        s->direction_us = now;
-        t->reverse_timing = t->weak_timing = false;
-        t->pending = 0;
+        p_state->direction = direction;
+        p_state->direction_us = now;
+        p_sample->reverse_timing = p_sample->weak_timing = false;
+        p_sample->pending = 0;
         return;
     }
     if (strong)
     {
-        t->weak_timing = false;
-        t->pending = 0;
-        if (!t->reverse_timing || t->reverse != direction)
+        p_sample->weak_timing = false;
+        p_sample->pending = 0;
+        if (!p_sample->reverse_timing || p_sample->reverse != direction)
         {
-            t->reverse_timing = true;
-            t->reverse = direction;
-            t->reverse_since = now;
+            p_sample->reverse_timing = true;
+            p_sample->reverse = direction;
+            p_sample->reverse_since = now;
         }
-        if (now - t->reverse_since >= C_REVERSE_US)
+        if (now - p_sample->reverse_since >= C_REVERSE_US)
         {
-            s->direction = direction;
-            s->direction_us = now;
-            t->reverse_timing = false;
+            p_state->direction = direction;
+            p_state->direction_us = now;
+            p_sample->reverse_timing = false;
         }
         return;
     }
-    t->reverse_timing = false;
+    p_sample->reverse_timing = false;
     /* A sustained faint return can also be real. Reverse memory only after
        120ms of consistent weak asymmetry; shorter flashes may guide a slow
        probe without committing the direction or restarting the loss budget. */
     if (weak)
     {
-        if (!t->weak_timing || t->pending != direction)
+        if (!p_sample->weak_timing || p_sample->pending != direction)
         {
-            t->weak_timing = true;
-            t->pending = direction;
-            t->weak_since = now;
+            p_sample->weak_timing = true;
+            p_sample->pending = direction;
+            p_sample->weak_since = now;
         }
-        unsigned dwell = s->direction && direction != s->direction
+        unsigned dwell = p_state->direction && direction != p_state->direction
                              ? C_WEAK_REVERSE_US
                              : C_WEAK_US;
-        if (now - t->weak_since >= dwell)
+        if (now - p_sample->weak_since >= dwell)
         {
-            s->direction = direction;
-            s->direction_us = now;
+            p_state->direction = direction;
+            p_state->direction_us = now;
         }
     }
     else
     {
-        t->weak_timing = false;
-        t->pending = 0;
+        p_sample->weak_timing = false;
+        p_sample->pending = 0;
     }
 }
 /* Absolute reflectance falls on worn tape. With a credible asymmetric faint
@@ -133,327 +156,347 @@ static inline void circuit_faint_targets (int error, const uint16_t level[2],
     target[0] = (int16_t)(target[0] * 35 / maximum);
     target[1] = (int16_t)(target[1] * 35 / maximum);
 }
-static inline AnalogDemand
-circuit_line_demand_motion (CircuitTracker * t, const LineCalibration * cal,
-                            uint16_t l, uint16_t r, uint64_t now, uint32_t mm,
+static inline analog_demand_t
+circuit_line_demand_motion (circuit_tracker_t * p_sample,
+                            const line_calibration_t * p_cal, uint16_t l_value,
+                            uint16_t result, uint64_t now, uint32_t mm_value,
                             const double wheel[2], const float speed[2])
 {
     (void)wheel;
     (void)speed;
-    AnalogDemand d = {.decision = SYM_STRAIGHT};
-    t->loss_reason = 0;
-    SymmetricTracker * s = &t->core;
+    analog_demand_t demand = {.decision = SYM_STRAIGHT};
+    p_sample->loss_reason = 0;
+    symmetric_tracker_t * p_state = &p_sample->core;
 #if defined(CIRCUIT_STATIONARY_SEARCH) || defined(LINE_STATIONARY_SEARCH)
     if (!wheel || !speed || !isfinite(wheel[0]) || !isfinite(wheel[1]) ||
         !isfinite(speed[0]) || !isfinite(speed[1]))
     {
-        t->loss_reason = LS_INPUT;
-        d.stop = true;
-        d.decision = AL_LOST;
-        return d;
+        p_sample->loss_reason = LS_INPUT;
+        demand.stop = true;
+        demand.decision = AL_LOST;
+        return demand;
     }
 #endif
-    if (!calibration_valid(cal))
+    if (!calibration_valid(p_cal))
     {
-        d.stop = true;
-        d.decision = AL_LOST;
-        return d;
+        demand.stop = true;
+        demand.decision = AL_LOST;
+        return demand;
     }
-    d.level[0] = line_level(l, cal->white[0], cal->black[0]);
-    d.level[1] = line_level(r, cal->white[1], cal->black[1]);
-    int error = (int)d.level[0] - d.level[1],
+    demand.level[0] = line_level(l_value, p_cal->white[0], p_cal->black[0]);
+    demand.level[1] = line_level(result, p_cal->white[1], p_cal->black[1]);
+    int error = (int)demand.level[0] - demand.level[1],
         magnitude = error < 0 ? -error : error;
-    unsigned strongest = d.level[0] > d.level[1] ? d.level[0] : d.level[1];
-    bool low = d.level[0] < 150 && d.level[1] < 150;
+    unsigned strongest =
+        demand.level[0] > demand.level[1] ? demand.level[0] : demand.level[1];
+    bool low = demand.level[0] < 150 && demand.level[1] < 150;
     bool faint = strongest >= 200 && magnitude >= 150;
     int8_t observed = error > 0 ? 1 : -1;
     if (!faint)
     {
-        t->probe_timing = false;
+        p_sample->probe_timing = false;
     }
-    else if (!t->probe_timing || t->probe_direction != observed)
+    else if (!p_sample->probe_timing || p_sample->probe_direction != observed)
     {
-        t->probe_timing = true;
-        t->probe_direction = observed;
-        t->probe_since = now;
+        p_sample->probe_timing = true;
+        p_sample->probe_direction = observed;
+        p_sample->probe_since = now;
     }
-    circuit_direction(t, error, strongest, now);
-    bool centred = d.level[0] >= 400 && d.level[1] >= 400 && magnitude <= 80;
+    circuit_direction(p_sample, error, strongest, now);
+    bool centred =
+        demand.level[0] >= 400 && demand.level[1] >= 400 && magnitude <= 80;
     if (!centred)
     {
-        t->centre_timing = false;
+        p_sample->centre_timing = false;
     }
     else
     {
-        if (!t->centre_timing)
+        if (!p_sample->centre_timing)
         {
-            t->centre_timing = true;
-            t->centre_since = now;
+            p_sample->centre_timing = true;
+            p_sample->centre_since = now;
         }
-        if (now - t->centre_since >= C_CENTRE_US)
+        if (now - p_sample->centre_since >= C_CENTRE_US)
         {
-            t->centre_valid = true;
-            t->centre_us = now;
+            p_sample->centre_valid = true;
+            p_sample->centre_us = now;
         }
     }
-    if (low && !s->white)
+    if (low && !p_state->white)
     {
-        unsigned memory = circuit_memory(t, now);
-        s->white = true;
-        s->white_since = now;
-        s->white_mm = mm;
-        s->recovery = memory == 1 ? 1 : memory == 2 ? -1 : 0;
-        t->straight_recovery = memory == 3;
-        t->reacquire_timing = t->medium_timing = t->strong_timing = false;
+        unsigned memory = circuit_memory(p_sample, now);
+        p_state->white = true;
+        p_state->white_since = now;
+        p_state->white_mm = mm_value;
+        p_state->recovery = memory == 1 ? 1 : memory == 2 ? -1 : 0;
+        p_sample->straight_recovery = memory == 3;
+        p_sample->reacquire_timing = p_sample->medium_timing =
+            p_sample->strong_timing = false;
     }
-    if (s->white)
+    if (p_state->white)
     {
         /* An isolated >=150 observation no longer ends/restarts a loss. The
            same episode and search direction persist until a credible line
            is sustained, including across weak or opposite-side flashes. */
         if (strongest < 300 && !faint)
         {
-            t->reacquire_timing = t->medium_timing = t->strong_timing = false;
+            p_sample->reacquire_timing = p_sample->medium_timing =
+                p_sample->strong_timing = false;
         }
         else
         {
-            if (!t->reacquire_timing)
+            if (!p_sample->reacquire_timing)
             {
-                t->reacquire_timing = true;
-                t->reacquire_since = now;
+                p_sample->reacquire_timing = true;
+                p_sample->reacquire_since = now;
             }
             if (strongest < 300)
             {
-                t->medium_timing = false;
+                p_sample->medium_timing = false;
             }
-            else if (!t->medium_timing)
+            else if (!p_sample->medium_timing)
             {
-                t->medium_timing = true;
-                t->medium_since = now;
+                p_sample->medium_timing = true;
+                p_sample->medium_since = now;
             }
             if (strongest < 400)
             {
-                t->strong_timing = false;
+                p_sample->strong_timing = false;
             }
-            else if (!t->strong_timing)
+            else if (!p_sample->strong_timing)
             {
-                t->strong_timing = true;
-                t->strong_since = now;
+                p_sample->strong_timing = true;
+                p_sample->strong_since = now;
             }
             /* Independent bands:400-threshold flicker cannot discard an
                otherwise sustained >=300 observation. */
 #if defined(CIRCUIT_STATIONARY_SEARCH) || defined(LINE_STATIONARY_SEARCH)
-            bool reacquired = (t->strong_timing && now - t->strong_since >=
-                                                       C_REACQUIRE_STRONG_US) ||
-                              (t->medium_timing &&
-                               now - t->medium_since >= C_REACQUIRE_WEAK_US) ||
-                              (t->probe_timing &&
-                               now - t->probe_since >= C_REACQUIRE_FAINT_US);
-            if (reacquired && t->search.active)
+            bool reacquired =
+                (p_sample->strong_timing &&
+                 now - p_sample->strong_since >= C_REACQUIRE_STRONG_US) ||
+                (p_sample->medium_timing &&
+                 now - p_sample->medium_since >= C_REACQUIRE_WEAK_US) ||
+                (p_sample->probe_timing &&
+                 now - p_sample->probe_since >= C_REACQUIRE_FAINT_US);
+            if (reacquired && p_sample->search.active)
             {
 
-                LineSearchDemand found = line_search_stationary_step(
-                    &t->search, now, mm, wheel, speed, t->reacquire_timing,
-                    true);
+                line_search_demand_t found = line_search_stationary_step(
+                    &p_sample->search, now, mm_value, wheel, speed,
+                    p_sample->reacquire_timing, true);
                 if (found.reason)
                 {
-                    t->loss_reason = found.reason;
-                    d.stop = true;
-                    d.decision = AL_LOST;
-                    return d;
+                    p_sample->loss_reason = found.reason;
+                    demand.stop = true;
+                    demand.decision = AL_LOST;
+                    return demand;
                 }
                 if (!found.complete)
                 {
-                    d.target[0] = found.target[0];
-                    d.target[1] = found.target[1];
-                    d.decision = (uint8_t)(LS_DECISION_FIRST + found.stage);
-                    return d;
+                    demand.target[0] = found.target[0];
+                    demand.target[1] = found.target[1];
+                    demand.decision =
+                        (uint8_t)(LS_DECISION_FIRST + found.stage);
+                    return demand;
                 }
             }
 #else
-            bool reacquired = (t->strong_timing && now - t->strong_since >=
-                                                       C_REACQUIRE_STRONG_US) ||
-                              (t->medium_timing &&
-                               now - t->medium_since >= C_REACQUIRE_WEAK_US) ||
-                              (t->probe_timing &&
-                               now - t->probe_since >= C_REACQUIRE_FAINT_US);
+            bool reacquired =
+                (p_sample->strong_timing &&
+                 now - p_sample->strong_since >= C_REACQUIRE_STRONG_US) ||
+                (p_sample->medium_timing &&
+                 now - p_sample->medium_since >= C_REACQUIRE_WEAK_US) ||
+                (p_sample->probe_timing &&
+                 now - p_sample->probe_since >= C_REACQUIRE_FAINT_US);
 #endif
             if (reacquired)
             {
-                s->white = false;
-                s->recovery = 0;
-                t->straight_recovery = false;
-                t->reacquire_timing = t->medium_timing = t->strong_timing =
-                    false;
+                p_state->white = false;
+                p_state->recovery = 0;
+                p_sample->straight_recovery = false;
+                p_sample->reacquire_timing = p_sample->medium_timing =
+                    p_sample->strong_timing = false;
 #if defined(CIRCUIT_SWEEP_SEARCH) || defined(CIRCUIT_STATIONARY_SEARCH) ||     \
     defined(LINE_STATIONARY_SEARCH)
-                t->search = (LineSearch){0};
+                p_sample->search = (line_search_t){0};
 #endif
             }
         }
-        if (s->white)
+        if (p_state->white)
         {
-            uint64_t elapsed = now - s->white_since;
-            uint32_t travel = mm - s->white_mm;
+            uint64_t elapsed = now - p_state->white_since;
+            uint32_t travel = mm_value - p_state->white_mm;
 #if defined(CIRCUIT_STATIONARY_SEARCH) || defined(LINE_STATIONARY_SEARCH)
             (void)travel;
-            if (line_search_ready(&t->search, now, d.level[0], d.level[1]))
+            if (line_search_ready(&p_sample->search, now, demand.level[0],
+                                  demand.level[1]))
             {
-                if (!t->search.active)
+                if (!p_sample->search.active)
                 {
 
-                    line_search_stationary_begin(&t->search, now, mm,
-                                                 s->recovery, wheel);
+                    line_search_stationary_begin(&p_sample->search, now,
+                                                 mm_value, p_state->recovery,
+                                                 wheel);
                 }
 
-                LineSearchDemand seek = line_search_stationary_step(
-                    &t->search, now, mm, wheel, speed, t->reacquire_timing,
-                    false);
+                line_search_demand_t seek = line_search_stationary_step(
+                    &p_sample->search, now, mm_value, wheel, speed,
+                    p_sample->reacquire_timing, false);
                 if (seek.reason)
                 {
-                    t->loss_reason = seek.reason;
-                    d.stop = true;
-                    d.decision = AL_LOST;
-                    return d;
+                    p_sample->loss_reason = seek.reason;
+                    demand.stop = true;
+                    demand.decision = AL_LOST;
+                    return demand;
                 }
-                d.target[0] = seek.target[0];
-                d.target[1] = seek.target[1];
-                d.decision = (uint8_t)(LS_DECISION_FIRST + seek.stage);
-                return d;
+                demand.target[0] = seek.target[0];
+                demand.target[1] = seek.target[1];
+                demand.decision = (uint8_t)(LS_DECISION_FIRST + seek.stage);
+                return demand;
             }
             /* The original brief-gap bridge remains; sustained loss waits at
                zero until the two-second confirmation opens the bounded sweep. */
             if (elapsed >= LS_BRIDGE_US)
             {
-                return d;
+                return demand;
             }
-            if (!s->recovery && !t->straight_recovery)
+            if (!p_state->recovery && !p_sample->straight_recovery)
             {
-                return d;
+                return demand;
             }
 #elif defined(CIRCUIT_SWEEP_SEARCH)
             (void)travel;
             /* A short worn gap still uses the proven bridge below. Once the
                gap persists, replace a one-direction timeout with alternating
                rolling searches; weak flashes do not restart this budget. */
-            if (line_search_ready(&t->search, now, d.level[0], d.level[1]))
+            if (line_search_ready(&p_sample->search, now, demand.level[0],
+                                  demand.level[1]))
             {
-                if (!t->search.active)
+                if (!p_sample->search.active)
                 {
-                    line_search_begin(&t->search, now, mm, s->recovery);
+                    line_search_begin(&p_sample->search, now, mm_value,
+                                      p_state->recovery);
                 }
-                LineSearchDemand seek =
-                    line_search_step(&t->search, now, mm, t->reacquire_timing);
+                line_search_demand_t seek =
+                    line_search_step(&p_sample->search, now, mm_value,
+                                     p_sample->reacquire_timing);
                 if (seek.reason)
                 {
-                    t->loss_reason = seek.reason;
-                    d.stop = true;
-                    d.decision = AL_LOST;
-                    return d;
+                    p_sample->loss_reason = seek.reason;
+                    demand.stop = true;
+                    demand.decision = AL_LOST;
+                    return demand;
                 }
-                d.target[0] = seek.target[0];
-                d.target[1] = seek.target[1];
-                d.decision = (uint8_t)(LS_DECISION_FIRST + seek.stage);
-                return d;
+                demand.target[0] = seek.target[0];
+                demand.target[1] = seek.target[1];
+                demand.decision = (uint8_t)(LS_DECISION_FIRST + seek.stage);
+                return demand;
             }
             /* Barcode V12: after the short gap bridge, coast while the
                continuous-white timer runs instead of pivoting for2s. */
             if (elapsed >= LS_BRIDGE_US && strongest < 200)
             {
-                return d;
+                return demand;
             }
             /* With no direction history, wait for the short confirmation
                rather than inventing a turn before the first sweep begins. */
-            if (!s->recovery && !t->straight_recovery)
+            if (!p_state->recovery && !p_sample->straight_recovery)
             {
-                return d;
+                return demand;
             }
 #else
-            if (!s->recovery && !t->straight_recovery)
+            if (!p_state->recovery && !p_sample->straight_recovery)
             {
-                t->loss_reason = C_LOSS_NO_DIRECTION;
+                p_sample->loss_reason = C_LOSS_NO_DIRECTION;
             }
-            else if (t->straight_recovery && (elapsed >= C_STRAIGHT_GAP_US ||
-                                              travel >= C_STRAIGHT_GAP_MM))
+            else if (p_sample->straight_recovery &&
+                     (elapsed >= C_STRAIGHT_GAP_US ||
+                      travel >= C_STRAIGHT_GAP_MM))
             {
-                t->loss_reason = C_LOSS_STRAIGHT;
+                p_sample->loss_reason = C_LOSS_STRAIGHT;
             }
             else if (elapsed >= C_LOSS_US)
             {
-                t->loss_reason = C_LOSS_TIME;
+                p_sample->loss_reason = C_LOSS_TIME;
             }
             else if (travel >= C_LOSS_MM)
             {
-                t->loss_reason = C_LOSS_DISTANCE;
+                p_sample->loss_reason = C_LOSS_DISTANCE;
             }
-            if (t->loss_reason)
+            if (p_sample->loss_reason)
             {
-                d.stop = true;
-                d.decision = AL_LOST;
-                return d;
+                demand.stop = true;
+                demand.decision = AL_LOST;
+                return demand;
             }
 #endif
             /* Unlike V5, do not blindly ignore a real weak return on the
                other sensor. Probe using reflectance balance at reduced speed,
                keeping the original loss deadline until confirmation succeeds. */
 #if !defined(CIRCUIT_STATIONARY_SEARCH) && !defined(LINE_STATIONARY_SEARCH)
-            if (faint && t->probe_timing && now - t->probe_since >= C_PROBE_US)
+            if (faint && p_sample->probe_timing &&
+                now - p_sample->probe_since >= C_PROBE_US)
             {
-                circuit_faint_targets(error, d.level, d.target);
-                d.decision = error > 0 ? C_PROBE_LEFT : C_PROBE_RIGHT;
-                return d;
+                circuit_faint_targets(error, demand.level, demand.target);
+                demand.decision = error > 0 ? C_PROBE_LEFT : C_PROBE_RIGHT;
+                return demand;
             }
 #endif
-            if (t->straight_recovery)
+            if (p_sample->straight_recovery)
             {
-                d.target[0] = d.target[1] = 35;
-                return d;
+                demand.target[0] = demand.target[1] = 35;
+                return demand;
             }
-            d.decision = s->recovery > 0 ? SYM_RECOVER_LEFT : SYM_RECOVER_RIGHT;
-            d.target[0] = s->recovery > 0 ? 0 : 45;
-            d.target[1] = s->recovery > 0 ? 45 : 0;
+            demand.decision =
+                p_state->recovery > 0 ? SYM_RECOVER_LEFT : SYM_RECOVER_RIGHT;
+            demand.target[0] = p_state->recovery > 0 ? 0 : 45;
+            demand.target[1] = p_state->recovery > 0 ? 45 : 0;
             /* Brief worn gaps retain the last reliable curve's curvature at
                reduced speed before beginning the usual bounded pivot search. */
             if (elapsed < C_BRIDGE_US &&
-                ((s->recovery > 0 && t->bridge[0] < t->bridge[1]) ||
-                 (s->recovery < 0 && t->bridge[0] > t->bridge[1])))
+                ((p_state->recovery > 0 &&
+                  p_sample->bridge[0] < p_sample->bridge[1]) ||
+                 (p_state->recovery < 0 &&
+                  p_sample->bridge[0] > p_sample->bridge[1])))
             {
-                d.target[0] = t->bridge[0];
-                d.target[1] = t->bridge[1];
+                demand.target[0] = p_sample->bridge[0];
+                demand.target[1] = p_sample->bridge[1];
             }
-            return d;
+            return demand;
         }
     }
-    symmetric_targets(error, d.target);
+    symmetric_targets(error, demand.target);
     if (strongest >= 200 && strongest < 400 && magnitude >= 150)
     {
-        circuit_faint_targets(error, d.level, d.target);
+        circuit_faint_targets(error, demand.level, demand.target);
     }
-    if (d.target[0] < d.target[1])
+    if (demand.target[0] < demand.target[1])
     {
-        d.decision = SYM_LEFT;
+        demand.decision = SYM_LEFT;
     }
-    else if (d.target[0] > d.target[1])
+    else if (demand.target[0] > demand.target[1])
     {
-        d.decision = SYM_RIGHT;
+        demand.decision = SYM_RIGHT;
     }
-    if (strongest >= 400 &&
-        ((error > 80 && s->direction > 0) || (error < -80 && s->direction < 0)))
+    if (strongest >= 400 && ((error > 80 && p_state->direction > 0) ||
+                             (error < -80 && p_state->direction < 0)))
     {
-        int maximum = d.target[0] > d.target[1] ? d.target[0] : d.target[1];
-        t->bridge[0] = (int16_t)(d.target[0] * 35 / maximum);
-        t->bridge[1] = (int16_t)(d.target[1] * 35 / maximum);
+        int maximum = demand.target[0] > demand.target[1] ? demand.target[0]
+                                                          : demand.target[1];
+        p_sample->bridge[0] = (int16_t)(demand.target[0] * 35 / maximum);
+        p_sample->bridge[1] = (int16_t)(demand.target[1] * 35 / maximum);
     }
-    return d;
+    return demand;
 }
-static inline AnalogDemand circuit_line_demand (CircuitTracker * t,
-                                                const LineCalibration * cal,
-                                                uint16_t l, uint16_t r,
-                                                uint64_t now, uint32_t mm)
+static inline analog_demand_t
+circuit_line_demand (circuit_tracker_t * p_sample,
+                     const line_calibration_t * p_cal, uint16_t l_value,
+                     uint16_t result, uint64_t now, uint32_t mm_value)
 {
     const double wheel[2] = {0, 0};
     const float speed[2] = {0, 0};
-    return circuit_line_demand_motion(t, cal, l, r, now, mm, wheel, speed);
+    return circuit_line_demand_motion(p_sample, p_cal, l_value, result, now,
+                                      mm_value, wheel, speed);
 }
 #endif
 

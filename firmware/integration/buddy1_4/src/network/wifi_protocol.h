@@ -1,3 +1,10 @@
+/**
+ * @file wifi_protocol.h
+ * @brief Wifi protocol.
+ * @details Network helpers validate and explicitly encode bounded application records.
+ * Transport calls belong to the configured SDK or RTOS owner, not these codecs.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 #ifndef WIFI_PROTOCOL_H
 #define WIFI_PROTOCOL_H
 
@@ -59,18 +66,22 @@ enum
 
 typedef struct
 {
-    uint8_t byte0, code, id;
+    uint8_t byte0;
+    uint8_t code;
+    uint8_t id;
     uint16_t arg;
     uint32_t mapping;
-} WifiCommand;
+} wifi_command_t;
 
-uint8_t wp_parse (const uint8_t * p, size_t original_len, WifiCommand * cmd);
+uint8_t wp_parse (const uint8_t * p_data, size_t original_len,
+                  wifi_command_t * p_cmd);
 bool wp_map_valid (uint32_t word);
 uint32_t wp_map_replace (uint32_t snapshot, uint32_t word);
 char wp_map_action (uint32_t snapshot, char letter);
-void wp_ack (const WifiCommand * cmd, uint8_t result, uint8_t state,
+void wp_ack (const wifi_command_t * p_cmd, uint8_t result, uint8_t state,
              uint8_t out[4]);
-void wp_map_frame (uint32_t snapshot, uint8_t id, uint8_t seq, uint8_t out[8]);
+void wp_map_frame (uint32_t snapshot, uint8_t identifier, uint8_t seq,
+                   uint8_t out[8]);
 
 #endif
 

@@ -1,3 +1,10 @@
+/**
+ * @file barcode_analog.h
+ * @brief Barcode analog.
+ * @details Pure barcode/route logic is called by the ADC owner and emits requests.
+ * Native records are not wire packets; preserve both decode directions.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 #ifndef BARCODE_ANALOG_H
 #define BARCODE_ANALOG_H
 #include "src/barcode/barcode_nav.h"
@@ -17,24 +24,42 @@ enum
 }; /*212 ADC diagnostic preview */
 typedef struct
 {
-    BarcodeReader reader;
-    bool stable, candidate, changed, was_frame;
-    uint64_t candidate_us, vote_us;
-    double candidate_wheel[2], vote_start, vote_end;
+    barcode_reader_t reader;
+    bool stable;
+    bool candidate;
+    bool changed;
+    bool was_frame;
+    uint64_t candidate_us;
+    uint64_t vote_us;
+    double candidate_wheel[2];
+    double vote_start;
+    double vote_end;
     char vote;
     bool reverse;
     uint16_t pattern[3];
-} AnalogBank;
+} analog_bank_t;
 typedef struct
 {
-    AnalogBank bank[AO_BANKS];
-    uint16_t adc, baseline, minimum, maximum;
+    analog_bank_t bank[AO_BANKS];
+    uint16_t adc;
+    uint16_t baseline;
+    uint16_t minimum;
+    uint16_t maximum;
     uint8_t selected;
-    bool black, busy, scanning, accepted, conflict;
+    bool black;
+    bool busy;
+    bool scanning;
+    bool accepted;
+    bool conflict;
     uint64_t last_us;
-    uint32_t max_gap_us, gap_count, candidates, selections;
-    double accepted_start, accepted_end, conflict_end;
-} BarcodeAnalog;
+    uint32_t max_gap_us;
+    uint32_t gap_count;
+    uint32_t candidates;
+    uint32_t selections;
+    double accepted_start;
+    double accepted_end;
+    double conflict_end;
+} barcode_analog_t;
 /* Sorted union: original128,256,...3968 plus192,194,...254. Fine banks
  * target the user's measured narrow gap203..206 and narrow bar215..221.
  * These are sensitivity hypotheses, not a hardcoded barcode or calibration. */
@@ -53,69 +78,76 @@ static inline unsigned barcode_analog_log_threshold (unsigned version,
 {
     return version < 8 ? (bank + 1) * AO_STEP : barcode_analog_threshold(bank);
 }
-static inline void barcode_analog_begin (BarcodeAnalog * a, BarcodeNav * n,
-                                         uint16_t adc, uint64_t now,
-                                         const double wheel[2])
+static inline void barcode_analog_begin (barcode_analog_t * p_first,
+                                         barcode_nav_t * p_count, uint16_t adc,
+                                         uint64_t now, const double wheel[2])
 {
-    *a = (BarcodeAnalog){.adc = adc,
-                         .baseline = adc,
-                         .minimum = adc,
-                         .maximum = adc,
-                         .selected = AO_DEFAULT_BANK,
-                         .last_us = now};
-    for (unsigned b = 0; b < AO_BANKS; ++b)
+    *p_first = (barcode_analog_t){.adc = adc,
+                                  .baseline = adc,
+                                  .minimum = adc,
+                                  .maximum = adc,
+                                  .selected = AO_DEFAULT_BANK,
+                                  .last_us = now};
+    for (unsigned second = 0; second < AO_BANKS; ++second)
     {
-        AnalogBank * v = &a->bank[b];
-        v->stable = v->candidate = adc >= barcode_analog_threshold(b);
-        v->candidate_us = now;
-        memcpy(v->candidate_wheel, wheel, sizeof(v->candidate_wheel));
-        barcode_reader_reset(&v->reader, v->stable, now,
+        analog_bank_t * p_value = &p_first->bank[second];
+        p_value->stable = p_value->candidate =
+            adc >= barcode_analog_threshold(second);
+        p_value->candidate_us = now;
+        memcpy(p_value->candidate_wheel, wheel,
+               sizeof(p_value->candidate_wheel));
+        barcode_reader_reset(&p_value->reader, p_value->stable, now,
                              (wheel[0] + wheel[1]) * .5);
     }
-    a->black = a->bank[a->selected].stable;
-    n->external_reader = true;
-    n->external_scanning = false;
+    p_first->black = p_first->bank[p_first->selected].stable;
+    p_count->external_reader = true;
+    p_count->external_scanning = false;
 }
-static inline bool barcode_analog_same_frame (const AnalogBank * v,
-                                              const AnalogBank * w)
+static inline bool barcode_analog_same_frame (const analog_bank_t * p_value,
+                                              const analog_bank_t * p_wheel)
 {
-    return v->vote && v->vote == w->vote && v->reverse == w->reverse &&
-           fabs(v->vote_start - w->vote_start) <= 6 &&
-           fabs(v->vote_end - w->vote_end) <= 6 &&
-           (v->vote_us > w->vote_us ? v->vote_us - w->vote_us
-                                    : w->vote_us - v->vote_us) <= 500000;
+    return p_value->vote && p_value->vote == p_wheel->vote &&
+           p_value->reverse == p_wheel->reverse &&
+           fabs(p_value->vote_start - p_wheel->vote_start) <= 6 &&
+           fabs(p_value->vote_end - p_wheel->vote_end) <= 6 &&
+           (p_value->vote_us > p_wheel->vote_us
+                ? p_value->vote_us - p_wheel->vote_us
+                : p_wheel->vote_us - p_value->vote_us) <= 500000;
 }
-static inline bool barcode_analog_select (BarcodeAnalog * a, BarcodeNav * n,
-                                          uint64_t now, double mm)
+static inline bool barcode_analog_select (barcode_analog_t * p_first,
+                                          barcode_nav_t * p_count, uint64_t now,
+                                          double mm_value)
 {
     int winner = -1;
     char code = 0;
     bool conflict = false;
-    double best = 1e9, centre = (a->minimum + a->maximum) * .5;
-    for (unsigned b = 0; b + 1 < AO_BANKS; ++b)
+    double best = 1e9, centre = (p_first->minimum + p_first->maximum) * .5;
+    for (unsigned second = 0; second + 1 < AO_BANKS; ++second)
     {
-        const AnalogBank *v = &a->bank[b], *w = &a->bank[b + 1];
-        if (!barcode_analog_same_frame(v, w) || now < v->vote_us ||
-            now - v->vote_us > 500000 || mm - v->vote_end > 10 ||
-            mm < v->vote_end)
+        const analog_bank_t *p_value = &p_first->bank[second],
+                            *p_wheel = &p_first->bank[second + 1];
+        if (!barcode_analog_same_frame(p_value, p_wheel) ||
+            now < p_value->vote_us || now - p_value->vote_us > 500000 ||
+            mm_value - p_value->vote_end > 10 || mm_value < p_value->vote_end)
         {
             continue;
         }
-        if (a->accepted && fabs(v->vote_start - a->accepted_start) <= 12 &&
-            fabs(v->vote_end - a->accepted_end) <= 12)
+        if (p_first->accepted &&
+            fabs(p_value->vote_start - p_first->accepted_start) <= 12 &&
+            fabs(p_value->vote_end - p_first->accepted_end) <= 12)
         {
             continue;
         }
-        if (winner >= 0 && code != v->vote)
+        if (winner >= 0 && code != p_value->vote)
         {
             conflict = true;
         }
         else if (winner < 0 ||
-                 fabs(barcode_analog_threshold(b) - centre) < best)
+                 fabs(barcode_analog_threshold(second) - centre) < best)
         {
-            winner = (int)b;
-            code = v->vote;
-            best = fabs(barcode_analog_threshold(b) - centre);
+            winner = (int)second;
+            code = p_value->vote;
+            best = fabs(barcode_analog_threshold(second) - centre);
         }
     }
     if (winner < 0)
@@ -124,218 +156,241 @@ static inline bool barcode_analog_select (BarcodeAnalog * a, BarcodeNav * n,
     }
     if (conflict)
     {
-        if (!a->conflict || mm - a->conflict_end > 12)
+        if (!p_first->conflict || mm_value - p_first->conflict_end > 12)
         {
-            barcode_event(n, B_ANALOG_CONFLICT, now, mm, 0, '?', 0, 0, NULL);
-            a->conflict = true;
-            a->conflict_end = mm;
+            barcode_event(p_count, B_ANALOG_CONFLICT, now, mm_value, 0, '?', 0,
+                          0, NULL);
+            p_first->conflict = true;
+            p_first->conflict_end = mm_value;
         }
-        n->pending = 0;
-        n->cross_candidate = n->cross_ready = false;
+        p_count->pending = 0;
+        p_count->cross_candidate = p_count->cross_ready = false;
         return false;
     }
-    if (a->conflict && mm - a->conflict_end <= 12)
+    if (p_first->conflict && mm_value - p_first->conflict_end <= 12)
     {
         return false;
     }
-    a->selected = (uint8_t)winner;
-    const AnalogBank * v = &a->bank[a->selected];
-    a->black = v->stable;
-    a->accepted = true;
-    a->accepted_start = v->vote_start;
-    a->accepted_end = v->vote_end;
-    ++a->selections;
-    n->cross_candidate = n->cross_ready = false;
-    barcode_queue_code(n, code);
-    barcode_event(n, B_ANALOG_SELECT, now, mm,
-                  barcode_analog_threshold(a->selected), code,
-                  barcode_decode_action(n, code), a->selected + 1, v->pattern);
-    barcode_event(n, B_DECODE, now, mm, v->vote_end - v->vote_start, code,
-                  barcode_decode_action(n, code),
-                  0x80u | (a->selected << 1) | v->reverse, v->pattern);
+    p_first->selected = (uint8_t)winner;
+    const analog_bank_t * p_value_value = &p_first->bank[p_first->selected];
+    p_first->black = p_value_value->stable;
+    p_first->accepted = true;
+    p_first->accepted_start = p_value_value->vote_start;
+    p_first->accepted_end = p_value_value->vote_end;
+    ++p_first->selections;
+    p_count->cross_candidate = p_count->cross_ready = false;
+    barcode_queue_code(p_count, code);
+    barcode_event(p_count, B_ANALOG_SELECT, now, mm_value,
+                  barcode_analog_threshold(p_first->selected), code,
+                  barcode_decode_action(p_count, code), p_first->selected + 1,
+                  p_value_value->pattern);
+    barcode_event(p_count, B_DECODE, now, mm_value,
+                  p_value_value->vote_end - p_value_value->vote_start, code,
+                  barcode_decode_action(p_count, code),
+                  0x80u | (p_first->selected << 1) | p_value_value->reverse,
+                  p_value_value->pattern);
     return true;
 }
-static inline void barcode_analog_sample (BarcodeAnalog * a, BarcodeNav * n,
-                                          uint16_t adc, uint64_t now,
-                                          const double wheel[2])
+static inline void barcode_analog_sample (barcode_analog_t * p_first,
+                                          barcode_nav_t * p_count, uint16_t adc,
+                                          uint64_t now, const double wheel[2])
 {
-    double mm = (wheel[0] + wheel[1]) * .5;
-    a->adc = adc;
-    if (adc < a->minimum)
+    double mm_value = (wheel[0] + wheel[1]) * .5;
+    p_first->adc = adc;
+    if (adc < p_first->minimum)
     {
-        a->minimum = adc;
+        p_first->minimum = adc;
     }
-    if (adc > a->maximum)
+    if (adc > p_first->maximum)
     {
-        a->maximum = adc;
+        p_first->maximum = adc;
     }
-    if (n->busy)
+    if (p_count->busy)
     {
-        if (!a->busy)
+        if (!p_first->busy)
         {
-            barcode_analog_begin(a, n, adc, now, wheel);
-            a->busy = true;
+            barcode_analog_begin(p_first, p_count, adc, now, wheel);
+            p_first->busy = true;
         }
-        a->last_us = now;
+        p_first->last_us = now;
         return;
     }
-    if (a->busy)
+    if (p_first->busy)
     {
-        barcode_analog_begin(a, n, adc, now, wheel);
+        barcode_analog_begin(p_first, p_count, adc, now, wheel);
     }
-    if (now > a->last_us)
+    if (now > p_first->last_us)
     {
-        uint64_t gap = now - a->last_us;
-        if (gap > a->max_gap_us)
+        uint64_t gap = now - p_first->last_us;
+        if (gap > p_first->max_gap_us)
         {
-            a->max_gap_us = (uint32_t)gap;
+            p_first->max_gap_us = (uint32_t)gap;
         }
         if (gap > 10000)
         {
-            ++a->gap_count;
-            if (a->gap_count <= 4)
+            ++p_first->gap_count;
+            if (p_first->gap_count <= 4)
             {
-                barcode_event(n, B_ANALOG_GAP, now, mm, (double)gap / 1000, 0,
-                              0, 0, NULL);
+                barcode_event(p_count, B_ANALOG_GAP, now, mm_value,
+                              (double)gap / 1000, 0, 0, 0, NULL);
             }
         }
     }
-    a->last_us = now;
-    a->scanning = false;
-    for (unsigned b = 0; b < AO_BANKS; ++b)
+    p_first->last_us = now;
+    p_first->scanning = false;
+    for (unsigned second = 0; second < AO_BANKS; ++second)
     {
-        AnalogBank * v = &a->bank[b];
-        unsigned t = barcode_analog_threshold(b);
-        v->changed = false;
-        unsigned hysteresis = barcode_analog_hysteresis(b);
-        bool black = v->stable ? adc > t - hysteresis : adc >= t + hysteresis;
-        if (black != v->candidate)
+        analog_bank_t * p_value = &p_first->bank[second];
+        unsigned sample = barcode_analog_threshold(second);
+        p_value->changed = false;
+        unsigned hysteresis = barcode_analog_hysteresis(second);
+        bool black = p_value->stable ? adc > sample - hysteresis
+                                     : adc >= sample + hysteresis;
+        if (black != p_value->candidate)
         {
-            v->candidate = black;
-            v->candidate_us = now;
-            memcpy(v->candidate_wheel, wheel, sizeof(v->candidate_wheel));
+            p_value->candidate = black;
+            p_value->candidate_us = now;
+            memcpy(p_value->candidate_wheel, wheel,
+                   sizeof(p_value->candidate_wheel));
         }
-        if (v->candidate != v->stable &&
-            now - v->candidate_us >= AO_DEBOUNCE_US)
+        if (p_value->candidate != p_value->stable &&
+            now - p_value->candidate_us >= AO_DEBOUNCE_US)
         {
-            v->stable = v->candidate;
-            v->changed = true;
-            v->was_frame = v->reader.frame;
+            p_value->stable = p_value->candidate;
+            p_value->changed = true;
+            p_value->was_frame = p_value->reader.frame;
             double edge_mm =
-                (v->candidate_wheel[0] + v->candidate_wheel[1]) * .5;
-            BarcodeRead r = barcode_reader_edge(&v->reader, v->stable,
-                                                v->candidate_us, edge_mm);
-            if (b == a->selected)
+                (p_value->candidate_wheel[0] + p_value->candidate_wheel[1]) *
+                .5;
+            barcode_read_t result =
+                barcode_reader_edge(&p_value->reader, p_value->stable,
+                                    p_value->candidate_us, edge_mm);
+            if (second == p_first->selected)
             {
-                if (r.events & (1u << B_RUN))
+                if (result.events & (1u << B_RUN))
                 {
-                    barcode_event(n, B_RUN, v->candidate_us, edge_mm, r.width,
-                                  0, 0, r.completed_black, NULL);
+                    barcode_event(p_count, B_RUN, p_value->candidate_us,
+                                  edge_mm, result.width, 0, 0,
+                                  result.completed_black, NULL);
                 }
-                if (r.events & (1u << B_FRAME_START))
+                if (result.events & (1u << B_FRAME_START))
                 {
-                    barcode_event(n, B_FRAME_START, v->candidate_us, edge_mm,
-                                  edge_mm - r.start, 0, 0, v->reader.reverse,
-                                  NULL);
+                    barcode_event(p_count, B_FRAME_START, p_value->candidate_us,
+                                  edge_mm, edge_mm - result.start, 0, 0,
+                                  p_value->reader.reverse, NULL);
                 }
-                if (r.events & (1u << B_BAD_FRAME))
+                if (result.events & (1u << B_BAD_FRAME))
                 {
-                    ++n->rejected;
-                    barcode_event(n, B_BAD_FRAME, v->candidate_us, edge_mm,
-                                  edge_mm - r.start, '?', 0, r.rejection,
-                                  r.pattern);
+                    ++p_count->rejected;
+                    barcode_event(p_count, B_BAD_FRAME, p_value->candidate_us,
+                                  edge_mm, edge_mm - result.start, '?', 0,
+                                  result.rejection, result.pattern);
                 }
             }
-            if (r.events & (1u << B_DECODE))
+            if (result.events & (1u << B_DECODE))
             {
-                v->vote = r.code;
-                v->vote_us = v->candidate_us;
-                v->vote_start = r.start;
-                v->vote_end = edge_mm;
-                v->reverse = r.reverse;
-                memcpy(v->pattern, r.pattern, sizeof(v->pattern));
-                ++a->candidates;
-                barcode_event(n, B_ANALOG_CANDIDATE, v->candidate_us, edge_mm,
-                              t, r.code, 0, b + 1, r.pattern);
-                if (a->accepted && fabs(r.start - a->accepted_start) <= 12 &&
-                    fabs(edge_mm - a->accepted_end) <= 12 &&
-                    r.code != n->last_code)
+                p_value->vote = result.code;
+                p_value->vote_us = p_value->candidate_us;
+                p_value->vote_start = result.start;
+                p_value->vote_end = edge_mm;
+                p_value->reverse = result.reverse;
+                memcpy(p_value->pattern, result.pattern,
+                       sizeof(p_value->pattern));
+                ++p_first->candidates;
+                barcode_event(p_count, B_ANALOG_CANDIDATE,
+                              p_value->candidate_us, edge_mm, sample,
+                              result.code, 0, second + 1, result.pattern);
+                if (p_first->accepted &&
+                    fabs(result.start - p_first->accepted_start) <= 12 &&
+                    fabs(edge_mm - p_first->accepted_end) <= 12 &&
+                    result.code != p_count->last_code)
                 {
-                    a->conflict = true;
-                    a->conflict_end = mm;
-                    n->pending = 0;
-                    n->cross_candidate = n->cross_ready = false;
-                    barcode_event(n, B_ANALOG_CONFLICT, now, mm, t, r.code, 0,
-                                  b + 1, r.pattern);
+                    p_first->conflict = true;
+                    p_first->conflict_end = mm_value;
+                    p_count->pending = 0;
+                    p_count->cross_candidate = p_count->cross_ready = false;
+                    barcode_event(p_count, B_ANALOG_CONFLICT, now, mm_value,
+                                  sample, result.code, 0, second + 1,
+                                  result.pattern);
                 }
             }
         }
-        if (barcode_reader_expire(&v->reader, now, mm) && b == a->selected)
+        if (barcode_reader_expire(&p_value->reader, now, mm_value) &&
+            second == p_first->selected)
         {
-            ++n->rejected;
-            barcode_event(n, B_BAD_FRAME, now, mm, mm - v->reader.start_mm, '?',
-                          0, B_REJECT_TIMEOUT, NULL);
+            ++p_count->rejected;
+            barcode_event(p_count, B_BAD_FRAME, now, mm_value,
+                          mm_value - p_value->reader.start_mm, '?', 0,
+                          B_REJECT_TIMEOUT, NULL);
         }
-        if (v->reader.frame || v->reader.history_count ||
-            (t > a->baseline + 100u && v->stable))
+        if (p_value->reader.frame || p_value->reader.history_count ||
+            (sample > p_first->baseline + 100u && p_value->stable))
         {
-            a->scanning = true;
+            p_first->scanning = true;
         }
     }
-    bool selected = barcode_analog_select(a, n, now, mm);
-    AnalogBank * v = &a->bank[a->selected];
-    a->black = v->stable;
-    n->external_scanning = a->scanning;
+    bool selected = barcode_analog_select(p_first, p_count, now, mm_value);
+    analog_bank_t * p_value_value = &p_first->bank[p_first->selected];
+    p_first->black = p_value_value->stable;
+    p_count->external_scanning = p_first->scanning;
     /* A cross is searched only after a verified command. The selecting edge
        is the final stop bar, and is never reused as the next junction. */
-    if (n->external_cross || selected || !n->pending)
+    if (p_count->external_cross || selected || !p_count->pending)
     {
         return;
     }
-    if (v->reader.frame)
+    if (p_value_value->reader.frame)
     {
-        n->cross_candidate = false;
+        p_count->cross_candidate = false;
         return;
     }
-    if (v->changed && !v->was_frame)
+    if (p_value_value->changed && !p_value_value->was_frame)
     {
-        double edge_mm = (v->candidate_wheel[0] + v->candidate_wheel[1]) * .5;
-        if (v->stable)
+        double edge_mm = (p_value_value->candidate_wheel[0] +
+                          p_value_value->candidate_wheel[1]) *
+                         .5;
+        if (p_value_value->stable)
         {
-            barcode_cross_confirm(n, v->candidate_us, edge_mm, true);
-            if (n->cross_candidate)
+            barcode_cross_confirm(p_count, p_value_value->candidate_us, edge_mm,
+                                  true);
+            if (p_count->cross_candidate)
             {
-                n->cross_candidate = false;
-                barcode_event(n, B_CROSS_CANCEL, v->candidate_us, edge_mm,
-                              edge_mm - n->cross_trailing_mm, n->pending, 0, 0,
-                              NULL);
+                p_count->cross_candidate = false;
+                barcode_event(p_count, B_CROSS_CANCEL,
+                              p_value_value->candidate_us, edge_mm,
+                              edge_mm - p_count->cross_trailing_mm,
+                              p_count->pending, 0, 0, NULL);
             }
-            n->leading_us = v->candidate_us;
-            memcpy(n->leading_wheel, v->candidate_wheel,
-                   sizeof(n->leading_wheel));
-            n->leading_gate = n->allow_cross;
+            p_count->leading_us = p_value_value->candidate_us;
+            memcpy(p_count->leading_wheel, p_value_value->candidate_wheel,
+                   sizeof(p_count->leading_wheel));
+            p_count->leading_gate = p_count->allow_cross;
         }
-        else if (n->leading_us >= n->start_us && now >= n->leading_us &&
-                 now - n->leading_us < 20000000)
+        else if (p_count->leading_us >= p_count->start_us &&
+                 now >= p_count->leading_us &&
+                 now - p_count->leading_us < 20000000)
         {
-            double leading = (n->leading_wheel[0] + n->leading_wheel[1]) * .5,
+            double leading =
+                       (p_count->leading_wheel[0] + p_count->leading_wheel[1]) *
+                       .5,
                    width = edge_mm - leading;
             if (width >= B_CROSS_MIN_MM && width <= B_CROSS_MAX_MM)
             {
-                n->cross_width = width;
-                n->cross_us = n->leading_us;
-                memcpy(n->cross_wheel, n->leading_wheel,
-                       sizeof(n->cross_wheel));
-                n->cross_gate = n->leading_gate;
-                n->cross_candidate = true;
-                n->cross_trailing_mm = edge_mm;
-                barcode_event(n, B_CROSS_CANDIDATE, v->candidate_us, edge_mm,
-                              width, n->pending,
-                              barcode_nav_action(n, n->pending), 0, NULL);
+                p_count->cross_width = width;
+                p_count->cross_us = p_count->leading_us;
+                memcpy(p_count->cross_wheel, p_count->leading_wheel,
+                       sizeof(p_count->cross_wheel));
+                p_count->cross_gate = p_count->leading_gate;
+                p_count->cross_candidate = true;
+                p_count->cross_trailing_mm = edge_mm;
+                barcode_event(
+                    p_count, B_CROSS_CANDIDATE, p_value_value->candidate_us,
+                    edge_mm, width, p_count->pending,
+                    barcode_nav_action(p_count, p_count->pending), 0, NULL);
             }
         }
     }
-    barcode_cross_confirm(n, now, mm, !a->black);
+    barcode_cross_confirm(p_count, now, mm_value, !p_first->black);
 }
 #endif
 

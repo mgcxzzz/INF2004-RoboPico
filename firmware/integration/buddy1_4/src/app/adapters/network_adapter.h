@@ -1,3 +1,10 @@
+/**
+ * @file network_adapter.h
+ * @brief Network adapter.
+ * @details Public feature contract. Requests cross coordinator ownership checks;
+ * callers observe completion/status separately and must respect task context.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 /* Included after the hardware/log state. Only core0 touches motion/nav state.
  * Core1 sees copied packets and validated network configuration only. */
 #include "src/network/wifi_settings.h"
@@ -22,7 +29,7 @@ static uint8_t wifi_seq[16], wifi_last_cmd, wifi_last_result = 7, wifi_accepted,
                                             wifi_rejected;
 static uint64_t wifi_last_motion, wifi_last_hb, wifi_start_at;
 static bool wifi_download;
-static WifiCommand wifi_download_command;
+static wifi_command_t wifi_download_command;
 static uint8_t wifi_provision_state;
 static unsigned wifi_provision_size;
 static uint8_t wifi_setup_last_code = WIFI_SETUP_NONE;
@@ -34,7 +41,7 @@ static uint8_t wifi_state (void)
     {
         return 5;
     }
-    MotionStatus s = nav_get_status();
+    motion_status_t s = nav_get_status();
     if (s.mode == MOTION_FAULT || circuit.fault)
     {
         return 6;
@@ -47,7 +54,7 @@ static uint8_t wifi_state (void)
 }
 static bool wifi_send (unsigned topic, const uint8_t * p, size_t n)
 {
-    WifiTransportStatus s = wifi_transport_status();
+    wifi_transport_status_t s = wifi_transport_status();
     if (!s.configured || !s.ready)
     {
         return false;
@@ -74,7 +81,7 @@ static int16_t wifi_heading (double left, double right)
     return (int16_t)lroundf(
         remainderf(heading_deg((float)left, (float)right), 360.0f) * 100);
 }
-static WifiMotionPacket wifi_snapshot (uint64_t now)
+static wifi_motion_packet_t wifi_snapshot (uint64_t now)
 {
     int64_t ticks[2];
     uint32_t irq = save_and_disable_interrupts();
@@ -85,8 +92,8 @@ static WifiMotionPacket wifi_snapshot (uint64_t now)
     }
     uint64_t duration = guard.active ? now - guard.start_us : guard.duration_us;
     restore_interrupts(irq);
-    MotionStatus state = nav_get_status();
-    WifiMotionPacket p = {
+    motion_status_t state = nav_get_status();
+    wifi_motion_packet_t p = {
         .uptime_ms = (uint32_t)(now / 1000),
         .elapsed_ms = (uint32_t)(duration / 1000),
         .run_id = (uint16_t)runs,
@@ -122,7 +129,7 @@ static WifiMotionPacket wifi_snapshot (uint64_t now)
 static void wifi_line_status (uint64_t now, unsigned event)
 {
     uint8_t packet[WPK_LINE_BYTES];
-    WifiLinePacket p = {
+    wifi_line_packet_t p = {
         .seq = wifi_seq[WPK_SRC_LINE]++,
         .uptime_ms = (uint32_t)(now / 1000),
         .event = (uint8_t)event,
@@ -150,9 +157,9 @@ static void wifi_event_id (uint64_t now, unsigned event, char letter,
                            uint32_t command_id)
 {
     ++wifi_nav_events;
-    MotionStatus state = nav_get_status();
+    motion_status_t state = nav_get_status();
     uint8_t packet[WPK_NAV_BYTES];
-    WifiNavPacket p = {
+    wifi_nav_packet_t p = {
         .seq = wifi_seq[WPK_SRC_NAV]++,
         .uptime_ms = (uint32_t)(now / 1000),
         .event = (uint8_t)event,
@@ -176,7 +183,7 @@ static void wifi_event (uint64_t now, unsigned event, char letter, char action,
 {
     wifi_event_id(now, event, letter, action, revision, detail, 0);
 }
-static void wifi_nav_event (const MotionEvent * e)
+static void wifi_nav_event (const motion_event_t * e)
 {
     unsigned event = e->type == MOTION_EVENT_FAULT         ? WPK_EVENT_FAULT
                      : e->type == MOTION_EVENT_DONE        ? WPK_EVENT_COMPLETED
@@ -187,18 +194,18 @@ static void wifi_nav_event (const MotionEvent * e)
                              e->type == MOTION_EVENT_STOPPED
                          ? WPK_EVENT_STATUS
                          : WPK_EVENT_COMMAND_RESULT;
-    MotionStatus state = nav_get_status();
+    motion_status_t state = nav_get_status();
     uint8_t packet[WPK_NAV_BYTES];
-    WifiNavPacket p = {.seq = wifi_seq[WPK_SRC_NAV]++,
-                       .uptime_ms = (uint32_t)(e->now_us / 1000),
-                       .event = (uint8_t)event,
-                       .command_id = e->id,
-                       .generation = state.generation,
-                       .fault_bitmap = (uint16_t)e->fault,
-                       .owner = (uint8_t)e->owner,
-                       .mode = (uint8_t)state.mode,
-                       .command_state = (uint8_t)e->state,
-                       .detail = (uint16_t)((e->type << 8) | e->result)};
+    wifi_nav_packet_t p = {.seq = wifi_seq[WPK_SRC_NAV]++,
+                           .uptime_ms = (uint32_t)(e->now_us / 1000),
+                           .event = (uint8_t)event,
+                           .command_id = e->id,
+                           .generation = state.generation,
+                           .fault_bitmap = (uint16_t)e->fault,
+                           .owner = (uint8_t)e->owner,
+                           .mode = (uint8_t)state.mode,
+                           .command_state = (uint8_t)e->state,
+                           .detail = (uint16_t)((e->type << 8) | e->result)};
     ++wifi_nav_events;
     if (wifi_forward && wpk_nav(&p, packet))
     {
@@ -221,7 +228,7 @@ static void wifi_barcode_events (uint64_t now)
     }
     for (unsigned k = available; k > 0; --k)
     {
-        const BarcodeEvent * e =
+        const barcode_event_t * e =
             &nav.events[(nav.event_head + B_EVENTS - k) % B_EVENTS];
         unsigned event;
         switch (e->type)
@@ -271,17 +278,17 @@ static bool wifi_summary (uint64_t now)
 {
     int64_t ticks[2] = {cut_ticks[0], cut_ticks[1]};
     uint8_t packet[WPK_SUMMARY_BYTES];
-    WifiSummaryPacket p = {.seq = wifi_seq[WPK_SRC_SUMMARY]++,
-                           .uptime_ms = (uint32_t)(now / 1000),
-                           .run_id = (uint16_t)runs,
-                           .result = guard.reason,
-                           .flags = wifi_estop ? 1 : 0,
-                           .elapsed_ms = (uint32_t)(guard.duration_us / 1000),
-                           .distance_mm =
-                               (uint32_t)fmin(path_mm(ticks), UINT32_MAX),
-                           .line_events = (uint16_t)wifi_line_events,
-                           .nav_events = (uint16_t)wifi_nav_events,
-                           .recoveries = (uint16_t)wifi_recoveries};
+    wifi_summary_packet_t p = {
+        .seq = wifi_seq[WPK_SRC_SUMMARY]++,
+        .uptime_ms = (uint32_t)(now / 1000),
+        .run_id = (uint16_t)runs,
+        .result = guard.reason,
+        .flags = wifi_estop ? 1 : 0,
+        .elapsed_ms = (uint32_t)(guard.duration_us / 1000),
+        .distance_mm = (uint32_t)fmin(path_mm(ticks), UINT32_MAX),
+        .line_events = (uint16_t)wifi_line_events,
+        .nav_events = (uint16_t)wifi_nav_events,
+        .recoveries = (uint16_t)wifi_recoveries};
     return wifi_forward && wpk_summary(&p, packet) &&
            wifi_send(WIFI_TOPIC_TLM, packet, sizeof(packet));
 }
@@ -291,7 +298,7 @@ static void wifi_readback (uint8_t id)
     wp_map_frame(wifi_mapping, id, wifi_seq[WPK_SRC_MAP]++, packet);
     (void)wifi_send(WIFI_TOPIC_TLM, packet, sizeof(packet));
 }
-static unsigned wifi_download_row (const WifiCommand * cmd, uint8_t data[64],
+static unsigned wifi_download_row (const wifi_command_t * cmd, uint8_t data[64],
                                    unsigned * total, unsigned * length)
 {
     unsigned dataset = cmd->arg >> 12, index = cmd->arg & 4095;
@@ -309,8 +316,8 @@ static unsigned wifi_download_row (const WifiCommand * cmd, uint8_t data[64],
         }
         const BarcodeTrace * b =
             &trace[(trace_head + B_ROWS - trace_count + index) % B_ROWS];
-        const CircuitTrace * r = &b->motion;
-        WifiMotionPacket p = {
+        const circuit_trace_t * r = &b->motion;
+        wifi_motion_packet_t p = {
             .elapsed_ms = (uint32_t)r->ms,
             .uptime_ms = (uint32_t)r->ms,
             .run_id = (uint16_t)runs,
@@ -364,7 +371,7 @@ static unsigned wifi_download_row (const WifiCommand * cmd, uint8_t data[64],
         {
             return *total ? 2 : 3;
         }
-        const BarcodeRawRow * r = &raw_capture.rows[index];
+        const barcode_raw_row_t * r = &raw_capture.rows[index];
         nav_le32(data, r->us);
         nav_le32(data + 4, (uint32_t)r->path100);
         data[8] = (uint8_t)r->adc;
@@ -389,7 +396,7 @@ static unsigned wifi_download_row (const WifiCommand * cmd, uint8_t data[64],
         }
         else
         {
-            MotionEvent e;
+            motion_event_t e;
             if (!motion_log_read(index, &e))
             {
                 return 3;
@@ -430,9 +437,9 @@ static void wifi_pump_download (void)
     }
     wifi_download = false;
 }
-static unsigned wifi_dispatch (const WifiCommand * cmd, uint64_t now)
+static unsigned wifi_dispatch (const wifi_command_t * cmd, uint64_t now)
 {
-    MotionResult result;
+    motion_result_t result;
     switch (cmd->code)
     {
     case WP_CMD_START:
@@ -512,7 +519,7 @@ static void wifi_harness_poll (uint64_t now)
     size_t n;
     for (unsigned k = 0; k < 2 && wifi_transport_receive(bytes, &n); ++k)
     {
-        WifiCommand cmd;
+        wifi_command_t cmd;
         unsigned result = wp_parse(bytes, n, &cmd);
         wifi_event_id(now, WPK_EVENT_COMMAND_REQUEST, 0, 0, 0, cmd.code,
                       cmd.id);
@@ -563,11 +570,11 @@ static void wifi_harness_poll (uint64_t now)
         wifi_event(now, WPK_EVENT_STOP, 0, 0, 0, guard.reason);
     }
     wifi_was_active = guard.active;
-    WifiTransportStatus transport = wifi_transport_status();
+    wifi_transport_status_t transport = wifi_transport_status();
     if (transport.configured && transport.ready &&
         (!wifi_last_hb || now - wifi_last_hb >= 1000000))
     {
-        WifiHeartbeat h = {
+        wifi_heartbeat_t h = {
             .seq = wifi_seq[WPK_SRC_HEARTBEAT]++,
             .net = transport.connected && transport.subscribed ? 2 : 1,
             .state = wifi_state(),
@@ -598,7 +605,7 @@ static void wifi_harness_poll (uint64_t now)
                                      ? enc[1].invalid - initial_invalid[1]
                                      : cut_invalid[1];
             restore_interrupts(irq);
-            WifiDiagnosticsPacket diagnostic = {
+            wifi_diagnostics_packet_t diagnostic = {
                 .seq = wifi_seq[WPK_SRC_DIAGNOSTICS]++,
                 .uptime_ms = (uint32_t)(now / 1000),
                 .threshold_adc =
@@ -631,7 +638,7 @@ static void wifi_harness_poll (uint64_t now)
     }
     if (wifi_forward && now - wifi_last_motion >= 50000)
     {
-        WifiMotionPacket m = wifi_snapshot(now);
+        wifi_motion_packet_t m = wifi_snapshot(now);
         uint8_t packet[WPK_MOTION_BYTES];
         m.seq = wifi_seq[WPK_SRC_MOTION]++;
         if (wpk_motion(&m, packet))
@@ -653,7 +660,7 @@ static void wifi_harness_poll (uint64_t now)
 }
 static void wifi_harness_init (void)
 {
-    WifiTransportConfig config;
+    wifi_transport_config_t config;
     if ((uintptr_t)&__flash_binary_end < XIP_BASE + WIFI_SETTINGS_OFFSET &&
         wifi_settings_decode(
             &config, (const uint8_t *)(XIP_BASE + WIFI_SETTINGS_OFFSET)))
@@ -673,7 +680,7 @@ static bool wifi_console_byte (int ch)
     }
     if (!wifi_provision_state && ch == 'n')
     {
-        WifiTransportStatus s = wifi_transport_status();
+        wifi_transport_status_t s = wifi_transport_status();
         printf("WIFI: configured=%u stack_ready=%u mqtt=%u subscribed=%u "
                "pm_off_verified=%u published=%lu dropped_TX=%lu dropped_RX=%lu "
                "poll_gap_us=%lu map_configured=%u map_revision=%u\n",
@@ -734,7 +741,7 @@ static bool wifi_console_byte (int ch)
         return true;
     }
     wifi_provision_line[wifi_provision_size] = 0;
-    WifiTransportConfig config = {.client_id = "is28-buddy123"};
+    wifi_transport_config_t config = {.client_id = "is28-buddy123"};
     bool valid = wifi_provision_state == 1;
     char *a = wifi_provision_line, *b = strchr(a, '|'),
          *c = b ? strchr(b + 1, '|') : NULL, *d = c ? strchr(c + 1, '|') : NULL;

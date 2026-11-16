@@ -107,7 +107,7 @@ int main(void) {
         now_us = queued = remaining = complete_at = pending_raw = rx_polls = enabled = 0;
         current_address = current_reg = budget_injected = queued_at_budget = 0;
         uint8_t value = 0;
-        RiAcquisition before, after;
+        ri_acquisition_t before, after;
         ri_acquisition_snapshot(&before);
         bool ok = b4_i2c_read_reg(0x19, 0x0f, &value, 1);
         ri_acquisition_snapshot(&after);
@@ -131,7 +131,7 @@ int main(void) {
         }
         assert(now_us < 8000); /* model bounds, including injected suspension */
     }
-    RiAcquisition before, after;
+    ri_acquisition_t before, after;
     ri_acquisition_snapshot(&before);
     ri_acquisition_record(20000, true, false);
     ri_acquisition_record(31000, false, false);

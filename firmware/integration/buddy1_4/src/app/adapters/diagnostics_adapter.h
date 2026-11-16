@@ -1,3 +1,10 @@
+/**
+ * @file diagnostics_adapter.h
+ * @brief Diagnostics adapter.
+ * @details Public feature contract. Requests cross coordinator ownership checks;
+ * callers observe completion/status separately and must respect task context.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 /* Included only after the baseline hardware globals and helpers. */
 #include "src/telemetry/drive_diag_storage.h"
 #define DIAG_OFFSET (PICO_FLASH_SIZE_BYTES - 0x55000u)
@@ -90,7 +97,7 @@ static void dump_drive_diag (void)
             matches = false;
         }
     }
-    DiagValues first, last;
+    diag_values_t first, last;
     diag_unpack(
         &diag_capture
              .rows[(diag_capture.head + DIAG_ROWS - diag_capture.count) %
@@ -151,7 +158,7 @@ static void dump_drive_diag (void)
         {
             return;
         }
-        DiagValues v;
+        diag_values_t v;
         diag_unpack(&diag_capture.rows[(diag_capture.head + DIAG_ROWS -
                                         diag_capture.count + k) %
                                        DIAG_ROWS],
@@ -177,7 +184,8 @@ static void dump_drive_diag (void)
     }
     puts("DRIVE_DIAG_END: complete=1");
 }
-static void observe_drive_tick (const CircuitInput * i, const BenchEncoder e[2],
+static void observe_drive_tick (const circuit_input_t * i,
+                                const bench_encoder_t e[2],
                                 const int32_t next[2], unsigned wheel_profile,
                                 bool ramp, bool maneuver, bool external,
                                 const bool loaded[2], uint64_t began,

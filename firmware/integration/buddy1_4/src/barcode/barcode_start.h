@@ -1,3 +1,10 @@
+/**
+ * @file barcode_start.h
+ * @brief Barcode start.
+ * @details Pure barcode/route logic is called by the ADC owner and emits requests.
+ * Native records are not wire packets; preserve both decode directions.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 #ifndef BARCODE_START_H
 #define BARCODE_START_H
 #include "src/line_following/line_logic.h"

@@ -41,10 +41,10 @@ static float frand(float lo, float hi) {
 /* ---------- A ---------- */
 static int test_identity(void) {
     for (int trial = 0; trial < 200; ++trial) {
-        ContinuousDrive a = {0};
-        SignedWheel pa = {0};
+        continuous_drive_t a = {0};
+        signed_wheel_t pa = {0};
         RefContinuousDrive b = {0};
-        SignedWheel pb = {0};
+        signed_wheel_t pb = {0};
         unsigned w = (unsigned)(trial & 1);
         int32_t out_a = 0, out_b = 0;
         uint64_t now = 0;
@@ -66,8 +66,8 @@ static int test_identity(void) {
 }
 
 /* ---------- B ---------- */
-static RampAssistInput base_in(uint64_t now) {
-    RampAssistInput in = {.now_us = now,
+static ramp_assist_input_t base_in(uint64_t now) {
+    ramp_assist_input_t in = {.now_us = now,
                           .dt = 0.01f,
                           .run_active = true,
                           .auto_mode = true,
@@ -77,7 +77,7 @@ static RampAssistInput base_in(uint64_t now) {
 }
 /* Drive the logic at 10 ms with a Buddy4 sample every 20 ms from h_of(t). */
 typedef int (*profile_fn)(double t, bool *valid);
-static float run_profile(RampAssist *a, profile_fn f, double seconds, uint8_t *events, int *nev,
+static float run_profile(ramp_assist_t *a, profile_fn f, double seconds, uint8_t *events, int *nev,
                          float *alpha_max, uint64_t *t0) {
     float last = 0;
     *alpha_max = 0;
@@ -93,7 +93,7 @@ static float run_profile(RampAssist *a, profile_fn f, double seconds, uint8_t *e
             int v = f((double)k * 0.01, &valid);
             h = (int16_t)v;
         }
-        RampAssistInput in = base_in(now);
+        ramp_assist_input_t in = base_in(now);
         in.tilt_seq = seq;
         in.tilt_us = tilt_us;
         in.tilt_valid = valid;
@@ -156,7 +156,7 @@ static int stuck_high(double t, bool *v) {
 } /* stalled on top */
 
 static int test_logic(void) {
-    RampAssist a;
+    ramp_assist_t a;
     uint8_t ev[32];
     int n;
     float amax;
@@ -213,7 +213,7 @@ static int test_logic(void) {
         n = 0;
         run_profile(&a, stuck_high, 1.0, ev, &n, &amax, &t0);
         CHECK(a.assisting && a.alpha_milli > 0.0f, "assisting before eligibility change");
-        RampAssistInput in = base_in(t0);
+        ramp_assist_input_t in = base_in(t0);
         in.tilt_seq = a.last_seq;
         in.tilt_us = t0 - 5000;
         in.tilt_valid = true;
@@ -241,7 +241,7 @@ static int test_logic(void) {
         uint64_t last = a.last_sample_us;
         float al = 1;
         for (int k = 1; k <= 10; ++k) {
-            RampAssistInput in = base_in(last + (uint64_t)k * 10000u);
+            ramp_assist_input_t in = base_in(last + (uint64_t)k * 10000u);
             in.tilt_seq = seq;
             in.tilt_us = last;
             in.tilt_valid = true;
@@ -254,7 +254,7 @@ static int test_logic(void) {
     /* Never activates when not following / paused even with a clear ramp. */
     ra_reset(&a);
     for (int k = 0; k < 300; ++k) {
-        RampAssistInput in = base_in(t0 + (uint64_t)k * 10000u);
+        ramp_assist_input_t in = base_in(t0 + (uint64_t)k * 10000u);
         in.following = false;
         in.tilt_seq = (uint32_t)(k / 2 + 1);
         in.tilt_us = in.now_us;
@@ -268,7 +268,7 @@ static int test_logic(void) {
         float prev = 0;
         uint32_t seq = 0;
         for (int k = 0; k < 200; ++k) {
-            RampAssistInput in = base_in(t0 + (uint64_t)k * 10000u);
+            ramp_assist_input_t in = base_in(t0 + (uint64_t)k * 10000u);
             if (k % 2 == 0)
                 seq++;
             in.tilt_seq = seq;
@@ -294,13 +294,13 @@ typedef struct {
 static void simulate(bool assist, float load_pwm, Trace *tr, int steps, int climb_from,
                      int climb_to, int *max_slew_violation, float *max_out, float *max_boost,
                      float *max_abs_i) {
-    ContinuousDrive cd[2];
-    SignedWheel p[2];
+    continuous_drive_t cd[2];
+    signed_wheel_t p[2];
     memset(cd, 0, sizeof cd);
     memset(p, 0, sizeof p);
     int32_t out[2] = {0};
     float v[2] = {0};
-    RampAssist a;
+    ramp_assist_t a;
     ra_reset(&a);
     uint32_t seq = 0;
     *max_slew_violation = 0;
@@ -314,7 +314,7 @@ static void simulate(bool assist, float load_pwm, Trace *tr, int steps, int clim
         int16_t h = climbing ? (int16_t)(1 + (k - climb_from) * 9 / (climb_to - climb_from)) : 0;
         if (k % 2 == 0)
             seq++;
-        RampAssistInput in = base_in(now);
+        ramp_assist_input_t in = base_in(now);
         in.tilt_seq = seq;
         in.tilt_us = now - (k % 2) * 10000u;
         in.tilt_valid = true;
@@ -423,8 +423,8 @@ static int test_controller(void) {
             CHECK(tr_on[k].out[w] == tr_off[k].out[w], "flat section identical with assist build");
     /* continuous_leave seeding: subtracting boost_pwm gives the no-boost seed */
     {
-        ContinuousDrive s = {0};
-        SignedWheel pw = {0};
+        continuous_drive_t s = {0};
+        signed_wheel_t pw = {0};
         int32_t o = 0;
         float v = 30;
         for (int k = 0; k < 50; ++k)
@@ -462,7 +462,7 @@ static const int8_t replay_seq[] = {
     9, 10, 11, 9, 8, 5, 9, 10, 9, 8, 9, 10, 9, 8, 9, 9, 10, 9, 8, 9, 10, 9, 8, 9, 9};
 static int replay_run(int which, uint8_t *end_reason, uint32_t *active_ms, uint64_t *end_at_ms,
                       float *alpha_at_2s) {
-    RampAssist a;
+    ramp_assist_t a;
     RampAssist01 b;
     ra_reset(&a);
     ra01_reset(&b);
@@ -477,7 +477,7 @@ static int replay_run(int which, uint8_t *end_reason, uint32_t *active_ms, uint6
         uint64_t now = t0 + (uint64_t)k * 10000u;
         int i = k / 2;
         int16_t h = (int16_t)(i < n_seq ? replay_seq[i] : (i % 2 ? 9 : 8));
-        RampAssistInput in = base_in(now);
+        ramp_assist_input_t in = base_in(now);
         in.tilt_seq = (uint32_t)i + 1;
         in.tilt_us = t0 + (uint64_t)i * 20000u;
         in.tilt_valid = true;
@@ -556,7 +556,7 @@ static int test_replay(void) {
         "v0.2 keeps assisting through the rocking climb and crest stall until the unchanged 2.5 s timeout");
     CHECK(ms2 >= 2480 && ms2 <= 2520, "timeout still bounds total assistance at 2.5 s");
     CHECK(fabsf(al2 - RA_ALPHA_MILLI) < 0.01f, "full (unchanged) alpha held during the stall");
-    RampAssist a;
+    ramp_assist_t a;
     uint8_t ev[32];
     int n;
     float amax;
@@ -580,7 +580,7 @@ static int test_replay(void) {
 
 /* ---------- D ---------- */
 static int test_tlm(void) {
-    RampAssistTlm t = {.uptime_ms = 0x01020304u,
+    ramp_assist_tlm_t t = {.uptime_ms = 0x01020304u,
                        .event = RA_EVT_END,
                        .flags = 0x2b,
                        .last_end = RA_END_DESCENT,
@@ -654,7 +654,7 @@ typedef struct {
 } HOpts;
 static HRes hrun(int which, HOpts o) {
     HRes r = {0, 0, 0, 1e9f, 0, 0};
-    RampAssist a;
+    ramp_assist_t a;
     RampAssist02 b;
     ra_reset(&a);
     ra02_reset(&b);
@@ -670,7 +670,7 @@ static HRes hrun(int which, HOpts o) {
         uint8_t ev, end;
         bool assisting;
         if (which == 3) {
-            RampAssistInput in = base_in(now);
+            ramp_assist_input_t in = base_in(now);
             in.run_active = run;
             in.auto_mode = autom;
             in.tilt_seq = (uint32_t)i + 1;
@@ -836,7 +836,7 @@ typedef struct {
 static PRes prun(double stall_from_s, double move_from_s, double level_at_s, double stop_at_s,
                  double pause_at_s, double total_s) {
     PRes r = {0};
-    RampAssist a;
+    ramp_assist_t a;
     ra_reset(&a);
     uint64_t t0 = 90000000;
     double end_t = -1;
@@ -845,7 +845,7 @@ static PRes prun(double stall_from_s, double move_from_s, double level_at_s, dou
         double t = k * 0.01;
         uint64_t now = t0 + (uint64_t)k * 10000u;
         int i = k / 2;
-        RampAssistInput in = base_in(now);
+        ramp_assist_input_t in = base_in(now);
         in.run_active = !(stop_at_s > 0 && t >= stop_at_s);
         in.auto_mode = !(pause_at_s > 0 && t >= pause_at_s);
         double ts = i * 0.02;
@@ -925,8 +925,8 @@ static int test_push(void) {
           "never pushes unless assisting (stopped on the flat = no push)");
     CHECK(r.alpha_max <= RA_ALPHA_MILLI + 0.01f, "feedforward boost unchanged (alpha <= 200)");
     /* controller: the push adds exactly its value below the 420 clamp, respects the clamp, no residual */
-    ContinuousDrive c1 = {0}, c2 = {0};
-    SignedWheel p1 = {0}, p2 = {0};
+    continuous_drive_t c1 = {0}, c2 = {0};
+    signed_wheel_t p1 = {0}, p2 = {0};
     int32_t o1 = 0, o2 = 0;
     float max_o = 0, d_mid = 0;
     for (int k = 0; k < 600; ++k) {
@@ -946,8 +946,8 @@ static int test_push(void) {
           "after release: same output and integral as without the push (no residual)");
     /* the 01:21 stall: targets 45 (left) / 13 (right, steering), both wheels at 0 mm/s */
     {
-        ContinuousDrive w[2][2];
-        SignedWheel sp[2][2];
+        continuous_drive_t w[2][2];
+        signed_wheel_t sp[2][2];
         int32_t o[2][2];
         memset(w, 0, sizeof w);
         memset(sp, 0, sizeof sp);
@@ -973,7 +973,7 @@ static int test_push(void) {
                   o[1][1] - o[0][1] <= 71,
               "assist + push add +90 / +70 PWM at that stall (30+60 / 10+60)");
     }
-    ContinuousDrive c3 = {0};
+    continuous_drive_t c3 = {0};
     continuous_drive_reset(&c3, &p1);
     CHECK(c3.boost_add == 0.0f && c3.boost_frac == 0.0f, "controller reset clears the push");
     return 0;
@@ -1000,7 +1000,7 @@ static int16_t tf_stuck(double ts) {
 static SRes srun(tilt_fn f, double total_s, double stop_at, double pause_at, double invalid_from,
                  double invalid_to, bool skip) {
     SRes r = {0};
-    RampAssist a;
+    ramp_assist_t a;
     ra_reset(&a);
     uint64_t t0 = 50000000;
     r.off_t = r.on_again_t = -1;
@@ -1011,7 +1011,7 @@ static SRes srun(tilt_fn f, double total_s, double stop_at, double pause_at, dou
         int i = k / 2;
         double ts = i * 0.02;
         uint64_t now = t0 + (uint64_t)k * 10000u;
-        RampAssistInput in = base_in(now);
+        ramp_assist_input_t in = base_in(now);
         in.run_active = !(stop_at > 0 && t >= stop_at);
         in.auto_mode = !(pause_at > 0 && t >= pause_at);
         bool inv = invalid_to > 0 && ts >= invalid_from && ts < invalid_to;
@@ -1045,7 +1045,7 @@ static SRes srun(tilt_fn f, double total_s, double stop_at, double pause_at, dou
     return r;
 }
 /* harness mapping (ramp_assist_harness.h) */
-static void hold_apply(ContinuousDrive *s, float hl) {
+static void hold_apply(continuous_drive_t *s, float hl) {
     s->hold_min_speed = hl > 0.0f ? RA_HOLD_MIN_MM_S * hl : 0.0f;
     s->hold_i_max =
         hl > 0.0f ? (float)CONTINUOUS_I_MAX + (RA_HOLD_I_MAX - (float)CONTINUOUS_I_MAX) * hl : 0.0f;
@@ -1062,8 +1062,8 @@ static CRes crun(unsigned w, int16_t target, float (*load)(int k), bool hold, in
                  int hold_to, int steps) {
     CRes r = {0};
     r.v_min_held = 1e9f;
-    ContinuousDrive c, n;
-    SignedWheel p, q;
+    continuous_drive_t c, n;
+    signed_wheel_t p, q;
     memset(&c, 0, sizeof c);
     memset(&n, 0, sizeof n);
     memset(&p, 0, sizeof p);
@@ -1150,13 +1150,13 @@ static int test_speed_hold(void) {
     r = srun(tf_ramp_flat, 0.15, 0, 0, 0, 0, false);
     CHECK(r.level_max == 0.0f, "no hold on the flat before a ramp is detected");
     {
-        RampAssist a;
+        ramp_assist_t a;
         ra_reset(&a);
         uint64_t t0 = 60000000;
         uint32_t seq = 0;
         float lvl = 1; /* stale Buddy4 */
         for (int k = 0; k < 200; ++k) {
-            RampAssistInput in = base_in(t0 + (uint64_t)k * 10000u);
+            ramp_assist_input_t in = base_in(t0 + (uint64_t)k * 10000u);
             if (k < 100 && k % 2 == 0)
                 seq++;
             in.tilt_seq = seq;
@@ -1201,8 +1201,8 @@ static int test_speed_hold(void) {
     CHECK(cl.v_min_held >= 38.0f, "hold keeps speed through the climb load");
     /* minimum target applies to a steering target of 0, never to a negative target */
     {
-        ContinuousDrive s;
-        SignedWheel pw;
+        continuous_drive_t s;
+        signed_wheel_t pw;
         memset(&s, 0, sizeof s);
         memset(&pw, 0, sizeof pw);
         int32_t o = 0;

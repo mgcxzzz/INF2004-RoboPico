@@ -3,7 +3,7 @@
 #include "src/line_following/smooth_follow.h"
 #include "src/barcode/barcode_analog.h"
 #include "src/barcode/barcode_record.h"
-static const LineCalibration cal = {{184, 184}, {3464, 3692}, 7};
+static const line_calibration_t cal = {{184, 184}, {3464, 3692}, 7};
 static double frame_widths(char code, double narrow, bool reverse, double w[29]) {
     uint16_t pat[3] = {0x094, 0, 0x094};
     for (unsigned p = 0; p < 512; ++p)
@@ -26,7 +26,7 @@ static double frame_widths(char code, double narrow, bool reverse, double w[29])
         length += w[n];
     return length;
 }
-static void decode_z(BarcodeNav *nav, BarcodeAnalog *a, CircuitInput *i, unsigned size,
+static void decode_z(barcode_nav_t *nav, barcode_analog_t *a, circuit_input_t *i, unsigned size,
                      bool reverse) {
     double w[29], length = frame_widths('Z', size ? 6 : 3, reverse, w), start = i->path + 20;
     barcode_analog_begin(a, nav, 180, i->now, i->wheel);
@@ -54,16 +54,16 @@ static bool black_at(double x, double y) {
     return fabs(y) <= 9 || fabs(x) <= 9;
 }
 static void kinematic_trial(unsigned size, bool reverse, bool hide_return, bool lag) {
-    CircuitInput i = {.now = 1000};
-    Circuit c;
-    BarcodeNav nav;
-    BarcodeAnalog a;
-    SmoothFollow smooth = {0};
+    circuit_input_t i = {.now = 1000};
+    circuit_t c;
+    barcode_nav_t nav;
+    barcode_analog_t a;
+    smooth_follow_t smooth = {0};
     barcode_nav_begin(&nav, &i);
     decode_z(&nav, &a, &i, size, reverse);
     circuit_begin(&c, &i);
     double x = -250, y = 0, theta = 0, motor[2] = {45, 45};
-    AnalogDemand d = {.target = {45, 45}};
+    analog_demand_t d = {.target = {45, 45}};
     bool first_branch_seen = false, reverse_seen = false, completed = false;
     unsigned stages = 0, last_stage = 0;
     for (unsigned step = 0; step < 15000 && !completed; ++step) {
@@ -135,7 +135,7 @@ static void kinematic_trial(unsigned size, bool reverse, bool hide_return, bool 
         assert(completed && stages == 30);
         unsigned complete_events = 0;
         for (unsigned n = 0; n < nav.event_count; ++n) {
-            BarcodeEvent *e = &nav.events[n];
+            barcode_event_t *e = &nav.events[n];
             if (e->type == B_COMPLETE) {
                 ++complete_events;
                 assert(e->code == 'Z' && e->action == 'U');
@@ -165,38 +165,38 @@ static void kinematic_trial(unsigned size, bool reverse, bool hide_return, bool 
 static void limits_and_saved_record(void) {
     assert(barcode_travel_ticks(INT32_MIN) == 2147483648ull && barcode_travel_ticks(0) == 0);
     assert(barcode_travel_ticks(100) + barcode_travel_ticks(-100) == 200);
-    Junction j = {.phase = J_TURN};
-    BarcodeUTurn u = {0};
-    JunctionInput i = {.now = 1000};
-    AnalogDemand d = barcode_uturn_step(&u, &j, &cal, &i);
+    junction_t j = {.phase = J_TURN};
+    barcode_u_turn_t u = {0};
+    junction_input_t i = {.now = 1000};
+    analog_demand_t d = barcode_uturn_step(&u, &j, &cal, &i);
     assert(d.target[1] == U_FORWARD_FAST);
     i.now += U_SEGMENT_US;
     d = barcode_uturn_step(&u, &j, &cal, &i);
     assert(d.stop && j.reason == J_TURN_TIMEOUT);
-    j = (Junction){.phase = J_TURN};
-    u = (BarcodeUTurn){0};
-    i = (JunctionInput){.now = 1000, .wheel = {13, 20}};
+    j = (junction_t){.phase = J_TURN};
+    u = (barcode_u_turn_t){0};
+    i = (junction_input_t){.now = 1000, .wheel = {13, 20}};
     d = barcode_uturn_step(&u, &j, &cal, &i);
     assert(d.stop && j.reason == J_CENTRE_DRIFT);
-    j = (Junction){.phase = J_TURN_SETTLE, .phase_us = 1000};
-    u = (BarcodeUTurn){.stage = 1};
-    i = (JunctionInput){.now = 1000 + U_SETTLE_US, .speed = {20, 20}};
+    j = (junction_t){.phase = J_TURN_SETTLE, .phase_us = 1000};
+    u = (barcode_u_turn_t){.stage = 1};
+    i = (junction_input_t){.now = 1000 + U_SETTLE_US, .speed = {20, 20}};
     d = barcode_uturn_step(&u, &j, &cal, &i);
     assert(d.stop && j.reason == J_SETTLE_TIMEOUT);
-    SignedWheel wheel = {0};
+    signed_wheel_t wheel = {0};
     int pwm = boosted_junction_step(&wheel, 0, -35, 0, .01f, 1000, true);
     assert(pwm < 0 && pwm >= -480);
-    DualLevels levels = boosted_junction_levels(0, pwm, true);
+    dual_levels_t levels = boosted_junction_levels(0, pwm, true);
     assert(!levels.a && levels.b == (unsigned)-pwm);
-    static BarcodeSaved saved;
+    static barcode_saved_t saved;
     saved.magic = B_MAGIC;
     saved.profile = saved.recorded_profile = 1;
     saved.calibration = cal;
-    saved.side = (SideCalibration){0, 1, 3};
+    saved.side = (side_calibration_t){0, 1, 3};
     for (unsigned version = 1; version <= 23; ++version) {
         saved.version = version;
         saved.decoded_z = saved.uturns = version >= 11 ? 3 : 0;
-        saved.crc = log_crc((const uint8_t *)&saved + offsetof(BarcodeSaved, count),
+        saved.crc = log_crc((const uint8_t *)&saved + offsetof(barcode_saved_t, count),
                             barcode_record_crc_size(version));
         assert(barcode_record_valid(&saved));
     }

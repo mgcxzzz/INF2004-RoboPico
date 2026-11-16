@@ -11,11 +11,11 @@
 static uint64_t clock_us;
 static unsigned lock_depth, off_calls, apply_calls;
 static int32_t pwm[2];
-static MotionFeedback feedback;
-static MotionOutput motion_output;
-static ContinuousDrive wheel[2];
-static SignedWheel legacy[2];
-static ContinuousSteering steering;
+static motion_feedback_t feedback;
+static motion_output_t motion_output;
+static continuous_drive_t wheel[2];
+static signed_wheel_t legacy[2];
+static continuous_steering_t steering;
 
 static uintptr_t enter(void *user) {
     (void)user;
@@ -53,8 +53,8 @@ static void commit_outputs(void *argument) {
     assert(lock_depth == 1);
     ++apply_calls;
     for (unsigned w = 0; w < 2; ++w) {
-        DualLevels levels =
-            commit->selected ? continuous_output_levels(w, commit->next[w]) : (DualLevels){0};
+        dual_levels_t levels =
+            commit->selected ? continuous_output_levels(w, commit->next[w]) : (dual_levels_t){0};
         pwm[w] = levels.a ? (int32_t)levels.a : (int32_t)levels.b;
     }
 }
@@ -70,19 +70,19 @@ static void begin_session(void) {
     lock_depth = off_calls = apply_calls = 0;
     pwm[0] = pwm[1] = 0;
     reset_controllers();
-    MotionPort port = {enter, leave, outputs_off, now_us, NULL};
+    motion_port_t port = {enter, leave, outputs_off, now_us, NULL};
     motion_init(&port);
     motion_session_begin(clock_us);
-    feedback = (MotionFeedback){.now_us = clock_us, .line_level = {700, 700}, .pending_route = 'A'};
+    feedback = (motion_feedback_t){.now_us = clock_us, .line_level = {700, 700}, .pending_route = 'A'};
     motion_output = motion_update(&feedback);
 }
 
 static bool selection(unsigned profile, unsigned phase, bool busy, bool external, bool ramp,
-                      bool maneuver, bool white, const AnalogDemand *d) {
+                      bool maneuver, bool white, const analog_demand_t *d) {
     return continuous_drive_selected(profile, phase, busy, external, ramp, maneuver, white, d);
 }
 
-static void auto_tick(unsigned profile, AnalogDemand *d, uint64_t elapsed_us) {
+static void auto_tick(unsigned profile, analog_demand_t *d, uint64_t elapsed_us) {
     clock_us += elapsed_us;
     feedback.now_us = clock_us;
     assert(motion_get_status().mode == MOTION_AUTO);
@@ -105,7 +105,7 @@ static void auto_tick(unsigned profile, AnalogDemand *d, uint64_t elapsed_us) {
 
 static void handover_and_resume(void) {
     begin_session();
-    AnalogDemand demand = {.target = {45, 45}, .level = {700, 700}, .decision = 25};
+    analog_demand_t demand = {.target = {45, 45}, .level = {700, 700}, .decision = 25};
 
     assert(selection(1, C_FOLLOW, false, false, false, false, false, &demand));
     assert(selection(3, C_FOLLOW, false, false, false, false, false, &demand));
@@ -181,7 +181,7 @@ static void presearch_gap_keeps_continuous_driver(void) {
     const unsigned forward_decisions[] = {
         SYM_STRAIGHT,  SYM_LEFT, SYM_RIGHT, SYM_RECOVER_LEFT, SYM_RECOVER_RIGHT, C_PROBE_LEFT,
         C_PROBE_RIGHT, 24,       25};
-    AnalogDemand d = {.target = {0, 35}, .decision = SYM_RECOVER_LEFT};
+    analog_demand_t d = {.target = {0, 35}, .decision = SYM_RECOVER_LEFT};
     for (unsigned profile_index = 0; profile_index < 2; ++profile_index) {
         unsigned profile = profile_index ? 3 : 1;
         for (unsigned k = 0; k < sizeof(forward_decisions) / sizeof(forward_decisions[0]); ++k) {
@@ -212,10 +212,10 @@ static void presearch_gap_keeps_continuous_driver(void) {
     /* The captured short-gap case entered the white bridge at 252 PWM with
      * 94 physical integral. Selection keeps the same motor state and limits
      * the next actuator change to the normal 12-per-10ms slew. */
-    ContinuousDrive s = {
+    continuous_drive_t s = {
         .duty = 252, .reference = 35, .integral = 94, .active = 1, .start_used = 1};
-    SignedWheel p = {.sign = 1, .pi = {.ramp = 35, .integral = 94.0f / 1.2f}};
-    d = (AnalogDemand){.target = {35, 35}, .decision = SYM_STRAIGHT};
+    signed_wheel_t p = {.sign = 1, .pi = {.ramp = 35, .integral = 94.0f / 1.2f}};
+    d = (analog_demand_t){.target = {35, 35}, .decision = SYM_STRAIGHT};
     assert(continuous_drive_selected(1, C_FOLLOW, false, false, false, false, true, &d));
     const int32_t prior_pwm = 252;
     int32_t next =
@@ -228,7 +228,7 @@ static void presearch_gap_keeps_continuous_driver(void) {
 
     /* The raw both-white coast demand is also eligible, and its explicit zero
      * target remains zero so the ordinary drive API turns that wheel off. */
-    d = (AnalogDemand){.target = {0, 0}, .decision = SYM_STRAIGHT};
+    d = (analog_demand_t){.target = {0, 0}, .decision = SYM_STRAIGHT};
     int16_t preserved[2] = {d.target[0], d.target[1]};
     assert(continuous_drive_selected(3, C_FOLLOW, false, false, false, false, true, &d));
     assert(d.target[0] == preserved[0] && d.target[1] == preserved[1]);

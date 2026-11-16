@@ -3,8 +3,8 @@
 #include "src/line_following/smooth_follow.h"
 static void load_boost_and_deadline(void) {
     for (unsigned w = 0; w < 2; ++w) {
-        RampWheel s = {0};
-        SignedWheel p = {.sign = 1, .pi = {.ramp = 180}};
+        ramp_wheel_t s = {0};
+        signed_wheel_t p = {.sign = 1, .pi = {.ramp = 180}};
         int normal = ramp_wheel_step(&s, &p, w, 180, 180, .01f, 1000);
         assert(normal > 0 && normal < RAMP2_SUSTAIN && !s.boost_used);
         int peak = 0;
@@ -45,21 +45,21 @@ static void load_boost_and_deadline(void) {
     }
 }
 static void independent_targets_and_guards(void) {
-    RampWheel left = {0}, right = {0};
-    SignedWheel l = {.sign = 1, .pi = {.ramp = 180}}, r = l;
+    ramp_wheel_t left = {0}, right = {0};
+    signed_wheel_t l = {.sign = 1, .pi = {.ramp = 180}}, r = l;
     int a = 0, b = 0;
     for (unsigned k = 0; k < 30; ++k) {
         a = ramp_wheel_step(&left, &l, 0, 180, 180, .01f, 1000 + k * 10000);
         b = ramp_wheel_step(&right, &r, 1, 180, 30, .01f, 1000 + k * 10000);
     }
     assert(b == 650 && a < 500 && right.boost_used && !left.boost_used);
-    RampWheel slow = {0};
-    SignedWheel p = {.sign = 1, .pi = {.ramp = 25}};
+    ramp_wheel_t slow = {0};
+    signed_wheel_t p = {.sign = 1, .pi = {.ramp = 25}};
     for (unsigned k = 0; k < 40; ++k)
         (void)ramp_wheel_step(&slow, &p, 0, 25, 25, .01f, 1000 + k * 10000);
     assert(!slow.boost_used); /* slower than outer wheel is intentional */
-    Circuit c = {.phase = C_FOLLOW};
-    AnalogDemand d = {.level = {700, 700}, .target = {45, 45}};
+    circuit_t c = {.phase = C_FOLLOW};
+    analog_demand_t d = {.level = {700, 700}, .target = {45, 45}};
     assert(ramp_profile_active(2, &c, &d));
     assert(!ramp_profile_active(1, &c, &d) && !ramp_profile_active(3, &c, &d));
     c.follower.core.white = true;
@@ -83,16 +83,16 @@ static void envelopes_and_baseline(void) {
             for (unsigned phase = 0; phase < 2; ++phase) {
                 int cap = barcode_output_cap(value, false, phase ? 2000 : 0, 1000);
                 assert(cap == boosted_junction_peak_cap(value, phase ? 2000 : 0, 1000));
-                DualLevels a = barcode_output_levels(w, cap, false, true, 1),
+                dual_levels_t a = barcode_output_levels(w, cap, false, true, 1),
                            b = circuit_levels(w, cap, true, 1);
                 assert(a.a == b.a && a.b == b.b);
             }
             int cap = barcode_output_cap(value, true, 2000, 1000);
-            DualLevels v = barcode_output_levels(w, cap, true, false, 2);
+            dual_levels_t v = barcode_output_levels(w, cap, true, false, 2);
             assert(cap >= 0 && cap <= 650 && (w ? v.b : v.a) == cap && !(w ? v.a : v.b));
         }
-    SignedWheel p = {0}, q = {0};
-    RampWheel disabled = {0};
+    signed_wheel_t p = {0}, q = {0};
+    ramp_wheel_t disabled = {0};
     for (unsigned k = 0; k < 300; ++k) {
         int wanted = k % 80 < 40 ? 45 : 25;
         float measured = k % 55;

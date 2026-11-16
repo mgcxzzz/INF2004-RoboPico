@@ -5,20 +5,20 @@
 #define CONTINUOUS_BEND_ASSIST 1
 #include "src/line_following/continuous_steering.h"
 
-static void init_circuit(Circuit *c) {
-    *c = (Circuit){0};
+static void init_circuit(circuit_t *c) {
+    *c = (circuit_t){0};
     c->phase = C_FOLLOW;
 }
 
-static CircuitInput input(float left, float right) {
-    CircuitInput i = {0};
+static circuit_input_t input(float left, float right) {
+    circuit_input_t i = {0};
     i.speed[0] = left;
     i.speed[1] = right;
     return i;
 }
 
-static AnalogDemand demand(int direction) {
-    AnalogDemand d = {0};
+static analog_demand_t demand(int direction) {
+    analog_demand_t d = {0};
     if (direction > 0) {
         d.target[0] = 25;
         d.target[1] = 50;
@@ -41,17 +41,17 @@ static AnalogDemand demand(int direction) {
     return d;
 }
 
-static AnalogDemand step(ContinuousSteering *s, AnalogDemand d, Circuit *c, CircuitInput *i,
+static analog_demand_t step(continuous_steering_t *s, analog_demand_t d, circuit_t *c, circuit_input_t *i,
                          float dt) {
     return continuous_steering_step(s, d, c, i, false, 1, dt);
 }
 
 static void straight_output_stays_at_v2_baseline(void) {
-    Circuit c;
+    circuit_t c;
     init_circuit(&c);
-    ContinuousSteering s = {0};
-    CircuitInput i = input(45, 45);
-    AnalogDemand d = demand(0), out = {0};
+    continuous_steering_t s = {0};
+    circuit_input_t i = input(45, 45);
+    analog_demand_t d = demand(0), out = {0};
     for (unsigned k = 0; k < 40; ++k) {
         out = step(&s, d, &c, &i, .01f);
         assert(out.target[0] == 45 && out.target[1] == 45);
@@ -61,10 +61,10 @@ static void straight_output_stays_at_v2_baseline(void) {
 }
 
 static void spikes_and_alternating_requests_do_not_qualify(void) {
-    Circuit c;
+    circuit_t c;
     init_circuit(&c);
-    ContinuousSteering s = {0};
-    CircuitInput i = input(45, 45);
+    continuous_steering_t s = {0};
+    circuit_input_t i = input(45, 45);
     (void)step(&s, demand(1), &c, &i, .01f); /* one sensor/request spike */
     (void)step(&s, demand(0), &c, &i, .01f);
     assert(!s.bend_candidate && !s.bend_confirmed);
@@ -76,11 +76,11 @@ static void spikes_and_alternating_requests_do_not_qualify(void) {
 }
 
 static void sustained_direction_confirms_only_with_matching_encoder_yaw(int direction) {
-    Circuit c;
+    circuit_t c;
     init_circuit(&c);
-    ContinuousSteering s = {0};
-    CircuitInput i = direction > 0 ? input(40, 50) : input(50, 40);
-    AnalogDemand d = demand(direction), out = {0};
+    continuous_steering_t s = {0};
+    circuit_input_t i = direction > 0 ? input(40, 50) : input(50, 40);
+    analog_demand_t d = demand(direction), out = {0};
     for (unsigned k = 0; k < 40; ++k)
         out = step(&s, d, &c, &i, .01f);
     assert(s.bend_candidate && s.bend_confirmed);
@@ -91,11 +91,11 @@ static void sustained_direction_confirms_only_with_matching_encoder_yaw(int dire
 }
 
 static void encoder_yaw_without_response_cannot_confirm(void) {
-    Circuit c;
+    circuit_t c;
     init_circuit(&c);
-    ContinuousSteering s = {0};
-    CircuitInput i = input(45, 45);
-    AnalogDemand d = demand(1);
+    continuous_steering_t s = {0};
+    circuit_input_t i = input(45, 45);
+    analog_demand_t d = demand(1);
     for (unsigned k = 0; k < 35; ++k)
         (void)step(&s, d, &c, &i, .01f);
     assert(s.bend_candidate && !s.bend_confirmed);
@@ -104,10 +104,10 @@ static void encoder_yaw_without_response_cannot_confirm(void) {
 }
 
 static void candidate_only_dropout_blends_back(void) {
-    Circuit c;
+    circuit_t c;
     init_circuit(&c);
-    ContinuousSteering s = {0};
-    CircuitInput i = input(45, 45); /* optical candidate, no measured yaw */
+    continuous_steering_t s = {0};
+    circuit_input_t i = input(45, 45); /* optical candidate, no measured yaw */
     for (unsigned k = 0; k < 30; ++k)
         (void)step(&s, demand(1), &c, &i, .01f);
     assert(s.bend_candidate && !s.bend_confirmed);
@@ -125,10 +125,10 @@ static void candidate_only_dropout_blends_back(void) {
 }
 
 static void exit_blends_then_busy_resets_state(void) {
-    Circuit c;
+    circuit_t c;
     init_circuit(&c);
-    ContinuousSteering s = {0};
-    CircuitInput i = input(40, 50);
+    continuous_steering_t s = {0};
+    circuit_input_t i = input(40, 50);
     for (unsigned k = 0; k < 40; ++k)
         (void)step(&s, demand(1), &c, &i, .01f);
     assert(s.bend_confirmed);

@@ -9,20 +9,20 @@ static uint64_t clock_port(void *u) {
     return clock_us;
 }
 int main(void) {
-    MotionPort port = {.now_us = clock_port};
+    motion_port_t port = {.now_us = clock_port};
     motion_init(&port);
     motion_session_begin(clock_us);
     assert(nav_submit_navigation(MOTION_BUDDY3, 45, 45) == MOTION_OK);
-    MotionRampAssist a = {
+    motion_ramp_assist_t a = {
         .boost_milli = 200, .push_pwm_x100 = 1234, .hold_milli = 1000, .ttl_ms = 50};
     assert(nav_request_ramp_assist(MOTION_BUDDY4, &a) == MOTION_BUSY);
     motion_assist_context(true);
     assert(nav_request_ramp_assist(MOTION_BUDDY4, &a) == MOTION_OK);
     assert(nav_get_status().owner == MOTION_BUDDY3);
-    MotionRampAssist b = nav_get_ramp_assist();
+    motion_ramp_assist_t b = nav_get_ramp_assist();
     assert(b.boost_milli == 200 && b.push_pwm_x100 == 1234 && b.hold_milli == 1000);
     assert(nav_request_ramp_assist(MOTION_BUDDY5, &a) == MOTION_INVALID);
-    NavRequest req = {.kind = NAV_RAMP_ASSIST, .owner = MOTION_BUDDY4, .assist = a}, decoded;
+    nav_request_t req = {.kind = NAV_RAMP_ASSIST, .owner = MOTION_BUDDY4, .assist = a}, decoded;
     uint8_t bytes[NAV_PACKET_BYTES];
     unsigned n = nav_packet_encode(bytes, &req);
     assert(n == 6 && nav_packet_decode(&decoded, bytes, n));
@@ -44,9 +44,9 @@ int main(void) {
     assert(nav_get_status().owner == MOTION_BUDDY5 && nav_get_ramp_assist().hold_milli == 0);
     assert(nav_request_ramp_assist(MOTION_BUDDY4, &a) == MOTION_BUSY);
     assert(nav_accept_barcode(MOTION_BUDDY3, 'Z') == MOTION_BUSY);
-    a = (MotionRampAssist){.ttl_ms = 50};
+    a = (motion_ramp_assist_t){.ttl_ms = 50};
     assert(nav_request_ramp_assist(MOTION_BUDDY4, &a) == MOTION_OK);
-    MotionEvent e;
+    motion_event_t e;
     bool saw_assist = false, saw_decode = false;
     for (unsigned i = 0; i < motion_log_count(); ++i) {
         assert(motion_log_read(i, &e));
@@ -55,7 +55,7 @@ int main(void) {
         if (e.kind == NAV_VERIFIED_BARCODE && e.result == MOTION_OK)
             saw_decode = true;
         uint8_t record[NAV_EVENT_BYTES];
-        MotionEvent restored;
+        motion_event_t restored;
         bool overflow;
         nav_event_encode(record, &e);
         assert(nav_event_decode(&restored, record, &overflow));

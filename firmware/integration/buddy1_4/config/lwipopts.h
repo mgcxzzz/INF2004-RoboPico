@@ -1,3 +1,10 @@
+/**
+ * @file lwipopts.h
+ * @brief Lwipopts.
+ * @details Build-time configuration for the tested application.
+ * Coding cleanup does not change calibration, timing, motor or sensor constants.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 #ifndef BUDDY_WIFI_LWIPOPTS_H
 #define BUDDY_WIFI_LWIPOPTS_H
 

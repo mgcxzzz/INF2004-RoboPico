@@ -5,7 +5,7 @@
 
 #include "src/motion/continuous_drive.h"
 
-static int step(ContinuousDrive *s, SignedWheel *p, int target, float speed, uint64_t now,
+static int step(continuous_drive_t *s, signed_wheel_t *p, int target, float speed, uint64_t now,
                 int last) {
     return continuous_drive_step(s, p, 0, (int16_t)target, speed, 0.01f, now, last);
 }
@@ -21,8 +21,8 @@ static void test_feedforward_and_entry(void) {
     assert(fabsf(continuous_feedforward(1, 45) - 180) < 0.01f);
     assert(continuous_feedforward(0, 15) < continuous_feedforward(0, 45));
 
-    ContinuousDrive s = {0};
-    SignedWheel p = {0};
+    continuous_drive_t s = {0};
+    signed_wheel_t p = {0};
     int out = continuous_drive_step(&s, &p, 0, 45, 18, 0.01f, 10000, 140);
     assert(out == 140);                      /* Entry blends from the actuator's actual output. */
     assert(fabsf(s.reference - 18) < 0.01f); /* No artificial reference jump. */
@@ -31,8 +31,8 @@ static void test_feedforward_and_entry(void) {
 }
 
 static void test_observed_profile_sequences(void) {
-    ContinuousDrive s = {0};
-    SignedWheel p = {0};
+    continuous_drive_t s = {0};
+    signed_wheel_t p = {0};
     int previous = 0;
     uint64_t now = 1000000;
     /* Ordinary profile 1/3 cruise at 45 mm/s: controller output stays
@@ -66,8 +66,8 @@ static void test_observed_profile_sequences(void) {
 }
 
 static void test_start_assist_and_explicit_stop(void) {
-    ContinuousDrive s = {0};
-    SignedWheel p = {0};
+    continuous_drive_t s = {0};
+    signed_wheel_t p = {0};
     int previous = 0;
     uint64_t now = 5000000;
     bool saw_start = false;
@@ -102,8 +102,8 @@ static void test_stiction_and_load_models(void) {
     /* Simple first-order plant: 45 mm/s needs about 150 permille on the left;
      * breakaway friction is 75 and the load changes the gain. This checks the
      * controller's shape only; it is not a claim about the physical robot. */
-    ContinuousDrive s = {0};
-    SignedWheel p = {0};
+    continuous_drive_t s = {0};
+    signed_wheel_t p = {0};
     float speed = 0.0f;
     int out = 0;
     uint64_t now = 9000000;
@@ -128,21 +128,21 @@ static void test_stiction_and_load_models(void) {
 }
 
 static void test_invalid_input_fails_safe(void) {
-    ContinuousDrive s = {.active = true, .duty = 200};
-    SignedWheel p = {.sign = 1};
+    continuous_drive_t s = {.active = true, .duty = 200};
+    signed_wheel_t p = {.sign = 1};
     assert(continuous_drive_step(&s, &p, 0, 45, NAN, 0.01f, 1, 200) == 0);
     assert(!s.active && p.sign == 0);
 }
 
-static int policy_step(ContinuousDrive *s, SignedWheel *p, int target, float measured, uint64_t now,
+static int policy_step(continuous_drive_t *s, signed_wheel_t *p, int target, float measured, uint64_t now,
                        int last, bool eligible) {
     return continuous_drive_step_policy(s, p, 0, (int16_t)target, measured, 0.01f, now, last,
                                         eligible);
 }
 
 static void test_smooth_bounded_load_reserve(void) {
-    ContinuousDrive s = {0};
-    SignedWheel p = {0};
+    continuous_drive_t s = {0};
+    signed_wheel_t p = {0};
     int output = 0;
     uint64_t now = 20000000;
     for (unsigned k = 0; k < 50; ++k) {
@@ -180,8 +180,8 @@ static void test_smooth_bounded_load_reserve(void) {
 
     /* From a fresh state, a hard stall only gets the original startup aid;
      * load reserve never activates without measured motion. */
-    s = (ContinuousDrive){0};
-    p = (SignedWheel){0};
+    s = (continuous_drive_t){0};
+    p = (signed_wheel_t){0};
     output = 0;
     for (unsigned k = 0; k < 40; ++k) {
         output = policy_step(&s, &p, 45, 0.0f, now, output, true);

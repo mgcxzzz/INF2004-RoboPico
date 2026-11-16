@@ -1,3 +1,10 @@
+/**
+ * @file wifi_transport.h
+ * @brief Wifi transport.
+ * @details Network helpers validate and explicitly encode bounded application records.
+ * Transport calls belong to the configured SDK or RTOS owner, not these codecs.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 #ifndef WIFI_TRANSPORT_H
 #define WIFI_TRANSPORT_H
 
@@ -50,7 +57,7 @@ typedef struct
     uint32_t broker_ipv4;  /* host-order configured broker IPv4 */
     unsigned
         phase : 3; /* 0 init, 1 poll, 2 link, 3 mqtt_connect, 4 mqtt_disconnect, 5 publish, 6 sleep */
-} WifiTransportStatus;
+} wifi_transport_status_t;
 
 typedef struct
 {
@@ -58,17 +65,17 @@ typedef struct
     char password[65];
     char broker[16];
     char client_id[32];
-} WifiTransportConfig;
+} wifi_transport_config_t;
 
 /* Optional runtime configuration, core0 only and only before init. */
-bool wifi_transport_configure (const WifiTransportConfig * config);
+bool wifi_transport_configure (const wifi_transport_config_t * config);
 /* Call once from core0. Starts core1 only when local Wi-Fi configuration exists. */
 void wifi_transport_init (void);
 /* Copies a packet into a bounded queue; never waits for the network. */
 bool wifi_transport_send (unsigned topic, const uint8_t * data, size_t len);
 /* Copies at most eight bytes; original_len reports the complete MQTT payload size. */
 bool wifi_transport_receive (uint8_t data[8], size_t * original_len);
-WifiTransportStatus wifi_transport_status (void);
+wifi_transport_status_t wifi_transport_status (void);
 /* Call on core0 before disabling IRQs for flash operations. */
 bool wifi_transport_flash_begin (void);
 /* Call on core0 after IRQs have been restored. */

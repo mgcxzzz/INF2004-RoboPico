@@ -1,3 +1,10 @@
+/**
+ * @file barcode_record.h
+ * @brief Barcode record.
+ * @details Pure barcode/route logic is called by the ADC owner and emits requests.
+ * Native records are not wire packets; preserve both decode directions.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 #ifndef BARCODE_RECORD_H
 #define BARCODE_RECORD_H
 #include "src/line_following/circuit_record.h"
@@ -5,99 +12,132 @@
 #define B_MAGIC 0x31424343u
 typedef struct
 {
-    CircuitTrace motion;
+    circuit_trace_t motion;
     union
     {
         struct
         {
-            uint8_t pending, decoded, action, scan;
+            uint8_t pending;
+            uint8_t decoded;
+            uint8_t action;
+            uint8_t scan;
         }; /* V1-V3 */
         struct
         {
             uint16_t side_adc;
-            uint8_t ao_black, ao_bank;
+            uint8_t ao_black;
+            uint8_t ao_bank;
         }; /* V4-V12 */
     };
 } BarcodeTrace;
 typedef struct
 {
-    CircuitSummary motion;
-    uint8_t code, action;
-} BarcodeSummary;
+    circuit_summary_t motion;
+    uint8_t code;
+    uint8_t action;
+} barcode_summary_t;
 typedef struct
 {
-    uint32_t magic, version, crc, count, summary_count, overwritten;
-    uint64_t duration_us, path10;
+    uint32_t magic;
+    uint32_t version;
+    uint32_t crc;
+    uint32_t count;
+    uint32_t summary_count;
+    uint32_t overwritten;
+    uint64_t duration_us;
+    uint64_t path10;
     int64_t ticks[2];
-    uint32_t invalid[2], turns, ignored;
-    uint8_t reason, key, offline, profile, recorded_profile, imported;
-    LineCalibration calibration;
-    SideCalibration side;
-    uint32_t event_count, event_overwritten, decoded_a, decoded_f, unsupported,
-        rejected, lefts, rights, straight_crosses;
+    uint32_t invalid[2];
+    uint32_t turns;
+    uint32_t ignored;
+    uint8_t reason;
+    uint8_t key;
+    uint8_t offline;
+    uint8_t profile;
+    uint8_t recorded_profile;
+    uint8_t imported;
+    line_calibration_t calibration;
+    side_calibration_t side;
+    uint32_t event_count;
+    uint32_t event_overwritten;
+    uint32_t decoded_a;
+    uint32_t decoded_f;
+    uint32_t unsupported;
+    uint32_t rejected;
+    uint32_t lefts;
+    uint32_t rights;
+    uint32_t straight_crosses;
     uint8_t last_code;
     BarcodeTrace rows[B_ROWS];
-    BarcodeSummary summaries[C_SUMMARIES];
-    BarcodeEvent events[B_EVENTS];
-    uint32_t decoded_z,
+    barcode_summary_t summaries[C_SUMMARIES];
+    barcode_event_t events[B_EVENTS];
+    uint32_t decoded_z;
+    uint32_t
         uturns; /* V11 extension; V1..V10 prefix remains byte-compatible. */
 #ifdef BUDDY_WIFI_LOGGING
     uint32_t
         decoded_total; /* Record26 counts all verified letters, assigned or not. */
 #endif
-} BarcodeSaved;
-_Static_assert(sizeof(BarcodeTrace) == 56 && sizeof(BarcodeSummary) == 40,
+} barcode_saved_t;
+_Static_assert(sizeof(BarcodeTrace) == 56 && sizeof(barcode_summary_t) == 40,
                "Barcode trace ABI changed");
 #ifdef BUDDY_WIFI_LOGGING
-_Static_assert(sizeof(BarcodeSaved) <= 32768,
+_Static_assert(sizeof(barcode_saved_t) <= 32768,
                "WiFi motion history must fit32KiB");
 #else
-_Static_assert(offsetof(BarcodeSaved, decoded_z) == 64840 &&
-                   sizeof(BarcodeSaved) == 64848,
+_Static_assert(offsetof(barcode_saved_t, decoded_z) == 64840 &&
+                   sizeof(barcode_saved_t) == 64848,
                "V11 record extension ABI");
 #endif
-_Static_assert(sizeof(BarcodeSaved) <= C_STORE_BYTES,
+_Static_assert(sizeof(barcode_saved_t) <= C_STORE_BYTES,
                "Barcode record exceeds64KiB");
 static inline size_t barcode_record_crc_size (unsigned version)
 {
-    size_t bytes = version >= 11 ? sizeof(BarcodeSaved)
-                                 : offsetof(BarcodeSaved, decoded_z);
-    return bytes - offsetof(BarcodeSaved, count);
+    size_t bytes = version >= 11 ? sizeof(barcode_saved_t)
+                                 : offsetof(barcode_saved_t, decoded_z);
+    return bytes - offsetof(barcode_saved_t, count);
 }
 /* Old rows used1000 slots; only the common front-calibration prefix is imported.
  * Caller supplies the complete64KiB flash bank, never a shorter RAM struct. */
-static inline bool barcode_import_v25 (const uint8_t * bank,
-                                       LineCalibration * cal, uint8_t * profile)
+static inline bool barcode_import_v25 (const uint8_t * p_bank,
+                                       line_calibration_t * p_cal,
+                                       uint8_t * p_profile)
 {
-    const BarcodeSaved * s = (const BarcodeSaved *)bank;
-    if (s->magic != B_MAGIC || s->version < 1 || s->version > 25 ||
-        s->count > 1000 || s->summary_count > C_SUMMARIES ||
-        s->event_count > B_EVENTS || s->profile < 1 || s->profile > 3 ||
-        !calibration_valid(&s->calibration) || !side_valid(&s->side) ||
-        s->crc != log_crc(bank + offsetof(BarcodeSaved, count),
-                          (s->version >= 11 ? 64848u : 64840u) -
-                              offsetof(BarcodeSaved, count)))
+    const barcode_saved_t * p_state = (const barcode_saved_t *)p_bank;
+    if (p_state->magic != B_MAGIC || p_state->version < 1 ||
+        p_state->version > 25 || p_state->count > 1000 ||
+        p_state->summary_count > C_SUMMARIES ||
+        p_state->event_count > B_EVENTS || p_state->profile < 1 ||
+        p_state->profile > 3 || !calibration_valid(&p_state->calibration) ||
+        !side_valid(&p_state->side) ||
+        p_state->crc != log_crc(p_bank + offsetof(barcode_saved_t, count),
+                                (p_state->version >= 11 ? 64848u : 64840u) -
+                                    offsetof(barcode_saved_t, count)))
     {
         return false;
     }
-    *cal = s->calibration;
-    *profile = s->profile;
+    *p_cal = p_state->calibration;
+    *p_profile = p_state->profile;
     return true;
 }
-static inline bool barcode_record_valid (const BarcodeSaved * s)
+static inline bool barcode_record_valid (const barcode_saved_t * p_state)
 {
-    return s->magic == B_MAGIC &&
+    return p_state->magic == B_MAGIC &&
 #ifdef BUDDY_WIFI_LOGGING
-           (s->version >= 26 && s->version <= 28)
+           (p_state->version >= 26 && p_state->version <= 28)
 #else
-           s->version >= 1 && s->version <= 25
+           p_state->version >= 1 && p_state->version <= 25
 #endif
-           && s->count <= B_ROWS && s->summary_count <= C_SUMMARIES &&
-           s->event_count <= B_EVENTS && s->profile >= 1 && s->profile <= 3 &&
-           s->recorded_profile >= 1 && s->recorded_profile <= 3 &&
-           calibration_valid(&s->calibration) && side_valid(&s->side) &&
-           s->crc == log_crc((const uint8_t *)s + offsetof(BarcodeSaved, count),
-                             barcode_record_crc_size(s->version));
+           && p_state->count <= B_ROWS &&
+           p_state->summary_count <= C_SUMMARIES &&
+           p_state->event_count <= B_EVENTS && p_state->profile >= 1 &&
+           p_state->profile <= 3 && p_state->recorded_profile >= 1 &&
+           p_state->recorded_profile <= 3 &&
+           calibration_valid(&p_state->calibration) &&
+           side_valid(&p_state->side) &&
+           p_state->crc == log_crc((const uint8_t *)p_state +
+                                       offsetof(barcode_saved_t, count),
+                                   barcode_record_crc_size(p_state->version));
 }
 #endif
 

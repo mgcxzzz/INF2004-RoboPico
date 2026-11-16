@@ -5,7 +5,7 @@
 
 int main(void) {
     /* User's captured references and independently reported held-surface ranges. */
-    LineCalibration c = {{138, 152}, {199, 229}, 7};
+    line_calibration_t c = {{138, 152}, {199, 229}, 7};
     assert(calibration_valid(&c) == (LINE_CAL_MIN_SPAN <= 61));
     if (LINE_CAL_MIN_SPAN <= 61) {
         unsigned white[5][2] = {{138, 153}, {137, 153}, {137, 153}, {136, 154}, {139, 156}};
@@ -20,25 +20,25 @@ int main(void) {
                                        LINE_USB_FREE) == START_LINE_ABSENT);
             assert(profile_start_block(5, false, false, true, false, true, bl, br, false,
                                        LINE_USB_FREE) == START_OK);
-            Circuit circuit;
-            CircuitInput i = {.now = 1000, .adc = {black[k][0], black[k][1]}};
+            circuit_t circuit;
+            circuit_input_t i = {.now = 1000, .adc = {black[k][0], black[k][1]}};
             circuit_begin(&circuit, &i);
-            AnalogDemand d = circuit_follow(&circuit, &c, &i, 1);
+            analog_demand_t d = circuit_follow(&circuit, &c, &i, 1);
             assert(!d.stop && d.target[0] == 45 && d.target[1] == 45);
         }
-        static BarcodeSaved s;
+        static barcode_saved_t s;
         s.magic = B_MAGIC;
         s.version = 5;
         s.profile = s.recorded_profile = 1;
         s.calibration = c;
-        s.side = (SideCalibration){0, 1, 3};
-        s.crc = log_crc((uint8_t *)&s + offsetof(BarcodeSaved, count),
+        s.side = (side_calibration_t){0, 1, 3};
+        s.crc = log_crc((uint8_t *)&s + offsetof(barcode_saved_t, count),
                         barcode_record_crc_size(s.version));
         assert(barcode_record_valid(&s));
         s.calibration.black[0]--;
         assert(!barcode_record_valid(&s));
     }
-    LineCalibration edge = {{100, 100}, {100 + LINE_CAL_MIN_SPAN, 100 + LINE_CAL_MIN_SPAN}, 7};
+    line_calibration_t edge = {{100, 100}, {100 + LINE_CAL_MIN_SPAN, 100 + LINE_CAL_MIN_SPAN}, 7};
     assert(calibration_valid(&edge));
     --edge.black[1];
     assert(!calibration_valid(&edge));

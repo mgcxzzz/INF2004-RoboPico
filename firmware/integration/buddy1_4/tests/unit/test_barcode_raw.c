@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include "src/barcode/barcode_raw.h"
-static BarcodeRaw r;
+static barcode_raw_t r;
 int main(void) {
     int64_t ticks[2] = {-1234, 2345};
     barcode_raw_begin(&r, 1);

@@ -1,3 +1,10 @@
+/**
+ * @file network_policy.h
+ * @brief Network policy.
+ * @details Application tasks exchange copied, bounded command and telemetry records.
+ * The kernel Wi-Fi service owns the transport; reconnect never restarts motion.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 #ifndef RTOS_NETWORK_POLICY_H
 #define RTOS_NETWORK_POLICY_H
 #include "src/network/wifi_protocol.h"
@@ -10,13 +17,15 @@ enum
 };
 typedef struct
 {
-    uint8_t result, flags;
-} RnCommandPlan;
-static inline RnCommandPlan
-rn_bench_command (const uint8_t * data, uint32_t length, uint32_t received,
-                  uint32_t now, uint32_t * mapping, WifiCommand * command)
+    uint8_t result;
+    uint8_t flags;
+} rn_command_plan_t;
+static inline rn_command_plan_t
+rn_bench_command (const uint8_t * p_data, uint32_t length, uint32_t received,
+                  uint32_t now, uint32_t * p_mapping,
+                  wifi_command_t * p_command)
 {
-    RnCommandPlan plan = {.result = wp_parse(data, length, command)};
+    rn_command_plan_t plan = {.result = wp_parse(p_data, length, p_command)};
     if (plan.result == WP_ACK_ACCEPTED && now - received > 500U)
     {
         plan.result = WP_ACK_BUSY;
@@ -25,13 +34,13 @@ rn_bench_command (const uint8_t * data, uint32_t length, uint32_t received,
     {
         return plan;
     }
-    switch (command->code)
+    switch (p_command->code)
     {
     case WP_CMD_PING:
         plan.flags = RN_PLAN_HEARTBEAT;
         break;
     case WP_CMD_MAP:
-        *mapping = wp_map_replace(*mapping, command->mapping);
+        *p_mapping = wp_map_replace(*p_mapping, p_command->mapping);
         plan.flags = RN_PLAN_MAP;
         break;
     case WP_CMD_GET:
@@ -50,11 +59,12 @@ rn_bench_command (const uint8_t * data, uint32_t length, uint32_t received,
     }
     return plan;
 }
-static inline bool rn_heartbeat_due (uint32_t now, uint32_t * last, bool forced)
+static inline bool rn_heartbeat_due (uint32_t now, uint32_t * p_last,
+                                     bool forced)
 {
-    if (now - *last >= 1000U)
+    if (now - *p_last >= 1000U)
     {
-        *last = now;
+        *p_last = now;
         return true;
     }
     return forced;

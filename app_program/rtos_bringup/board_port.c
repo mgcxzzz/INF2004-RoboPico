@@ -1,3 +1,10 @@
+/**
+ * @file board_port.c
+ * @brief Board port.
+ * @details Core1 owns normal motor commits. Safety paths may only remove output;
+ * command/status access uses the existing kernel locks and copied records.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 /* RP2040 port. Motor outputs have one task owner and a safety-only OFF path.
  * Encoder wiring, quadrature table, PWM polarity/frequency and conversion
  * constants are the unchanged main-branch values. */
@@ -11,35 +18,36 @@
 #define BR_IO_INTS(n) (0x40014150U + 4U * (n))
 #define BR_IO_IRQ_BANK0 13U
 
-static T_SPLOCK motion_lock;
-static volatile BenchEncoder encoders[2];
-volatile uint32_t bringup_irq_stop;
-static const unsigned encoder_a[2] = {0U, 4U}, encoder_b[2] = {1U, 5U};
+static T_SPLOCK g_motion_lock;
+static volatile bench_encoder_t g_encoders[2];
+volatile uint32_t g_bringup_irq_stop;
+static const unsigned g_encoder_a[2] = {0U, 4U};
+static const unsigned g_encoder_b[2] = {1U, 5U};
 
-uintptr_t board_motion_lock (void * user)
+uintptr_t board_motion_lock (void * p_user_value)
 {
     UINT key;
-    (void)user;
-    (void)ISpinLock(&motion_lock, &key);
+    (void)p_user_value;
+    (void)ISpinLock(&g_motion_lock, &key);
     return key;
 }
 
-void board_motion_unlock (void * user, uintptr_t key)
+void board_motion_unlock (void * p_user_value, uintptr_t key)
 {
-    (void)user;
-    (void)ISpinUnlock(&motion_lock, (UINT)key);
+    (void)p_user_value;
+    (void)ISpinUnlock(&g_motion_lock, (UINT)key);
 }
 
 uint64_t board_time_us (void)
 {
-    uint32_t hi, lo, after;
+    uint32_t high, low, after;
     do
     {
-        hi = BR_REG(0x40054024U);
-        lo = BR_REG(0x40054028U);
+        high = BR_REG(0x40054024U);
+        low = BR_REG(0x40054028U);
         after = BR_REG(0x40054024U);
-    } while (hi != after);
-    return ((uint64_t)hi << 32U) | lo;
+    } while (high != after);
+    return ((uint64_t)high << 32U) | low;
 }
 
 uint32_t board_kernel_ms (void)
@@ -57,8 +65,8 @@ bool board_button_pressed (unsigned pin)
 static uint8_t read_ab (unsigned wheel)
 {
     uint32_t pins = in_w(GPIO_IN);
-    return (uint8_t)((((pins >> encoder_a[wheel]) & 1U) << 1U) |
-                     ((pins >> encoder_b[wheel]) & 1U));
+    return (uint8_t)((((pins >> g_encoder_a[wheel]) & 1U) << 1U) |
+                     ((pins >> g_encoder_b[wheel]) & 1U));
 }
 
 void board_motor_off (void)
@@ -112,7 +120,7 @@ void board_motor_write (unsigned wheel, unsigned pwm)
     BR_PWM(4U + wheel, 0x0cU) = wheel == 0U ? pwm : pwm << 16U;
 }
 
-static void gpio_dispatch (UINT vector)
+static void board_gpio_isr (UINT vector)
 {
     (void)vector;
     uint32_t first = BR_REG(BR_IO_INTS(0U));
@@ -121,17 +129,17 @@ static void gpio_dispatch (UINT vector)
     BR_REG(BR_IO_INTR(2U)) = buttons & 0x00ff0000U;
     if ((first & 0xffU) != 0U)
     {
-        bench_encoder_update(&encoders[0], read_ab(0U));
+        bench_encoder_update(&g_encoders[0], read_ab(0U));
     }
     if ((first & 0x00ff0000U) != 0U)
     {
-        bench_encoder_update(&encoders[1], read_ab(1U));
+        bench_encoder_update(&g_encoders[1], read_ab(1U));
     }
     if ((buttons & (4U << 16U)) != 0U || board_button_pressed(20U))
     {
         /* IRQ never calls the task-only motion API. Its latch is checked
          * inside every generation-checked commit before PWM is written. */
-        bringup_irq_stop = 1U;
+        g_bringup_irq_stop = 1U;
         board_motor_off();
     }
 }
@@ -139,24 +147,24 @@ static void gpio_dispatch (UINT vector)
 bool board_gpio_init (void)
 {
     const unsigned pins[] = {0U, 1U, 4U, 5U, 20U, 21U};
-    for (unsigned i = 0U; i < sizeof(pins) / sizeof(pins[0]); ++i)
+    for (unsigned index = 0U; index < sizeof(pins) / sizeof(pins[0]); ++index)
     {
-        unsigned pin = pins[i];
+        unsigned pin = pins[index];
         out_w(GPIO_OE_CLR, 1U << pin);
         clr_w(GPIO(pin), GPIO_OD | GPIO_PDE);
         set_w(GPIO(pin), GPIO_IE | GPIO_PUE);
         out_w(GPIO_CTRL(pin), GPIO_CTRL_FUNCSEL_SIO);
     }
-    for (unsigned w = 0U; w < 2U; ++w)
+    for (unsigned wheel = 0U; wheel < 2U; ++wheel)
     {
-        encoders[w].ab = read_ab(w);
+        g_encoders[wheel].ab = read_ab(wheel);
     }
     T_DINT definition = {0};
     definition.intatr = TA_HLNG;
-    definition.inthdr = gpio_dispatch;
+    definition.inthdr = board_gpio_isr;
     if (tk_def_int(BR_IO_IRQ_BANK0, &definition) != E_OK)
     {
-        bringup_irq_stop = 1U;
+        g_bringup_irq_stop = 1U;
         return false;
     }
     BR_REG(BR_IO_INTR(0U)) = 0x00cc00ccU;
@@ -173,12 +181,12 @@ void board_encoder_drain (int32_t delta[2], uint32_t edges[2],
 {
     UINT key;
     DI(key); /* Only the owning core's GPIO IRQ changes encoder state. */
-    for (unsigned w = 0U; w < 2U; ++w)
+    for (unsigned wheel = 0U; wheel < 2U; ++wheel)
     {
-        delta[w] = encoders[w].position;
-        edges[w] = encoders[w].a_edges + encoders[w].b_edges;
-        invalid[w] = encoders[w].invalid;
-        encoders[w].position = 0;
+        delta[wheel] = g_encoders[wheel].position;
+        edges[wheel] = g_encoders[wheel].a_edges + g_encoders[wheel].b_edges;
+        invalid[wheel] = g_encoders[wheel].invalid;
+        g_encoders[wheel].position = 0;
     }
     EI(key);
 }

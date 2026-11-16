@@ -1,3 +1,10 @@
+/**
+ * @file motor_output.h
+ * @brief Motor output.
+ * @details Platform access obeys the configured motor/flash/interrupt owner.
+ * Hardware and kernel calling conventions are retained under CEX-02/CEX-07.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 #ifndef ROBOPICO_MOTOR_OUTPUT_H
 #define ROBOPICO_MOTOR_OUTPUT_H
 #include <stdint.h>

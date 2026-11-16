@@ -7,10 +7,10 @@
 int main(void) {
     uint8_t raw[8] = {0};
     uint32_t mapping = 0;
-    WifiCommand cmd;
+    wifi_command_t cmd;
     for (unsigned code = WP_CMD_START; code <= WP_CMD_TURN; ++code) {
         raw[0] = (uint8_t)((code << 4) | WP_VERSION);
-        RnCommandPlan p = rn_bench_command(raw, 4, 100, 110, &mapping, &cmd);
+        rn_command_plan_t p = rn_bench_command(raw, 4, 100, 110, &mapping, &cmd);
         if (code == WP_CMD_STOP || code == WP_CMD_PAUSE || code == WP_CMD_ESTOP) {
             assert(p.result == WP_ACK_ACCEPTED && (p.flags & RN_PLAN_STOP));
             assert(!!(p.flags & RN_PLAN_ESTOP) == (code == WP_CMD_ESTOP));

@@ -1,3 +1,10 @@
+/**
+ * @file wifi_packets.h
+ * @brief Wifi packets.
+ * @details Network helpers validate and explicitly encode bounded application records.
+ * Transport calls belong to the configured SDK or RTOS owner, not these codecs.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 #ifndef WIFI_PACKETS_H
 #define WIFI_PACKETS_H
 
@@ -62,10 +69,19 @@ enum
 /* Source 1 payload is Buddy 1 v2, preserved for existing dashboard clients. */
 typedef struct
 {
-    uint8_t seq, net, state, last_cmd, last_result;
-    uint16_t uptime_s, published, lost;
-    uint8_t accepted, rejected, connects, fill_pct;
-} WifiHeartbeat;
+    uint8_t seq;
+    uint8_t net;
+    uint8_t state;
+    uint8_t last_cmd;
+    uint8_t last_result;
+    uint16_t uptime_s;
+    uint16_t published;
+    uint16_t lost;
+    uint8_t accepted;
+    uint8_t rejected;
+    uint8_t connects;
+    uint8_t fill_pct;
+} wifi_heartbeat_t;
 
 /* Source 9, payload offsets: uptime_ms u32@0; elapsed_ms u32@4; run_id
  * u16@8; phase/profile/flags/recovery_state@10..13; measured speed L/R
@@ -76,14 +92,29 @@ typedef struct
  * i16 wrapped to +/-18000 @43. */
 typedef struct
 {
-    uint8_t seq, phase, profile, flags, recovery_state, line_levels;
-    uint32_t uptime_ms, elapsed_ms, distance_mm;
-    uint16_t run_id, adc_left, adc_right, adc_barcode;
-    uint16_t calibrated_level_left, calibrated_level_right;
-    int16_t speed_left_0p1mm_s, speed_right_0p1mm_s;
-    int16_t target_left_mm_s, target_right_mm_s;
-    int16_t pwm_left, pwm_right, heading_cdeg;
-} WifiMotionPacket;
+    uint8_t seq;
+    uint8_t phase;
+    uint8_t profile;
+    uint8_t flags;
+    uint8_t recovery_state;
+    uint8_t line_levels;
+    uint32_t uptime_ms;
+    uint32_t elapsed_ms;
+    uint32_t distance_mm;
+    uint16_t run_id;
+    uint16_t adc_left;
+    uint16_t adc_right;
+    uint16_t adc_barcode;
+    uint16_t calibrated_level_left;
+    uint16_t calibrated_level_right;
+    int16_t speed_left_0p1mm_s;
+    int16_t speed_right_0p1mm_s;
+    int16_t target_left_mm_s;
+    int16_t target_right_mm_s;
+    int16_t pwm_left;
+    int16_t pwm_right;
+    int16_t heading_cdeg;
+} wifi_motion_packet_t;
 
 /* Source 10, payload offsets: uptime_ms@0,event@4, ADC left/right/barcode
  * u16 @5/@7/@9, calibrated line levels L/R u16 0..1000 or 0xffff unavailable @11/@13, last decoded
@@ -91,32 +122,55 @@ typedef struct
  * action/revision@19..20. */
 typedef struct
 {
-    uint8_t seq, event, last_decoded_letter;
-    uint8_t pending_letter, pending_action, pending_revision;
-    uint8_t executing_action, executing_revision;
+    uint8_t seq;
+    uint8_t event;
+    uint8_t last_decoded_letter;
+    uint8_t pending_letter;
+    uint8_t pending_action;
+    uint8_t pending_revision;
+    uint8_t executing_action;
+    uint8_t executing_revision;
     uint32_t uptime_ms;
-    uint16_t adc_left, adc_right, adc_barcode;
-    uint16_t calibrated_level_left, calibrated_level_right;
-} WifiLinePacket;
+    uint16_t adc_left;
+    uint16_t adc_right;
+    uint16_t adc_barcode;
+    uint16_t calibrated_level_left;
+    uint16_t calibrated_level_right;
+} wifi_line_packet_t;
 
 /* Source 11 event/status, payload offsets: uptime_ms@0,event@4,letter@5,
  * action@6,map_revision@7,command_id u32@8,generation u32@12,
  * fault_bitmap u16@16,owner/mode/command_state@18..20,detail u16@21. */
 typedef struct
 {
-    uint8_t seq, event, letter, action, map_revision;
-    uint8_t owner, mode, command_state;
+    uint8_t seq;
+    uint8_t event;
+    uint8_t letter;
+    uint8_t action;
+    uint8_t map_revision;
+    uint8_t owner;
+    uint8_t mode;
+    uint8_t command_state;
     uint32_t uptime_ms;
-    uint32_t command_id, generation;
-    uint16_t fault_bitmap, detail;
-} WifiNavPacket;
+    uint32_t command_id;
+    uint32_t generation;
+    uint16_t fault_bitmap;
+    uint16_t detail;
+} wifi_nav_packet_t;
 
 typedef struct
 {
-    uint8_t seq, result, flags;
-    uint32_t uptime_ms, elapsed_ms, distance_mm;
-    uint16_t run_id, line_events, nav_events, recoveries;
-} WifiSummaryPacket;
+    uint8_t seq;
+    uint8_t result;
+    uint8_t flags;
+    uint32_t uptime_ms;
+    uint32_t elapsed_ms;
+    uint32_t distance_mm;
+    uint16_t run_id;
+    uint16_t line_events;
+    uint16_t nav_events;
+    uint16_t recoveries;
+} wifi_summary_packet_t;
 
 /* Source 14 diagnostics/status, payload offsets: uptime_ms u32@0,
  * threshold_adc u16@4,bank@6,flags@7; decoded_total/turns/lefts/rights/
@@ -126,31 +180,47 @@ typedef struct
  * run-active in bits0..3; upper bits reserved. Threshold<=4095, bank<=62. */
 typedef struct
 {
-    uint8_t seq, bank, flags;
+    uint8_t seq;
+    uint8_t bank;
+    uint8_t flags;
     uint32_t uptime_ms;
     uint16_t threshold_adc;
-    uint32_t decoded_total, turns, lefts, rights, uturns, bad_frames;
-    uint32_t unsupported, max_adc_gap_us, max_control_gap_us;
-    uint32_t tx_dropped, rx_dropped, invalid_left, invalid_right;
-} WifiDiagnosticsPacket;
+    uint32_t decoded_total;
+    uint32_t turns;
+    uint32_t lefts;
+    uint32_t rights;
+    uint32_t uturns;
+    uint32_t bad_frames;
+    uint32_t unsupported;
+    uint32_t max_adc_gap_us;
+    uint32_t max_control_gap_us;
+    uint32_t tx_dropped;
+    uint32_t rx_dropped;
+    uint32_t invalid_left;
+    uint32_t invalid_right;
+} wifi_diagnostics_packet_t;
 
 /* All packers return false for a null pointer or an invalid semantic field.
  * Integers are encoded little-endian; each frame starts with v2 common header. */
-bool wpk_heartbeat (const WifiHeartbeat * in, uint8_t out[WPK_HEARTBEAT_BYTES]);
-bool wpk_motion (const WifiMotionPacket * in, uint8_t out[WPK_MOTION_BYTES]);
-bool wpk_line (const WifiLinePacket * in, uint8_t out[WPK_LINE_BYTES]);
-bool wpk_nav (const WifiNavPacket * in, uint8_t out[WPK_NAV_BYTES]);
-bool wpk_summary (const WifiSummaryPacket * in, uint8_t out[WPK_SUMMARY_BYTES]);
-bool wpk_diagnostics (const WifiDiagnosticsPacket * in,
+bool wpk_heartbeat (const wifi_heartbeat_t * p_in_value,
+                    uint8_t out[WPK_HEARTBEAT_BYTES]);
+bool wpk_motion (const wifi_motion_packet_t * p_in_value,
+                 uint8_t out[WPK_MOTION_BYTES]);
+bool wpk_line (const wifi_line_packet_t * p_in_value,
+               uint8_t out[WPK_LINE_BYTES]);
+bool wpk_nav (const wifi_nav_packet_t * p_in_value, uint8_t out[WPK_NAV_BYTES]);
+bool wpk_summary (const wifi_summary_packet_t * p_in_value,
+                  uint8_t out[WPK_SUMMARY_BYTES]);
+bool wpk_diagnostics (const wifi_diagnostics_packet_t * p_in_value,
                       uint8_t out[WPK_DIAGNOSTICS_BYTES]);
 /* Source 13 row-based chunk response; payload offsets are dataset@0,
  * request_id@1,row_index u16@2,total_rows u16@4,part_index@6,part_count@7,
  * status@8,data_len@9,reserved zero u16@10,data@12. */
 bool wpk_log_chunk (uint8_t seq, uint8_t dataset, uint8_t request_id,
                     uint16_t row_index, uint16_t total_rows, uint8_t part_index,
-                    uint8_t part_count, uint8_t status, const uint8_t * data,
+                    uint8_t part_count, uint8_t status, const uint8_t * p_data,
                     uint8_t length, uint8_t out[WIFI_PACKET_MAX],
-                    uint8_t * out_len);
+                    uint8_t * p_out_len);
 
 #endif
 

@@ -1,3 +1,10 @@
+/**
+ * @file startup_sequence.h
+ * @brief Startup sequence.
+ * @details Public feature contract. Requests cross coordinator ownership checks;
+ * callers observe completion/status separately and must respect task context.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 #ifndef INTEGRATION_LOGIC_H
 #define INTEGRATION_LOGIC_H
 #include <stdint.h>
@@ -15,9 +22,9 @@ typedef struct
 {
     uint8_t state;
     uint32_t since;
-} BenchArm;
+} bench_arm_t;
 /* Inputs must BOTH be debounced. Cancelling never consumes the only run. */
-static inline bool bench_arm_step (BenchArm * a, uint32_t now, bool usb,
+static inline bool bench_arm_step (bench_arm_t * a, uint32_t now, bool usb,
                                    bool busy, bool hold, bool stop)
 {
     if (usb || busy)

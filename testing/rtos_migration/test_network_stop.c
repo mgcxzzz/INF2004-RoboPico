@@ -11,7 +11,7 @@ static uint32_t read32(const uint8_t *p) {
 
 int main(void) {
     const uint32_t now = 5000U;
-    RnStatus online = {.polls = 1U,
+    rn_status_t online = {.polls = 1U,
                        .last_poll_ms = now - 250U,
                        .connects = 17U,
                        .last_complete_ms = now - 3000U,
@@ -21,7 +21,7 @@ int main(void) {
     assert(rn_delivery_fresh(&online, now, online.last_complete_ms));
     assert(rn_network_stop_failure_mask(&online, now, now - 250U,
                                         online.last_complete_ms) == 0U);
-    RnStatus wrapped = online;
+    rn_status_t wrapped = online;
     wrapped.last_poll_ms = UINT32_MAX - 239U;
     wrapped.last_complete_ms = UINT32_MAX - 2989U;
     assert(rn_link_usable(&wrapped, 10U));
@@ -29,7 +29,7 @@ int main(void) {
     assert(rn_network_stop_failure_mask(&wrapped, 10U, UINT32_MAX - 239U,
                                         wrapped.last_complete_ms) == 0U);
 
-    RnStatus bad = online;
+    rn_status_t bad = online;
     bad.link = 2;
     assert(rn_network_stop_failure_mask(&bad, now, now - 250U,
                                         bad.last_complete_ms) == RN_STOP_FAIL_LINK_DOWN);
@@ -62,7 +62,7 @@ int main(void) {
     assert((rn_network_stop_failure_mask(&online, now, now - 250U, now) &
             RN_STOP_FAIL_ACK_BEFORE_CONNECT) != 0U);
 
-    bad = (RnStatus){.polls = 0U,
+    bad = (rn_status_t){.polls = 0U,
                      .last_poll_ms = now - 251U,
                      .connects = 0x12345678U,
                      .last_complete_ms = now - 3001U,
@@ -74,13 +74,13 @@ int main(void) {
                                 RN_STOP_FAIL_ACK_BEFORE_CONNECT;
     assert(rn_network_stop_failure_mask(&bad, now, now - 251U, now) == expected_failures);
 
-    RnNetworkStopSnapshot stored = {0};
-    RnNetworkStopSnapshot first = rn_network_stop_candidate(
+    rn_network_stop_snapshot_t stored = {0};
+    rn_network_stop_snapshot_t first = rn_network_stop_candidate(
         &online, now, now - 250U, online.last_complete_ms);
     assert(first.valid && first.failmask == 0U && first.poll_age_ms == 250U);
     assert(first.app_age_ms == 250U && first.ack_age_ms == 3000U);
     assert(rn_network_stop_capture_once(&stored, &first));
-    RnNetworkStopSnapshot later = rn_network_stop_candidate(&bad, now, now - 251U, now);
+    rn_network_stop_snapshot_t later = rn_network_stop_candidate(&bad, now, now - 251U, now);
     assert(!rn_network_stop_capture_once(&stored, &later));
     assert(stored.stop_ms == now && stored.connects == 17U && stored.failmask == 0U);
 
@@ -94,7 +94,7 @@ int main(void) {
     uint16_t metadata = (uint16_t)packet[30] | ((uint16_t)packet[31] << 8U);
     assert(metadata == 0x201fU); /* flags=7, signed3 link=+3, valid=1 */
 
-    RnNetworkStopSnapshot signed_link = rn_network_stop_candidate(&bad, now, now, now);
+    rn_network_stop_snapshot_t signed_link = rn_network_stop_candidate(&bad, now, now, now);
     signed_link.valid = 1U;
     rn_network_stop_encode(&signed_link, 0U, packet);
     metadata = (uint16_t)packet[30] | ((uint16_t)packet[31] << 8U);
@@ -113,9 +113,9 @@ int main(void) {
     assert(rn_network_stop_capture_once(&stored, &later));
     assert(stored.valid);
 
-    RnStatus no_polls = online;
+    rn_status_t no_polls = online;
     no_polls.polls = 0U;
-    RnNetworkStopSnapshot no_poll = rn_network_stop_candidate(&no_polls, now, now, now);
+    rn_network_stop_snapshot_t no_poll = rn_network_stop_candidate(&no_polls, now, now, now);
     assert(no_poll.poll_age_ms == UINT32_MAX);
 
     puts("PASS network stop snapshot: guard boundaries, failure mask, latch, C6 codec and clear");

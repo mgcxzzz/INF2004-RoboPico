@@ -5,7 +5,7 @@
 static void captured_exit(float ref_l, float ref_r, float i_l, float i_r, int16_t target_l,
                           int16_t target_r, float speed_l, float speed_r, float dt, int expected_l,
                           int expected_r) {
-    SignedWheel old[2] = {{.pi = {.ramp = ref_l, .integral = i_l}, .sign = 1},
+    signed_wheel_t old[2] = {{.pi = {.ramp = ref_l, .integral = i_l}, .sign = 1},
                           {.pi = {.ramp = ref_r, .integral = i_r}, .sign = 1}},
                 next[2];
     memcpy(next, old, sizeof(old));
@@ -34,7 +34,7 @@ static void eligibility_and_legacy(void) {
             for (unsigned decision = 11; decision <= 25; ++decision)
                 for (unsigned special = 0; special < 2; ++special)
                     for (unsigned stop = 0; stop < 2; ++stop) {
-                        SignedWheel a[2] = {{.pi = {.ramp = 60, .integral = 53}, .sign = 1},
+                        signed_wheel_t a[2] = {{.pi = {.ramp = 60, .integral = 53}, .sign = 1},
                                             {.pi = {.ramp = 59, .integral = 59}, .sign = 1}},
                                     b[2];
                         int16_t target[2] = {49, 50};
@@ -54,7 +54,7 @@ static void eligibility_and_legacy(void) {
                         assert(!memcmp(a, b, sizeof(a)));
                         ++compared;
                     }
-    SignedWheel p[2] = {{.pi = {.ramp = 135, .integral = 140}, .sign = 1},
+    signed_wheel_t p[2] = {{.pi = {.ramp = 135, .integral = 140}, .sign = 1},
                         {.pi = {.ramp = 60, .integral = 60}, .sign = 1}};
     int16_t target[2] = {50, 50};
     float speed[2] = {135, 50};
@@ -77,14 +77,14 @@ static void eligibility_and_legacy(void) {
     /* Existing speed-controller negative authority, inner coast and zero keep
      * working even if the state-preserving helper is called explicitly. */
     for (unsigned w = 0; w < 2; ++w) {
-        SignedWheel q = {.pi = {.ramp = 60, .integral = 100}, .sign = 1};
+        signed_wheel_t q = {.pi = {.ramp = 60, .integral = 100}, .sign = 1};
         cruise_handover_apply(&q, true);
         assert(circuit_wheel_step(&q, w, 0, 45, .01f, 1000, false, 1) == 0 && q.sign == 0);
-        q = (SignedWheel){.pi = {.ramp = 60, .integral = 100}, .sign = 1};
+        q = (signed_wheel_t){.pi = {.ramp = 60, .integral = 100}, .sign = 1};
         cruise_handover_apply(&q, true);
         assert(circuit_wheel_step(&q, w, 10, 40, .01f, 1000, false, 1) == 0 && q.pi.integral == 0);
-        q = (SignedWheel){.pi = {.ramp = 60, .integral = 100}, .sign = 1};
-        SignedWheel before = q;
+        q = (signed_wheel_t){.pi = {.ramp = 60, .integral = 100}, .sign = 1};
+        signed_wheel_t before = q;
         cruise_handover_apply(&q, true);
         circuit_leave_fast(&before);
         int a = circuit_wheel_step(&q, w, 45, 90, .01f, 1000, false, 1);
@@ -100,14 +100,14 @@ static void slowdown_models(void) {
     for (unsigned w = 0; w < 2; ++w)
         for (unsigned load = 100; load <= 160; load += 30)
             for (unsigned gain = 0; gain < 2; ++gain) {
-                SignedWheel p = {0};
+                signed_wheel_t p = {0};
                 float v = 0, measured = 0, k = gain ? 1.1f : .7f;
                 for (unsigned tick = 0; tick < 1600; ++tick) {
                     int16_t wanted = tick < 800 ? 55 : 50;
                     if (tick == 800) {
                         int16_t targets[2] = {50, 50};
                         float speeds[2] = {measured, measured};
-                        SignedWheel pair[2] = {p, p};
+                        signed_wheel_t pair[2] = {p, p};
                         assert(cruise_handover_eligible(1, C_FOLLOW, 25, targets, speeds, pair,
                                                         false, false));
                         cruise_handover_apply(&p, true);

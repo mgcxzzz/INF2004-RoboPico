@@ -1,3 +1,10 @@
+/**
+ * @file barcode_raw.h
+ * @brief Barcode raw.
+ * @details Pure barcode/route logic is called by the ADC owner and emits requests.
+ * Native records are not wire packets; preserve both decode directions.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 #ifndef BARCODE_RAW_H
 #define BARCODE_RAW_H
 #include <stdint.h>
@@ -23,7 +30,7 @@ typedef struct
     uint32_t us;
     int32_t path100;
     uint16_t adc, reserved;
-} BarcodeRawRow;
+} barcode_raw_row_t;
 typedef struct
 {
     uint32_t magic, version, crc, count, data_crc, capacity;
@@ -31,37 +38,38 @@ typedef struct
     int64_t ticks[2];
     uint32_t max_gap_us;
     uint8_t profile, reason, pin, channel, full;
-} BarcodeRawMeta;
+} barcode_raw_meta_t;
 typedef union
 {
-    BarcodeRawMeta meta;
+    barcode_raw_meta_t meta;
     uint8_t page[256];
-} BarcodeRawHeader;
+} barcode_raw_header_t;
 typedef struct
 {
-    BarcodeRawHeader header;
-    BarcodeRawRow rows[RAW_CAPACITY];
-} BarcodeRaw;
-_Static_assert(sizeof(BarcodeRawRow) == 12 && sizeof(BarcodeRawHeader) == 256,
+    barcode_raw_header_t header;
+    barcode_raw_row_t rows[RAW_CAPACITY];
+} barcode_raw_t;
+_Static_assert(sizeof(barcode_raw_row_t) == 12 &&
+                   sizeof(barcode_raw_header_t) == 256,
                "Raw trace ABI changed");
-_Static_assert(sizeof(BarcodeRaw) == 256 + 12 * RAW_CAPACITY &&
-                   sizeof(BarcodeRaw) % 256 == 0 &&
-                   sizeof(BarcodeRaw) <= RAW_BANK_BYTES,
+_Static_assert(sizeof(barcode_raw_t) == 256 + 12 * RAW_CAPACITY &&
+                   sizeof(barcode_raw_t) % 256 == 0 &&
+                   sizeof(barcode_raw_t) <= RAW_BANK_BYTES,
                "Raw flash layout");
-static inline void barcode_raw_begin (BarcodeRaw * r, unsigned profile)
+static inline void barcode_raw_begin (barcode_raw_t * r, unsigned profile)
 {
     memset(r, 0, sizeof(*r));
-    r->header.meta = (BarcodeRawMeta){.magic = RAW_MAGIC,
-                                      .version = RAW_VERSION,
-                                      .capacity = RAW_CAPACITY,
-                                      .profile = (uint8_t)profile,
-                                      .pin = 27,
-                                      .channel = 1};
+    r->header.meta = (barcode_raw_meta_t){.magic = RAW_MAGIC,
+                                          .version = RAW_VERSION,
+                                          .capacity = RAW_CAPACITY,
+                                          .profile = (uint8_t)profile,
+                                          .pin = 27,
+                                          .channel = 1};
 }
-static inline void barcode_raw_sample (BarcodeRaw * r, uint64_t us,
+static inline void barcode_raw_sample (barcode_raw_t * r, uint64_t us,
                                        int32_t path100, uint16_t adc)
 {
-    BarcodeRawMeta * m = &r->header.meta;
+    barcode_raw_meta_t * m = &r->header.meta;
     if (m->count == RAW_CAPACITY)
     {
         m->full = 1;
@@ -77,23 +85,23 @@ static inline void barcode_raw_sample (BarcodeRaw * r, uint64_t us,
         m->max_gap_us = (uint32_t)(us - r->rows[m->count - 1].us);
     }
     r->rows[m->count++] =
-        (BarcodeRawRow){.us = (uint32_t)us, .path100 = path100, .adc = adc};
+        (barcode_raw_row_t){.us = (uint32_t)us, .path100 = path100, .adc = adc};
 }
-static inline void barcode_raw_finish (BarcodeRaw * r, uint64_t duration,
+static inline void barcode_raw_finish (barcode_raw_t * r, uint64_t duration,
                                        const int64_t ticks[2], unsigned reason)
 {
-    BarcodeRawMeta * m = &r->header.meta;
+    barcode_raw_meta_t * m = &r->header.meta;
     m->duration_us = duration;
     m->ticks[0] = ticks[0];
     m->ticks[1] = ticks[1];
     m->reason = (uint8_t)reason;
     m->data_crc = log_crc(r->rows, m->count * sizeof(r->rows[0]));
-    m->crc = log_crc((const uint8_t *)r + offsetof(BarcodeRawMeta, count),
-                     sizeof(*r) - offsetof(BarcodeRawMeta, count));
+    m->crc = log_crc((const uint8_t *)r + offsetof(barcode_raw_meta_t, count),
+                     sizeof(*r) - offsetof(barcode_raw_meta_t, count));
 }
-static inline bool barcode_raw_valid (const BarcodeRaw * r)
+static inline bool barcode_raw_valid (const barcode_raw_t * r)
 {
-    const BarcodeRawMeta * m = &r->header.meta;
+    const barcode_raw_meta_t * m = &r->header.meta;
     if (m->magic != RAW_MAGIC || m->version != RAW_VERSION ||
         m->count > RAW_CAPACITY || m->capacity != RAW_CAPACITY ||
         m->profile < 1 || m->profile > 3 || m->pin != 27 || m->channel != 1 ||
@@ -101,8 +109,9 @@ static inline bool barcode_raw_valid (const BarcodeRaw * r)
     {
         return false;
     }
-    if (m->crc != log_crc((const uint8_t *)r + offsetof(BarcodeRawMeta, count),
-                          sizeof(*r) - offsetof(BarcodeRawMeta, count)) ||
+    if (m->crc !=
+            log_crc((const uint8_t *)r + offsetof(barcode_raw_meta_t, count),
+                    sizeof(*r) - offsetof(barcode_raw_meta_t, count)) ||
         m->data_crc != log_crc(r->rows, m->count * sizeof(r->rows[0])))
     {
         return false;

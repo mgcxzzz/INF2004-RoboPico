@@ -1,3 +1,10 @@
+/**
+ * @file drive_mode.h
+ * @brief Drive mode.
+ * @details Motion helpers run under the coordinator/control ownership contract.
+ * Preserve bounded outputs, target sign, stop precedence and request lifetimes.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 #ifndef BUDDY_DRIVE_MODE_H
 #define BUDDY_DRIVE_MODE_H
 
@@ -12,7 +19,7 @@ typedef enum
     DRIVE_MODE_NORMAL60 = 1,
     DRIVE_MODE_FASTER_TRIAL75 = 2,
     DRIVE_MODE_NONE = 3
-} DriveMode;
+} drive_mode_t;
 
 enum
 {

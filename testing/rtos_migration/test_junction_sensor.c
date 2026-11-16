@@ -8,8 +8,8 @@
 #include <stdlib.h>
 #include "app_program/barcode_navigation/barcode_model.h"
 #include "src/motion/motion_port.h"
-static RbDecoder d;
-static BarcodeNav n;
+static rb_decoder_t d;
+static barcode_nav_t n;
 static uint64_t now;
 static uint64_t clock_now(void *p) {
     (void)p;
@@ -18,7 +18,7 @@ static uint64_t clock_now(void *p) {
 static void sample(unsigned ms, double mm, unsigned adc) {
     now = 1000000 + (uint64_t)ms * 1000;
     assert(motion_submit_navigation(MOTION_BUDDY3, 45, 45) == MOTION_OK);
-    MotionFeedback f = {
+    motion_feedback_t f = {
         .now_us = now, .wheel_mm = {mm, mm}, .speed_mm_s = {45, 45}, .line_level = {1000, 1000}};
     (void)motion_update(&f);
     double w[2] = {mm, mm};
@@ -31,14 +31,14 @@ static unsigned count(unsigned type) {
         result += n.events[k].type == type;
     return result;
 }
-static void sensor(RbJunctionSensor *q, BarcodeNav *nav, double mm, unsigned adc) {
+static void sensor(rb_junction_sensor_t *q, barcode_nav_t *nav, double mm, unsigned adc) {
     double wheel[2] = {mm, mm};
     now += 2000;
     rb_junction_sample(q, nav, adc, now, wheel);
 }
 static void width_case(double width, unsigned result, bool candidate) {
-    BarcodeNav nav = {.pending = 'Y', .pending_action = 'U', .allow_cross = true};
-    RbJunctionSensor q = {0};
+    barcode_nav_t nav = {.pending = 'Y', .pending_action = 'U', .allow_cross = true};
+    rb_junction_sensor_t q = {0};
     rb_junction_learn(&q, &nav, 250, 2250, 250, now, 0);
     for (double mm = 0; mm < 8; mm += .1)
         sensor(&q, &nav, mm, 250);
@@ -60,15 +60,15 @@ static void width_case(double width, unsigned result, bool candidate) {
     }
 }
 int main(void) {
-    _Static_assert(sizeof(RbJunctionSensor) <= 64, "Bounded ADC-owner junction state");
+    _Static_assert(sizeof(rb_junction_sensor_t) <= 64, "Bounded ADC-owner junction state");
     _Static_assert(B_SIDE_AHEAD_MM == 110, "Step4 measured forward offset");
     _Static_assert(B_CROSS_MIN_MM == 11, "SDK junction minimum remains unchanged");
     _Static_assert(RTOS_JUNCTION_MIN_MM == 7, "RTOS junction adapter uses its 7mm minimum");
     now = 1000000;
-    MotionPort port = {.now_us = clock_now};
+    motion_port_t port = {.now_us = clock_now};
     motion_init(&port);
     motion_session_begin(now);
-    CircuitInput input = {.now = now, .wheel = {1416.87, 1416.87}};
+    circuit_input_t input = {.now = now, .wheel = {1416.87, 1416.87}};
     barcode_nav_begin(&n, &input);
     n.mapping =
         wp_map_replace(0, ('N' - 'A') | ('Y' - 'A') << 5 | ('Q' - 'A') << 10 | ('Z' - 'A') << 15);
@@ -104,8 +104,8 @@ int main(void) {
 
     /* Scale/offset-independent contrast, same physical width and white gate. */
     for (unsigned base = 100; base <= 900; base += 400) {
-        BarcodeNav nav = {.pending = 'Y', .pending_action = 'U', .allow_cross = true};
-        RbJunctionSensor q = {0};
+        barcode_nav_t nav = {.pending = 'Y', .pending_action = 'U', .allow_cross = true};
+        rb_junction_sensor_t q = {0};
         rb_junction_learn(&q, &nav, base, base + 1000, base + 1000, now, 0);
         /* Begin over black: no synthetic leading edge, even an 18mm remainder. */
         for (double mm = 0; mm < 18; mm += .1)
@@ -137,8 +137,8 @@ int main(void) {
         assert(q.valid && !q.armed && !nav.cross_ready && !nav.cross_candidate);
     }
     /* Short white gap cancels a candidate; no bypass of the straight gate. */
-    BarcodeNav nav = {.pending = 'Y', .allow_cross = false};
-    RbJunctionSensor q = {0};
+    barcode_nav_t nav = {.pending = 'Y', .allow_cross = false};
+    rb_junction_sensor_t q = {0};
     rb_junction_learn(&q, &nav, 250, 2250, 250, now, 0);
     for (double mm = 0; mm < 10; mm += .1)
         sensor(&q, &nav, mm, 250);
@@ -157,14 +157,14 @@ int main(void) {
     nav.external_reader = nav.external_cross = true;
     nav.cross_candidate = true;
     nav.cross_trailing_mm = 28;
-    Circuit circuit;
-    CircuitInput in = {.now = now,
+    circuit_t circuit;
+    circuit_input_t in = {.now = now,
                        .path = 32.1,
                        .wheel = {32.1, 32.1},
                        .speed = {45, 45},
                        .adc = {1100, 1100},
                        .side_black = false};
-    LineCalibration cal = {{100, 100}, {1100, 1100}, 7};
+    line_calibration_t cal = {{100, 100}, {1100, 1100}, 7};
     circuit_begin(&circuit, &in);
     (void)barcode_circuit_step(&circuit, &nav, &cal, &in, 1);
     assert(nav.cross_candidate && !nav.cross_ready && !nav.busy);
@@ -173,8 +173,8 @@ int main(void) {
 
     /* Busy and absent-pending phases cannot accumulate the pre-cross white
      * gate; four fresh white millimetres are required after eligibility. */
-    BarcodeNav waiting = {.pending = 'Y'};
-    RbJunctionSensor waiting_q = {0};
+    barcode_nav_t waiting = {.pending = 'Y'};
+    rb_junction_sensor_t waiting_q = {0};
     rb_junction_learn(&waiting_q, &waiting, 250, 2250, 250, now, 0);
     waiting.busy = true;
     for (double mm = 0; mm < 8; mm += .1)
@@ -196,8 +196,8 @@ int main(void) {
     width_case(30.0, RB_JUNCTION_RESULT_CANDIDATE, true);
     width_case(30.1, RB_JUNCTION_RESULT_TOO_WIDE, false);
 
-    BarcodeNav reverse_nav = {.pending = 'Y'};
-    RbJunctionSensor reverse_q = {0};
+    barcode_nav_t reverse_nav = {.pending = 'Y'};
+    rb_junction_sensor_t reverse_q = {0};
     rb_junction_learn(&reverse_q, &reverse_nav, 250, 2250, 250, now, 0);
     for (double mm = 0; mm <= 15; mm += 1)
         sensor(&reverse_q, &reverse_nav, mm, 250);
@@ -213,11 +213,11 @@ int main(void) {
     assert(rb_junction_width_centi(-12.34, &saturated) == -1234 && !saturated);
     assert(rb_junction_width_centi(400.0, &saturated) == INT16_MAX && saturated);
     assert(rb_junction_width_centi(-400.0, &saturated) == -INT16_MAX && saturated);
-    RbJunctionSensor saturated_q = {0};
+    rb_junction_sensor_t saturated_q = {0};
     rb_junction_record_width(&saturated_q, 400.0, RB_JUNCTION_RESULT_TOO_WIDE, false);
     assert(saturated_q.last_width_centi_mm == INT16_MAX && saturated_q.last_width_saturated);
 
-    RbJunctionSensor packed = {.threshold = 0xabc,
+    rb_junction_sensor_t packed = {.threshold = 0xabc,
                                .hysteresis = 0x56,
                                .decision_serial = 0x78563412,
                                .decision_threshold = 0xabc,
@@ -240,8 +240,8 @@ int main(void) {
     assert(frame[19] == (RB_JUNCTION_RESULT_WHITE_CANCELLED | (1U << 3) | (1U << 4) |
                           (1U << 5) | (1U << 6) | (1U << 7)));
 
-    BarcodeNav frozen_nav = {.pending = 'Y'};
-    RbJunctionSensor frozen = {0};
+    barcode_nav_t frozen_nav = {.pending = 'Y'};
+    rb_junction_sensor_t frozen = {0};
     rb_junction_learn(&frozen, &frozen_nav, 200, 2000, 200, now, 0);
     frozen.armed = true;
     rb_junction_record_width(&frozen, 10.4, RB_JUNCTION_RESULT_CANDIDATE, true);
@@ -254,7 +254,7 @@ int main(void) {
     assert((frame[15] >> 4) == (90 & 0x0f) && frame[16] == (90 >> 4));
     assert((frame[19] & 0x18U) == 0x18U); /* Recorded valid + armed survive re-learn. */
 
-    RbJunctionSensor fixture_q = {.threshold = 1100,
+    rb_junction_sensor_t fixture_q = {.threshold = 1100,
                                   .hysteresis = 90,
                                   .decision_serial = 7,
                                   .decision_threshold = 1100,

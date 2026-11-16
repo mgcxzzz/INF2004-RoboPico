@@ -8,8 +8,8 @@
 #include "src/navigation/nav_codec.h"
 static uint64_t clock_us;
 static unsigned depth, off_count, commits;
-static MotionFeedback feedback;
-static MotionOutput output;
+static motion_feedback_t feedback;
+static motion_output_t output;
 static uintptr_t enter(void *u) {
     (void)u;
     assert(!depth);
@@ -39,10 +39,10 @@ static void apply(void *u) {
 static void begin(void) {
     clock_us = 1000;
     depth = off_count = commits = 0;
-    MotionPort port = {enter, leave, off, now, NULL};
+    motion_port_t port = {enter, leave, off, now, NULL};
     motion_init(&port);
     motion_session_begin(clock_us);
-    feedback = (MotionFeedback){.now_us = clock_us, .line_level = {700, 700}, .pending_route = 'A'};
+    feedback = (motion_feedback_t){.now_us = clock_us, .line_level = {700, 700}, .pending_route = 'A'};
     output = motion_update(&feedback);
 }
 static void tick(bool model) {
@@ -57,7 +57,7 @@ static void tick(bool model) {
         assert(nav_submit_navigation(MOTION_BUDDY3, 45, 45) == MOTION_OK);
     output = motion_update(&feedback);
 }
-static uint32_t pause_owner(MotionOwner owner) {
+static uint32_t pause_owner(motion_owner_t owner) {
     uint32_t lease = 0;
     assert(nav_request_takeover(owner, &lease) == MOTION_OK && lease);
     for (unsigned k = 0; k < 15; ++k)
@@ -68,7 +68,7 @@ static uint32_t pause_owner(MotionOwner owner) {
 static void run_command(uint32_t id) {
     for (unsigned k = 0; k < 7000; ++k) {
         tick(true);
-        MotionCommandStatus s;
+        motion_command_status_t s;
         assert(nav_get_command(id, &s));
         if (s.state != MOTION_CMD_RUNNING) {
             assert(s.state == MOTION_CMD_DONE);
@@ -96,7 +96,7 @@ static void workflow(void) {
     assert(nav_drive_distance(MOTION_BUDDY5, lease, -30, 40, &id) == MOTION_OK);
     uint32_t reverse = id;
     run_command(id);
-    MotionCommandStatus result;
+    motion_command_status_t result;
     assert(nav_get_command(id, &result) && result.progress_mm <= -29 && result.progress_mm >= -31);
     assert(nav_get_status().mode == MOTION_PAUSED && nav_get_status().pending_route == 'A');
     assert(nav_turn_relative(MOTION_BUDDY5, lease, 45, 45, MOTION_ROLLING, &id) == MOTION_OK);
@@ -154,13 +154,13 @@ static void interruption_and_failures(void) {
     feedback.now_us = clock_us;
     output = motion_update(&feedback);
     assert(nav_get_status().mode == MOTION_FAULT && (nav_get_status().fault & NAV_FAULT_TIMEOUT));
-    MotionCommandStatus s;
+    motion_command_status_t s;
     assert(nav_get_command(id, &s) && s.state == MOTION_CMD_FAILED);
     begin();
     lease = pause_owner(MOTION_BUDDY5);
     assert(nav_drive_distance(MOTION_BUDDY5, lease, 20, 300, &id) == MOTION_INVALID);
     assert(nav_turn_relative(MOTION_BUDDY5, lease, NAN, 40, MOTION_ROLLING, &id) == MOTION_INVALID);
-    assert(nav_turn_relative(MOTION_BUDDY5, lease, 45, 40, (MotionTurnStyle)2, &id) ==
+    assert(nav_turn_relative(MOTION_BUDDY5, lease, 45, 40, (motion_turn_style_t)2, &id) ==
            MOTION_INVALID);
     assert(nav_drive_distance(MOTION_BUDDY5, lease, 20, 40, &id) == MOTION_OK);
     tick(true);
@@ -175,7 +175,7 @@ static void interruption_and_failures(void) {
 }
 static void codec(void) {
     uint8_t packet[NAV_PACKET_BYTES];
-    NavRequest r = {.kind = NAV_DRIVE, .owner = 5, .lease = UINT32_MAX, .speed = 60}, decoded;
+    nav_request_t r = {.kind = NAV_DRIVE, .owner = 5, .lease = UINT32_MAX, .speed = 60}, decoded;
     for (int tenth = -10000; tenth <= 10000; ++tenth)
         if (abs(tenth) >= 10) {
             r.value = tenth / 10.0f;
@@ -184,21 +184,21 @@ static void codec(void) {
             assert(nav_packet_decode(&decoded, packet, n) && decoded.lease == UINT32_MAX &&
                    fabsf(decoded.value - r.value) < .001f);
         }
-    r = (NavRequest){.kind = NAV_TURN, .owner = 5, .value = -180, .speed = 90, .style = 1};
+    r = (nav_request_t){.kind = NAV_TURN, .owner = 5, .value = -180, .speed = 90, .style = 1};
     assert(nav_packet_encode(packet, &r) == 8 && nav_packet_decode(&decoded, packet, 8));
     packet[7] |= 0x80;
     assert(!nav_packet_decode(&decoded, packet, 8));
-    r = (NavRequest){.kind = NAV_WHEELS, .owner = 3, .wheels = {-180, 180}};
+    r = (nav_request_t){.kind = NAV_WHEELS, .owner = 3, .wheels = {-180, 180}};
     assert(nav_packet_encode(packet, &r) == 4 && nav_packet_decode(&decoded, packet, 4));
     assert(decoded.wheels[0] == -180 && decoded.wheels[1] == 180);
-    r = (NavRequest){.kind = NAV_SPEED_MODE, .owner = MOTION_BUDDY1,
+    r = (nav_request_t){.kind = NAV_SPEED_MODE, .owner = MOTION_BUDDY1,
                      .speed = DRIVE_MODE_FASTER_TRIAL75};
     assert(nav_packet_encode(packet, &r) == 2 && nav_packet_decode(&decoded, packet, 2));
     assert(decoded.kind == NAV_SPEED_MODE && decoded.owner == MOTION_BUDDY1 &&
            decoded.speed == DRIVE_MODE_FASTER_TRIAL75);
     packet[1] |= 0x80U;
     assert(!nav_packet_decode(&decoded, packet, 2));
-    MotionEvent e = {.now_us = UINT64_MAX,
+    motion_event_t e = {.now_us = UINT64_MAX,
                      .id = UINT32_MAX,
                      .sequence = UINT32_MAX,
                      .owner = 5,
@@ -216,7 +216,7 @@ static void codec(void) {
                      .rotation_deg = 179.9f};
     uint8_t data[NAV_EVENT_BYTES];
     nav_event_encode(data, &e);
-    MotionEvent d;
+    motion_event_t d;
     bool overflow;
     assert(nav_event_decode(&d, data, &overflow) && !overflow && d.fault == NAV_FAULT_MASK &&
            d.requester == 4 && d.owner == 5 && d.id == UINT32_MAX && d.target_mm_s[0] == -180 &&
@@ -232,12 +232,12 @@ static void codec(void) {
     assert(motion_log_read(0, &d) && d.sequence == 21 && d.requester == 4 && d.kind == NAV_TERRAIN);
     printf(
         "representation: request<=%u bytes wheels=4 bytes audit=%u bytes status=%zu event_ram=%zu request_working=%zu command_status=%zu\n",
-        NAV_PACKET_BYTES, NAV_EVENT_BYTES, sizeof(MotionStatus), sizeof(MotionEvent),
-        sizeof(NavRequest), sizeof(MotionCommandStatus));
+        NAV_PACKET_BYTES, NAV_EVENT_BYTES, sizeof(motion_status_t), sizeof(motion_event_t),
+        sizeof(nav_request_t), sizeof(motion_command_status_t));
 }
 static void speed_mode_lifecycle(void) {
     begin();
-    MotionSpeedModeStatus mode = motion_get_speed_mode_status();
+    motion_speed_mode_status_t mode = motion_get_speed_mode_status();
     assert(mode.mode == DRIVE_MODE_BASELINE45 && mode.requested_mode == DRIVE_MODE_NONE);
     assert(nav_request_speed_mode(MOTION_BUDDY1, DRIVE_MODE_NORMAL60) == MOTION_NOT_STOPPED);
     mode = motion_get_speed_mode_status();

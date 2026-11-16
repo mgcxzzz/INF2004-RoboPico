@@ -103,28 +103,28 @@ void watchdog_reboot(unsigned a, unsigned b, unsigned c) {
 
 /* Firmware context consumed by wifi_harness.h. These are real ABI types from
  * the Buddy 1 headers, not copies of the harness's behavior. */
-static volatile DualGuard guard = {.consumed = true};
-static volatile BenchEncoder enc[2];
+static volatile dual_guard_t guard = {.consumed = true};
+static volatile bench_encoder_t enc[2];
 static volatile int64_t total_ticks[2], cut_ticks[2];
 static volatile uint32_t initial_invalid[2], cut_invalid[2];
 static volatile int32_t output[2];
 static volatile float velocity[2];
 static volatile uint16_t analog_raw[2];
 static volatile uint16_t side_adc;
-static volatile AnalogDemand demand;
-static LineCalibration calibration;
-static Circuit circuit;
-static BarcodeNav nav;
-static BarcodeAnalog side_analog;
+static volatile analog_demand_t demand;
+static line_calibration_t calibration;
+static circuit_t circuit;
+static barcode_nav_t nav;
+static barcode_analog_t side_analog;
 static BarcodeTrace trace[B_ROWS];
 static uint32_t trace_count, trace_head, runs;
-static BarcodeRaw raw_capture;
-static DriveDiag diag_capture;
+static barcode_raw_t raw_capture;
+static drive_diag_t diag_capture;
 static bool trace_settling;
 static uint8_t test_mode = 1, recorded_mode = 1;
 static char recorded_key;
-static CircuitTracker fake_tracker;
-static const CircuitTracker *current_tracker(void) {
+static circuit_tracker_t fake_tracker;
+static const circuit_tracker_t *current_tracker(void) {
     return &fake_tracker;
 }
 static uint32_t wifi_mapping;
@@ -152,7 +152,7 @@ static void port_unlock(void *u, uintptr_t s) {
     (void)u;
     (void)s;
 }
-static MotionPort port = {port_lock, port_unlock, port_off, port_now, NULL};
+static motion_port_t port = {port_lock, port_unlock, port_off, port_now, NULL};
 static bool start_run(unsigned mode) {
     (void)mode;
     ++start_invocations;
@@ -170,7 +170,7 @@ static unsigned start_block(unsigned mode) {
     return start_block_reason;
 }
 
-bool wifi_transport_configure(const WifiTransportConfig *c) {
+bool wifi_transport_configure(const wifi_transport_config_t *c) {
     (void)c;
     return true;
 }
@@ -193,8 +193,8 @@ bool wifi_transport_receive(uint8_t p[8], size_t *n) {
     --rx_count;
     return true;
 }
-WifiTransportStatus wifi_transport_status(void) {
-    return (WifiTransportStatus){.configured = fake_configured,
+wifi_transport_status_t wifi_transport_status(void) {
+    return (wifi_transport_status_t){.configured = fake_configured,
                                  .ready = fake_ready,
                                  .connected = fake_connected,
                                  .subscribed = fake_subscribed,
@@ -260,7 +260,7 @@ static uint32_t map_for(char letter, char action) {
 }
 
 static void test_map_during_run(void) {
-    nav = (BarcodeNav){
+    nav = (barcode_nav_t){
         .pending = 'A', .pending_action = 'L', .pending_revision = 7, .mapping = wifi_mapping};
     guard.active = true;
     wifi_mapping = wp_map_replace(0, map_for('A', 'L')) | (6u << WP_MAP_REV_SHIFT);
@@ -318,16 +318,16 @@ static void test_pause_resume_coordinator(void) {
     guard.active = true;
     wifi_estop = false;
     wifi_lease = 0;
-    nav = (BarcodeNav){0};
+    nav = (barcode_nav_t){0};
     motion_session_begin(fake_now);
     uint8_t p[8] = {0};
     reset_capture();
     queue_command(WP_CMD_PAUSE, 9, 0, 0);
     wifi_harness_poll(fake_now);
-    MotionStatus s = motion_get_status();
+    motion_status_t s = motion_get_status();
     assert(s.mode == MOTION_STOPPING && s.owner == MOTION_BUDDY1);
-    MotionFeedback f = {.now_us = fake_now, .line_level = {500, 100}, .speed_mm_s = {0, 0}};
-    MotionOutput out = motion_update(&f);
+    motion_feedback_t f = {.now_us = fake_now, .line_level = {500, 100}, .speed_mm_s = {0, 0}};
+    motion_output_t out = motion_update(&f);
     assert(out.external && out.target_mm_s[0] == 0 && out.target_mm_s[1] == 0);
     for (unsigned k = 1; k <= 8; ++k) {
         fake_now += 20000;
@@ -392,7 +392,7 @@ static void test_downloads_and_recheck(void) {
     fake_now = 30000000;
     guard.active = false;
     trace_settling = false;
-    diag_capture = (DriveDiag){0};
+    diag_capture = (drive_diag_t){0};
     diag_capture.count = 1;
     diag_capture.head = 1;
     for (unsigned i = 0; i < DIAG_ROW_BYTES; ++i)
@@ -432,8 +432,8 @@ static void test_downloads_and_recheck(void) {
     first = last_src(WPK_SRC_LOG_CHUNK);
     assert(first && first->len == 63 && first->bytes[12] == 48 && first->bytes[15] == 0x92);
     guard.active = false;
-    WifiCommand pending =
-        (WifiCommand){.code = WP_CMD_GET_LOG, .id = 25, .arg = (WP_LOG_DIAGNOSTIC << 12)};
+    wifi_command_t pending =
+        (wifi_command_t){.code = WP_CMD_GET_LOG, .id = 25, .arg = (WP_LOG_DIAGNOSTIC << 12)};
     assert(wifi_dispatch(&pending, fake_now) == WP_ACK_ACCEPTED && wifi_download);
     guard.active = true;
     reset_capture();
@@ -444,12 +444,12 @@ static void test_downloads_and_recheck(void) {
 }
 
 static void test_calibration_summary_and_provision(void) {
-    calibration = (LineCalibration){0};
+    calibration = (line_calibration_t){0};
     guard.active = false;
     wifi_estop = false;
     analog_raw[0] = 123;
     analog_raw[1] = 456;
-    WifiMotionPacket m = wifi_snapshot(50000000);
+    wifi_motion_packet_t m = wifi_snapshot(50000000);
     assert(m.calibrated_level_left == 65535 && m.calibrated_level_right == 65535);
     assert((m.line_levels & 3) == 0);
     side_analog.black = true;
@@ -524,7 +524,7 @@ int main(void) {
     guard.duration_us = 0;
     wifi_mapping = 0;
     wifi_harness_init();
-    MotionEvent e = {.type = MOTION_EVENT_NAV_STATE, .now_us = 1};
+    motion_event_t e = {.type = MOTION_EVENT_NAV_STATE, .now_us = 1};
     wifi_nav_event(&e);
     wifi_barcode_events(1);
     test_map_during_run();

@@ -1,3 +1,10 @@
+/**
+ * @file wifi_settings.h
+ * @brief Wifi settings.
+ * @details Network helpers validate and explicitly encode bounded application records.
+ * Transport calls belong to the configured SDK or RTOS owner, not these codecs.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 #ifndef BUDDY_WIFI_SETTINGS_H
 #define BUDDY_WIFI_SETTINGS_H
 #include "src/network/wifi_transport.h"
@@ -83,7 +90,7 @@ static inline bool wifi_ipv4 (const char * p)
     }
     return false;
 }
-static inline bool wifi_settings_valid (const WifiTransportConfig * c)
+static inline bool wifi_settings_valid (const wifi_transport_config_t * c)
 {
     return c && wifi_text(c->ssid, sizeof(c->ssid), false) &&
            wifi_text(c->password, sizeof(c->password), true) &&
@@ -92,7 +99,7 @@ static inline bool wifi_settings_valid (const WifiTransportConfig * c)
            wifi_text(c->client_id, sizeof(c->client_id), false);
 }
 static inline bool wifi_settings_encode (uint8_t page[WIFI_SETTINGS_PAGE],
-                                         const WifiTransportConfig * c)
+                                         const wifi_transport_config_t * c)
 {
     if (!wifi_settings_valid(c))
     {
@@ -104,7 +111,7 @@ static inline bool wifi_settings_encode (uint8_t page[WIFI_SETTINGS_PAGE],
     nav_le32(page + 4, nav_crc(page + 8, WIFI_SETTINGS_PAGE - 8));
     return true;
 }
-static inline bool wifi_settings_decode (WifiTransportConfig * c,
+static inline bool wifi_settings_decode (wifi_transport_config_t * c,
                                          const uint8_t page[WIFI_SETTINGS_PAGE])
 {
     if (memcmp(page, "WCF1", 4) ||
@@ -112,7 +119,7 @@ static inline bool wifi_settings_decode (WifiTransportConfig * c,
     {
         return false;
     }
-    WifiTransportConfig candidate;
+    wifi_transport_config_t candidate;
     memcpy(&candidate, page + 8, sizeof(candidate));
     if (!wifi_settings_valid(&candidate))
     {

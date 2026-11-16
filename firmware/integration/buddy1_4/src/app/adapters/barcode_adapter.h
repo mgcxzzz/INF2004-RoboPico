@@ -1,3 +1,10 @@
+/**
+ * @file barcode_adapter.h
+ * @brief Barcode adapter.
+ * @details Public feature contract. Requests cross coordinator ownership checks;
+ * callers observe completion/status separately and must respect task context.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 /* Barcode peak decoder v0.1 glue, COMBINED build (v2.3 + Buddy4 v0.2 + ramp
  * assist v0.2 + peak decoder). Ported from
  * interface_wifi_v2_3_barcode_peak_v0_1/barcode_peak_harness.h; the decoder
@@ -43,7 +50,7 @@
 #define BP_R_RUN_START 10u
 #define BP_FLAG_COMBINED 0x80u
 
-static BarcodePeak bp_state;
+static barcode_peak_t bp_state;
 static uint16_t bp_groups;
 static uint8_t bp_seq;
 static uint32_t bp_decodes, bp_applied, bp_conflicts;
@@ -53,7 +60,7 @@ static uint8_t bp_build_flags (void)
     return (uint8_t)((BARCODE_PEAK_ACTIVE ? 1u : 0u) |
                      (BARCODE_PEAK_COMBINED ? BP_FLAG_COMBINED : 0u));
 }
-static void bp_send (const BpResult * r, uint64_t now, uint8_t flags)
+static void bp_send (const bp_result_t * r, uint64_t now, uint8_t flags)
 {
     uint8_t frame[BP_TLM_FRAME];
     bp_tlm_pack(r, (uint32_t)(now / 1000u), flags, bp_groups, bp_seq++, frame);
@@ -73,7 +80,7 @@ static void barcode_peak_begin (uint64_t now)
     barcode_partial_reset();
     bp_groups = 0;
     bp_decodes = bp_applied = bp_conflicts = 0;
-    BpResult r;
+    bp_result_t r;
     memset(&r, 0, sizeof(r));
     r.code = '?';
     r.reason = BP_R_RUN_START;
@@ -96,7 +103,7 @@ static void barcode_peak_sample (uint16_t adc, uint64_t now,
         return;
     } /* turning/U-turn: no labels */
     double mm = (wheel[0] + wheel[1]) * .5;
-    BpResult r;
+    bp_result_t r;
     if (!bp_sample(&bp_state, adc, mm, &r) || r.nbars < BP_REPORT_MIN_BARS)
     {
         return;
@@ -146,7 +153,7 @@ static void barcode_peak_sample (uint16_t adc, uint64_t now,
             side_analog.accepted = true;
             side_analog.accepted_start = r.start_mm;
             side_analog.accepted_end = r.end_mm;
-            AnalogBank * v = &side_analog.bank[side_analog.selected];
+            analog_bank_t * v = &side_analog.bank[side_analog.selected];
             barcode_reader_reset(
                 &v->reader, v->stable, now,
                 mm); /* a half-read noise frame must not block the junction search */

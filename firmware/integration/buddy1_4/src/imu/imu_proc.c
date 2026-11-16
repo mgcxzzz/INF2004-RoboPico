@@ -71,25 +71,25 @@ static int16_t const g_asin_dd[33] = {
  * Small helpers
  * ================================================================== */
 
-static int32_t iabs (int32_t v)
+static int32_t iabs (int32_t value)
 {
-    return (v < 0) ? -v : v;
+    return (value < 0) ? -value : value;
 }
 
 bool b4_side_geometry (int16_t const baseline[3], int16_t const sample[3],
                        int32_t g_mg, int16_t * p_height_mm, int16_t * p_roll_dd)
 {
-    int32_t u[3];
-    int32_t f[3];
-    int32_t r[3];
-    int32_t v[3];
+    int32_t u_value[3];
+    int32_t flags[3];
+    int32_t result[3];
+    int32_t value[3];
     int64_t dot;
     uint32_t mag2 = 0U;
     uint32_t bmag2 = 0U;
     uint32_t mag;
     uint32_t bmag;
     int32_t proj_q15;
-    uint32_t i;
+    uint32_t index;
 
     if ((baseline == NULL) || (sample == NULL) || (p_height_mm == NULL) ||
         (p_roll_dd == NULL) || (g_mg <= 0))
@@ -97,10 +97,10 @@ bool b4_side_geometry (int16_t const baseline[3], int16_t const sample[3],
         return false;
     }
 
-    for (i = 0U; i < 3U; i++)
+    for (index = 0U; index < 3U; index++)
     {
-        mag2 += (uint32_t)((int32_t)sample[i] * sample[i]);
-        bmag2 += (uint32_t)((int32_t)baseline[i] * baseline[i]);
+        mag2 += (uint32_t)((int32_t)sample[index] * sample[index]);
+        bmag2 += (uint32_t)((int32_t)baseline[index] * baseline[index]);
     }
 
     mag = b4_isqrt(mag2);
@@ -112,47 +112,54 @@ bool b4_side_geometry (int16_t const baseline[3], int16_t const sample[3],
         return false;
     }
 
-    for (i = 0U; i < 3U; i++)
+    for (index = 0U; index < 3U; index++)
     {
-        u[i] = ((int32_t)baseline[i] * 32768) / (int32_t)bmag;
-        v[i] = ((int32_t)sample[i] * 32768) / (int32_t)mag;
+        u_value[index] = ((int32_t)baseline[index] * 32768) / (int32_t)bmag;
+        value[index] = ((int32_t)sample[index] * 32768) / (int32_t)mag;
     }
 
     /* forward = (1,0,0) projected onto the plane perpendicular to up */
-    dot = u[0];
-    f[0] = 32768 - (int32_t)((dot * u[0]) / 32768);
-    f[1] = -(int32_t)((dot * u[1]) / 32768);
-    f[2] = -(int32_t)((dot * u[2]) / 32768);
-    mag2 = (uint32_t)(f[0] * f[0]) + (uint32_t)(f[1] * f[1]) +
-           (uint32_t)(f[2] * f[2]);
+    dot = u_value[0];
+    flags[0] = 32768 - (int32_t)((dot * u_value[0]) / 32768);
+    flags[1] = -(int32_t)((dot * u_value[1]) / 32768);
+    flags[2] = -(int32_t)((dot * u_value[2]) / 32768);
+    mag2 = (uint32_t)(flags[0] * flags[0]) + (uint32_t)(flags[1] * flags[1]) +
+           (uint32_t)(flags[2] * flags[2]);
     mag = b4_isqrt(mag2);
     if (mag == 0U)
     {
         return false;
     }
-    for (i = 0U; i < 3U; i++)
+    for (index = 0U; index < 3U; index++)
     {
-        f[i] = (f[i] * 32768) / (int32_t)mag;
+        flags[index] = (flags[index] * 32768) / (int32_t)mag;
     }
 
     /* right = up x forward in [forward, right, up] coordinates */
-    r[0] = (int32_t)(((int64_t)u[1] * f[2] - (int64_t)u[2] * f[1]) / 32768);
-    r[1] = (int32_t)(((int64_t)u[2] * f[0] - (int64_t)u[0] * f[2]) / 32768);
-    r[2] = (int32_t)(((int64_t)u[0] * f[1] - (int64_t)u[1] * f[0]) / 32768);
-    mag2 = (uint32_t)(r[0] * r[0]) + (uint32_t)(r[1] * r[1]) +
-           (uint32_t)(r[2] * r[2]);
+    result[0] = (int32_t)(((int64_t)u_value[1] * flags[2] -
+                           (int64_t)u_value[2] * flags[1]) /
+                          32768);
+    result[1] = (int32_t)(((int64_t)u_value[2] * flags[0] -
+                           (int64_t)u_value[0] * flags[2]) /
+                          32768);
+    result[2] = (int32_t)(((int64_t)u_value[0] * flags[1] -
+                           (int64_t)u_value[1] * flags[0]) /
+                          32768);
+    mag2 = (uint32_t)(result[0] * result[0]) +
+           (uint32_t)(result[1] * result[1]) +
+           (uint32_t)(result[2] * result[2]);
     mag = b4_isqrt(mag2);
     if (mag == 0U)
     {
         return false;
     }
-    for (i = 0U; i < 3U; i++)
+    for (index = 0U; index < 3U; index++)
     {
-        r[i] = (r[i] * 32768) / (int32_t)mag;
+        result[index] = (result[index] * 32768) / (int32_t)mag;
     }
 
-    dot = ((int64_t)v[0] * r[0]) + ((int64_t)v[1] * r[1]) +
-          ((int64_t)v[2] * r[2]);
+    dot = ((int64_t)value[0] * result[0]) + ((int64_t)value[1] * result[1]) +
+          ((int64_t)value[2] * result[2]);
     proj_q15 = (int32_t)(dot / 32768);
     if (proj_q15 > 32767)
     {
@@ -177,25 +184,26 @@ bool b4_side_geometry (int16_t const baseline[3], int16_t const sample[3],
  */
 int16_t b4_asin_dd (int32_t sin_q15)
 {
-    int32_t x = iabs(sin_q15);
+    int32_t value_x = iabs(sin_q15);
     int32_t idx;
     int32_t frac;
-    int32_t v;
+    int32_t value;
 
-    if (x >= 32768)
+    if (value_x >= 32768)
     {
-        v = 900;
+        value = 900;
     }
     else
     {
-        idx = x / 1024; /* 32768 / 32 per step */
-        frac = x % 1024;
-        v = (int32_t)g_asin_dd[idx] +
+        idx = value_x / 1024; /* 32768 / 32 per step */
+        frac = value_x % 1024;
+        value =
+            (int32_t)g_asin_dd[idx] +
             ((((int32_t)g_asin_dd[idx + 1] - (int32_t)g_asin_dd[idx]) * frac) /
              1024);
     }
 
-    return (int16_t)((sin_q15 < 0) ? -v : v);
+    return (int16_t)((sin_q15 < 0) ? -value : value);
 }
 
 /**
@@ -241,15 +249,15 @@ bool b4_nfr02_ok (int32_t est_mm, int32_t ref_mm)
             ((err * 100) <= (iabs(ref_mm) * B4_NFR02_PCT)));
 }
 
-static int32_t clamp (int32_t v, int32_t lo, int32_t hi)
+static int32_t clamp (int32_t value, int32_t low, int32_t high)
 {
-    return (v < lo) ? lo : ((v > hi) ? hi : v);
+    return (value < low) ? low : ((value > high) ? high : value);
 }
 
-static bool sampling (imu_state_t s)
+static bool sampling (imu_state_t state)
 {
-    return ((s == IMU_ST_IDLE) || (s == IMU_ST_TRACKING) ||
-            (s == IMU_ST_HUMP) || (s == IMU_ST_IMPACT));
+    return ((state == IMU_ST_IDLE) || (state == IMU_ST_TRACKING) ||
+            (state == IMU_ST_HUMP) || (state == IMU_ST_IMPACT));
 }
 
 static void emit (b4_ctx_t const * p_ctx, b4_out_t * p_out, imu_evt_type_t type,
@@ -302,15 +310,15 @@ static void enter_fault (b4_ctx_t * p_ctx, uint8_t code, uint32_t t_us,
 
 static void cal_restart (b4_ctx_t * p_ctx)
 {
-    uint32_t i;
+    uint32_t index;
 
     p_ctx->cal_n = 0U;
 
-    for (i = 0U; i < 3U; i++)
+    for (index = 0U; index < 3U; index++)
     {
-        p_ctx->cal_sum[i] = 0;
-        p_ctx->cal_min[i] = INT16_MAX;
-        p_ctx->cal_max[i] = INT16_MIN;
+        p_ctx->cal_sum[index] = 0;
+        p_ctx->cal_min[index] = INT16_MAX;
+        p_ctx->cal_max[index] = INT16_MIN;
     }
 }
 
@@ -490,8 +498,8 @@ static void side_terrain (b4_ctx_t * p_ctx, b4_in_t const * p_in,
     bool b_motion_safe;
     bool b_turn_safe;
     bool b_skip;
-    int32_t dd = 0;
-    int32_t dh = 0;
+    int32_t dd_value = 0;
+    int32_t dh_value = 0;
 #ifdef APP_RTOS_IMU
     bool b_odo_gap_eligible = false;
     bool b_odo_gap_recovery = false;
@@ -601,10 +609,10 @@ static void side_terrain (b4_ctx_t * p_ctx, b4_in_t const * p_in,
 #endif
             if (p_ctx->side_have_odo)
             {
-                dd = (int32_t)(int16_t)((uint16_t)p_in->distance_mm -
-                                        (uint16_t)p_ctx->side_last_dist);
-                dh = (int32_t)(int16_t)((uint16_t)p_in->heading_dd -
-                                        (uint16_t)p_ctx->side_last_head);
+                dd_value = (int32_t)(int16_t)((uint16_t)p_in->distance_mm -
+                                              (uint16_t)p_ctx->side_last_dist);
+                dh_value = (int32_t)(int16_t)((uint16_t)p_in->heading_dd -
+                                              (uint16_t)p_ctx->side_last_head);
             }
 #ifdef APP_RTOS_IMU
         }
@@ -612,8 +620,8 @@ static void side_terrain (b4_ctx_t * p_ctx, b4_in_t const * p_in,
         {
             /* Compare the outage span for safety above, then exclude its
              * translation and rotation from every accepted delta. */
-            dd = 0;
-            dh = 0;
+            dd_value = 0;
+            dh_value = 0;
         }
 #endif
         p_ctx->side_last_dist = p_in->distance_mm;
@@ -638,10 +646,10 @@ static void side_terrain (b4_ctx_t * p_ctx, b4_in_t const * p_in,
      * increment falsely rejected a powered run at an averaged 2.4 deg/s.
      * Use the existing 200 ms rate (same 20 deg/s limit) once primed; retain
      * the instantaneous guard during warm-up, before a rate is available. */
-    b_turn_safe =
-        p_ctx->b_rates
-            ? (iabs(p_ctx->turn_dd_s) <= B4_TURN_DD_S)
-            : (iabs(dh) <= (B4_TURN_DD_S * (int32_t)p_in->gap_us / 1000000));
+    b_turn_safe = p_ctx->b_rates
+                      ? (iabs(p_ctx->turn_dd_s) <= B4_TURN_DD_S)
+                      : (iabs(dh_value) <=
+                         (B4_TURN_DD_S * (int32_t)p_in->gap_us / 1000000));
 #ifdef APP_RTOS_IMU
     if (p_ctx->b_rates)
     {
@@ -678,7 +686,7 @@ static void side_terrain (b4_ctx_t * p_ctx, b4_in_t const * p_in,
          * odo sample heading is only a placeholder, so keep the last anchor. */
     }
 #endif
-    b_motion_safe = b_odo_safe && (dd >= 0) && b_turn_safe;
+    b_motion_safe = b_odo_safe && (dd_value >= 0) && b_turn_safe;
 #ifdef APP_RTOS_IMU
     if (!b_odo_recovery_safe)
     {
@@ -689,7 +697,7 @@ static void side_terrain (b4_ctx_t * p_ctx, b4_in_t const * p_in,
     {
         p_ctx->side_quality_reason |= B4_Q_UNAVAILABLE;
     }
-    if (dd < 0)
+    if (dd_value < 0)
     {
         p_ctx->side_quality_reason |= B4_Q_REVERSE;
     }
@@ -784,7 +792,8 @@ static void side_terrain (b4_ctx_t * p_ctx, b4_in_t const * p_in,
     if (p_ctx->side_candidate)
     {
         bool b_unsafe = (!b_quality && !b_skip) || !b_odo_safe ||
-                        (p_ctx->side_have_odo && (dd < 0)) || !b_turn_safe;
+                        (p_ctx->side_have_odo && (dd_value < 0)) ||
+                        !b_turn_safe;
 #ifdef APP_RTOS_IMU
         if (!b_odo_recovery_safe)
         {
@@ -815,9 +824,9 @@ static void side_terrain (b4_ctx_t * p_ctx, b4_in_t const * p_in,
             p_ctx->side_skip_run_us += p_in->gap_us;
             p_ctx->side_skip_us += p_in->gap_us;
 #ifndef APP_RTOS_IMU
-            if ((dd > 0) && (p_ctx->side_last_h_mm >= B4_SIDE_START_MM))
+            if ((dd_value > 0) && (p_ctx->side_last_h_mm >= B4_SIDE_START_MM))
             {
-                p_ctx->side_travel_mm += dd;
+                p_ctx->side_travel_mm += dd_value;
             }
 #endif
             if (p_ctx->side_skip_run_us > (B4_SIDE_SKIP_RUN_MS * 1000U))
@@ -853,9 +862,9 @@ static void side_terrain (b4_ctx_t * p_ctx, b4_in_t const * p_in,
         }
         if (p_ctx->side_height_mm >= B4_SIDE_START_MM)
         {
-            if (dd > 0)
+            if (dd_value > 0)
             {
-                p_ctx->side_travel_mm += dd;
+                p_ctx->side_travel_mm += dd_value;
             }
         }
         if (!p_ctx->side_rising)
@@ -1209,11 +1218,11 @@ void b4_mission (b4_ctx_t * p_ctx, b4_mission_t event, uint32_t t_us,
  * wrapping int16 values), keep a short history, derive the rates. */
 static void update_motion (b4_ctx_t * p_ctx, b4_in_t const * p_in)
 {
-    int32_t dd = 0;
-    int32_t dh = 0;
+    int32_t dd_value = 0;
+    int32_t dh_value = 0;
     uint32_t last = B4_RATE_N - 1U;
     uint32_t mid = B4_RATE_N / 2U;
-    uint32_t i;
+    uint32_t index;
 
     p_ctx->b_odo_now = false;
 
@@ -1226,25 +1235,26 @@ static void update_motion (b4_ctx_t * p_ctx, b4_in_t const * p_in)
         p_ctx->hist_fine = p_in->b_fine_motion;
         if (p_ctx->b_have_last)
         {
-            dd = (int32_t)(int16_t)(uint16_t)((uint16_t)p_in->distance_mm -
-                                              (uint16_t)p_ctx->last_dist);
-            dh = (int32_t)(int16_t)(uint16_t)((uint16_t)p_in->heading_dd -
-                                              (uint16_t)p_ctx->last_head);
+            dd_value =
+                (int32_t)(int16_t)(uint16_t)((uint16_t)p_in->distance_mm -
+                                             (uint16_t)p_ctx->last_dist);
+            dh_value = (int32_t)(int16_t)(uint16_t)((uint16_t)p_in->heading_dd -
+                                                    (uint16_t)p_ctx->last_head);
         }
 
         p_ctx->b_have_last = true;
         p_ctx->last_dist = p_in->distance_mm;
         p_ctx->last_head = p_in->heading_dd;
-        p_ctx->hump.d_mm += dd;
-        p_ctx->head_dd += dh;
+        p_ctx->hump.d_mm += dd_value;
+        p_ctx->head_dd += dh_value;
         p_ctx->b_odo_now = true;
 
-        for (i = 0U; i < last; i++)
+        for (index = 0U; index < last; index++)
         {
-            p_ctx->hist_t[i] = p_ctx->hist_t[i + 1U];
-            p_ctx->hist_d[i] = p_ctx->hist_d[i + 1U];
-            p_ctx->hist_fine_d[i] = p_ctx->hist_fine_d[i + 1U];
-            p_ctx->hist_h[i] = p_ctx->hist_h[i + 1U];
+            p_ctx->hist_t[index] = p_ctx->hist_t[index + 1U];
+            p_ctx->hist_d[index] = p_ctx->hist_d[index + 1U];
+            p_ctx->hist_fine_d[index] = p_ctx->hist_fine_d[index + 1U];
+            p_ctx->hist_h[index] = p_ctx->hist_h[index + 1U];
         }
 
         p_ctx->hist_t[last] = p_in->t_us;
@@ -1326,7 +1336,7 @@ static void update_motion (b4_ctx_t * p_ctx, b4_in_t const * p_in)
 static int32_t update_pitch (b4_ctx_t * p_ctx)
 {
     int32_t fwd = p_ctx->lp[AX_FWD] / LP_ONE;
-    int32_t up = p_ctx->lp[AX_UP] / LP_ONE;
+    int32_t up_value = p_ctx->lp[AX_UP] / LP_ONE;
     int32_t b_f = p_ctx->base[AX_FWD];
     int32_t b_u = p_ctx->base[AX_UP];
     int64_t den;
@@ -1341,7 +1351,7 @@ static int32_t update_pitch (b4_ctx_t * p_ctx)
      *   sin(pitch) = (fwd * b_u - up * b_f) / (|now| * |rest|)
      * Using the direction, not the size, cancels vertical acceleration
      * (going over the hump's edges scales both components alike). */
-    den = (int64_t)b4_isqrt((uint32_t)((fwd * fwd) + (up * up))) *
+    den = (int64_t)b4_isqrt((uint32_t)((fwd * fwd) + (up_value * up_value))) *
           (int64_t)b4_isqrt((uint32_t)((b_f * b_f) + (b_u * b_u)));
 
     if (den < (int64_t)(300 * 300))
@@ -1350,7 +1360,7 @@ static int32_t update_pitch (b4_ctx_t * p_ctx)
     }
     else
     {
-        int64_t num = ((int64_t)fwd * b_u) - ((int64_t)up * b_f);
+        int64_t num = ((int64_t)fwd * b_u) - ((int64_t)up_value * b_f);
 
         sin_q15 = clamp((int32_t)((num * 32768) / den), -32767, 32767);
     }
@@ -1685,7 +1695,7 @@ static void calibrate (b4_ctx_t * p_ctx, int16_t const mean[3],
 #ifdef APP_RTOS_IMU
     uint8_t restart_reason = 0U;
 #endif
-    uint32_t i;
+    uint32_t index;
 
     if ((uint32_t)(p_in->t_us - p_ctx->cal_start_us) >=
         (B4_CAL_DEADLINE_MS * 1000U))
@@ -1704,18 +1714,20 @@ static void calibrate (b4_ctx_t * p_ctx, int16_t const mean[3],
 #endif
     }
 
-    for (i = 0U; i < 3U; i++)
+    for (index = 0U; index < 3U; index++)
     {
-        int16_t lo =
-            (mean[i] < p_ctx->cal_min[i]) ? mean[i] : p_ctx->cal_min[i];
-        int16_t hi =
-            (mean[i] > p_ctx->cal_max[i]) ? mean[i] : p_ctx->cal_max[i];
+        int16_t low = (mean[index] < p_ctx->cal_min[index])
+                          ? mean[index]
+                          : p_ctx->cal_min[index];
+        int16_t high = (mean[index] > p_ctx->cal_max[index])
+                           ? mean[index]
+                           : p_ctx->cal_max[index];
 
-        if (((int32_t)hi - (int32_t)lo) > B4_CAL_STABLE_MG)
+        if (((int32_t)high - (int32_t)low) > B4_CAL_STABLE_MG)
         {
             b_restart = true; /* moved: start the window again */
 #ifdef APP_RTOS_IMU
-            restart_reason |= (uint8_t)(1U << i);
+            restart_reason |= (uint8_t)(1U << index);
 #endif
         }
     }
@@ -1728,18 +1740,18 @@ static void calibrate (b4_ctx_t * p_ctx, int16_t const mean[3],
         cal_restart(p_ctx);
     }
 
-    for (i = 0U; i < 3U; i++)
+    for (index = 0U; index < 3U; index++)
     {
-        p_ctx->cal_sum[i] += mean[i];
+        p_ctx->cal_sum[index] += mean[index];
 
-        if (mean[i] < p_ctx->cal_min[i])
+        if (mean[index] < p_ctx->cal_min[index])
         {
-            p_ctx->cal_min[i] = mean[i];
+            p_ctx->cal_min[index] = mean[index];
         }
 
-        if (mean[i] > p_ctx->cal_max[i])
+        if (mean[index] > p_ctx->cal_max[index])
         {
-            p_ctx->cal_max[i] = mean[i];
+            p_ctx->cal_max[index] = mean[index];
         }
     }
 
@@ -1747,20 +1759,20 @@ static void calibrate (b4_ctx_t * p_ctx, int16_t const mean[3],
 
     if (p_ctx->cal_n >= CAL_PERIODS)
     {
-        int32_t b[3];
-        uint32_t sq = 0U;
+        int32_t second[3];
+        uint32_t sq_value = 0U;
 
-        for (i = 0U; i < 3U; i++)
+        for (index = 0U; index < 3U; index++)
         {
-            b[i] = p_ctx->cal_sum[i] / (int32_t)p_ctx->cal_n;
-            sq += (uint32_t)(b[i] * b[i]);
+            second[index] = p_ctx->cal_sum[index] / (int32_t)p_ctx->cal_n;
+            sq_value += (uint32_t)(second[index] * second[index]);
         }
 
-        p_ctx->g_mg = (int32_t)b4_isqrt(sq);
+        p_ctx->g_mg = (int32_t)b4_isqrt(sq_value);
 
         if ((p_ctx->g_mg < B4_CAL_G_MIN_MG) ||
             (p_ctx->g_mg > B4_CAL_G_MAX_MG) ||
-            ((b[AX_UP] * 100) < (B4_CAL_UP_MIN_PCT * p_ctx->g_mg)))
+            ((second[AX_UP] * 100) < (B4_CAL_UP_MIN_PCT * p_ctx->g_mg)))
         {
             /* |g| wrong, or gravity is not on the UP axis (mounting
              * settings wrong, or the car is on a slope). */
@@ -1768,10 +1780,10 @@ static void calibrate (b4_ctx_t * p_ctx, int16_t const mean[3],
             return;
         }
 
-        for (i = 0U; i < 3U; i++)
+        for (index = 0U; index < 3U; index++)
         {
-            p_ctx->base[i] = (int16_t)b[i];
-            p_ctx->lp[i] = b[i] * LP_ONE;
+            p_ctx->base[index] = (int16_t)second[index];
+            p_ctx->lp[index] = second[index] * LP_ONE;
         }
 
         p_ctx->pitch_dd = 0;
@@ -1802,7 +1814,7 @@ void b4_tick (b4_ctx_t * p_ctx, b4_in_t const * p_in, b4_out_t * p_out)
 {
     int32_t sum[3] = {0, 0, 0};
     int16_t mean[3];
-    uint32_t i;
+    uint32_t index;
 
     p_ctx->side_quality_reason = 0U;
     p_ctx->side_spread_mg = 0U;
@@ -1919,16 +1931,16 @@ void b4_tick (b4_ctx_t * p_ctx, b4_in_t const * p_in, b4_out_t * p_out)
 
     p_ctx->stale_run = 0U;
 
-    for (i = 0U; i < (uint32_t)p_in->n; i++)
+    for (index = 0U; index < (uint32_t)p_in->n; index++)
     {
-        sum[AX_FWD] += p_in->s[i].fwd_mg;
-        sum[AX_LAT] += p_in->s[i].lat_mg;
-        sum[AX_UP] += p_in->s[i].up_mg;
+        sum[AX_FWD] += p_in->s[index].fwd_mg;
+        sum[AX_LAT] += p_in->s[index].lat_mg;
+        sum[AX_UP] += p_in->s[index].up_mg;
     }
 
-    for (i = 0U; i < 3U; i++)
+    for (index = 0U; index < 3U; index++)
     {
-        mean[i] = (int16_t)(sum[i] / (int32_t)p_in->n);
+        mean[index] = (int16_t)(sum[index] / (int32_t)p_in->n);
     }
 
     if ((mean[AX_FWD] == p_ctx->last_mean.fwd_mg) &&
@@ -1966,69 +1978,74 @@ void b4_tick (b4_ctx_t * p_ctx, b4_in_t const * p_in, b4_out_t * p_out)
         uint32_t spread = 0U;
         uint32_t spread_range = 0U;
 #ifndef APP_RTOS_RELEASE
-        uint32_t at = 0U;
+        uint32_t at_value = 0U;
 #endif
         int32_t s_min[3] = {INT32_MAX, INT32_MAX, INT32_MAX};
         int32_t s_max[3] = {INT32_MIN, INT32_MIN, INT32_MIN};
-        int32_t g[3];
+        int32_t g_value[3];
         bool b_quiet;
 
-        for (i = 0U; i < 3U; i++)
+        for (index = 0U; index < 3U; index++)
         {
-            g[i] = p_ctx->lp[i] / LP_ONE;
+            g_value[index] = p_ctx->lp[index] / LP_ONE;
         }
 
-        for (i = 0U; i < (uint32_t)p_in->n; i++)
+        for (index = 0U; index < (uint32_t)p_in->n; index++)
         {
-            int32_t dx = p_in->s[i].fwd_mg - g[AX_FWD];
-            int32_t dy = p_in->s[i].lat_mg - g[AX_LAT];
-            int32_t dz = p_in->s[i].up_mg - g[AX_UP];
-            uint32_t d2 = (uint32_t)((dx * dx) + (dy * dy) + (dz * dz));
-            uint32_t sx = (uint32_t)iabs(p_in->s[i].fwd_mg - mean[AX_FWD]);
-            uint32_t sy = (uint32_t)iabs(p_in->s[i].lat_mg - mean[AX_LAT]);
-            uint32_t sz = (uint32_t)iabs(p_in->s[i].up_mg - mean[AX_UP]);
+            int32_t dx_value = p_in->s[index].fwd_mg - g_value[AX_FWD];
+            int32_t dy_value = p_in->s[index].lat_mg - g_value[AX_LAT];
+            int32_t dz_value = p_in->s[index].up_mg - g_value[AX_UP];
+            uint32_t d2_value =
+                (uint32_t)((dx_value * dx_value) + (dy_value * dy_value) +
+                           (dz_value * dz_value));
+            uint32_t sx_value =
+                (uint32_t)iabs(p_in->s[index].fwd_mg - mean[AX_FWD]);
+            uint32_t sy_value =
+                (uint32_t)iabs(p_in->s[index].lat_mg - mean[AX_LAT]);
+            uint32_t sz_value =
+                (uint32_t)iabs(p_in->s[index].up_mg - mean[AX_UP]);
 
-            if (d2 > max_d2)
+            if (d2_value > max_d2)
             {
-                max_d2 = d2;
+                max_d2 = d2_value;
 #ifndef APP_RTOS_RELEASE
-                at = i;
+                at_value = index;
 #endif
             }
 
-            spread = (sx > spread) ? sx : spread;
-            spread = (sy > spread) ? sy : spread;
-            spread = (sz > spread) ? sz : spread;
+            spread = (sx_value > spread) ? sx_value : spread;
+            spread = (sy_value > spread) ? sy_value : spread;
+            spread = (sz_value > spread) ? sz_value : spread;
 
-            if (p_in->s[i].fwd_mg < s_min[AX_FWD])
+            if (p_in->s[index].fwd_mg < s_min[AX_FWD])
             {
-                s_min[AX_FWD] = p_in->s[i].fwd_mg;
+                s_min[AX_FWD] = p_in->s[index].fwd_mg;
             }
-            if (p_in->s[i].fwd_mg > s_max[AX_FWD])
+            if (p_in->s[index].fwd_mg > s_max[AX_FWD])
             {
-                s_max[AX_FWD] = p_in->s[i].fwd_mg;
+                s_max[AX_FWD] = p_in->s[index].fwd_mg;
             }
-            if (p_in->s[i].lat_mg < s_min[AX_LAT])
+            if (p_in->s[index].lat_mg < s_min[AX_LAT])
             {
-                s_min[AX_LAT] = p_in->s[i].lat_mg;
+                s_min[AX_LAT] = p_in->s[index].lat_mg;
             }
-            if (p_in->s[i].lat_mg > s_max[AX_LAT])
+            if (p_in->s[index].lat_mg > s_max[AX_LAT])
             {
-                s_max[AX_LAT] = p_in->s[i].lat_mg;
+                s_max[AX_LAT] = p_in->s[index].lat_mg;
             }
-            if (p_in->s[i].up_mg < s_min[AX_UP])
+            if (p_in->s[index].up_mg < s_min[AX_UP])
             {
-                s_min[AX_UP] = p_in->s[i].up_mg;
+                s_min[AX_UP] = p_in->s[index].up_mg;
             }
-            if (p_in->s[i].up_mg > s_max[AX_UP])
+            if (p_in->s[index].up_mg > s_max[AX_UP])
             {
-                s_max[AX_UP] = p_in->s[i].up_mg;
+                s_max[AX_UP] = p_in->s[index].up_mg;
             }
         }
 
-        for (i = 0U; i < 3U; i++)
+        for (index = 0U; index < 3U; index++)
         {
-            uint32_t range = (uint32_t)(s_max[i] - s_min[i]);
+            uint32_t range = (uint32_t)(s_max[index] - s_min[index]);
             spread_range = (range > spread_range) ? range : spread_range;
         }
 
@@ -2136,7 +2153,7 @@ void b4_tick (b4_ctx_t * p_ctx, b4_in_t const * p_in, b4_out_t * p_out)
         if ((max_d2 > (uint32_t)(B4_SHOCK_MG * B4_SHOCK_MG)) &&
             (p_ctx->state != IMU_ST_IMPACT))
         {
-            uint32_t mg = b4_isqrt(max_d2);
+            uint32_t mg_value = b4_isqrt(max_d2);
 
             /* A shock invalidates a partial hump: never a false peak. */
 #if B4_SIDE_RAMP_MODE
@@ -2171,9 +2188,10 @@ void b4_tick (b4_ctx_t * p_ctx, b4_in_t const * p_in, b4_out_t * p_out)
             p_ctx->hump.b_ref_ok = false; /* re-establish when level */
             p_ctx->clear_us = 0U;
             p_ctx->shocks++;
-            p_ctx->shock_mg = (uint16_t)((mg > 4095U) ? 4095U : mg);
+            p_ctx->shock_mg = (uint16_t)((mg_value > 4095U) ? 4095U : mg_value);
             p_out->b_shock = true;
-            p_out->shock_age_us = ((uint32_t)p_in->n - 1U - at) * B4_SAMPLE_US;
+            p_out->shock_age_us =
+                ((uint32_t)p_in->n - 1U - at_value) * B4_SAMPLE_US;
             p_ctx->motion = IMU_MOTION_IMPACT;
             p_ctx->cand = IMU_MOTION_IMPACT;
             emit(p_ctx, p_out, IMU_EVT_IMPACT, 0U, 0, p_in->t_us);
@@ -2201,10 +2219,10 @@ void b4_tick (b4_ctx_t * p_ctx, b4_in_t const * p_in, b4_out_t * p_out)
 #endif
 
         /* 3. Terrain */
-        for (i = 0U; i < 3U; i++)
+        for (index = 0U; index < 3U; index++)
         {
-            p_ctx->lp[i] +=
-                ((mean[i] * LP_ONE) - p_ctx->lp[i]) / (1 << B4_LP_SHIFT);
+            p_ctx->lp[index] += ((mean[index] * LP_ONE) - p_ctx->lp[index]) /
+                                (1 << B4_LP_SHIFT);
         }
 
         update_motion(p_ctx, p_in);

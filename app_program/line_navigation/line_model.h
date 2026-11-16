@@ -1,3 +1,10 @@
+/**
+ * @file line_model.h
+ * @brief Line model.
+ * @details ADC/control ownership covers sensor acquisition, planning and calibration.
+ * Other tasks consume protected copies; flash and stored exports require Stop.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 #ifndef RTOS_LINE_MODEL_H
 #define RTOS_LINE_MODEL_H
 
@@ -51,183 +58,196 @@ typedef struct
 {
     uint64_t white_us;
     uint8_t flags;
-} LineJunctionDiagnostic;
+} line_junction_diagnostic_t;
 
 typedef struct
 {
-    Circuit circuit;
-    BarcodeNav nav;
-    ContinuousSteering steering;
-    ScanSmooth scan;
-    AnalogDemand optical;
-    uint16_t baseline, side_adc;
+    circuit_t circuit;
+    barcode_nav_t nav;
+    continuous_steering_t steering;
+    scan_smooth_t scan;
+    analog_demand_t optical;
+    uint16_t baseline;
+    uint16_t side_adc;
     uint64_t candidate_us;
     double candidate_wheel[2];
-    bool black, candidate;
-    LineJunctionDiagnostic junction;
-} LinePlanner;
+    bool black;
+    bool candidate;
+    line_junction_diagnostic_t junction;
+} line_planner_t;
 
 /* Observation only: never modifies the planner's acceptance or motor targets.
  * White qualification reproduces the former <200, >10deg, 30ms condition.
  * For U-turns, acceptance is stage2 -> stage3, before the second settle. */
-static inline void rl_junction_observe (LinePlanner * p,
-                                        const LineCalibration * cal,
-                                        const CircuitInput * i, unsigned before,
-                                        unsigned stage)
+static inline void rl_junction_observe (line_planner_t * p_data,
+                                        const line_calibration_t * p_cal,
+                                        const circuit_input_t * p_index,
+                                        unsigned before, unsigned stage)
 {
-    LineJunctionDiagnostic * q = &p->junction;
-    const Junction * j = &p->circuit.turn;
-    if (before == J_CENTRE && p->circuit.phase == J_TURN)
+    line_junction_diagnostic_t * p_other_data = &p_data->junction;
+    const junction_t * p_other_index = &p_data->circuit.turn;
+    if (before == J_CENTRE && p_data->circuit.phase == J_TURN)
     {
-        *q = (LineJunctionDiagnostic){0};
+        *p_other_data = (line_junction_diagnostic_t){0};
     }
-    q->flags &= (uint8_t) ~(RL_J_WHITE_NOW | RL_J_ACCEPT_EVENT);
-    bool white = line_level(i->adc[0], cal->white[0], cal->black[0]) < 200 &&
-                 line_level(i->adc[1], cal->white[1], cal->black[1]) < 200;
+    p_other_data->flags &= (uint8_t) ~(RL_J_WHITE_NOW | RL_J_ACCEPT_EVENT);
+    bool white =
+        line_level(p_index->adc[0], p_cal->white[0], p_cal->black[0]) < 200 &&
+        line_level(p_index->adc[1], p_cal->white[1], p_cal->black[1]) < 200;
     if (white)
     {
-        q->flags |= RL_J_WHITE_NOW;
+        p_other_data->flags |= RL_J_WHITE_NOW;
     }
-    if (before == J_TURN && j->turn_degrees > 10 && white)
+    if (before == J_TURN && p_other_index->turn_degrees > 10 && white)
     {
-        if (!(q->flags & RL_J_WHITE_TIMING))
+        if (!(p_other_data->flags & RL_J_WHITE_TIMING))
         {
-            q->white_us = i->now;
-            q->flags |= RL_J_WHITE_TIMING;
+            p_other_data->white_us = p_index->now;
+            p_other_data->flags |= RL_J_WHITE_TIMING;
         }
-        if (i->now - q->white_us >= 30000)
+        if (p_index->now - p_other_data->white_us >= 30000)
         {
-            q->flags |= RL_J_WHITE_QUALIFIED;
+            p_other_data->flags |= RL_J_WHITE_QUALIFIED;
         }
     }
     else
     {
-        q->flags &= (uint8_t)~RL_J_WHITE_TIMING;
+        p_other_data->flags &= (uint8_t)~RL_J_WHITE_TIMING;
     }
-    if (j->off_line)
+    if (p_other_index->off_line)
     {
-        q->flags |= RL_J_DEPARTURE_READY;
+        p_other_data->flags |= RL_J_DEPARTURE_READY;
     }
-    bool uturn = barcode_nav_action(&p->nav, p->nav.action) == 'U';
+    bool uturn = barcode_nav_action(&p_data->nav, p_data->nav.action) == 'U';
     bool accepted =
-        before == J_TURN && (uturn ? stage == 2 && p->nav.uturn.stage == 3
-                                   : p->circuit.phase == J_ACQUIRE);
+        before == J_TURN && (uturn ? stage == 2 && p_data->nav.uturn.stage == 3
+                                   : p_data->circuit.phase == J_ACQUIRE);
     if (accepted)
     {
-        q->flags |= RL_J_BRANCH_ACCEPTED | RL_J_ACCEPT_EVENT;
-        if (!(q->flags & RL_J_WHITE_QUALIFIED))
+        p_other_data->flags |= RL_J_BRANCH_ACCEPTED | RL_J_ACCEPT_EVENT;
+        if (!(p_other_data->flags & RL_J_WHITE_QUALIFIED))
         {
-            q->flags |= RL_J_ACCEPTED_WITHOUT_WHITE;
+            p_other_data->flags |= RL_J_ACCEPTED_WITHOUT_WHITE;
         }
     }
 }
 
-static inline void rl_begin (LinePlanner * p, const CircuitInput * i,
-                             uint16_t side_adc)
+static inline void rl_begin (line_planner_t * p_data,
+                             const circuit_input_t * p_index, uint16_t side_adc)
 {
-    *p = (LinePlanner){.baseline = side_adc,
-                       .side_adc = side_adc,
-                       .black = side_adc >= 212,
-                       .candidate = side_adc >= 212};
-    circuit_begin(&p->circuit, i);
-    barcode_nav_begin(&p->nav, i);
-    p->nav.external_reader =
+    *p_data = (line_planner_t){.baseline = side_adc,
+                               .side_adc = side_adc,
+                               .black = side_adc >= 212,
+                               .candidate = side_adc >= 212};
+    circuit_begin(&p_data->circuit, p_index);
+    barcode_nav_begin(&p_data->nav, p_index);
+    p_data->nav.external_reader =
         true; /* Code39 is deliberately deferred to Step 4. */
 }
 
 /* Junction-only edge qualification. Same 212 ADC preview, 3 ADC hysteresis,
  * 2 ms debounce, encoder width 11..30 mm and 4 mm white confirmation as the
  * reference. No call to either barcode decoder; test with a bare cross. */
-static inline void rl_side (LinePlanner * p, uint16_t adc, uint64_t now,
+static inline void rl_side (line_planner_t * p_data, uint16_t adc, uint64_t now,
                             const double wheel[2])
 {
-    p->side_adc = adc;
-    bool candidate = p->black ? adc >= 209 : adc >= 215;
-    if (candidate != p->candidate)
+    p_data->side_adc = adc;
+    bool candidate = p_data->black ? adc >= 209 : adc >= 215;
+    if (candidate != p_data->candidate)
     {
-        p->candidate = candidate;
-        p->candidate_us = now;
-        memcpy(p->candidate_wheel, wheel, sizeof(p->candidate_wheel));
+        p_data->candidate = candidate;
+        p_data->candidate_us = now;
+        memcpy(p_data->candidate_wheel, wheel, sizeof(p_data->candidate_wheel));
     }
-    if (candidate == p->black || now - p->candidate_us < AO_DEBOUNCE_US)
-    {
-        return;
-    }
-    p->black = candidate;
-    BarcodeNav * n = &p->nav;
-    if (n->busy)
+    if (candidate == p_data->black ||
+        now - p_data->candidate_us < AO_DEBOUNCE_US)
     {
         return;
     }
-    double mm = (p->candidate_wheel[0] + p->candidate_wheel[1]) * .5;
+    p_data->black = candidate;
+    barcode_nav_t * p_count = &p_data->nav;
+    if (p_count->busy)
+    {
+        return;
+    }
+    double mm_value =
+        (p_data->candidate_wheel[0] + p_data->candidate_wheel[1]) * .5;
     if (candidate)
     {
-        barcode_cross_confirm(n, p->candidate_us, mm, true);
-        n->cross_candidate = false;
-        memcpy(n->leading_wheel, p->candidate_wheel, sizeof(n->leading_wheel));
-        n->leading_us = p->candidate_us;
-        n->leading_gate = n->allow_cross;
+        barcode_cross_confirm(p_count, p_data->candidate_us, mm_value, true);
+        p_count->cross_candidate = false;
+        memcpy(p_count->leading_wheel, p_data->candidate_wheel,
+               sizeof(p_count->leading_wheel));
+        p_count->leading_us = p_data->candidate_us;
+        p_count->leading_gate = p_count->allow_cross;
     }
-    else if (n->leading_us)
+    else if (p_count->leading_us)
     {
-        double width = mm - (n->leading_wheel[0] + n->leading_wheel[1]) * .5;
+        double width =
+            mm_value -
+            (p_count->leading_wheel[0] + p_count->leading_wheel[1]) * .5;
         if (width >= B_CROSS_MIN_MM && width <= B_CROSS_MAX_MM)
         {
-            n->cross_width = width;
-            n->cross_us = n->leading_us;
-            memcpy(n->cross_wheel, n->leading_wheel, sizeof(n->cross_wheel));
-            n->cross_gate = n->leading_gate;
-            n->cross_candidate = true;
-            n->cross_trailing_mm = mm;
+            p_count->cross_width = width;
+            p_count->cross_us = p_count->leading_us;
+            memcpy(p_count->cross_wheel, p_count->leading_wheel,
+                   sizeof(p_count->cross_wheel));
+            p_count->cross_gate = p_count->leading_gate;
+            p_count->cross_candidate = true;
+            p_count->cross_trailing_mm = mm_value;
         }
-        n->leading_us = 0;
+        p_count->leading_us = 0;
     }
 }
 
 /* Profile 1 part of continuous_follow_step, without allocating 63 inactive
  * decoder banks. Host tests compare it against the unchanged full wrapper. */
-static inline AnalogDemand rl_follow_with_cruise (LinePlanner * p,
-                                                  const LineCalibration * cal,
-                                                  const CircuitInput * i,
-                                                  float dt,
-                                                  unsigned cruise_speed_mm_s)
+static inline analog_demand_t
+rl_follow_with_cruise (line_planner_t * p_data,
+                       const line_calibration_t * p_cal,
+                       const circuit_input_t * p_index, float delta_time,
+                       unsigned cruise_speed_mm_s)
 {
-    unsigned before = p->circuit.phase, stage = p->nav.uturn.stage;
-    AnalogDemand d =
-        barcode_circuit_step(&p->circuit, &p->nav, cal, i, RL_PROFILE);
-    rl_junction_observe(p, cal, i, before, stage);
-    p->optical = d;
-    bool activity = p->nav.pending || p->side_adc >= (unsigned)p->baseline + 16;
+    unsigned before = p_data->circuit.phase, stage = p_data->nav.uturn.stage;
+    analog_demand_t demand = barcode_circuit_step(
+        &p_data->circuit, &p_data->nav, p_cal, p_index, RL_PROFILE);
+    rl_junction_observe(p_data, p_cal, p_index, before, stage);
+    p_data->optical = demand;
+    bool activity = p_data->nav.pending ||
+                    p_data->side_adc >= (unsigned)p_data->baseline + 16;
     if (activity)
     {
-        p->scan.activity_us = i->now;
+        p_data->scan.activity_us = p_index->now;
     }
-    bool scanning = !p->circuit.busy && !d.stop &&
-                    (activity || (p->scan.scanning &&
-                                  i->now - p->scan.activity_us < 600000));
-    p->scan.scanning = scanning;
-    return continuous_steering_step_with_cruise(&p->steering, d, &p->circuit, i,
-                                                scanning, RL_PROFILE, dt,
-                                                cruise_speed_mm_s);
+    bool scanning =
+        !p_data->circuit.busy && !demand.stop &&
+        (activity || (p_data->scan.scanning &&
+                      p_index->now - p_data->scan.activity_us < 600000));
+    p_data->scan.scanning = scanning;
+    return continuous_steering_step_with_cruise(
+        &p_data->steering, demand, &p_data->circuit, p_index, scanning,
+        RL_PROFILE, delta_time, cruise_speed_mm_s);
 }
-static inline AnalogDemand rl_follow (LinePlanner * p,
-                                      const LineCalibration * cal,
-                                      const CircuitInput * i, float dt)
+static inline analog_demand_t rl_follow (line_planner_t * p_data,
+                                         const line_calibration_t * p_cal,
+                                         const circuit_input_t * p_index,
+                                         float delta_time)
 {
-    return rl_follow_with_cruise(p, cal, i, dt, DRIVE_MODE_BASELINE_SPEED);
+    return rl_follow_with_cruise(p_data, p_cal, p_index, delta_time,
+                                 DRIVE_MODE_BASELINE_SPEED);
 }
 
 typedef struct
 {
-    ContinuousDrive drive[2];
-    SignedWheel wheel[2];
-    ManeuverPower maneuver[2];
-    LineRecoveryWheel recovery[2];
-    CircuitCapture capture;
-    CircuitLoad load;
+    continuous_drive_t drive[2];
+    signed_wheel_t wheel[2];
+    maneuver_power_t maneuver[2];
+    line_recovery_wheel_t recovery[2];
+    circuit_capture_t capture;
+    circuit_load_t load;
     int32_t output[2];
     unsigned assist_code;
-} LinePower;
+} line_power_t;
 
 /* A committed envelope is copied under the motion lock. The 1 ms safety
  * task can expire peaks without reading the controller's mutable PI state. */
@@ -235,228 +255,261 @@ typedef struct
 {
     int32_t output[2];
     uint64_t until[2];
-    unsigned continuous : 1, maneuver : 1, reverse : 1, recovery : 1;
+    unsigned continuous : 1;
+    unsigned maneuver : 1;
+    unsigned reverse : 1;
+    unsigned recovery : 1;
     unsigned loaded : 2;
-} LineEnvelope;
+} line_envelope_t;
 
-static inline LineEnvelope rl_power (LinePower * s, const LinePlanner * p,
-                                     const CircuitInput * i,
-                                     const AnalogDemand * d, unsigned before,
-                                     float dt)
+static inline line_envelope_t rl_power (line_power_t * p_state,
+                                        const line_planner_t * p_data,
+                                        const circuit_input_t * p_index,
+                                        const analog_demand_t * p_demand,
+                                        unsigned before, float delta_time)
 {
-    const Circuit * c = &p->circuit;
+    const circuit_t * p_character = &p_data->circuit;
     if ((before == J_TURN ||
-         (barcode_nav_action(&p->nav, p->nav.action) == 'U' &&
+         (barcode_nav_action(&p_data->nav, p_data->nav.action) == 'U' &&
           before == J_TURN_SETTLE)) &&
-        c->phase == J_ACQUIRE)
+        p_character->phase == J_ACQUIRE)
     {
-        circuit_capture_begin(&s->capture, i->now, i->path);
+        circuit_capture_begin(&p_state->capture, p_index->now, p_index->path);
     }
-    bool turning =
-        c->phase == J_TURN && ((d->target[0] == 0 && d->target[1] > 0) ||
-                               (d->target[1] == 0 && d->target[0] != 0));
-    const CircuitTracker * tracker =
-        c->phase == J_ACQUIRE ? &c->joining : &c->follower;
-    bool recovering = tracker->core.white;
-    int capture = circuit_capture_outer(&s->capture, i, c->phase, d);
+    bool turning = p_character->phase == J_TURN &&
+                   ((p_demand->target[0] == 0 && p_demand->target[1] > 0) ||
+                    (p_demand->target[1] == 0 && p_demand->target[0] != 0));
+    const circuit_tracker_t * p_tracker = p_character->phase == J_ACQUIRE
+                                              ? &p_character->joining
+                                              : &p_character->follower;
+    bool recovering = p_tracker->core.white;
+    int capture = circuit_capture_outer(&p_state->capture, p_index,
+                                        p_character->phase, p_demand);
 #if defined(CIRCUIT_STATIONARY_SEARCH) || defined(LINE_STATIONARY_SEARCH)
-    bool recovery = tracker->search.active && recovering && !d->stop;
+    bool recovery = p_tracker->search.active && recovering && !p_demand->stop;
     int search = -1;
 #else
     bool recovery = false;
-    int search =
-        line_search_outer(tracker->search.active && recovering && !d->stop,
-                          d->target[0], d->target[1]);
+    int search = line_search_outer(p_tracker->search.active && recovering &&
+                                       !p_demand->stop,
+                                   p_demand->target[0], p_demand->target[1]);
 #endif
-    bool maneuver =
-        (turning && barcode_nav_action(&p->nav, p->nav.action) == 'U') ||
-        search >= 0;
+    bool maneuver = (turning && barcode_nav_action(
+                                    &p_data->nav, p_data->nav.action) == 'U') ||
+                    search >= 0;
     if (recovering)
     {
         capture = -1;
     }
-    int load = circuit_load_outer(&s->load, i, c->phase, d,
-                                  capture >= 0 || recovering);
-    bool continuous = continuous_drive_selected(
-        RL_PROFILE, c->phase, c->busy, false, false, maneuver, recovering, d);
+    int load = circuit_load_outer(&p_state->load, p_index, p_character->phase,
+                                  p_demand, capture >= 0 || recovering);
+    bool continuous = continuous_drive_selected(RL_PROFILE, p_character->phase,
+                                                p_character->busy, false, false,
+                                                maneuver, recovering, p_demand);
     if (continuous)
     {
         capture = load = -1;
-        s->load = (CircuitLoad){0};
+        p_state->load = (circuit_load_t){0};
     }
     int effort = search >= 0 ? search : capture >= 0 ? capture : load;
     unsigned assist_code = search >= 0    ? (unsigned)search + 5
                            : capture >= 0 ? (unsigned)capture + 1
                            : load >= 0    ? (unsigned)load + 3
                                           : 0;
-    LineEnvelope e = {.continuous = continuous,
-                      .maneuver = maneuver,
-                      .recovery = recovery,
-                      .reverse =
-                          barcode_nav_action(&p->nav, p->nav.action) == 'U' &&
-                          c->phase == J_TURN};
+    line_envelope_t event = {
+        .continuous = continuous,
+        .maneuver = maneuver,
+        .recovery = recovery,
+        .reverse =
+            barcode_nav_action(&p_data->nav, p_data->nav.action) == 'U' &&
+            p_character->phase == J_TURN};
 #ifdef APP_RTOS_IMU
-    MotionRampAssist approved = ri_ramp_step(dt, continuous && !recovering,
-                                             i->speed, d->target, s->drive);
+    motion_ramp_assist_t approved =
+        ri_ramp_step(delta_time, continuous && !recovering, p_index->speed,
+                     p_demand->target, p_state->drive);
 #endif
-    for (unsigned w = 0; w < 2; ++w)
+    for (unsigned wheel = 0; wheel < 2; ++wheel)
     {
-        bool loaded = turning || effort == (int)w;
+        bool loaded = turning || effort == (int)wheel;
         if (loaded)
         {
-            e.loaded |= 1U << w;
+            event.loaded |= 1U << wheel;
         }
         if (!continuous)
         {
-            continuous_leave(&s->drive[w], &s->wheel[w], w, d->target[w],
-                             i->speed[w],
 #ifdef APP_RTOS_IMU
-                             ri_unboosted(&s->drive[w], s->output[w]));
-        }
-        motion_apply_ramp_profile(&s->drive[w], &approved);
+            continuous_leave(
+                &p_state->drive[wheel], &p_state->wheel[wheel], wheel,
+                p_demand->target[wheel], p_index->speed[wheel],
+                ri_unboosted(&p_state->drive[wheel], p_state->output[wheel]));
 #else
-                             s->output[w]);
+            continuous_leave(&p_state->drive[wheel], &p_state->wheel[wheel],
+                             wheel, p_demand->target[wheel],
+                             p_index->speed[wheel], p_state->output[wheel]);
+#endif
+        }
+#ifdef APP_RTOS_IMU
+        motion_apply_ramp_profile(&p_state->drive[wheel], &approved);
 #endif
         if (!maneuver)
         {
-            maneuver_leave(&s->maneuver[w], &s->wheel[w], d->target[w]);
+            maneuver_leave(&p_state->maneuver[wheel], &p_state->wheel[wheel],
+                           p_demand->target[wheel]);
         }
         if (!recovery)
         {
-            s->recovery[w] = (LineRecoveryWheel){0};
+            p_state->recovery[wheel] = (line_recovery_wheel_t){0};
         }
     }
-    if (!maneuver && effort >= 0 && assist_code != s->assist_code)
+    if (!maneuver && effort >= 0 && assist_code != p_state->assist_code)
     {
-        circuit_capture_prepare(&s->wheel[effort]);
+        circuit_capture_prepare(&p_state->wheel[effort]);
     }
-    s->assist_code = assist_code;
-    for (unsigned w = 0; w < 2; ++w)
+    p_state->assist_code = assist_code;
+    for (unsigned wheel_value = 0; wheel_value < 2; ++wheel_value)
     {
         bool load_eligible =
-            !p->scan.scanning && !recovering && !maneuver && !d->stop &&
-            c->phase == C_FOLLOW && !c->busy &&
-            (d->decision == SYM_STRAIGHT || d->decision == SYM_LEFT ||
-             d->decision == SYM_RIGHT || d->decision == C_FAST) &&
-            d->target[0] > 10 && d->target[1] > 10;
-        e.output[w] =
-            recovery ? line_recovery_wheel_step(&s->recovery[w], w,
-                                                d->target[w], i->speed[w], dt,
-                                                i->now, s->output[w])
+            !p_data->scan.scanning && !recovering && !maneuver &&
+            !p_demand->stop && p_character->phase == C_FOLLOW &&
+            !p_character->busy &&
+            (p_demand->decision == SYM_STRAIGHT ||
+             p_demand->decision == SYM_LEFT ||
+             p_demand->decision == SYM_RIGHT || p_demand->decision == C_FAST) &&
+            p_demand->target[0] > 10 && p_demand->target[1] > 10;
+        event.output[wheel_value] =
+            recovery ? line_recovery_wheel_step(
+                           &p_state->recovery[wheel_value], wheel_value,
+                           p_demand->target[wheel_value],
+                           p_index->speed[wheel_value], delta_time,
+                           p_index->now, p_state->output[wheel_value])
             : continuous
                 ? continuous_drive_step_policy(
-                      &s->drive[w], &s->wheel[w], w, d->target[w], i->speed[w],
-                      dt, i->now, s->output[w], load_eligible)
+                      &p_state->drive[wheel_value],
+                      &p_state->wheel[wheel_value], wheel_value,
+                      p_demand->target[wheel_value],
+                      p_index->speed[wheel_value], delta_time, p_index->now,
+                      p_state->output[wheel_value], load_eligible)
             : maneuver
-                ? maneuver_wheel_step(&s->maneuver[w], &s->wheel[w], w,
-                                      d->target[w], i->speed[w], dt, i->now)
-                : circuit_wheel_step(&s->wheel[w], w, d->target[w], i->speed[w],
-                                     dt, i->now, (e.loaded & (1U << w)) != 0,
-                                     RL_PROFILE);
-        e.until[w] = (maneuver ? s->wheel[w].peak_active : turning)
-                         ? s->wheel[w].peak_end_us
-                         : 0;
+                ? maneuver_wheel_step(&p_state->maneuver[wheel_value],
+                                      &p_state->wheel[wheel_value], wheel_value,
+                                      p_demand->target[wheel_value],
+                                      p_index->speed[wheel_value], delta_time,
+                                      p_index->now)
+                : circuit_wheel_step(
+                      &p_state->wheel[wheel_value], wheel_value,
+                      p_demand->target[wheel_value],
+                      p_index->speed[wheel_value], delta_time, p_index->now,
+                      (event.loaded & (1U << wheel_value)) != 0, RL_PROFILE);
+        event.until[wheel_value] =
+            (maneuver ? p_state->wheel[wheel_value].peak_active : turning)
+                ? p_state->wheel[wheel_value].peak_end_us
+                : 0;
     }
-    return e;
+    return event;
 }
 
-static inline int32_t rl_cap (const LineEnvelope * e, unsigned w, uint64_t now)
+static inline int32_t rl_cap (const line_envelope_t * p_event, unsigned wheel,
+                              uint64_t now)
 {
-    return e->recovery     ? line_recovery_output_cap(e->output[w])
-           : e->continuous ? continuous_output_cap(e->output[w])
-           : e->maneuver
-               ? maneuver_output_cap(e->output[w], e->until[w], now)
-               : barcode_output_cap(e->output[w], false, e->until[w], now);
+    return p_event->recovery ? line_recovery_output_cap(p_event->output[wheel])
+           : p_event->continuous ? continuous_output_cap(p_event->output[wheel])
+           : p_event->maneuver
+               ? maneuver_output_cap(p_event->output[wheel],
+                                     p_event->until[wheel], now)
+               : barcode_output_cap(p_event->output[wheel], false,
+                                    p_event->until[wheel], now);
 }
 
-static inline DualLevels rl_levels (const LineEnvelope * e, unsigned w,
-                                    uint64_t now)
+static inline dual_levels_t rl_levels (const line_envelope_t * p_event,
+                                       unsigned wheel, uint64_t now)
 {
-    int32_t output = rl_cap(e, w, now);
-    return e->recovery     ? line_recovery_levels(w, output)
-           : e->continuous ? continuous_output_levels(w, output)
-           : e->maneuver   ? maneuver_levels(w, output, e->reverse)
-           : e->reverse    ? boosted_junction_levels(w, output, true)
-                           : barcode_output_levels(w, output, false,
-                                                   (e->loaded & (1U << w)) != 0,
-                                                   RL_PROFILE);
+    int32_t output = rl_cap(p_event, wheel, now);
+    return p_event->recovery     ? line_recovery_levels(wheel, output)
+           : p_event->continuous ? continuous_output_levels(wheel, output)
+           : p_event->maneuver
+               ? maneuver_levels(wheel, output, p_event->reverse)
+           : p_event->reverse
+               ? boosted_junction_levels(wheel, output, true)
+               : barcode_output_levels(wheel, output, false,
+                                       (p_event->loaded & (1U << wheel)) != 0,
+                                       RL_PROFILE);
 }
 
 /* A supervisor may only lower live channel levels, never re-enable an API
  * stop or change direction using an older committed controller envelope. */
-static inline DualLevels rl_reduce (DualLevels actual, DualLevels cap)
+static inline dual_levels_t rl_reduce (dual_levels_t actual, dual_levels_t cap)
 {
-    return (DualLevels){.a = actual.a < cap.a ? actual.a : cap.a,
-                        .b = actual.b < cap.b ? actual.b : cap.b};
+    return (dual_levels_t){.a = actual.a < cap.a ? actual.a : cap.a,
+                           .b = actual.b < cap.b ? actual.b : cap.b};
 }
 
 /* Own sector; never erase the SDK motion log, its calibration or Wi-Fi settings.
  * Fixed-endian page, CRC over all bytes except the first magic+CRC words. */
 static inline bool rl_cal_decode (const uint8_t page[256],
-                                  LineCalibration * cal)
+                                  line_calibration_t * p_cal)
 {
     uint32_t magic = 0, crc = 0;
-    for (unsigned j = 0; j < 4; ++j)
+    for (unsigned other_index = 0; other_index < 4; ++other_index)
     {
-        magic |= (uint32_t)page[j] << (8 * j);
-        crc |= (uint32_t)page[4 + j] << (8 * j);
+        magic |= (uint32_t)page[other_index] << (8 * other_index);
+        crc |= (uint32_t)page[4 + other_index] << (8 * other_index);
     }
     if (magic != RL_CAL_MAGIC || page[8] != 1 || crc != log_crc(page + 8, 248))
     {
         return false;
     }
-    *cal = (LineCalibration){.mask = page[9] & 7U};
+    *p_cal = (line_calibration_t){.mask = page[9] & 7U};
     uint64_t packed = 0;
-    for (unsigned n = 0; n < 6; ++n)
+    for (unsigned count = 0; count < 6; ++count)
     {
-        packed |= (uint64_t)page[10 + n] << (8 * n);
+        packed |= (uint64_t)page[10 + count] << (8 * count);
     }
-    cal->white[0] = (uint16_t)(packed & 4095U);
-    cal->white[1] = (uint16_t)((packed >> 12) & 4095U);
-    cal->black[0] = (uint16_t)((packed >> 24) & 4095U);
-    cal->black[1] = (uint16_t)((packed >> 36) & 4095U);
-    return calibration_valid(cal);
+    p_cal->white[0] = (uint16_t)(packed & 4095U);
+    p_cal->white[1] = (uint16_t)((packed >> 12) & 4095U);
+    p_cal->black[0] = (uint16_t)((packed >> 24) & 4095U);
+    p_cal->black[1] = (uint16_t)((packed >> 36) & 4095U);
+    return calibration_valid(p_cal);
 }
 
 static inline void rl_cal_encode (uint8_t page[256],
-                                  const LineCalibration * cal)
+                                  const line_calibration_t * p_cal)
 {
     memset(page, 0xff, 256);
     page[8] = 1;
-    page[9] = cal->mask & 7U;
-    uint64_t packed = (cal->white[0] & 4095U) |
-                      ((uint64_t)(cal->white[1] & 4095U) << 12) |
-                      ((uint64_t)(cal->black[0] & 4095U) << 24) |
-                      ((uint64_t)(cal->black[1] & 4095U) << 36);
-    for (unsigned n = 0; n < 6; ++n)
+    page[9] = p_cal->mask & 7U;
+    uint64_t packed = (p_cal->white[0] & 4095U) |
+                      ((uint64_t)(p_cal->white[1] & 4095U) << 12) |
+                      ((uint64_t)(p_cal->black[0] & 4095U) << 24) |
+                      ((uint64_t)(p_cal->black[1] & 4095U) << 36);
+    for (unsigned count = 0; count < 6; ++count)
     {
-        page[10 + n] = (uint8_t)(packed >> (8 * n));
+        page[10 + count] = (uint8_t)(packed >> (8 * count));
     }
     uint32_t crc = log_crc(page + 8, 248);
-    for (unsigned j = 0; j < 4; ++j)
+    for (unsigned other_index = 0; other_index < 4; ++other_index)
     {
-        page[j] = (uint8_t)(RL_CAL_MAGIC >> (8 * j));
-        page[4 + j] = (uint8_t)(crc >> (8 * j));
+        page[other_index] = (uint8_t)(RL_CAL_MAGIC >> (8 * other_index));
+        page[4 + other_index] = (uint8_t)(crc >> (8 * other_index));
     }
 }
 
-static inline LineCalibration rl_boot_cal (const uint8_t page[256],
-                                           const BarcodeSaved * saved,
-                                           uint32_t * origin)
+static inline line_calibration_t rl_boot_cal (const uint8_t page[256],
+                                              const barcode_saved_t * p_saved,
+                                              uint32_t * p_origin)
 {
-    LineCalibration cal = successful_calibration();
-    *origin = 0;
-    if (saved->version == CALIBRATION_RECORD_VERSION &&
-        barcode_record_valid(saved))
+    line_calibration_t cal = successful_calibration();
+    *p_origin = 0;
+    if (p_saved->version == CALIBRATION_RECORD_VERSION &&
+        barcode_record_valid(p_saved))
     {
-        cal = saved->calibration;
-        *origin = 1;
+        cal = p_saved->calibration;
+        *p_origin = 1;
     }
-    LineCalibration local;
+    line_calibration_t local;
     if (rl_cal_decode(page, &local))
     {
         cal = local;
-        *origin = 2;
+        *p_origin = 2;
     }
     return cal;
 }
@@ -468,49 +521,60 @@ typedef struct
     uint32_t ms;
     int32_t ticks[2];
     uint32_t optics[2];
-    int16_t speed[2], target[2], pwm[2];
-    uint16_t dt_us, cost_us;
-    uint32_t meta, sequence;
+    int16_t speed[2];
+    int16_t target[2];
+    int16_t pwm[2];
+    uint16_t dt_us;
+    uint16_t cost_us;
+    uint32_t meta;
+    uint32_t sequence;
     uint32_t aux[2];
     int16_t optical_target[2];
-} LineLogRow;
-_Static_assert(sizeof(LineLogRow) == 56, "line log layout");
-static inline void rl_pack_optics (LineLogRow * r, const uint16_t adc[3],
-                                   const AnalogDemand * d, unsigned phase)
+} line_log_row_t;
+_Static_assert(sizeof(line_log_row_t) == 56, "line log layout");
+static inline void rl_pack_optics (line_log_row_t * p_result,
+                                   const uint16_t adc[3],
+                                   const analog_demand_t * p_demand,
+                                   unsigned phase)
 {
-    r->optics[0] = (adc[0] & 4095U) | ((uint32_t)(adc[1] & 4095U) << 12) |
-                   ((uint32_t)(adc[2] & 255U) << 24);
-    r->optics[1] =
-        ((uint32_t)adc[2] >> 8) | ((uint32_t)(d->level[0] & 1023U) << 4) |
-        ((uint32_t)(d->level[1] & 1023U) << 14) | ((phase & 15U) << 24);
+    p_result->optics[0] = (adc[0] & 4095U) |
+                          ((uint32_t)(adc[1] & 4095U) << 12) |
+                          ((uint32_t)(adc[2] & 255U) << 24);
+    p_result->optics[1] = ((uint32_t)adc[2] >> 8) |
+                          ((uint32_t)(p_demand->level[0] & 1023U) << 4) |
+                          ((uint32_t)(p_demand->level[1] & 1023U) << 14) |
+                          ((phase & 15U) << 24);
 }
 
-static inline void rl_pack_steering (LineLogRow * r, const uint16_t filtered[2],
+static inline void rl_pack_steering (line_log_row_t * p_result,
+                                     const uint16_t filtered[2],
                                      unsigned gain_milli,
                                      unsigned damping_milli)
 {
-    r->aux[0] = (filtered[0] & 4095U) |
-                ((uint32_t)(filtered[1] & 4095U) << 12) |
-                ((gain_milli & 255U) << 24);
-    r->aux[1] = ((gain_milli >> 8) & 3U) | ((damping_milli & 1023U) << 2);
+    p_result->aux[0] = (filtered[0] & 4095U) |
+                       ((uint32_t)(filtered[1] & 4095U) << 12) |
+                       ((gain_milli & 255U) << 24);
+    p_result->aux[1] =
+        ((gain_milli >> 8) & 3U) | ((damping_milli & 1023U) << 2);
 }
 
 /* Use spare bits: six one-bit observations and signed13-bit angle x10.
  * The 56-byte row and existing steering fields retain their layout. */
-static inline void rl_pack_junction (LineLogRow * r, const LinePlanner * p)
+static inline void rl_pack_junction (line_log_row_t * p_result,
+                                     const line_planner_t * p_data)
 {
-    float degrees = p->circuit.turn.turn_degrees;
+    float degrees = p_data->circuit.turn.turn_degrees;
     int angle = degrees <= -409.6f ? -4096
                 : degrees >= 409.5f
                     ? 4095
                     : (int)(degrees * 10 + (degrees < 0 ? -.5f : .5f));
-    r->aux[1] = (r->aux[1] & 4095U) |
-                ((uint32_t)(p->junction.flags & 63U) << 12) |
-                ((uint32_t)(angle & 8191) << 18);
+    p_result->aux[1] = (p_result->aux[1] & 4095U) |
+                       ((uint32_t)(p_data->junction.flags & 63U) << 12) |
+                       ((uint32_t)(angle & 8191) << 18);
 }
-static inline int rl_log_angle (const LineLogRow * r)
+static inline int rl_log_angle (const line_log_row_t * p_result)
 {
-    unsigned value = (r->aux[1] >> 18) & 8191U;
+    unsigned value = (p_result->aux[1] >> 18) & 8191U;
     return value & 4096U ? (int)value - 8192 : (int)value;
 }
 

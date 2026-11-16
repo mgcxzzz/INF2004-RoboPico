@@ -6,11 +6,11 @@
 int main(void) {
     for (unsigned w = 0; w < 2; ++w)
         for (int sign = -1; sign <= 1; sign += 2) {
-            SignedWheel p = {0};
-            ManeuverPower s = {0};
+            signed_wheel_t p = {0};
+            maneuver_power_t s = {0};
             int pwm = maneuver_wheel_step(&s, &p, w, (int16_t)(sign * 90), 0, .01f, 1000);
             assert(pwm == sign * 750 && p.peak_active && p.peak_used);
-            DualLevels levels = maneuver_levels(w, pwm, true);
+            dual_levels_t levels = maneuver_levels(w, pwm, true);
             bool a_side = w == 0 ? sign > 0 : sign < 0;
             assert((a_side ? levels.a : levels.b) == 750 && !(a_side ? levels.b : levels.a));
             if (sign < 0) {
@@ -37,8 +37,8 @@ int main(void) {
                                       deadline + 2200000);
             assert(abs(pwm) <= 600 && !p.peak_active); /* observed movement ends kick early */
         }
-    SignedWheel a = {0}, b = {0};
-    ManeuverPower idle = {0};
+    signed_wheel_t a = {0}, b = {0};
+    maneuver_power_t idle = {0};
     for (unsigned k = 0; k < 200; ++k) {
         maneuver_leave(&idle, &a, 45);
         int x = circuit_wheel_step(&a, 0, 45, k % 60, .01f, 1000 + k * 10000, false, 1);

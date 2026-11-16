@@ -1,3 +1,10 @@
+/**
+ * @file dual_logic.h
+ * @brief Dual logic.
+ * @details Motion helpers run under the coordinator/control ownership contract.
+ * Preserve bounded outputs, target sign, stop precedence and request lifetimes.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 #ifndef DUAL_LOGIC_H
 #define DUAL_LOGIC_H
 #include <stdbool.h>
@@ -32,71 +39,79 @@ enum
 };
 typedef struct
 {
-    bool active, consumed;
-    uint32_t generation, stops;
+    bool active;
+    bool consumed;
+    uint32_t generation;
+    uint32_t stops;
     uint8_t reason;
-    uint64_t start_us, deadline_us, last_control_us, next_us, duration_us;
-} DualGuard;
-static inline void guard_stop (volatile DualGuard * g, uint64_t now,
+    uint64_t start_us;
+    uint64_t deadline_us;
+    uint64_t last_control_us;
+    uint64_t next_us;
+    uint64_t duration_us;
+} dual_guard_t;
+static inline void guard_stop (volatile dual_guard_t * p_g_value, uint64_t now,
                                uint8_t why)
 {
-    if (g->active)
+    if (p_g_value->active)
     {
-        g->duration_us = now - g->start_us;
-        g->next_us = now + REST_US;
-        g->reason = why;
-        ++g->stops;
+        p_g_value->duration_us = now - p_g_value->start_us;
+        p_g_value->next_us = now + REST_US;
+        p_g_value->reason = why;
+        ++p_g_value->stops;
     }
-    g->active = false;
-    g->consumed = true;
+    p_g_value->active = false;
+    p_g_value->consumed = true;
 }
-static inline void guard_tick (volatile DualGuard * g, uint64_t now, bool held,
-                               bool stop)
+static inline void guard_tick (volatile dual_guard_t * p_g_value, uint64_t now,
+                               bool held, bool stop)
 {
     if (stop)
     {
-        guard_stop(g, now, WHY_GP20);
+        guard_stop(p_g_value, now, WHY_GP20);
     }
     else if (!held)
     {
-        guard_stop(g, now, WHY_RELEASE);
+        guard_stop(p_g_value, now, WHY_RELEASE);
     }
-    else if (g->active && now >= g->deadline_us)
+    else if (p_g_value->active && now >= p_g_value->deadline_us)
     {
-        guard_stop(g, now, WHY_LIMIT);
+        guard_stop(p_g_value, now, WHY_LIMIT);
     }
-    else if (g->active && now - g->last_control_us >= CONTROL_LATE_US)
+    else if (p_g_value->active &&
+             now - p_g_value->last_control_us >= CONTROL_LATE_US)
     {
-        guard_stop(g, now, WHY_LATE);
+        guard_stop(p_g_value, now, WHY_LATE);
     }
     if (!held && !stop)
     {
-        g->consumed = false;
+        p_g_value->consumed = false;
     }
 }
-static inline bool guard_start (volatile DualGuard * g, uint64_t now, bool held,
-                                bool stop)
+static inline bool guard_start (volatile dual_guard_t * p_g_value, uint64_t now,
+                                bool held, bool stop)
 {
-    if (g->active || g->consumed || !held || stop || now < g->next_us)
+    if (p_g_value->active || p_g_value->consumed || !held || stop ||
+        now < p_g_value->next_us)
     {
         return false;
     }
-    g->active = true;
-    g->consumed = true;
-    ++g->generation;
-    g->start_us = g->last_control_us = now;
-    g->deadline_us = now + MAX_RUN_US;
+    p_g_value->active = true;
+    p_g_value->consumed = true;
+    ++p_g_value->generation;
+    p_g_value->start_us = p_g_value->last_control_us = now;
+    p_g_value->deadline_us = now + MAX_RUN_US;
     return true;
 }
 
-static inline float mm_per_tick (unsigned w)
+static inline float mm_per_tick (unsigned wheel)
 {
-    return CIRCUMFERENCE_MM / (w == 0 ? LEFT_CPR : RIGHT_CPR);
+    return CIRCUMFERENCE_MM / (wheel == 0 ? LEFT_CPR : RIGHT_CPR);
 }
 /* Raw encoder sign: left forward negative, right forward positive. */
-static inline float raw_to_mm (unsigned w, int64_t ticks)
+static inline float raw_to_mm (unsigned wheel, int64_t ticks)
 {
-    return (float)ticks * mm_per_tick(w) * (w == 0 ? -1.0f : 1.0f);
+    return (float)ticks * mm_per_tick(wheel) * (wheel == 0 ? -1.0f : 1.0f);
 }
 static inline float heading_deg (float left_mm, float right_mm)
 {
@@ -104,15 +119,17 @@ static inline float heading_deg (float left_mm, float right_mm)
 }
 typedef struct
 {
-    uint16_t a, b;
-} DualLevels;
+    uint16_t a;
+    uint16_t b;
+} dual_levels_t;
 /* Positive command means chassis-forward on BOTH wheels. */
-static inline DualLevels dual_levels (unsigned w, int32_t signed_permille)
+static inline dual_levels_t dual_levels (unsigned wheel,
+                                         int32_t signed_permille)
 {
-    DualLevels v = {0, 0};
-    if (w > 1)
+    dual_levels_t value = {0, 0};
+    if (wheel > 1)
     {
-        return v;
+        return value;
     }
     if (signed_permille > PWM_LIMIT)
     {
@@ -124,60 +141,64 @@ static inline DualLevels dual_levels (unsigned w, int32_t signed_permille)
     }
     uint16_t level =
         (uint16_t)(signed_permille < 0 ? -signed_permille : signed_permille);
-    bool a_side = (w == 0) ? signed_permille > 0 : signed_permille < 0;
+    bool a_side = (wheel == 0) ? signed_permille > 0 : signed_permille < 0;
     if (a_side)
     {
-        v.a = level;
+        value.a = level;
     }
     else
     {
-        v.b = level;
+        value.b = level;
     }
-    return v;
+    return value;
 }
-static inline float clampf (float x, float lo, float hi)
+static inline float clampf (float value_x, float low, float high)
 {
-    return x < lo ? lo : x > hi ? hi : x;
+    return value_x < low ? low : value_x > high ? high : value_x;
 }
 typedef struct
 {
-    float integral, ramp;
-} WheelPI;
+    float integral;
+    float ramp;
+} wheel_pi_t;
 /* Positive magnitudes: the command supplies direction separately. Gains are
    conservative initial values, still requiring physical tuning. */
-static inline float feedforward (unsigned w, int direction, float speed)
+static inline float feedforward (unsigned wheel, int direction, float speed)
 {
     if (speed <= 0)
     {
         return 0;
     }
-    float v15 = w == 0 ? (direction > 0 ? 101.0f : 96.0f)
-                       : (direction > 0 ? 93.0f : 96.0f);
-    float v25 = w == 0 ? (direction > 0 ? 185.0f : 181.0f)
-                       : (direction > 0 ? 177.0f : 176.0f);
+    float v15 = wheel == 0 ? (direction > 0 ? 101.0f : 96.0f)
+                           : (direction > 0 ? 93.0f : 96.0f);
+    float v25 = wheel == 0 ? (direction > 0 ? 185.0f : 181.0f)
+                           : (direction > 0 ? 177.0f : 176.0f);
     return clampf(150.0f + (speed - v15) * 100.0f / (v25 - v15), 0, PWM_LIMIT);
 }
-static inline int32_t pi_step (WheelPI * p, unsigned w, int direction,
-                               float demand_mm_s, float measured_along_mm_s,
-                               float dt)
+static inline int32_t pi_step (wheel_pi_t * p_data, unsigned wheel,
+                               int direction, float demand_mm_s,
+                               float measured_along_mm_s, float delta_time)
 {
     if (demand_mm_s <= 0)
     {
-        p->ramp = p->integral = 0;
+        p_data->ramp = p_data->integral = 0;
         return 0;
     }
     /* 100 mm/s^2 demand ramp; no automatic polarity reversal. */
-    p->ramp += clampf(demand_mm_s - p->ramp, -100.0f * dt, 100.0f * dt);
-    float error = p->ramp - measured_along_mm_s;
-    float ff = feedforward(w, direction, p->ramp);
-    float proposed_i = clampf(p->integral + 0.8f * error * dt, -80, 80);
-    float proposed = ff + 0.6f * error + proposed_i;
+    p_data->ramp += clampf(demand_mm_s - p_data->ramp, -100.0f * delta_time,
+                           100.0f * delta_time);
+    float error = p_data->ramp - measured_along_mm_s;
+    float ff_value = feedforward(wheel, direction, p_data->ramp);
+    float proposed_i =
+        clampf(p_data->integral + 0.8f * error * delta_time, -80, 80);
+    float proposed = ff_value + 0.6f * error + proposed_i;
     if (!((proposed > PWM_LIMIT && error > 0) || (proposed < 0 && error < 0)))
     {
-        p->integral = proposed_i;
+        p_data->integral = proposed_i;
     }
-    int32_t pwm =
-        (int32_t)(clampf(ff + 0.6f * error + p->integral, 0, PWM_LIMIT) + 0.5f);
+    int32_t pwm = (int32_t)(clampf(ff_value + 0.6f * error + p_data->integral,
+                                   0, PWM_LIMIT) +
+                            0.5f);
     return direction * pwm;
 }
 
@@ -186,38 +207,43 @@ typedef struct
     char key;
     bool bounded;
     int8_t sign[2];
-    float speed[2], target_mm[2];
-} DualCommand;
-static inline bool command_make (char key, float timed_speed, DualCommand * c)
+    float speed[2];
+    float target_mm[2];
+} dual_command_t;
+static inline bool command_make (char key, float timed_speed,
+                                 dual_command_t * p_character)
 {
-    *c = (DualCommand){.key = key};
+    *p_character = (dual_command_t){.key = key};
     if (key == 'f' || key == 'b')
     {
-        c->sign[0] = c->sign[1] = key == 'f' ? 1 : -1;
-        c->speed[0] = c->speed[1] = clampf(timed_speed, 60, 100);
+        p_character->sign[0] = p_character->sign[1] = key == 'f' ? 1 : -1;
+        p_character->speed[0] = p_character->speed[1] =
+            clampf(timed_speed, 60, 100);
     }
     else if (key == 'l' || key == 'r')
     {
-        c->sign[0] = key == 'r' ? 1 : -1;
-        c->sign[1] = -c->sign[0];
-        c->speed[0] = c->speed[1] = 40;
+        p_character->sign[0] = key == 'r' ? 1 : -1;
+        p_character->sign[1] = -p_character->sign[0];
+        p_character->speed[0] = p_character->speed[1] = 40;
     }
     else if (key == 'd' || key == 'g' || key == 'q' || key == 'e')
     {
-        c->bounded = true;
+        p_character->bounded = true;
         if (key == 'd' || key == 'g')
         {
-            c->sign[0] = c->sign[1] = 1;
-            c->target_mm[0] = c->target_mm[1] = key == 'g' ? 300 : 100;
-            c->speed[0] = c->speed[1] = key == 'g' ? 100 : 60;
+            p_character->sign[0] = p_character->sign[1] = 1;
+            p_character->target_mm[0] = p_character->target_mm[1] =
+                key == 'g' ? 300 : 100;
+            p_character->speed[0] = p_character->speed[1] =
+                key == 'g' ? 100 : 60;
         }
         else
         {
-            c->sign[0] = key == 'e' ? 1 : -1;
-            c->sign[1] = -c->sign[0];
-            c->target_mm[0] = c->target_mm[1] =
+            p_character->sign[0] = key == 'e' ? 1 : -1;
+            p_character->sign[1] = -p_character->sign[0];
+            p_character->target_mm[0] = p_character->target_mm[1] =
                 TRACK_MM * 3.14159265358979323846f / 8.0f;
-            c->speed[0] = c->speed[1] = 40;
+            p_character->speed[0] = p_character->speed[1] = 40;
         }
     }
     else
@@ -226,73 +252,80 @@ static inline bool command_make (char key, float timed_speed, DualCommand * c)
     }
     return true;
 }
-static inline float position_demand (const DualCommand * c, unsigned w,
-                                     float wheel_mm)
+static inline float position_demand (const dual_command_t * p_character,
+                                     unsigned wheel, float wheel_mm)
 {
-    if (!c->bounded)
+    if (!p_character->bounded)
     {
-        return c->speed[w];
+        return p_character->speed[wheel];
     }
-    float remaining = c->target_mm[w] - wheel_mm * c->sign[w];
+    float remaining =
+        p_character->target_mm[wheel] - wheel_mm * p_character->sign[wheel];
     if (remaining <= 2.0f)
     {
         return 0;
     }
-    float minimum = c->sign[0] != c->sign[1] ? 18.0f : 25.0f;
-    return fminf(c->speed[w], fmaxf(minimum, remaining * 3.0f));
+    float minimum =
+        p_character->sign[0] != p_character->sign[1] ? 18.0f : 25.0f;
+    return fminf(p_character->speed[wheel], fmaxf(minimum, remaining * 3.0f));
 }
 
 /* Bench-only terminal approach: 15% was physically tested on both wheels.
    Keep enough torque through the final 12 mm rather than tapering into stiction.
    Cut at the existing 2 mm threshold, then measure coasting/overshoot physically. */
-static inline int32_t finish_output (const DualCommand * c, unsigned w,
-                                     float pos, int32_t u)
+static inline int32_t finish_output (const dual_command_t * p_character,
+                                     unsigned wheel, float pos, int32_t u_value)
 {
-    float remaining = c->target_mm[w] - pos * c->sign[w];
-    if (c->bounded && c->sign[0] == c->sign[1] && remaining > 2 &&
-        remaining <= 12 && u * c->sign[w] < 150)
+    float remaining =
+        p_character->target_mm[wheel] - pos * p_character->sign[wheel];
+    if (p_character->bounded && p_character->sign[0] == p_character->sign[1] &&
+        remaining > 2 && remaining <= 12 &&
+        u_value * p_character->sign[wheel] < 150)
     {
-        return c->sign[w] * 150;
+        return p_character->sign[wheel] * 150;
     }
-    return u;
+    return u_value;
 }
 /* Turn-only breakaway assistance. 20% is below the existing 25% cap.
    A pulse lasts at most 100 ms, ends early once speed reaches 20 mm/s,
    and cannot repeat for 100 ms. No unconditional boost near the target. */
 typedef struct
 {
-    uint32_t pulse_us, cooldown_us;
-} TurnAssist;
-static inline uint32_t subtract_us (uint32_t a, uint32_t b)
+    uint32_t pulse_us;
+    uint32_t cooldown_us;
+} turn_assist_t;
+static inline uint32_t subtract_us (uint32_t first, uint32_t second)
 {
-    return a > b ? a - b : 0;
+    return first > second ? first - second : 0;
 }
-static inline int32_t turn_assist_step (TurnAssist * t, const DualCommand * c,
-                                        unsigned w, float ramp, float along,
-                                        int32_t u, uint32_t elapsed, bool done)
+static inline int32_t turn_assist_step (turn_assist_t * p_sample,
+                                        const dual_command_t * p_character,
+                                        unsigned wheel, float ramp, float along,
+                                        int32_t u_value, uint32_t elapsed,
+                                        bool done)
 {
-    if (done || c->sign[0] == c->sign[1])
+    if (done || p_character->sign[0] == p_character->sign[1])
     {
-        *t = (TurnAssist){0};
-        return done ? 0 : u;
+        *p_sample = (turn_assist_t){0};
+        return done ? 0 : u_value;
     }
-    t->cooldown_us = subtract_us(t->cooldown_us, elapsed);
-    if (t->pulse_us)
+    p_sample->cooldown_us = subtract_us(p_sample->cooldown_us, elapsed);
+    if (p_sample->pulse_us)
     {
-        t->pulse_us = subtract_us(t->pulse_us, elapsed);
-        if (along >= 20 || !t->pulse_us)
+        p_sample->pulse_us = subtract_us(p_sample->pulse_us, elapsed);
+        if (along >= 20 || !p_sample->pulse_us)
         {
-            t->pulse_us = 0;
-            t->cooldown_us = 100000;
+            p_sample->pulse_us = 0;
+            p_sample->cooldown_us = 100000;
         }
     }
-    if (!t->pulse_us && !t->cooldown_us && ramp >= 20 && along >= -8 &&
-        along < 8)
+    if (!p_sample->pulse_us && !p_sample->cooldown_us && ramp >= 20 &&
+        along >= -8 && along < 8)
     {
-        t->pulse_us = 100000;
+        p_sample->pulse_us = 100000;
     }
-    int32_t magnitude = u * c->sign[w];
-    if (t->pulse_us && magnitude < 200)
+    int32_t magnitude = u_value * p_character->sign[wheel];
+    if (p_sample->pulse_us && magnitude < 200)
     {
         magnitude = 200;
     }
@@ -304,7 +337,7 @@ static inline int32_t turn_assist_step (TurnAssist * t, const DualCommand * c,
     {
         magnitude = PWM_LIMIT;
     }
-    return magnitude * c->sign[w];
+    return magnitude * p_character->sign[wheel];
 }
 static inline uint32_t command_limit_us (char key)
 {
@@ -312,43 +345,45 @@ static inline uint32_t command_limit_us (char key)
 }
 typedef struct
 {
-    bool selecting, last_stop, ready;
+    bool selecting;
+    bool last_stop;
+    bool ready;
     uint8_t index;
-} ProfileSelect;
+} profile_select_t;
 static inline char profile_key (uint8_t index)
 {
     const char keys[] = {'d', 'g', 'q', 'e'};
     return keys[index % 4];
 }
 /* GP20 cycles only before the start tap. Outside selection it remains STOP. */
-static inline bool profile_step (ProfileSelect * s, bool usb, bool hold,
-                                 bool stop)
+static inline bool profile_step (profile_select_t * p_state, bool usb,
+                                 bool hold, bool stop)
 {
     if (usb)
     {
-        s->selecting = false;
+        p_state->selecting = false;
     }
-    if (!s->selecting)
+    if (!p_state->selecting)
     {
         return false;
     }
-    if (!s->ready)
+    if (!p_state->ready)
     {
         if (!hold && !stop)
         {
-            s->ready = true;
-            s->last_stop = false;
+            p_state->ready = true;
+            p_state->last_stop = false;
         }
         return false;
     }
-    if (stop && !s->last_stop)
+    if (stop && !p_state->last_stop)
     {
-        s->index = (s->index + 1) % 4;
+        p_state->index = (p_state->index + 1) % 4;
     }
-    s->last_stop = stop;
+    p_state->last_stop = stop;
     if (hold && !stop)
     {
-        s->selecting = false;
+        p_state->selecting = false;
         return true;
     }
     return false;
@@ -367,51 +402,51 @@ typedef struct
 {
     uint8_t state;
     uint64_t start_at;
-} OfflineArm;
+} offline_arm_t;
 /* button is debounced by hardware adapter. Returns one start request only. */
-static inline bool offline_step (OfflineArm * o, uint64_t now, bool usb,
-                                 bool button, bool stop)
+static inline bool offline_step (offline_arm_t * p_o_value, uint64_t now,
+                                 bool usb, bool button, bool stop)
 {
-    if (stop || (usb && o->state != OFF_UNPLUG))
+    if (stop || (usb && p_o_value->state != OFF_UNPLUG))
     {
-        o->state = OFF_NONE;
+        p_o_value->state = OFF_NONE;
         return false;
     }
-    switch (o->state)
+    switch (p_o_value->state)
     {
     case OFF_UNPLUG:
         if (!usb)
         {
-            o->state = OFF_BASE_RELEASE;
+            p_o_value->state = OFF_BASE_RELEASE;
         }
         break;
     case OFF_BASE_RELEASE:
         if (!button)
         {
-            o->state = OFF_PRESS;
+            p_o_value->state = OFF_PRESS;
         }
         break;
     case OFF_PRESS:
         if (button)
         {
-            o->state = OFF_RELEASE;
+            p_o_value->state = OFF_RELEASE;
         }
         break;
     case OFF_RELEASE:
         if (!button)
         {
-            o->state = OFF_COUNTDOWN;
-            o->start_at = now + 2000000;
+            p_o_value->state = OFF_COUNTDOWN;
+            p_o_value->start_at = now + 2000000;
         }
         break;
     case OFF_COUNTDOWN:
         if (button)
         {
-            o->state = OFF_NONE;
+            p_o_value->state = OFF_NONE;
         }
-        else if (now >= o->start_at)
+        else if (now >= p_o_value->start_at)
         {
-            o->state = OFF_NONE;
+            p_o_value->state = OFF_NONE;
             return true;
         }
         break;
@@ -424,44 +459,45 @@ static inline bool offline_step (OfflineArm * o, uint64_t now, bool usb,
 typedef struct
 {
     uint64_t since;
-    bool ready, used;
-} BootArm;
-static inline bool boot_arm_step (BootArm * b, uint64_t now, bool usb,
+    bool ready;
+    bool used;
+} boot_arm_t;
+static inline bool boot_arm_step (boot_arm_t * p_second, uint64_t now, bool usb,
                                   bool busy, bool hold, bool stop)
 {
     if (usb || busy)
     {
-        b->since = 0;
-        b->ready = false;
+        p_second->since = 0;
+        p_second->ready = false;
         return false;
     }
-    if (b->used)
+    if (p_second->used)
     {
         return false;
     }
     if (hold && stop)
     {
-        if (!b->since)
+        if (!p_second->since)
         {
-            b->since = now;
+            p_second->since = now;
         }
-        if (now - b->since >= 2000000)
+        if (now - p_second->since >= 2000000)
         {
-            b->ready = true;
+            p_second->ready = true;
         }
     }
-    else if (b->ready)
+    else if (p_second->ready)
     {
         if (!hold && !stop)
         {
-            b->used = true;
-            b->ready = false;
+            p_second->used = true;
+            p_second->ready = false;
             return true;
         }
     }
     else
     {
-        b->since = 0;
+        p_second->since = 0;
     }
     return false;
 }

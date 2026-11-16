@@ -29,18 +29,18 @@ bool buddy5_next_step(Buddy5Step *s) {
     ++offered;
     return true;
 }
-void buddy5_step_completed(const MotionCommandStatus *s) {
+void buddy5_step_completed(const motion_command_status_t *s) {
     assert(s->state == MOTION_CMD_DONE);
     ++completed;
 }
 int main(void) {
     now_us = 1000;
-    MotionPort port = {.now_us = now};
+    motion_port_t port = {.now_us = now};
     motion_init(&port);
     motion_session_begin(now_us);
     buddy_extension_init();
-    MotionFeedback f = {.now_us = now_us, .line_level = {700, 700}};
-    MotionOutput o = motion_update(&f);
+    motion_feedback_t f = {.now_us = now_us, .line_level = {700, 700}};
+    motion_output_t o = motion_update(&f);
     for (unsigned tick = 0; tick < 2000; ++tick) {
         now_us += 10000;
         f.now_us = now_us;

@@ -1,3 +1,10 @@
+/**
+ * @file effort_scale.h
+ * @brief Effort scale.
+ * @details Motion helpers run under the coordinator/control ownership contract.
+ * Preserve bounded outputs, target sign, stop precedence and request lifetimes.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 #ifndef BUDDY23_EFFORT_SCALE_H
 #define BUDDY23_EFFORT_SCALE_H
 #include <stdint.h>

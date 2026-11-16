@@ -28,8 +28,8 @@ typedef int INT;
 enum { E_OK = 0, TA_TFIFO = 0, TMO_POL = 0 };
 typedef struct {
     unsigned flags, reason;
-} BringupStatus;
-static BringupStatus hardware;
+} bringup_status_t;
+static bringup_status_t hardware;
 static uint32_t clock_ms = 10000, last_cancel;
 static bool pending_start;
 static bool mode_change_allowed = true;
@@ -95,7 +95,7 @@ static uint32_t board_kernel_ms(void) {
 static uint64_t board_time_us(void) {
     return (uint64_t)clock_ms * 1000;
 }
-static unsigned bringup_irq_stop;
+static unsigned g_bringup_irq_stop;
 static unsigned tm_usb_state(void) {
 #ifdef APP_RTOS_RELEASE
     return 0; /* Exercise actual Resume with a powerbank/no terminal. */
@@ -107,7 +107,7 @@ static bool board_button_pressed(unsigned p) {
     (void)p;
     return false;
 }
-static void bringup_get_status(BringupStatus *out) {
+static void bringup_get_status(bringup_status_t *out) {
     *out = hardware;
 }
 static bool bringup_can_start(void) {
@@ -147,14 +147,14 @@ static bool rtos_line_ready(void) {
 static void rtos_line_resume(void) {
     ++resumes;
 }
-static void rtos_line_feedback(MotionFeedback *f, const void *d) {
+static void rtos_line_feedback(motion_feedback_t *f, const void *d) {
     (void)d;
     f->line_level[0] = 500;
 }
-static void rtos_line_telemetry(WifiMotionPacket *p) {
-    *p = (WifiMotionPacket){0};
+static void rtos_line_telemetry(wifi_motion_packet_t *p) {
+    *p = (wifi_motion_packet_t){0};
 }
-static void bringup_stop_from(uint8_t reason, uint16_t latch, MotionOwner who);
+static void bringup_stop_from(uint8_t reason, uint16_t latch, motion_owner_t who);
 #ifdef APP_RTOS_RELEASE
 #include "src/network/wifi_protocol.h"
 static void rtos_line_release_info(uint8_t seq, uint8_t out[15]) { (void)seq;memset(out,0,15); }
@@ -165,12 +165,12 @@ static void rtos_line_junction_info(uint8_t seq, uint32_t now_ms, uint8_t out[20
 static void rtos_line_drive_info(uint8_t seq, uint32_t now_ms, uint8_t out[18]) { (void)seq;(void)now_ms;memset(out,0,18); }
 static void rtos_line_drive_mode_info(uint8_t seq, uint32_t now_ms, uint8_t out[17]) { (void)seq;(void)now_ms;memset(out,0,17); }
 
-static uint8_t rtos_line_log_reply(const WifiCommand *cmd) { (void)cmd;return hardware.flags&BR_ACTIVE?WP_ACK_BUSY:WP_ACK_ACCEPTED; }
+static uint8_t rtos_line_log_reply(const wifi_command_t *cmd) { (void)cmd;return hardware.flags&BR_ACTIVE?WP_ACK_BUSY:WP_ACK_ACCEPTED; }
 #endif
 #include "app_program/network_bridge/network_bridge.c"
 #include "app_program/network_bridge/connected_control.c"
 #include "app_program/network_bridge/delivery_policy.h"
-static void bringup_stop_from(uint8_t reason, uint16_t latch, MotionOwner who) {
+static void bringup_stop_from(uint8_t reason, uint16_t latch, motion_owner_t who) {
     hardware.flags = (hardware.flags & ~BR_ACTIVE) | latch;
     hardware.reason = reason;
     rtos_line_cancel();
@@ -187,14 +187,14 @@ static void api_off(void *u) {
     ++offs;
 }
 static void online(void) {
-    RnStatus s = {.link = 3, .flags = 7, .polls = 1, .last_poll_ms = clock_ms, .last_complete_ms = clock_ms, .connects = 1};
+    rn_status_t s = {.link = 3, .flags = 7, .polls = 1, .last_poll_ms = clock_ms, .last_complete_ms = clock_ms, .connects = 1};
     rn_status_update(&s);
-    app_last_ms = clock_ms;
+    g_app_last_ms = clock_ms;
 }
 static void request(unsigned code) {
     uint8_t data[4] = {(uint8_t)((code << 4) | 2), 17, 0, 0}, msg[RN_RX_BYTES];
     assert(rn_rx_push(data, 4, 4, clock_ms));
-    assert(tk_rcv_mbf(rx, msg, 0) == RN_RX_BYTES);
+    assert(tk_rcv_mbf(g_rx_queue, msg, 0) == RN_RX_BYTES);
     assert(rn_drive_enqueue(msg));
 }
 static void request_config(unsigned mode) {
@@ -203,7 +203,7 @@ static void request_config(unsigned mode) {
                        (uint8_t)(arg >> 8U)};
     uint8_t msg[RN_RX_BYTES];
     assert(rn_rx_push(data, sizeof(data), sizeof(data), clock_ms));
-    assert(tk_rcv_mbf(rx, msg, 0) == RN_RX_BYTES);
+    assert(tk_rcv_mbf(g_rx_queue, msg, 0) == RN_RX_BYTES);
     assert(rn_drive_enqueue(msg));
 }
 static uint8_t last_ack_result(void) {
@@ -214,7 +214,7 @@ static uint8_t last_ack_result(void) {
     return result;
 }
 static void drive_mode_packet_fixture(void) {
-    const RnDriveModeTelemetry info = {.uptime_ms = 0x01020304U,
+    const rn_drive_mode_telemetry_t info = {.uptime_ms = 0x01020304U,
                                        .revision = 0x11223344U,
                                        .mode = DRIVE_MODE_FASTER_TRIAL75,
                                        .requested_mode = DRIVE_MODE_FASTER_TRIAL75,
@@ -249,7 +249,7 @@ int main(void) {
     assert(rn_drive_state(BR_ESTOP, false, false, BR_REASON_ADC) == 6);
     assert(rn_drive_state(BR_ENCODER, false, false, 0) == 6);
     assert(rn_drive_state(0, false, false, BR_REASON_NETWORK) == 3);
-    RnStatus s = rn_status();
+    rn_status_t s = rn_status();
     assert(rn_link_usable(&s, clock_ms + 250));
     assert(!rn_link_usable(&s, clock_ms + 251));
     assert(rn_request_current(10, UINT32_MAX - 4, 2, 2, 1, 1));
@@ -266,7 +266,7 @@ int main(void) {
     assert(!rn_rx_push(bad, 8, 9, clock_ms));
     assert(rn_take_urgent() == 0); /* No prefix execution. */
     uint8_t msg[RN_RX_BYTES];
-    while (tk_rcv_mbf(rx, msg, 0) > 0) {
+    while (tk_rcv_mbf(g_rx_queue, msg, 0) > 0) {
     }
     uint8_t value = 1, topic, len, payload[64];
     assert(rn_tx_push(RN_TLM, &value, 1, clock_ms));
@@ -314,9 +314,9 @@ int main(void) {
     assert(!rn_telemetry_room(16, 203, 11680));
     assert(!rn_telemetry_room(16, 1024, 203));
     assert(rn_telemetry_room(3, 204, 204));
-    MotionPort port = {.now_us = api_now, .outputs_off = api_off};
+    motion_port_t port = {.now_us = api_now, .outputs_off = api_off};
     motion_init(&port);
-    MotionFeedback f = {.now_us = board_time_us(), .line_level = {500, 0}};
+    motion_feedback_t f = {.now_us = board_time_us(), .line_level = {500, 0}};
     for (unsigned k = 0; k < 13; ++k) {
         clock_ms += 10;
         f.now_us = board_time_us();
@@ -354,7 +354,7 @@ int main(void) {
     rn_drive_process(&f);
     assert(starts == 0);
     (void)rn_take_urgent();
-    while (tk_rcv_mbf(rx, msg, 0) > 0) {
+    while (tk_rcv_mbf(g_rx_queue, msg, 0) > 0) {
     }
     clock_ms += 1100;
     online();

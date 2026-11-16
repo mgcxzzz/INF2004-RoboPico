@@ -1,50 +1,61 @@
+/**
+ * @file barcode_runtime.inc
+ * @brief Barcode runtime.
+ * @details The ADC owner feeds both optical decoders and junction qualification.
+ * Accepted navigation crosses the coordinator; this module never writes PWM.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 /* Included only by line_service.c. Core1 ADC/line owner reads live decoder
  * state. Core0 console reads copied view, or frozen data during gated export.
  * Network API below copies packets; this code never calls lwIP/CYW43. */
 static void barcode_line_packet (unsigned event, uint32_t now)
 {
-    BarcodeNav * n = &planner.nav;
-    WifiLinePacket p = {
+    barcode_nav_t * p_count = &g_planner.nav;
+    wifi_line_packet_t data = {
         .seq = rn_next_sequence(WPK_SRC_LINE),
         .uptime_ms = now,
         .event = event,
-        .adc_left = adc[0],
-        .adc_right = adc[2],
-        .adc_barcode = adc[1],
-        .calibrated_level_left = line_level(input.adc[0], calibration.white[0],
-                                            calibration.black[0]),
-        .calibrated_level_right = line_level(input.adc[1], calibration.white[1],
-                                             calibration.black[1]),
-        .last_decoded_letter = n->last_code,
-        .pending_letter = n->pending,
-        .pending_action = n->pending_action,
-        .pending_revision = n->pending_revision,
-        .executing_action = n->busy ? n->executing_action : 0,
-        .executing_revision = n->busy ? n->executing_revision : 0};
+        .adc_left = g_adc[0],
+        .adc_right = g_adc[2],
+        .adc_barcode = g_adc[1],
+        .calibrated_level_left =
+            line_level(g_input.adc[0], g_calibration_value.white[0],
+                       g_calibration_value.black[0]),
+        .calibrated_level_right =
+            line_level(g_input.adc[1], g_calibration_value.white[1],
+                       g_calibration_value.black[1]),
+        .last_decoded_letter = p_count->last_code,
+        .pending_letter = p_count->pending,
+        .pending_action = p_count->pending_action,
+        .pending_revision = p_count->pending_revision,
+        .executing_action = p_count->busy ? p_count->executing_action : 0,
+        .executing_revision = p_count->busy ? p_count->executing_revision : 0};
     uint8_t bytes[WPK_LINE_BYTES];
-    if (wpk_line(&p, bytes))
+    if (wpk_line(&data, bytes))
     {
         (void)rn_tx_push(RN_TLM, bytes, sizeof(bytes), now);
     }
 }
-static void barcode_event_packet (const BarcodeEvent * e, unsigned event,
-                                  uint32_t now)
+static void barcode_event_packet (const barcode_event_t * p_event,
+                                  unsigned event, uint32_t now)
 {
-    MotionStatus s = motion_get_status();
-    WifiNavPacket p = {.seq = rn_next_sequence(WPK_SRC_NAV),
-                       .uptime_ms = now,
-                       .event = event,
-                       .letter = e->code >= 'A' && e->code <= 'Z' ? e->code : 0,
-                       .action = e->action,
-                       .map_revision = e->map_revision,
-                       .generation = s.generation,
-                       .fault_bitmap = s.fault,
-                       .owner = s.owner,
-                       .mode = s.mode,
-                       .command_state = s.command_state,
-                       .detail = e->flags};
+    motion_status_t state = motion_get_status();
+    wifi_nav_packet_t data = {
+        .seq = rn_next_sequence(WPK_SRC_NAV),
+        .uptime_ms = now,
+        .event = event,
+        .letter =
+            p_event->code >= 'A' && p_event->code <= 'Z' ? p_event->code : 0,
+        .action = p_event->action,
+        .map_revision = p_event->map_revision,
+        .generation = state.generation,
+        .fault_bitmap = state.fault,
+        .owner = state.owner,
+        .mode = state.mode,
+        .command_state = state.command_state,
+        .detail = p_event->flags};
     uint8_t bytes[WPK_NAV_BYTES];
-    if (wpk_nav(&p, bytes))
+    if (wpk_nav(&data, bytes))
     {
         (void)rn_tx_push(RN_TLM, bytes, sizeof(bytes), now);
     }
@@ -52,67 +63,71 @@ static void barcode_event_packet (const BarcodeEvent * e, unsigned event,
 static void barcode_publish (uint64_t sample_time)
 {
     (void)sample_time;
-    BarcodeNav * n = &planner.nav;
+    barcode_nav_t * p_count = &g_planner.nav;
     uint32_t now =
         board_kernel_ms(); /* Queue freshness uses KERNEL time, not TIMER epoch. */
     if (!rn_drive_telemetry_enabled() || !rn_drive_online())
     {
-        barcode.event_seen = n->event_sequence;
-        barcode_peak_sent = barcode.peak_serial;
+        g_barcode.event_seen = p_count->event_sequence;
+        g_barcode_peak_sent = g_barcode.peak_serial;
         return;
     }
-    uint32_t available = n->event_sequence - barcode.event_seen;
-    if (available > n->event_count)
+    uint32_t available = p_count->event_sequence - g_barcode.event_seen;
+    if (available > p_count->event_count)
     {
-        available = n->event_count;
-        barcode.event_seen = n->event_sequence - available;
+        available = p_count->event_count;
+        g_barcode.event_seen = p_count->event_sequence - available;
     }
-    for (unsigned k = 0; k < 8 && available; ++k, --available)
+    for (unsigned item_index = 0; item_index < 8 && available;
+         ++item_index, --available)
     {
-        const BarcodeEvent * e =
-            &n->events[(n->event_head + B_EVENTS - available) % B_EVENTS];
-        ++barcode.event_seen;
+        const barcode_event_t * p_event =
+            &p_count->events[(p_count->event_head + B_EVENTS - available) %
+                             B_EVENTS];
+        ++g_barcode.event_seen;
         unsigned event =
-            e->type == B_DECODE           ? WPK_EVENT_DECODED
-            : e->type == B_CROSS          ? WPK_EVENT_JUNCTION_CONFIRMED
-            : e->type == B_DISPATCH       ? WPK_EVENT_DISPATCH
-            : e->type == B_COMPLETE       ? WPK_EVENT_COMPLETED
-            : e->type == B_RECOVERY_WAIT  ? WPK_EVENT_RECOVERY_WAIT
-            : e->type == B_RECOVERY_SWEEP ? WPK_EVENT_RECOVERY_SWEEP
-            : e->type == B_RECOVERY_FOUND ? WPK_EVENT_RECOVERY_FOUND
-            : (e->type == B_BAD_FRAME || e->type == B_ANALOG_CONFLICT ||
-               e->type == B_RECOVERY_FAIL)
+            p_event->type == B_DECODE           ? WPK_EVENT_DECODED
+            : p_event->type == B_CROSS          ? WPK_EVENT_JUNCTION_CONFIRMED
+            : p_event->type == B_DISPATCH       ? WPK_EVENT_DISPATCH
+            : p_event->type == B_COMPLETE       ? WPK_EVENT_COMPLETED
+            : p_event->type == B_RECOVERY_WAIT  ? WPK_EVENT_RECOVERY_WAIT
+            : p_event->type == B_RECOVERY_SWEEP ? WPK_EVENT_RECOVERY_SWEEP
+            : p_event->type == B_RECOVERY_FOUND ? WPK_EVENT_RECOVERY_FOUND
+            : (p_event->type == B_BAD_FRAME ||
+               p_event->type == B_ANALOG_CONFLICT ||
+               p_event->type == B_RECOVERY_FAIL)
                 ? WPK_EVENT_FAULT
                 : 0;
         if (!event)
         {
             continue;
         }
-        barcode_event_packet(e, event, now);
-        if (e->type == B_DECODE)
+        barcode_event_packet(p_event, event, now);
+        if (p_event->type == B_DECODE)
         {
-            barcode_event_packet(
-                e, e->action == '-' ? WPK_EVENT_UNASSIGNED : WPK_EVENT_QUEUED,
-                now);
+            barcode_event_packet(p_event,
+                                 p_event->action == '-' ? WPK_EVENT_UNASSIGNED
+                                                        : WPK_EVENT_QUEUED,
+                                 now);
             barcode_line_packet(WPK_EVENT_DECODED, now);
             tm_printf((UB *)"BARCODE_DECODE ms=%u letter=%c action=%c "
                             "revision=%u flags=%u\n",
-                      (uint32_t)e->ms, e->code, e->action, e->map_revision,
-                      e->flags);
+                      (uint32_t)p_event->ms, p_event->code, p_event->action,
+                      p_event->map_revision, p_event->flags);
         }
     }
-    if (barcode_peak_sent != barcode.peak_serial)
+    if (g_barcode_peak_sent != g_barcode.peak_serial)
     {
         uint8_t bytes[BP_TLM_FRAME];
-        bp_tlm_pack(&barcode.last_peak, now, barcode.peak_flags, barcode.groups,
-                    rn_next_sequence(15), bytes);
+        bp_tlm_pack(&g_barcode.last_peak, now, g_barcode.peak_flags,
+                    g_barcode.groups, rn_next_sequence(15), bytes);
         (void)rn_tx_push(RN_TLM, bytes, sizeof(bytes), now);
-        barcode_peak_sent = barcode.peak_serial;
+        g_barcode_peak_sent = g_barcode.peak_serial;
     }
-    if (now - barcode_status_ms >= 250)
+    if (now - g_barcode_status_ms >= 250)
     {
         barcode_line_packet(WPK_EVENT_STATUS, now);
-        barcode_status_ms = now;
+        g_barcode_status_ms = now;
     }
 }
 static void barcode_export_wait (void)
@@ -124,38 +139,46 @@ static void barcode_export_wait (void)
 }
 static void barcode_export (void)
 {
-    BarcodeNav * n = &planner.nav;
+    barcode_nav_t * p_count = &g_planner.nav;
     tm_printf((UB *)"BARCODE_LOG_BEGIN version=1 events=%u raw=%u "
                     "overwritten=%u frozen=%u\n",
-              n->event_count, barcode.raw_count, barcode.raw_overwritten,
-              barcode.raw_frozen);
+              p_count->event_count, g_barcode.raw_count,
+              g_barcode.raw_overwritten, g_barcode.raw_frozen);
     tm_printf((UB *)"BARCODE_LOG_CAL white=%u,%u black=%u,%u origin=%u\n",
-              run_calibration.white[0], run_calibration.white[1],
-              run_calibration.black[0], run_calibration.black[1],
-              run_cal_origin);
-    for (unsigned k = n->event_count; k > 0 && tm_usb_state() == 3; --k)
+              g_run_calibration.white[0], g_run_calibration.white[1],
+              g_run_calibration.black[0], g_run_calibration.black[1],
+              g_run_cal_origin);
+    for (unsigned item_index = p_count->event_count;
+         item_index > 0 && tm_usb_state() == 3; --item_index)
     {
         barcode_export_wait();
-        const BarcodeEvent * e =
-            &n->events[(n->event_head + B_EVENTS - k) % B_EVENTS];
+        const barcode_event_t * p_event =
+            &p_count->events[(p_count->event_head + B_EVENTS - item_index) %
+                             B_EVENTS];
         tm_printf((UB *)"BARCODE_EVENT %u,%u,%u,%d,%u,%u,%u,%u,%u,%u,%u,%u\n",
-                  e->number, (uint32_t)e->ms, e->path10, e->width100, e->type,
-                  e->code, e->action, e->map_revision, e->flags, e->pattern[0],
-                  e->pattern[1], e->pattern[2]);
+                  p_event->number, (uint32_t)p_event->ms, p_event->path10,
+                  p_event->width100, p_event->type, p_event->code,
+                  p_event->action, p_event->map_revision, p_event->flags,
+                  p_event->pattern[0], p_event->pattern[1],
+                  p_event->pattern[2]);
     }
-    for (unsigned k = 0; k < barcode.raw_count && tm_usb_state() == 3; ++k)
+    for (unsigned item_index_value = 0;
+         item_index_value < g_barcode.raw_count && tm_usb_state() == 3;
+         ++item_index_value)
     {
         barcode_export_wait();
-        const uint8_t * p =
-            barcode
-                .raw[(barcode.raw_head + RB_RAW_ROWS - barcode.raw_count + k) %
+        const uint8_t * p_data =
+            g_barcode
+                .raw[(g_barcode.raw_head + RB_RAW_ROWS - g_barcode.raw_count +
+                      item_index_value) %
                      RB_RAW_ROWS]
                 .bytes;
-        tm_printf((UB *)"BARCODE_RAW %u,%u,%d,%u\n", k, rb_get32(p),
-                  (int32_t)rb_get32(p + 4), p[8] | (unsigned)p[9] << 8);
+        tm_printf((UB *)"BARCODE_RAW %u,%u,%d,%u\n", item_index_value,
+                  rb_get32(p_data), (int32_t)rb_get32(p_data + 4),
+                  p_data[8] | (unsigned)p_data[9] << 8);
     }
-    tm_printf((UB *)"BARCODE_LOG_END events=%u raw=%u\n", n->event_count,
-              barcode.raw_count);
+    tm_printf((UB *)"BARCODE_LOG_END events=%u raw=%u\n", p_count->event_count,
+              g_barcode.raw_count);
 }
 
 /* End of file. */

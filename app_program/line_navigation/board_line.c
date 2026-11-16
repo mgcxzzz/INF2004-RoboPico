@@ -1,64 +1,76 @@
+/**
+ * @file board_line.c
+ * @brief Board line.
+ * @details ADC/control ownership covers sensor acquisition, planning and calibration.
+ * Other tasks consume protected copies; flash and stored exports require Stop.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 #include "line_service.h"
 
 #define RL_REG(a) (*(volatile uint32_t *)(uintptr_t)(a))
 #define RL_RAM __attribute__((section(".rtos_ramfunc"), noinline))
-static volatile uint32_t flash_request, flash_ack;
+static volatile uint32_t g_flash_request;
+static volatile uint32_t g_flash_ack;
 typedef void (*FlashVoid)(void);
 typedef void (*FlashErase)(uint32_t, size_t, uint32_t, uint8_t);
 typedef void (*FlashProgram)(uint32_t, const uint8_t *, size_t);
 typedef void * (*RomLookup)(uint16_t *, uint32_t);
 static struct
 {
-    FlashVoid connect, exit_xip, flush, boot;
+    FlashVoid connect;
+    FlashVoid exit_xip;
+    FlashVoid flush;
+    FlashVoid boot;
     FlashErase erase;
     FlashProgram program;
     uint32_t boot2[64];
     uint8_t page[256];
-} flash_ram;
+} g_flash_ram;
 extern uint32_t __boot2_start__;
-static RlAdcDiagnostics adc_diagnostics;
+static rl_adc_diagnostics_t g_adc_diagnostics;
 
 /* ADC owner calls these only on core1; publication to core0 uses the service
  * snapshot lock. First failure is retained even after successful recovery. */
-void board_line_adc_diagnostics (RlAdcDiagnostics * out)
+void board_line_adc_diagnostics (rl_adc_diagnostics_t * p_out_value)
 {
-    *out = adc_diagnostics;
+    *p_out_value = g_adc_diagnostics;
 }
 
-static void adc_failure (RlAdcReason reason, unsigned channel, RlAdcStage stage,
-                         unsigned sample, uint32_t cs, uint32_t elapsed)
+static void adc_failure (rl_adc_reason_t reason, unsigned channel,
+                         rl_adc_stage_t stage, unsigned sample,
+                         uint32_t cs_value, uint32_t elapsed)
 {
-    RlAdcFailure f = {.cs = cs,
-                      .elapsed_us = elapsed,
-                      .timer_us = (uint32_t)board_time_us(),
-                      .clk_ctrl = RL_REG(0x40008060U),
-                      .clk_div = RL_REG(0x40008064U),
-                      .adc_div = RL_REG(0x4004c010U),
-                      .resets_done = RL_REG(0x4000c008U),
-                      .reason = reason,
-                      .channel = channel > 2 ? 7 : channel,
-                      .stage = stage,
-                      .sample = sample};
-    if (adc_diagnostics.first.reason == RL_ADC_NONE)
+    rl_adc_failure_t flags = {.cs = cs_value,
+                              .elapsed_us = elapsed,
+                              .timer_us = (uint32_t)board_time_us(),
+                              .clk_ctrl = RL_REG(0x40008060U),
+                              .clk_div = RL_REG(0x40008064U),
+                              .adc_div = RL_REG(0x4004c010U),
+                              .resets_done = RL_REG(0x4000c008U),
+                              .reason = reason,
+                              .channel = channel > 2 ? 7 : channel,
+                              .stage = stage,
+                              .sample = sample};
+    if (g_adc_diagnostics.first.reason == RL_ADC_NONE)
     {
-        adc_diagnostics.first = f;
+        g_adc_diagnostics.first = flags;
     }
-    adc_diagnostics.last = f;
+    g_adc_diagnostics.last = flags;
     if (reason == RL_ADC_TIMEOUT)
     {
-        ++adc_diagnostics.timeouts;
+        ++g_adc_diagnostics.timeouts;
     }
     else if (reason == RL_ADC_CONVERSION_ERR)
     {
-        ++adc_diagnostics.errors;
+        ++g_adc_diagnostics.errors;
     }
     else if (reason == RL_ADC_ARGUMENT)
     {
-        ++adc_diagnostics.bad_arguments;
+        ++g_adc_diagnostics.bad_arguments;
     }
     else
     {
-        ++adc_diagnostics.init_errors;
+        ++g_adc_diagnostics.init_errors;
     }
 }
 
@@ -69,24 +81,28 @@ static uint16_t rom_halfword (uintptr_t address)
     return (uint16_t)value;
 }
 
-void board_motor_levels (unsigned wheel, uint16_t a, uint16_t b)
+void board_motor_levels (unsigned wheel, uint16_t first_value,
+                         uint16_t second_value)
 {
-    if (wheel > 1 || (a && b) || a > M_PEAK || b > M_PEAK)
+    if (wheel > 1 || (first_value && second_value) || first_value > M_PEAK ||
+        second_value > M_PEAK)
     {
         board_motor_off();
         return;
     }
-    RL_REG(0x4005000cU + 0x14U * (4U + wheel)) = a | ((uint32_t)b << 16);
+    RL_REG(0x4005000cU + 0x14U * (4U + wheel)) =
+        first_value | ((uint32_t)second_value << 16);
 }
 
-DualLevels board_motor_current (unsigned wheel)
+dual_levels_t board_motor_current (unsigned wheel)
 {
     if (wheel > 1)
     {
-        return (DualLevels){0};
+        return (dual_levels_t){0};
     }
-    uint32_t cc = RL_REG(0x4005000cU + 0x14U * (4U + wheel));
-    return (DualLevels){.a = (uint16_t)cc, .b = (uint16_t)(cc >> 16)};
+    uint32_t cc_value = RL_REG(0x4005000cU + 0x14U * (4U + wheel));
+    return (dual_levels_t){.a = (uint16_t)cc_value,
+                           .b = (uint16_t)(cc_value >> 16)};
 }
 
 bool board_line_adc_init (void)
@@ -129,28 +145,29 @@ bool board_line_adc_init (void)
     return true;
 }
 
-static bool adc_once (unsigned channel, RlAdcStage stage, unsigned index,
-                      uint16_t * value)
+static bool adc_once (unsigned channel, rl_adc_stage_t stage, unsigned index,
+                      uint16_t * p_value)
 {
-    const RlAdcPort port = {.cs = (volatile uint32_t *)0x4004c000U,
-                            .result = (volatile uint32_t *)0x4004c004U,
-                            .now = board_time_us};
-    uint32_t elapsed = 0, cs = 0;
-    RlAdcReason reason = rl_adc_conversion(&port, value, &elapsed, &cs,
-                                           &adc_diagnostics.avoided_timeout);
+    const rl_adc_port_t port = {.cs = (volatile uint32_t *)0x4004c000U,
+                                .result = (volatile uint32_t *)0x4004c004U,
+                                .now = board_time_us};
+    uint32_t elapsed = 0, cs_value = 0;
+    rl_adc_reason_t reason =
+        rl_adc_conversion(&port, p_value, &elapsed, &cs_value,
+                          &g_adc_diagnostics.avoided_timeout);
     if (reason != RL_ADC_NONE)
     {
-        adc_failure(reason, channel, stage, index, cs, elapsed);
+        adc_failure(reason, channel, stage, index, cs_value, elapsed);
         return false;
     }
-    ++adc_diagnostics.conversions;
+    ++g_adc_diagnostics.conversions;
     return true;
 }
 
 bool board_line_adc_read (unsigned channel, unsigned count, bool spaced,
-                          uint16_t * value)
+                          uint16_t * p_value_value)
 {
-    if (channel > 2 || !count || count > 32 || !value)
+    if (channel > 2 || !count || count > 32 || !p_value_value)
     {
         adc_failure(RL_ADC_ARGUMENT, channel, RL_ADC_ARGUMENT_STAGE, 0,
                     RL_REG(0x4004c000U), 0);
@@ -160,15 +177,15 @@ bool board_line_adc_read (unsigned channel, unsigned count, bool spaced,
     uint16_t sample;
     if (!adc_once(channel, RL_ADC_DISCARD, 0, &sample))
     {
-        ++adc_diagnostics.read_fail[channel];
+        ++g_adc_diagnostics.read_fail[channel];
         return false; /* discard the first conversion after changing input */
     }
     uint32_t sum = 0;
-    for (unsigned n = 0; n < count; ++n)
+    for (unsigned count_value = 0; count_value < count; ++count_value)
     {
-        if (!adc_once(channel, RL_ADC_SAMPLE, n + 1, &sample))
+        if (!adc_once(channel, RL_ADC_SAMPLE, count_value + 1, &sample))
         {
-            ++adc_diagnostics.read_fail[channel];
+            ++g_adc_diagnostics.read_fail[channel];
             return false;
         }
         sum += sample;
@@ -180,8 +197,8 @@ bool board_line_adc_read (unsigned channel, unsigned count, bool spaced,
             }
         }
     }
-    *value = (uint16_t)((sum + count / 2) / count);
-    ++adc_diagnostics.read_ok[channel];
+    *p_value_value = (uint16_t)((sum + count / 2) / count);
+    ++g_adc_diagnostics.read_ok[channel];
     return true;
 }
 
@@ -191,14 +208,14 @@ static RL_RAM void rl_flash_park (void)
 {
     uint32_t irq;
     __asm volatile("mrs %0, primask\ncpsid i" : "=r"(irq)::"memory");
-    flash_ack = 1;
+    g_flash_ack = 1;
     __asm volatile("dmb" ::: "memory");
-    while (flash_request)
+    while (g_flash_request)
     {
         __asm volatile("nop" ::: "memory");
     }
     __asm volatile("dmb" ::: "memory");
-    flash_ack = 0;
+    g_flash_ack = 0;
     __asm volatile("msr primask, %0" ::"r"(irq) : "memory");
 }
 
@@ -207,20 +224,20 @@ static RL_RAM void rl_flash_write (void)
     uint32_t irq;
     __asm volatile("mrs %0, primask\ncpsid i" : "=r"(irq)::"memory");
     __asm volatile("dmb" ::: "memory");
-    flash_ram.connect();
-    flash_ram.exit_xip();
-    flash_ram.erase(RL_CAL_OFFSET, 4096, 4096, 0x20);
-    flash_ram.program(RL_CAL_OFFSET, flash_ram.page, 256);
-    flash_ram.flush();
-    flash_ram.boot(); /* SDK boot2 copy restores the original QSPI mode. */
-    flash_request = 0;
+    g_flash_ram.connect();
+    g_flash_ram.exit_xip();
+    g_flash_ram.erase(RL_CAL_OFFSET, 4096, 4096, 0x20);
+    g_flash_ram.program(RL_CAL_OFFSET, g_flash_ram.page, 256);
+    g_flash_ram.flush();
+    g_flash_ram.boot(); /* SDK boot2 copy restores the original QSPI mode. */
+    g_flash_request = 0;
     __asm volatile("dmb" ::: "memory");
     __asm volatile("msr primask, %0" ::"r"(irq) : "memory");
 }
 
 void board_line_flash_worker (void)
 {
-    if (flash_request)
+    if (g_flash_request)
     {
         rl_flash_park();
     }
@@ -228,38 +245,38 @@ void board_line_flash_worker (void)
 
 bool board_line_save (const uint8_t page[256])
 {
-    BringupStatus s;
-    bringup_get_status(&s);
-    if ((s.flags & BR_ACTIVE) || board_button_pressed(20) ||
-        board_button_pressed(21) || bringup_irq_stop || flash_ack)
+    bringup_status_t state;
+    bringup_get_status(&state);
+    if ((state.flags & BR_ACTIVE) || board_button_pressed(20) ||
+        board_button_pressed(21) || g_bringup_irq_stop || g_flash_ack)
     {
         return false;
     }
     board_motor_off();
-    RomLookup lookup = (RomLookup)(uintptr_t)rom_halfword(0x18U);
-    uint16_t * table = (uint16_t *)(uintptr_t)rom_halfword(0x14U);
-    flash_ram.connect = (FlashVoid)lookup(table, 'I' | ('F' << 8));
-    flash_ram.exit_xip = (FlashVoid)lookup(table, 'E' | ('X' << 8));
-    flash_ram.erase = (FlashErase)lookup(table, 'R' | ('E' << 8));
-    flash_ram.program = (FlashProgram)lookup(table, 'R' | ('P' << 8));
-    flash_ram.flush = (FlashVoid)lookup(table, 'F' | ('C' << 8));
-    if (!flash_ram.connect || !flash_ram.exit_xip || !flash_ram.erase ||
-        !flash_ram.program || !flash_ram.flush)
+    RomLookup p_lookup = (RomLookup)(uintptr_t)rom_halfword(0x18U);
+    uint16_t * p_table = (uint16_t *)(uintptr_t)rom_halfword(0x14U);
+    g_flash_ram.connect = (FlashVoid)p_lookup(p_table, 'I' | ('F' << 8));
+    g_flash_ram.exit_xip = (FlashVoid)p_lookup(p_table, 'E' | ('X' << 8));
+    g_flash_ram.erase = (FlashErase)p_lookup(p_table, 'R' | ('E' << 8));
+    g_flash_ram.program = (FlashProgram)p_lookup(p_table, 'R' | ('P' << 8));
+    g_flash_ram.flush = (FlashVoid)p_lookup(p_table, 'F' | ('C' << 8));
+    if (!g_flash_ram.connect || !g_flash_ram.exit_xip || !g_flash_ram.erase ||
+        !g_flash_ram.program || !g_flash_ram.flush)
     {
         return false;
     }
-    memcpy(flash_ram.boot2, &__boot2_start__, sizeof(flash_ram.boot2));
-    memcpy(flash_ram.page, page, sizeof(flash_ram.page));
-    flash_ram.boot = (FlashVoid)((uintptr_t)flash_ram.boot2 | 1U);
+    memcpy(g_flash_ram.boot2, &__boot2_start__, sizeof(g_flash_ram.boot2));
+    memcpy(g_flash_ram.page, page, sizeof(g_flash_ram.page));
+    g_flash_ram.boot = (FlashVoid)((uintptr_t)g_flash_ram.boot2 | 1U);
     __asm volatile("dmb" ::: "memory");
-    flash_request = 1;
+    g_flash_request = 1;
     uint64_t start = board_time_us();
     /* Do not sleep: the parked core stops its kernel tick during lockout. */
-    while (!flash_ack)
+    while (!g_flash_ack)
     {
         if (board_time_us() - start >= 20000)
         {
-            flash_request = 0;
+            g_flash_request = 0;
             __asm volatile("dmb" ::: "memory");
             return false;
         }

@@ -4,7 +4,7 @@
 int main(void) {
     uint8_t bank[NAV_LOG_FLASH_BYTES];
     memset(bank, 0xff, sizeof(bank));
-    MotionEvent e = {.now_us = 12345678,
+    motion_event_t e = {.now_us = 12345678,
                      .id = 7,
                      .requester = 5,
                      .owner = 5,

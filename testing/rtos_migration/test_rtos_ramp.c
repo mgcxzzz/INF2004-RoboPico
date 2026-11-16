@@ -14,21 +14,21 @@ static uint64_t clock_now(void *u) {
     return now;
 }
 int main(void) {
-    RampAssist state;
+    ramp_assist_t state;
     ra_reset(&state);
     float speed[2] = {45, 45};
     b4v23_tilt_t tilt = {.valid = true, .tracking = true, .height_mm = 8};
-    MotionPort port = {.now_us = clock_now};
+    motion_port_t port = {.now_us = clock_now};
     motion_init(&port);
     motion_session_begin(now);
-    MotionRampAssist requested = {0}, approved = {0};
-    ContinuousDrive drive = {.active = true};
+    motion_ramp_assist_t requested = {0}, approved = {0};
+    continuous_drive_t drive = {.active = true};
     for (unsigned k = 0; k < 20; ++k) {
         now += 20000;
         tilt.seq++;
         tilt.t_us = now;
         assert(motion_submit_navigation(MOTION_BUDDY3, 45, 45) == MOTION_OK);
-        MotionFeedback f = {.now_us = now, .speed_mm_s = {45, 45}, .line_level = {700, 700}};
+        motion_feedback_t f = {.now_us = now, .speed_mm_s = {45, 45}, .line_level = {700, 700}};
         (void)motion_update(&f);
         requested = ri_ramp_request(&state, &tilt, now, .02f, true, true, true, speed);
         motion_assist_context(true);

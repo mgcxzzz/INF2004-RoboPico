@@ -1,3 +1,10 @@
+/**
+ * @file ramp_adapter.h
+ * @brief Ramp adapter.
+ * @details Public feature contract. Requests cross coordinator ownership checks;
+ * callers observe completion/status separately and must respect task context.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 /* v2.3 + Buddy4 ramp-assist v0.6 glue (v0.6: speed hold out via hold_min_speed/hold_i_max/hold_ki, replacing the v0.5 floor_pwm; v0.3: ACCEL/SPREAD skip flag; v0.4: wheel speeds in, stall push out via boost_add) (unchanged from v0.1 apart from the
  * detector-version flag bits). Included by the v2.3 main
  * (circuit_with_barcode/main.c) after buddy4_harness.h, like the other
@@ -21,7 +28,7 @@
 #endif
 #define RA_REPORT_US 500000u
 
-static RampAssist ra_state;
+static ramp_assist_t ra_state;
 static uint32_t ra_generation;
 static bool ra_run_seen;
 static uint64_t ra_last_report_us;
@@ -30,7 +37,7 @@ static int16_t ra_pwm_now[2], ra_peak_pwm;
 
 static int16_t ra_added_pwm (unsigned w, float alpha_milli, float push_pwm)
 {
-    const ContinuousDrive * s = &continuous_wheel[w];
+    const continuous_drive_t * s = &continuous_wheel[w];
     if (!s->active || (alpha_milli <= 0.0f && push_pwm <= 0.0f))
     {
         return 0;
@@ -50,7 +57,7 @@ static int16_t ra_added_pwm (unsigned w, float alpha_milli, float push_pwm)
 
 static void ra_report (uint64_t now, uint8_t event)
 {
-    RampAssistTlm t = {0};
+    ramp_assist_tlm_t t = {0};
     uint8_t frame[RA_TLM_FRAME_BYTES];
     t.uptime_ms = (uint32_t)(now / 1000u);
     t.event = event;
@@ -92,7 +99,7 @@ static void ra_report (uint64_t now, uint8_t event)
      * coordinator-approved target constraint, rather than relabelling demand. */
     uint8_t detail[24] = {0xF2, 21, ra_target_seq++};
     uint8_t * p = detail + 3;
-    MotionRampAssist approved = nav_get_ramp_assist();
+    motion_ramp_assist_t approved = nav_get_ramp_assist();
     uint32_t ms = (uint32_t)(now / 1000u);
     for (unsigned i = 0; i < 4; ++i)
     {
@@ -148,7 +155,7 @@ static void ramp_assist_control (uint64_t now, float dt, bool following)
     bool sat = false;
     for (unsigned w = 0; w < 2; ++w)
     {
-        const ContinuousDrive * s = &continuous_wheel[w];
+        const continuous_drive_t * s = &continuous_wheel[w];
         if (!s->active)
         {
             continue;
@@ -172,13 +179,13 @@ static void ramp_assist_control (uint64_t now, float dt, bool following)
         ra_sat_ticks++;
     }
 
-    MotionStatus st = nav_get_status();
+    motion_status_t st = nav_get_status();
     b4v23_tilt_t tilt = {0};
     if (b4h_ready)
     {
         b4v23_tilt(&tilt);
     }
-    RampAssistInput in = {
+    ramp_assist_input_t in = {
         .now_us = now,
         .dt = dt,
         .run_active = true,
@@ -198,14 +205,14 @@ static void ramp_assist_control (uint64_t now, float dt, bool following)
         ra_peak_pwm = 0;
     }
     motion_assist_context(following);
-    MotionRampAssist requested = {.ttl_ms = 50};
+    motion_ramp_assist_t requested = {.ttl_ms = 50};
 #if RAMP_ASSIST_ACTIVE
     requested.boost_milli = (uint16_t)(alpha + 0.5f);
     requested.push_pwm_x100 = (uint16_t)(ra_state.push_pwm * 100.0f + 0.5f);
     requested.hold_milli = (uint16_t)(ra_state.hold_level * 1000.0f + 0.5f);
 #endif
     (void)nav_request_ramp_assist(MOTION_BUDDY4, &requested);
-    MotionRampAssist approved = nav_get_ramp_assist();
+    motion_ramp_assist_t approved = nav_get_ramp_assist();
     for (unsigned w = 0; w < 2; ++w)
     {
         motion_apply_ramp_profile(&continuous_wheel[w], &approved);
@@ -236,7 +243,7 @@ static void ramp_assist_halt (uint64_t now)
     {
         return;
     }
-    RampAssistInput in = {.now_us = now, .run_active = false};
+    ramp_assist_input_t in = {.now_us = now, .run_active = false};
     (void)ramp_assist_step(&ra_state, &in);
     for (unsigned w = 0; w < 2; ++w)
     {

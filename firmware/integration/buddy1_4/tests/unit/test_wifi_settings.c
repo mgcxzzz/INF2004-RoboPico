@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include "src/network/wifi_settings.h"
 int main(void) {
-    WifiTransportConfig a = {.ssid = "TEST-NET",
+    wifi_transport_config_t a = {.ssid = "TEST-NET",
                              .password = "",
                              .broker = "192.168.1.12",
                              .client_id = "is28-test"},

@@ -1,3 +1,10 @@
+/**
+ * @file imu_motion.h
+ * @brief Imu motion.
+ * @details The IMU task owns sensor acquisition and calibration; readers use snapshots.
+ * Ramp requests expire through the coordinator; lift safety may remove output.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 #ifndef RTOS_IMU_MOTION_H
 #define RTOS_IMU_MOTION_H
 /* Motion-core calls only. No hardware/RTOS types leak into the controller. */
@@ -6,15 +13,17 @@
 #include "include/interfaces/nav_api.h"
 void ri_new_run (void);
 /* Snapshot the IMU first, then read hardware time internally for its age. */
-MotionRampAssist ri_ramp_step (float dt, bool following, const float speed[2],
-                               const int16_t target[2],
-                               const ContinuousDrive drive[2]);
+motion_ramp_assist_t ri_ramp_step (float delta_time, bool following,
+                                   const float speed[2],
+                                   const int16_t target[2],
+                                   const continuous_drive_t drive[2]);
 void ri_ramp_halt (uint64_t now);
 void ri_ramp_report (void);
-static inline int32_t ri_unboosted (const ContinuousDrive * s, int32_t output)
+static inline int32_t ri_unboosted (const continuous_drive_t * p_state,
+                                    int32_t output)
 {
-    int32_t b = (int32_t)(s->boost_pwm + .5f);
-    return output > b ? output - b : 0;
+    int32_t second = (int32_t)(p_state->boost_pwm + .5f);
+    return output > second ? output - second : 0;
 }
 #endif
 

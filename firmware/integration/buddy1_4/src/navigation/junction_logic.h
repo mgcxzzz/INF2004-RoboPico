@@ -1,3 +1,10 @@
+/**
+ * @file junction_logic.h
+ * @brief Junction logic.
+ * @details The shared facade/coordinator arbitrates ownership and generations.
+ * Acceptance is not completion; external callers never write motor registers.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 #ifndef JUNCTION_LEFT_LOGIC_H
 #define JUNCTION_LEFT_LOGIC_H
 #include "src/line_following/symmetric_logic.h"
@@ -45,136 +52,166 @@ enum
 };
 typedef struct
 {
-    uint8_t white, black, mask;
-} SideCalibration;
-static inline bool side_valid (const SideCalibration * s)
+    uint8_t white;
+    uint8_t black;
+    uint8_t mask;
+} side_calibration_t;
+static inline bool side_valid (const side_calibration_t * p_state)
 {
-    return s->mask == 3 && s->white <= 1 && s->black <= 1 &&
-           s->white != s->black;
+    return p_state->mask == 3 && p_state->white <= 1 && p_state->black <= 1 &&
+           p_state->white != p_state->black;
 }
 typedef struct
 {
     uint64_t now;
-    float wheel[2], speed[2], path;
+    float wheel[2];
+    float speed[2];
+    float path;
     uint16_t adc[2];
     bool side_black;
-} JunctionInput;
+} junction_input_t;
 typedef struct
 {
-    uint8_t phase, reason;
-    bool turn_enabled, side_last, side_armed, striped, off_line;
-    bool still_timing, off_timing, line_timing;
+    uint8_t phase;
+    uint8_t reason;
+    bool turn_enabled;
+    bool side_last;
+    bool side_armed;
+    bool striped;
+    bool off_line;
+    bool still_timing;
+    bool off_timing;
+    bool line_timing;
     bool rolling; /* Fits former padding: persisted record offsets unchanged. */
-    uint64_t phase_us, edge_us, still_us, off_us, line_us;
-    float edge_mm, leading_mm, trailing_mm, centre_mm, approach_heading;
-    float turn_origin[2], exit_origin, turn_degrees;
-    SymmetricTracker follower;
-} Junction;
-static inline float j_mean (const JunctionInput * i)
+    uint64_t phase_us;
+    uint64_t edge_us;
+    uint64_t still_us;
+    uint64_t off_us;
+    uint64_t line_us;
+    float edge_mm;
+    float leading_mm;
+    float trailing_mm;
+    float centre_mm;
+    float approach_heading;
+    float turn_origin[2];
+    float exit_origin;
+    float turn_degrees;
+    symmetric_tracker_t follower;
+} junction_t;
+static inline float j_mean (const junction_input_t * p_index)
 {
-    return (i->wheel[0] + i->wheel[1]) * 0.5f;
+    return (p_index->wheel[0] + p_index->wheel[1]) * 0.5f;
 }
-static inline void j_enter (Junction * j, unsigned phase, uint64_t now)
+static inline void j_enter (junction_t * p_other_index, unsigned phase,
+                            uint64_t now)
 {
-    j->phase = (uint8_t)phase;
-    j->phase_us = now;
-    j->still_timing = false;
+    p_other_index->phase = (uint8_t)phase;
+    p_other_index->phase_us = now;
+    p_other_index->still_timing = false;
 }
-static inline void j_begin (Junction * j, bool turn, const JunctionInput * i)
+static inline void j_begin (junction_t * p_other_index, bool turn,
+                            const junction_input_t * p_index)
 {
-    *j = (Junction){
-        .turn_enabled = turn, .edge_us = i->now, .edge_mm = j_mean(i)};
-    j_enter(j, J_APPROACH, i->now);
+    *p_other_index = (junction_t){.turn_enabled = turn,
+                                  .edge_us = p_index->now,
+                                  .edge_mm = j_mean(p_index)};
+    j_enter(p_other_index, J_APPROACH, p_index->now);
 }
-static inline void j_begin_mode (Junction * j, unsigned mode,
-                                 const JunctionInput * i)
+static inline void j_begin_mode (junction_t * p_other_index, unsigned mode,
+                                 const junction_input_t * p_index)
 {
-    j_begin(j, mode != 1, i);
-    j->rolling = mode == 3;
+    j_begin(p_other_index, mode != 1, p_index);
+    p_other_index->rolling = mode == 3;
 }
-static inline float j_turn_start_offset (const Junction * j)
+static inline float j_turn_start_offset (const junction_t * p_other_index)
 {
-    return j->rolling ? TRACK_MM * 0.5f : 0;
+    return p_other_index->rolling ? TRACK_MM * 0.5f : 0;
 }
-static inline void j_fail (Junction * j, unsigned why)
+static inline void j_fail (junction_t * p_other_index, unsigned why)
 {
-    j->phase = J_FAULT;
-    j->reason = (uint8_t)why;
+    p_other_index->phase = J_FAULT;
+    p_other_index->reason = (uint8_t)why;
 }
-static inline bool j_still (Junction * j, const JunctionInput * i)
+static inline bool j_still (junction_t * p_other_index,
+                            const junction_input_t * p_index)
 {
-    bool still = fabsf(i->speed[0]) < 5 && fabsf(i->speed[1]) < 5;
+    bool still = fabsf(p_index->speed[0]) < 5 && fabsf(p_index->speed[1]) < 5;
     if (!still)
     {
-        j->still_timing = false;
+        p_other_index->still_timing = false;
         return false;
     }
-    if (!j->still_timing)
+    if (!p_other_index->still_timing)
     {
-        j->still_timing = true;
-        j->still_us = i->now;
+        p_other_index->still_timing = true;
+        p_other_index->still_us = p_index->now;
     }
-    return i->now - j->phase_us >= 300000 && i->now - j->still_us >= 200000;
+    return p_index->now - p_other_index->phase_us >= 300000 &&
+           p_index->now - p_other_index->still_us >= 200000;
 }
-static inline void j_start_turn (Junction * j, const JunctionInput * i)
+static inline void j_start_turn (junction_t * p_other_index,
+                                 const junction_input_t * p_index)
 {
-    for (unsigned w = 0; w < 2; ++w)
+    for (unsigned wheel = 0; wheel < 2; ++wheel)
     {
-        j->turn_origin[w] = i->wheel[w];
+        p_other_index->turn_origin[wheel] = p_index->wheel[wheel];
     }
-    j->off_line = false;
-    j->off_timing = j->line_timing = false;
-    j_enter(j, J_TURN, i->now);
+    p_other_index->off_line = false;
+    p_other_index->off_timing = p_other_index->line_timing = false;
+    j_enter(p_other_index, J_TURN, p_index->now);
 }
-static inline float j_rotation (const Junction * j, const JunctionInput * i)
+static inline float j_rotation (const junction_t * p_other_index,
+                                const junction_input_t * p_index)
 {
-    return ((i->wheel[1] - j->turn_origin[1]) -
-            (i->wheel[0] - j->turn_origin[0])) /
+    return ((p_index->wheel[1] - p_other_index->turn_origin[1]) -
+            (p_index->wheel[0] - p_other_index->turn_origin[0])) /
            TRACK_MM * (180.0f / 3.14159265358979323846f);
 }
 /* Mode3 only: first sight of the outgoing stripe starts forward alignment.
  * exit_origin holds absolute path at acquisition entry, then mean wheel position
  * at J_EXIT entry. Reuse existing storage so saved V1..V5 record ABI is intact. */
-static inline AnalogDemand j_acquire (Junction * j, const LineCalibration * c,
-                                      const JunctionInput * i)
+static inline analog_demand_t j_acquire (junction_t * p_other_index,
+                                         const line_calibration_t * p_character,
+                                         const junction_input_t * p_index)
 {
-    AnalogDemand d = symmetric_demand(&j->follower, c, i->adc[0], i->adc[1],
-                                      i->now, (uint32_t)i->path);
-    j->turn_degrees = j_rotation(j, i);
-    if (j->turn_degrees < 60 || j->turn_degrees > 115 ||
-        i->path - j->exit_origin >= J_ALIGN_MM)
+    analog_demand_t demand = symmetric_demand(
+        &p_other_index->follower, p_character, p_index->adc[0], p_index->adc[1],
+        p_index->now, (uint32_t)p_index->path);
+    p_other_index->turn_degrees = j_rotation(p_other_index, p_index);
+    if (p_other_index->turn_degrees < 60 || p_other_index->turn_degrees > 115 ||
+        p_index->path - p_other_index->exit_origin >= J_ALIGN_MM)
     {
-        j_fail(j, J_BRANCH_MISSING);
+        j_fail(p_other_index, J_BRANCH_MISSING);
     }
-    else if (i->now - j->phase_us >= J_ALIGN_US)
+    else if (p_index->now - p_other_index->phase_us >= J_ALIGN_US)
     {
-        j_fail(j, J_ALIGN_TIMEOUT);
+        j_fail(p_other_index, J_ALIGN_TIMEOUT);
     }
-    else if (d.stop)
+    else if (demand.stop)
     {
-        j_fail(j, J_LINE_LOST);
+        j_fail(p_other_index, J_LINE_LOST);
     }
-    bool white = d.level[0] < 150 && d.level[1] < 150;
+    bool white = demand.level[0] < 150 && demand.level[1] < 150;
     if (white)
     {
-        if (!j->off_timing)
+        if (!p_other_index->off_timing)
         {
-            j->off_timing = true;
-            j->off_us = i->now;
+            p_other_index->off_timing = true;
+            p_other_index->off_us = p_index->now;
         }
-        if (i->now - j->off_us >= 150000)
+        if (p_index->now - p_other_index->off_us >= 150000)
         {
-            j_fail(j, J_LINE_LOST);
+            j_fail(p_other_index, J_LINE_LOST);
         }
     }
     else
     {
-        j->off_timing = false;
+        p_other_index->off_timing = false;
     }
-    int32_t error = (int32_t)d.level[0] - d.level[1];
+    int32_t error = (int32_t)demand.level[0] - demand.level[1];
     if (white)
     {
-        error = j->follower.recovery * 1000;
+        error = p_other_index->follower.recovery * 1000;
     }
     int32_t magnitude = error < 0 ? -error : error;
     if (magnitude > 1000)
@@ -184,305 +221,331 @@ static inline AnalogDemand j_acquire (Junction * j, const LineCalibration * c,
     int32_t amount = magnitude > 80 ? magnitude - 80 : 0;
     int16_t inner = (int16_t)(30 - amount * 10 / 920),
             outer = (int16_t)(30 + amount * 5 / 920);
-    d.target[0] = error >= 0 ? inner : outer;
-    d.target[1] = error >= 0 ? outer : inner;
-    d.decision = error > 80 ? SYM_LEFT : error < -80 ? SYM_RIGHT : SYM_STRAIGHT;
-    bool aligned = d.level[0] >= 400 && d.level[1] >= 400 && magnitude <= 350;
+    demand.target[0] = error >= 0 ? inner : outer;
+    demand.target[1] = error >= 0 ? outer : inner;
+    demand.decision = error > 80    ? SYM_LEFT
+                      : error < -80 ? SYM_RIGHT
+                                    : SYM_STRAIGHT;
+    bool aligned =
+        demand.level[0] >= 400 && demand.level[1] >= 400 && magnitude <= 350;
     if (aligned)
     {
-        if (!j->line_timing)
+        if (!p_other_index->line_timing)
         {
-            j->line_timing = true;
-            j->line_us = i->now;
+            p_other_index->line_timing = true;
+            p_other_index->line_us = p_index->now;
         }
-        if (j->phase == J_ACQUIRE && i->now - j->line_us >= 80000)
+        if (p_other_index->phase == J_ACQUIRE &&
+            p_index->now - p_other_index->line_us >= 80000)
         {
-            j->exit_origin = j_mean(i);
-            j_enter(j, J_EXIT, i->now);
+            p_other_index->exit_origin = j_mean(p_index);
+            j_enter(p_other_index, J_EXIT, p_index->now);
         }
     }
     else
     {
-        j->line_timing = false;
+        p_other_index->line_timing = false;
     }
-    if (j->phase == J_FAULT)
+    if (p_other_index->phase == J_FAULT)
     {
-        d.stop = true;
-        d.target[0] = d.target[1] = 0;
+        demand.stop = true;
+        demand.target[0] = demand.target[1] = 0;
     }
-    return d;
+    return demand;
 }
 /* Cross detection is ONLY valid on a straight, with NO barcode/other side marks.
  * The side sensing point is approximately 92mm ahead of the wheel axle.
  * Record both cross-arm edges; their midpoint plus92mm is the axle target.
  * This is a provisional geometric value, not calibrated stopping compensation. */
-static inline AnalogDemand
-junction_step (Junction * j, const LineCalibration * c, const JunctionInput * i)
+static inline analog_demand_t
+junction_step (junction_t * p_other_index,
+               const line_calibration_t * p_character,
+               const junction_input_t * p_index)
 {
-    AnalogDemand d = {0};
-    for (unsigned w = 0; w < 2; ++w)
+    analog_demand_t demand = {0};
+    for (unsigned wheel = 0; wheel < 2; ++wheel)
     {
-        d.level[w] = line_level(i->adc[w], c->white[w], c->black[w]);
+        demand.level[wheel] =
+            line_level(p_index->adc[wheel], p_character->white[wheel],
+                       p_character->black[wheel]);
     }
-    if (!calibration_valid(c))
+    if (!calibration_valid(p_character))
     {
-        j_fail(j, J_LINE_LOST);
+        j_fail(p_other_index, J_LINE_LOST);
     }
-    if (i->path >= J_MAX_PATH_MM)
+    if (p_index->path >= J_MAX_PATH_MM)
     {
-        j_fail(j, J_PATH_LIMIT);
+        j_fail(p_other_index, J_PATH_LIMIT);
     }
-    float mean = j_mean(i);
-    if (i->side_black != j->side_last)
+    float mean = j_mean(p_index);
+    if (p_index->side_black != p_other_index->side_last)
     {
-        j->side_last = i->side_black;
-        j->edge_us = i->now;
-        j->edge_mm = mean;
+        p_other_index->side_last = p_index->side_black;
+        p_other_index->edge_us = p_index->now;
+        p_other_index->edge_mm = mean;
     }
-    switch (j->phase)
+    switch (p_other_index->phase)
     {
     case J_APPROACH:
-        d = symmetric_demand(&j->follower, c, i->adc[0], i->adc[1], i->now,
-                             (uint32_t)i->path);
-        if (d.stop)
+        demand = symmetric_demand(&p_other_index->follower, p_character,
+                                  p_index->adc[0], p_index->adc[1],
+                                  p_index->now, (uint32_t)p_index->path);
+        if (demand.stop)
         {
-            j_fail(j, J_LINE_LOST);
+            j_fail(p_other_index, J_LINE_LOST);
             break;
         }
-        if (!i->side_black && i->now - j->edge_us >= 100000)
+        if (!p_index->side_black &&
+            p_index->now - p_other_index->edge_us >= 100000)
         {
-            j->side_armed = true;
+            p_other_index->side_armed = true;
         }
-        if (i->side_black && i->now - j->edge_us >= 20000)
+        if (p_index->side_black &&
+            p_index->now - p_other_index->edge_us >= 20000)
         {
-            if (!j->side_armed)
+            if (!p_other_index->side_armed)
             {
-                j_fail(j, J_NO_CROSS);
+                j_fail(p_other_index, J_NO_CROSS);
                 break;
             }
-            j->leading_mm = j->edge_mm;
-            j->centre_mm = j->leading_mm + 101.0f - j_turn_start_offset(j);
-            j->approach_heading = heading_deg(i->wheel[0], i->wheel[1]);
-            j_enter(j, J_CENTRE, i->now);
-            d.target[0] = d.target[1] = 30;
-            d.stop = false;
+            p_other_index->leading_mm = p_other_index->edge_mm;
+            p_other_index->centre_mm = p_other_index->leading_mm + 101.0f -
+                                       j_turn_start_offset(p_other_index);
+            p_other_index->approach_heading =
+                heading_deg(p_index->wheel[0], p_index->wheel[1]);
+            j_enter(p_other_index, J_CENTRE, p_index->now);
+            demand.target[0] = demand.target[1] = 30;
+            demand.stop = false;
         }
-        else if (i->now - j->phase_us >= 12000000 || mean >= 450)
+        else if (p_index->now - p_other_index->phase_us >= 12000000 ||
+                 mean >= 450)
         {
-            j_fail(j, J_NO_CROSS);
+            j_fail(p_other_index, J_NO_CROSS);
         }
         break;
     case J_CENTRE:
     {
-        float drift =
-            heading_deg(i->wheel[0], i->wheel[1]) - j->approach_heading;
+        float drift = heading_deg(p_index->wheel[0], p_index->wheel[1]) -
+                      p_other_index->approach_heading;
         if (fabsf(drift) > 12)
         {
-            j_fail(j, J_CENTRE_DRIFT);
+            j_fail(p_other_index, J_CENTRE_DRIFT);
             break;
         }
-        if (!j->striped && !i->side_black && i->now - j->edge_us >= 20000)
+        if (!p_other_index->striped && !p_index->side_black &&
+            p_index->now - p_other_index->edge_us >= 20000)
         {
-            j->trailing_mm = j->edge_mm;
-            float width = j->trailing_mm - j->leading_mm;
+            p_other_index->trailing_mm = p_other_index->edge_mm;
+            float width =
+                p_other_index->trailing_mm - p_other_index->leading_mm;
             if (width < 6 || width > 40)
             {
-                j_fail(j, J_BAD_STRIPE);
+                j_fail(p_other_index, J_BAD_STRIPE);
                 break;
             }
-            j->striped = true;
-            j->centre_mm = (j->leading_mm + j->trailing_mm) * 0.5f + 92.0f -
-                           j_turn_start_offset(j);
+            p_other_index->striped = true;
+            p_other_index->centre_mm =
+                (p_other_index->leading_mm + p_other_index->trailing_mm) *
+                    0.5f +
+                92.0f - j_turn_start_offset(p_other_index);
         }
-        if ((!j->striped && mean - j->leading_mm > 50) ||
-            i->now - j->phase_us >= 6000000)
+        if ((!p_other_index->striped &&
+             mean - p_other_index->leading_mm > 50) ||
+            p_index->now - p_other_index->phase_us >= 6000000)
         {
-            j_fail(j, J_BAD_STRIPE);
+            j_fail(p_other_index, J_BAD_STRIPE);
             break;
         }
-        float remaining = j->centre_mm - mean;
-        if (j->striped && remaining <= 1.0f)
+        float remaining = p_other_index->centre_mm - mean;
+        if (p_other_index->striped && remaining <= 1.0f)
         {
-            if (j->rolling)
+            if (p_other_index->rolling)
             {
                 /* No reversal: keep the right wheel rolling through the corner
                    instead of stopping both wheels and overcoming stiction again. */
-                j_start_turn(j, i);
-                d.target[0] = 0;
-                d.target[1] = 45;
+                j_start_turn(p_other_index, p_index);
+                demand.target[0] = 0;
+                demand.target[1] = 45;
             }
             else
             {
-                j_enter(j, J_SETTLE, i->now);
+                j_enter(p_other_index, J_SETTLE, p_index->now);
             }
             break;
         }
         float base = remaining < 15 ? 25.0f : 30.0f;
         float correction = clampf(drift * 1.5f, -6, 6);
-        d.target[0] = (int16_t)(base - correction);
-        d.target[1] = (int16_t)(base + correction);
+        demand.target[0] = (int16_t)(base - correction);
+        demand.target[1] = (int16_t)(base + correction);
         break;
     }
     case J_SETTLE:
-        if (j_still(j, i))
+        if (j_still(p_other_index, p_index))
         {
-            if (!j->turn_enabled)
+            if (!p_other_index->turn_enabled)
             {
-                j->phase = J_DONE;
-                j->reason = J_COMPLETE;
+                p_other_index->phase = J_DONE;
+                p_other_index->reason = J_COMPLETE;
                 break;
             }
-            j_start_turn(j, i);
+            j_start_turn(p_other_index, p_index);
         }
-        else if (i->now - j->phase_us >= 2000000)
+        else if (p_index->now - p_other_index->phase_us >= 2000000)
         {
-            j_fail(j, J_SETTLE_TIMEOUT);
+            j_fail(p_other_index, J_SETTLE_TIMEOUT);
         }
         break;
     case J_TURN:
     {
-        float left = -(i->wheel[0] - j->turn_origin[0]);
-        float right = i->wheel[1] - j->turn_origin[1];
-        j->turn_degrees = j_rotation(j, i);
-        if (j->rolling)
+        float left = -(p_index->wheel[0] - p_other_index->turn_origin[0]);
+        float right = p_index->wheel[1] - p_other_index->turn_origin[1];
+        p_other_index->turn_degrees = j_rotation(p_other_index, p_index);
+        if (p_other_index->rolling)
         {
             /* Inner wheel is unpowered, not actively locked. Encoder drift is
                bounded; optical branch confirmation must still succeed. */
             if (fabsf(left) > 12 || right < -5)
             {
-                j_fail(j, J_CENTRE_DRIFT);
+                j_fail(p_other_index, J_CENTRE_DRIFT);
                 break;
             }
-            if (i->now - j->phase_us >= 9000000u)
+            if (p_index->now - p_other_index->phase_us >= 9000000u)
             {
-                j_fail(j, J_TURN_TIMEOUT);
+                j_fail(p_other_index, J_TURN_TIMEOUT);
                 break;
             }
         }
         else if (left < -5 || right < -5 || fabsf(left - right) > 20)
         {
-            j_fail(j, J_CENTRE_DRIFT);
+            j_fail(p_other_index, J_CENTRE_DRIFT);
             break;
         }
-        bool white = d.level[0] < 200 && d.level[1] < 200;
-        if ((white || JUNCTION_ANGLE_GATE_ONLY) && j->turn_degrees > 10)
+        bool white = demand.level[0] < 200 && demand.level[1] < 200;
+        if ((white || JUNCTION_ANGLE_GATE_ONLY) &&
+            p_other_index->turn_degrees > 10)
         {
-            if (!j->off_timing)
+            if (!p_other_index->off_timing)
             {
-                j->off_timing = true;
-                j->off_us = i->now;
+                p_other_index->off_timing = true;
+                p_other_index->off_us = p_index->now;
             }
-            if (i->now - j->off_us >= 30000)
+            if (p_index->now - p_other_index->off_us >= 30000)
             {
-                j->off_line = true;
+                p_other_index->off_line = true;
             }
         }
         else
         {
-            j->off_timing = false;
+            p_other_index->off_timing = false;
         }
-        bool branch = j->rolling ? (d.level[0] >= 400 || d.level[1] >= 400)
-                                 : (d.level[0] >= 650 && d.level[1] >= 650);
-        bool found = j->off_line && j->turn_degrees >= 75 &&
-                     (!j->rolling || j->turn_degrees < 110) && branch;
+        bool branch = p_other_index->rolling
+                          ? (demand.level[0] >= 400 || demand.level[1] >= 400)
+                          : (demand.level[0] >= 650 && demand.level[1] >= 650);
+        bool found =
+            p_other_index->off_line && p_other_index->turn_degrees >= 75 &&
+            (!p_other_index->rolling || p_other_index->turn_degrees < 110) &&
+            branch;
         if (found)
         {
-            if (!j->line_timing)
+            if (!p_other_index->line_timing)
             {
-                j->line_timing = true;
-                j->line_us = i->now;
+                p_other_index->line_timing = true;
+                p_other_index->line_us = p_index->now;
             }
-            if (i->now - j->line_us >= 30000)
+            if (p_index->now - p_other_index->line_us >= 30000)
             {
-                if (j->rolling)
+                if (p_other_index->rolling)
                 {
-                    j->follower = (SymmetricTracker){0};
-                    j->exit_origin = i->path;
-                    j->line_timing = j->off_timing = false;
-                    j_enter(j, J_ACQUIRE, i->now);
-                    d = j_acquire(j, c, i);
+                    p_other_index->follower = (symmetric_tracker_t){0};
+                    p_other_index->exit_origin = p_index->path;
+                    p_other_index->line_timing = p_other_index->off_timing =
+                        false;
+                    j_enter(p_other_index, J_ACQUIRE, p_index->now);
+                    demand = j_acquire(p_other_index, p_character, p_index);
                 }
                 else
                 {
-                    j_enter(j, J_TURN_SETTLE, i->now);
+                    j_enter(p_other_index, J_TURN_SETTLE, p_index->now);
                 }
                 break;
             }
         }
         else
         {
-            j->line_timing = false;
+            p_other_index->line_timing = false;
         }
-        if (j->turn_degrees >= 110 || left >= 120 ||
-            right >= (j->rolling ? 240 : 120))
+        if (p_other_index->turn_degrees >= 110 || left >= 120 ||
+            right >= (p_other_index->rolling ? 240 : 120))
         {
-            j_fail(j, J_BRANCH_MISSING);
+            j_fail(p_other_index, J_BRANCH_MISSING);
             break;
         }
-        if (i->now - j->phase_us >= (j->rolling ? 9000000u : 6000000u))
+        if (p_index->now - p_other_index->phase_us >=
+            (p_other_index->rolling ? 9000000u : 6000000u))
         {
-            j_fail(j, J_TURN_TIMEOUT);
+            j_fail(p_other_index, J_TURN_TIMEOUT);
             break;
         }
-        if (j->rolling)
+        if (p_other_index->rolling)
         {
-            d.target[0] = 0;
-            d.target[1] = j->turn_degrees >= 65 ? 30 : 45;
+            demand.target[0] = 0;
+            demand.target[1] = p_other_index->turn_degrees >= 65 ? 30 : 45;
         }
         else
         {
-            int16_t speed = j->turn_degrees >= 65 ? 25 : 35;
+            int16_t speed = p_other_index->turn_degrees >= 65 ? 25 : 35;
             float sync = clampf((left - right) * 1.0f, -7, 7);
-            d.target[0] = -(int16_t)(speed - sync);
-            d.target[1] = (int16_t)(speed + sync);
+            demand.target[0] = -(int16_t)(speed - sync);
+            demand.target[1] = (int16_t)(speed + sync);
         }
         break;
     }
     case J_ACQUIRE:
-        d = j_acquire(j, c, i);
+        demand = j_acquire(p_other_index, p_character, p_index);
         break;
     case J_TURN_SETTLE:
-        if (j_still(j, i))
+        if (j_still(p_other_index, p_index))
         {
-            if (d.level[0] < 400 || d.level[1] < 400)
+            if (demand.level[0] < 400 || demand.level[1] < 400)
             {
-                j_fail(j, J_BRANCH_MISSING);
+                j_fail(p_other_index, J_BRANCH_MISSING);
                 break;
             }
-            j->exit_origin = mean;
-            j->follower = (SymmetricTracker){0};
-            j_enter(j, J_EXIT, i->now);
+            p_other_index->exit_origin = mean;
+            p_other_index->follower = (symmetric_tracker_t){0};
+            j_enter(p_other_index, J_EXIT, p_index->now);
         }
-        else if (i->now - j->phase_us >= 2000000)
+        else if (p_index->now - p_other_index->phase_us >= 2000000)
         {
-            j_fail(j, J_SETTLE_TIMEOUT);
+            j_fail(p_other_index, J_SETTLE_TIMEOUT);
         }
         break;
     case J_EXIT:
         /* The ten seconds begin only after outgoing-line alignment succeeds.
            Distance is not a completion condition; whole-run/loss guards remain. */
-        if (i->now - j->phase_us >= J_EXIT_US)
+        if (p_index->now - p_other_index->phase_us >= J_EXIT_US)
         {
-            j->phase = J_DONE;
-            j->reason = J_COMPLETE;
+            p_other_index->phase = J_DONE;
+            p_other_index->reason = J_COMPLETE;
             break;
         }
-        d = symmetric_demand(&j->follower, c, i->adc[0], i->adc[1], i->now,
-                             (uint32_t)i->path);
-        if (d.stop)
+        demand = symmetric_demand(&p_other_index->follower, p_character,
+                                  p_index->adc[0], p_index->adc[1],
+                                  p_index->now, (uint32_t)p_index->path);
+        if (demand.stop)
         {
-            j_fail(j, J_LINE_LOST);
+            j_fail(p_other_index, J_LINE_LOST);
         }
         break;
     default:
         break;
     }
-    if (j->phase == J_DONE || j->phase == J_FAULT)
+    if (p_other_index->phase == J_DONE || p_other_index->phase == J_FAULT)
     {
-        d.stop = true;
-        d.target[0] = d.target[1] = 0;
+        demand.stop = true;
+        demand.target[0] = demand.target[1] = 0;
     }
-    return d;
+    return demand;
 }
 #endif
 

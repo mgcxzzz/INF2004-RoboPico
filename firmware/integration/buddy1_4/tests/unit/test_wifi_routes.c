@@ -30,12 +30,12 @@ static void reader_roundtrip(char c, bool reverse) {
         if (group < 2)
             widths[at++] = 2.5;
     }
-    BarcodeReader r = {0};
+    barcode_reader_t r = {0};
     uint64_t now = 1000;
     double mm = 20;
     barcode_reader_reset(&r, false, now, 0);
     (void)barcode_reader_edge(&r, true, now, mm);
-    BarcodeRead read = {0};
+    barcode_read_t read = {0};
     for (unsigned k = 0; k < 29; ++k) {
         mm += widths[reverse ? 28 - k : k];
         now += 100000;
@@ -45,23 +45,23 @@ static void reader_roundtrip(char c, bool reverse) {
 }
 static void capture_and_dispatch(char c, unsigned slot) {
     static const char actions[] = "SULR";
-    BarcodeNav n = {0};
+    barcode_nav_t n = {0};
     n.mapping = map_for(c, slot);
     barcode_queue_code(&n, c);
     assert(n.pending == c && n.pending_action == actions[slot]);
     unsigned revision = n.pending_revision;
     n.mapping = wp_map_replace(n.mapping, map_for(c, (slot + 1) % 4) & WP_MAP_MASK);
     assert(n.pending_revision == revision && barcode_nav_action(&n, c) == actions[slot]);
-    LineCalibration cal = {{160, 160}, {3457, 3700}, 7};
-    CircuitInput i = {
+    line_calibration_t cal = {{160, 160}, {3457, 3700}, 7};
+    circuit_input_t i = {
         .now = 1000000, .path = 100, .wheel = {100, 100}, .speed = {45, 45}, .adc = {3400, 3500}};
-    Circuit circuit = {0};
+    circuit_t circuit = {0};
     circuit_begin(&circuit, &i);
     n.cross_ready = n.cross_gate = true;
     n.cross_us = 900000;
     n.cross_width = 18;
     n.cross_wheel[0] = n.cross_wheel[1] = 76;
-    AnalogDemand d = barcode_circuit_step(&circuit, &n, &cal, &i, 1);
+    analog_demand_t d = barcode_circuit_step(&circuit, &n, &cal, &i, 1);
     assert(!d.stop && !n.pending);
     if (slot == 0) {
         assert(!circuit.busy && !n.busy && n.straight_crosses == 1 && !circuit.turns);
@@ -87,10 +87,10 @@ int main(void) {
         for (unsigned slot = 0; slot < 4; ++slot)
             capture_and_dispatch(c, slot);
     }
-    BarcodeNav n = {0};
+    barcode_nav_t n = {0};
     barcode_queue_code(&n, 'A');
     assert(n.last_code == 'A' && !n.pending && n.unsupported == 1);
-    n = (BarcodeNav){0};
+    n = (barcode_nav_t){0};
     n.mapping = map_for('A', 2);
     barcode_queue_code(&n, 'A');
     unsigned old_revision = n.pending_revision;
@@ -102,7 +102,7 @@ int main(void) {
     assert(barcode_decode_action(&n, 'A') == '-');
     barcode_event(&n, B_DECODE, 0, 0, 0, 'A', barcode_decode_action(&n, 'A'), 0, NULL);
     assert(n.events[0].action == '-' && n.events[0].map_revision == (uint8_t)(n.mapping >> 21));
-    MotionPort p = {.now_us = now};
+    motion_port_t p = {.now_us = now};
     motion_init(&p);
     motion_session_begin(1000);
     for (char c = 'A'; c <= 'Z'; ++c)

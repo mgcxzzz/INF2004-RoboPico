@@ -11,12 +11,12 @@ static unsigned u32(const uint8_t *p) {
 }
 int main(void) {
     uint8_t b[WIFI_PACKET_MAX], outlen;
-    WifiHeartbeat hb = {0};
-    WifiMotionPacket m = {0};
-    WifiLinePacket l = {0};
-    WifiNavPacket n = {0};
-    WifiSummaryPacket s = {0};
-    WifiDiagnosticsPacket d = {0};
+    wifi_heartbeat_t hb = {0};
+    wifi_motion_packet_t m = {0};
+    wifi_line_packet_t l = {0};
+    wifi_nav_packet_t n = {0};
+    wifi_summary_packet_t s = {0};
+    wifi_diagnostics_packet_t d = {0};
     const uint8_t data[58] = {0};
     hb.seq = 255;
     hb.net = 2;
@@ -110,7 +110,7 @@ int main(void) {
     assert(wpk_summary(&s, b));
     assert(b[0] == 0xc2 && b[1] == 22 && u32(b + 11) == 0x12345678u && u32(b + 15) == 0x23456789u &&
            u16(b + 23) == 7);
-    d = (WifiDiagnosticsPacket){.seq = 0x5a,
+    d = (wifi_diagnostics_packet_t){.seq = 0x5a,
                                 .bank = 62,
                                 .flags = 0x0f,
                                 .uptime_ms = 0x78563412u,

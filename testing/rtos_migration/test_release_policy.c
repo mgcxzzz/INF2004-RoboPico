@@ -11,7 +11,7 @@ int main(void) {
     assert(!br_outputs_allowed(ready|BR_ACTIVE,true,0,true));
     assert(!br_outputs_allowed(ready|BR_ACTIVE|BR_ENCODER,false,0,true));
     assert(!br_outputs_allowed(BR_ACTIVE,false,0,true));
-    RnStatus s={.link=3,.flags=RN_CONNECTED|RN_SUBSCRIBED,.polls=1,.last_poll_ms=1000};
+    rn_status_t s={.link=3,.flags=RN_CONNECTED|RN_SUBSCRIBED,.polls=1,.last_poll_ms=1000};
     assert(rn_link_usable(&s,1250));assert(!rn_link_usable(&s,1251));
     s.last_poll_ms=4500;s.last_complete_ms=1500;
     assert(rn_delivery_fresh(&s,4500,1000));

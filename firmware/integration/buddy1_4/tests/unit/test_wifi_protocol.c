@@ -15,7 +15,7 @@ static void map_command(uint32_t word, uint8_t id, uint8_t out[5]) {
 }
 int main(void) {
     uint8_t p[5] = {0}, ack[4], frame[8];
-    WifiCommand c;
+    wifi_command_t c;
     uint32_t map, snap;
     unsigned i, j, k;
     /* Every A-Z letter is exercised in each of four slots; all four remain distinct. */

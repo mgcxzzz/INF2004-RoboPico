@@ -1,3 +1,10 @@
+/**
+ * @file scan_smooth_reference.h
+ * @brief Scan smooth reference.
+ * @details The control task owns mutable steering/recovery state.
+ * Keep straight, scan, turn and recovery behavior distinct; no direct PWM here.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 #ifndef BARCODE_SCAN_SMOOTH_H
 #define BARCODE_SCAN_SMOOTH_H
 #include "src/barcode/barcode_analog.h"
@@ -9,16 +16,16 @@ typedef struct
     bool active, scanning;
     uint64_t activity_us;
     double start_mm;
-} ScanSmooth;
+} scan_smooth_t;
 /* Optical state, recovery, crossing and turns run on every real ADC reading.
  * This output adapter never captures a heading or freezes the follower. */
-static inline AnalogDemand
-scan_smooth_step (Circuit * c, BarcodeNav * n, const LineCalibration * cal,
-                  const CircuitInput * i, unsigned profile,
-                  SmoothFollow * legacy, const BarcodeAnalog * a,
-                  ScanSmooth * s, float dt)
+static inline analog_demand_t
+scan_smooth_step (circuit_t * c, barcode_nav_t * n,
+                  const line_calibration_t * cal, const circuit_input_t * i,
+                  unsigned profile, smooth_follow_t * legacy,
+                  const barcode_analog_t * a, scan_smooth_t * s, float dt)
 {
-    AnalogDemand d = barcode_circuit_step(c, n, cal, i, profile);
+    analog_demand_t d = barcode_circuit_step(c, n, cal, i, profile);
     dt = clampf(dt, 0, .05f);
     bool activity =
         a->scanning || n->pending || a->adc >= (unsigned)a->baseline + 16;
@@ -50,7 +57,7 @@ scan_smooth_step (Circuit * c, BarcodeNav * n, const LineCalibration * cal,
     unsigned strongest = d.level[0] > d.level[1] ? d.level[0] : d.level[1];
     unsigned weakest = d.level[0] < d.level[1] ? d.level[0] : d.level[1];
     unsigned magnitude = (unsigned)abs((int)d.level[0] - d.level[1]);
-    *legacy = (SmoothFollow){0};
+    *legacy = (smooth_follow_t){0};
     if (!following || !ordinary || strongest < 200)
     {
         s->active = false;

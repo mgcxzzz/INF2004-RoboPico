@@ -74,8 +74,8 @@ static uint64_t clock_now(void *u) {
     (void)u;
     return now;
 }
-static void follow_tick(LinePlanner *planner, LinePower *power, CircuitInput *in,
-                         AnalogDemand *demand, bool fresh) {
+static void follow_tick(line_planner_t *planner, line_power_t *power, circuit_input_t *in,
+                         analog_demand_t *demand, bool fresh) {
     now += 10000;
     in->now = now;
     if (fresh) {
@@ -83,10 +83,10 @@ static void follow_tick(LinePlanner *planner, LinePower *power, CircuitInput *in
         tilt.t_us = now;
     }
     assert(motion_submit_navigation(MOTION_BUDDY3, 45, 45) == MOTION_OK);
-    MotionFeedback feedback = {
+    motion_feedback_t feedback = {
         .now_us = now, .speed_mm_s = {45, 45}, .line_level = {1000, 1000}};
     (void)motion_update(&feedback);
-    LineEnvelope out = rl_power(power, planner, in, demand, C_FOLLOW, .01f);
+    line_envelope_t out = rl_power(power, planner, in, demand, C_FOLLOW, .01f);
     assert(out.continuous);
     for (unsigned w = 0; w < 2; ++w) {
         assert(out.output[w] >= 0 && out.output[w] <= 420);
@@ -94,32 +94,32 @@ static void follow_tick(LinePlanner *planner, LinePower *power, CircuitInput *in
     }
 }
 int main(void) {
-    MotionPort port = {.now_us = clock_now};
+    motion_port_t port = {.now_us = clock_now};
     motion_init(&port);
     motion_session_begin(now);
-    LinePlanner planner;
-    LinePower power = {0};
-    CircuitInput in = {.now = now, .adc = {246, 267}, .speed = {45, 45}};
+    line_planner_t planner;
+    line_power_t power = {0};
+    circuit_input_t in = {.now = now, .adc = {246, 267}, .speed = {45, 45}};
     rl_begin(&planner, &in, 250);
-    AnalogDemand demand = {.target = {45, 45}, .level = {1000, 1000}, .decision = SYM_STRAIGHT};
+    analog_demand_t demand = {.target = {45, 45}, .level = {1000, 1000}, .decision = SYM_STRAIGHT};
     tilt = (b4v23_tilt_t){.valid = true, .tracking = true, .height_mm = 8};
     for (unsigned k = 0; k < 80; ++k)
         follow_tick(&planner, &power, &in, &demand, k % 2 == 0);
-    MotionRampAssist approved = nav_get_ramp_assist();
+    motion_ramp_assist_t approved = nav_get_ramp_assist();
     assert(approved.boost_milli == 200 && approved.hold_milli == 1000 && packets >= 2);
     assert(power.drive[0].hold_i_max == 300 && motion_get_status().owner == MOTION_BUDDY3);
     /* A fresh sample arriving while snapshotting must not end/restart
      * assistance, reset speed hold, or add unsigned elapsed-time credit. */
-    uint8_t activations = state.activations;
+    uint8_t activations = g_state.activations;
     for (unsigned k = 0; k < 12; ++k) {
         publish_while_copying = true;
         follow_tick(&planner, &power, &in, &demand, false);
         approved = nav_get_ramp_assist();
-        assert(!publish_while_copying && state.assisting && state.hold_on);
-        assert(state.activations == activations && state.last_end != RA_END_STALE);
-        assert(state.last_sample_us > in.now && state.last_sample_us <= board_time_us());
+        assert(!publish_while_copying && g_state.assisting && g_state.hold_on);
+        assert(g_state.activations == activations && g_state.last_end != RA_END_STALE);
+        assert(g_state.last_sample_us > in.now && g_state.last_sample_us <= board_time_us());
         assert(approved.boost_milli == 200 && approved.hold_milli == 1000);
-        assert(state.episode_us < 2000000U);
+        assert(g_state.episode_us < 2000000U);
     }
     /* Genuine stopped acquisition still obeys the exact60ms/200ms budgets. */
     uint64_t last_sample = tilt.t_us;
@@ -127,16 +127,16 @@ int main(void) {
     const int16_t target[2] = {45, 45};
     now = last_sample + RA_STALE_US;
     (void)ri_ramp_step(.01f, true, speed, target, power.drive);
-    assert(state.assisting && state.hold_on);
+    assert(g_state.assisting && g_state.hold_on);
     now++;
     (void)ri_ramp_step(.01f, true, speed, target, power.drive);
-    assert(!state.assisting && state.last_end == RA_END_STALE && state.hold_on);
+    assert(!g_state.assisting && g_state.last_end == RA_END_STALE && g_state.hold_on);
     now = last_sample + RA_HOLD_STALE_US;
     (void)ri_ramp_step(.01f, true, speed, target, power.drive);
-    assert(state.hold_on);
+    assert(g_state.hold_on);
     now++;
     (void)ri_ramp_step(.01f, true, speed, target, power.drive);
-    assert(!state.hold_on);
+    assert(!g_state.hold_on);
 
     /* A new session crossing the low32-bit timer boundary keeps full64-bit
      * sample times and ordinary activation. No epoch truncation is allowed. */
@@ -146,12 +146,12 @@ int main(void) {
     motion_session_begin(now);
     in.now = now;
     rl_begin(&planner, &in, 250);
-    power = (LinePower){0};
-    demand = (AnalogDemand){.target={45,45},.level={1000,1000},.decision=SYM_STRAIGHT};
+    power = (line_power_t){0};
+    demand = (analog_demand_t){.target={45,45},.level={1000,1000},.decision=SYM_STRAIGHT};
     for (unsigned k = 0; k < 80; ++k)
         follow_tick(&planner, &power, &in, &demand, k % 2 == 0);
-    assert(now > UINT32_MAX && state.last_sample_us > UINT32_MAX);
-    assert(state.assisting && state.activations == 1 && state.last_end != RA_END_STALE);
+    assert(now > UINT32_MAX && g_state.last_sample_us > UINT32_MAX);
+    assert(g_state.assisting && g_state.activations == 1 && g_state.last_end != RA_END_STALE);
     approved = nav_get_ramp_assist();
     assert(approved.boost_milli == 200 && approved.hold_milli == 1000);
     planner.circuit.busy = planner.nav.busy = true;
@@ -162,7 +162,7 @@ int main(void) {
     demand.target[1] = 45;
     now += 10000;
     in.now = now;
-    LineEnvelope out = rl_power(&power, &planner, &in, &demand, C_FOLLOW, .01f);
+    line_envelope_t out = rl_power(&power, &planner, &in, &demand, C_FOLLOW, .01f);
     assert(!out.continuous && !nav_get_ramp_assist().boost_milli);
     assert(!power.drive[0].boost_frac && !power.drive[1].hold_min_speed);
     ri_ramp_halt(now);

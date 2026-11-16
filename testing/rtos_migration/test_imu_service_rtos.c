@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include "app_program/imu_navigation/imu_acquisition.h"
 /* Service fixture uses a synthetic FIFO, not the physical transport. */
-static RiAcquisition acq;
+static ri_acquisition_t acq;
 static uint32_t fifo_start_us, init_start_us;
 void ri_acquisition_record(uint32_t gap_us, bool ok, bool overrun) {
     ++acq.reads;
@@ -46,7 +46,7 @@ void ri_acquisition_record_tick(uint32_t wall_us) {
         acq.max_tick_wall_us = wall_us;
     acq.ticks_over_8ms += wall_us > RI_FIFO_BUDGET_US;
 }
-void ri_acquisition_snapshot(RiAcquisition *out) {
+void ri_acquisition_snapshot(ri_acquisition_t *out) {
     *out = acq;
 }
 #include "tests/imu/test_buddy4_v23_service.c"

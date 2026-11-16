@@ -307,11 +307,11 @@ bool b4_i2c_write_reg (uint8_t addr, uint8_t reg, uint8_t value)
 
 static bool mag_init (void)
 {
-    uint8_t id[3] = {0U, 0U, 0U};
+    uint8_t identifier[3] = {0U, 0U, 0U};
 
-    if (b4_i2c_read_reg(B4_MAG_ADDR, DLHC_IRA, id, 3U) &&
-        (id[0] == (uint8_t)'H') && (id[1] == (uint8_t)'4') &&
-        (id[2] == (uint8_t)'3'))
+    if (b4_i2c_read_reg(B4_MAG_ADDR, DLHC_IRA, identifier, 3U) &&
+        (identifier[0] == (uint8_t)'H') && (identifier[1] == (uint8_t)'4') &&
+        (identifier[2] == (uint8_t)'3'))
     {
         /* 75 Hz, +-1.3 gauss, continuous */
         return (b4_i2c_write_reg(B4_MAG_ADDR, DLHC_CRA, 0x18U) &&
@@ -319,8 +319,8 @@ static bool mag_init (void)
                 b4_i2c_write_reg(B4_MAG_ADDR, DLHC_MR, 0x00U));
     }
 
-    if (b4_i2c_read_reg(B4_MAG_ADDR, AGR_WHO_AM_I_M, id, 1U) &&
-        (id[0] == 0x40U))
+    if (b4_i2c_read_reg(B4_MAG_ADDR, AGR_WHO_AM_I_M, identifier, 1U) &&
+        (identifier[0] == 0x40U))
     {
         /* 100 Hz continuous, block data update */
         return (b4_i2c_write_reg(B4_MAG_ADDR, AGR_CFG_A, 0x0CU) &&
@@ -332,7 +332,7 @@ static bool mag_init (void)
 
 bool b4_drv_init (b4_chip_t * p_chip, bool * p_b_mag)
 {
-    uint8_t id = 0U;
+    uint8_t identifier = 0U;
     uint8_t check = 0U;
     bool b_ok;
 
@@ -350,8 +350,8 @@ bool b4_drv_init (b4_chip_t * p_chip, bool * p_b_mag)
     }
 #endif
 
-    b_ok =
-        b4_i2c_read_reg(B4_ACC_ADDR, ACC_WHO_AM_I, &id, 1U) && (id == ACC_ID);
+    b_ok = b4_i2c_read_reg(B4_ACC_ADDR, ACC_WHO_AM_I, &identifier, 1U) &&
+           (identifier == ACC_ID);
 
     if (b_ok)
     {
@@ -369,10 +369,10 @@ bool b4_drv_init (b4_chip_t * p_chip, bool * p_b_mag)
     if (b_ok)
     {
         /* The magnetometer tells the two chips apart. */
-        uint8_t m = 0U;
+        uint8_t m_value = 0U;
 
-        g_chip = (b4_i2c_read_reg(B4_MAG_ADDR, AGR_WHO_AM_I_M, &m, 1U) &&
-                  (m == 0x40U))
+        g_chip = (b4_i2c_read_reg(B4_MAG_ADDR, AGR_WHO_AM_I_M, &m_value, 1U) &&
+                  (m_value == 0x40U))
                      ? B4_CHIP_AGR
                      : B4_CHIP_DLHC;
     }
@@ -386,8 +386,8 @@ bool b4_drv_read_fifo (b4_raw_t * p_s, uint8_t max, uint8_t * p_n,
                        bool * p_b_overrun)
 {
     uint8_t src = 0U;
-    uint8_t n;
-    uint8_t i;
+    uint8_t count;
+    uint8_t index;
 
     *p_n = 0U;
     *p_b_overrun = false;
@@ -402,56 +402,59 @@ bool b4_drv_read_fifo (b4_raw_t * p_s, uint8_t max, uint8_t * p_n,
         return true; /* nothing new                 */
     }
 
-    n = src & FIFO_SRC_FSS;
+    count = src & FIFO_SRC_FSS;
 
     if ((src & FIFO_SRC_OVRN) != 0U)
     {
         *p_b_overrun = true;
-        n = (uint8_t)B4_FIFO_DEPTH;
+        count = (uint8_t)B4_FIFO_DEPTH;
     }
 
-    if (n == 0U)
+    if (count == 0U)
     {
-        n = 1U; /* not empty: at least one     */
+        count = 1U; /* not empty: at least one     */
     }
 
-    if (n > max)
+    if (count > max)
     {
-        n = max;
+        count = max;
     }
 
-    for (i = 0U; i < n; i++)
+    for (index = 0U; index < count; index++)
     {
-        uint8_t b[6];
+        uint8_t second[6];
 
-        if (!b4_i2c_read_reg(B4_ACC_ADDR, (uint8_t)(ACC_OUT_X_L | AUTO_INC), b,
-                             6U))
+        if (!b4_i2c_read_reg(B4_ACC_ADDR, (uint8_t)(ACC_OUT_X_L | AUTO_INC),
+                             second, 6U))
         {
             return false;
         }
 
         /* 12-bit, left-justified, little-endian; 2 mg per LSB at +-4 g */
-        p_s[i].x = (int16_t)(((int32_t)(int16_t)((uint16_t)b[0] |
-                                                 ((uint16_t)b[1] << 8)) /
-                              16) *
-                             B4_MG_PER_LSB);
-        p_s[i].y = (int16_t)(((int32_t)(int16_t)((uint16_t)b[2] |
-                                                 ((uint16_t)b[3] << 8)) /
-                              16) *
-                             B4_MG_PER_LSB);
-        p_s[i].z = (int16_t)(((int32_t)(int16_t)((uint16_t)b[4] |
-                                                 ((uint16_t)b[5] << 8)) /
-                              16) *
-                             B4_MG_PER_LSB);
+        p_s[index].x =
+            (int16_t)(((int32_t)(int16_t)((uint16_t)second[0] |
+                                          ((uint16_t)second[1] << 8)) /
+                       16) *
+                      B4_MG_PER_LSB);
+        p_s[index].y =
+            (int16_t)(((int32_t)(int16_t)((uint16_t)second[2] |
+                                          ((uint16_t)second[3] << 8)) /
+                       16) *
+                      B4_MG_PER_LSB);
+        p_s[index].z =
+            (int16_t)(((int32_t)(int16_t)((uint16_t)second[4] |
+                                          ((uint16_t)second[5] << 8)) /
+                       16) *
+                      B4_MG_PER_LSB);
     }
 
-    *p_n = n;
+    *p_n = count;
     return true;
 }
 
 bool b4_drv_read_mag (b4_raw_t * p_m)
 {
-    uint8_t b[6];
+    uint8_t second[6];
 
     if (!g_b_mag)
     {
@@ -460,26 +463,26 @@ bool b4_drv_read_mag (b4_raw_t * p_m)
 
     if (g_chip == B4_CHIP_AGR)
     {
-        if (!b4_i2c_read_reg(B4_MAG_ADDR, (uint8_t)(AGR_OUT_X_L | AUTO_INC), b,
-                             6U))
+        if (!b4_i2c_read_reg(B4_MAG_ADDR, (uint8_t)(AGR_OUT_X_L | AUTO_INC),
+                             second, 6U))
         {
             return false;
         }
 
-        p_m->x = (int16_t)((uint16_t)b[0] | ((uint16_t)b[1] << 8));
-        p_m->y = (int16_t)((uint16_t)b[2] | ((uint16_t)b[3] << 8));
-        p_m->z = (int16_t)((uint16_t)b[4] | ((uint16_t)b[5] << 8));
+        p_m->x = (int16_t)((uint16_t)second[0] | ((uint16_t)second[1] << 8));
+        p_m->y = (int16_t)((uint16_t)second[2] | ((uint16_t)second[3] << 8));
+        p_m->z = (int16_t)((uint16_t)second[4] | ((uint16_t)second[5] << 8));
         return true;
     }
 
-    if (!b4_i2c_read_reg(B4_MAG_ADDR, DLHC_OUT_X_H, b, 6U))
+    if (!b4_i2c_read_reg(B4_MAG_ADDR, DLHC_OUT_X_H, second, 6U))
     {
         return false;
     }
 
-    p_m->x = (int16_t)(((uint16_t)b[0] << 8) | (uint16_t)b[1]);
-    p_m->z = (int16_t)(((uint16_t)b[2] << 8) | (uint16_t)b[3]);
-    p_m->y = (int16_t)(((uint16_t)b[4] << 8) | (uint16_t)b[5]);
+    p_m->x = (int16_t)(((uint16_t)second[0] << 8) | (uint16_t)second[1]);
+    p_m->z = (int16_t)(((uint16_t)second[2] << 8) | (uint16_t)second[3]);
+    p_m->y = (int16_t)(((uint16_t)second[4] << 8) | (uint16_t)second[5]);
     return true;
 }
 

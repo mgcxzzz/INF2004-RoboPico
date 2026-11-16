@@ -264,7 +264,8 @@ int16_t b4_asin_dd (int32_t sin_q15);
 uint32_t b4_isqrt (uint32_t value);
 bool b4_nfr02_ok (int32_t est_mm, int32_t ref_mm);
 bool b4_side_geometry (int16_t const baseline[3], int16_t const sample[3],
-                       int32_t g_mg, int16_t * height_mm, int16_t * roll_dd);
+                       int32_t g_mg, int16_t * p_height_mm_value,
+                       int16_t * p_roll_dd_value);
 
 #endif /* IMU_PROC_H */
 

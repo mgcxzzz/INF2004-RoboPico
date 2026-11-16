@@ -13,8 +13,8 @@
 #include "tests/barcode/bp_captured_fixtures.h"
 
 /* ---- the globals and transport main.c/wifi_harness.h provide ---- */
-static BarcodeNav nav;
-static BarcodeAnalog side_analog;
+static barcode_nav_t nav;
+static barcode_analog_t side_analog;
 static bool wifi_forward = true;
 #define WIFI_TOPIC_TLM 0u
 #define MAX_TLM 512
@@ -100,7 +100,7 @@ static uint16_t white_noise(unsigned k) {
 
 /* ---- drive exactly like main.c: original sample, then peak sample ---- */
 static uint64_t now_us;
-static void step(double x, uint16_t adc, bool with_peak, BarcodeNav *nv, BarcodeAnalog *an) {
+static void step(double x, uint16_t adc, bool with_peak, barcode_nav_t *nv, barcode_analog_t *an) {
     now_us += 2000;
     double wheel[2] = {x, x};
     barcode_analog_sample(an, nv, adc, now_us, wheel);
@@ -109,7 +109,7 @@ static void step(double x, uint16_t adc, bool with_peak, BarcodeNav *nv, Barcode
 }
 typedef enum { BOTH, STRIPE } Model;
 static void run(const Iv *iv, unsigned n, double from, double to, Model m, bool with_peak,
-                BarcodeNav *nv, BarcodeAnalog *an) {
+                barcode_nav_t *nv, barcode_analog_t *an) {
     unsigned k = 0;
     for (double x = from; x < to; x += 0.09, ++k) {
         uint16_t a = m == BOTH ? adc_both(iv, n, x) : adc_stripe(iv, n, x), w = white_noise(k);
@@ -117,8 +117,8 @@ static void run(const Iv *iv, unsigned n, double from, double to, Model m, bool 
     }
 }
 /* A real GP27 capture that the original decoder fails on the car (and in replay), from path 0. */
-static double feed_capture(unsigned cap, double stop_mm, bool with_peak, BarcodeNav *nv,
-                           BarcodeAnalog *an) {
+static double feed_capture(unsigned cap, double stop_mm, bool with_peak, barcode_nav_t *nv,
+                           barcode_analog_t *an) {
     const BpCapture *c = &bp_captures[cap];
     double x = 0;
     for (unsigned i = 0; i < c->n; ++i) {
@@ -134,8 +134,8 @@ static uint32_t mapping_YZAF(void) { /* forward Y, U-turn Z, left A, right F (da
                     (uint32_t)('A' - 'A') << 10 | (uint32_t)('F' - 'A') << 15;
     return wp_map_replace(0, word);
 }
-static void begin(BarcodeNav *nv, BarcodeAnalog *an) {
-    CircuitInput in = {.now = now_us};
+static void begin(barcode_nav_t *nv, barcode_analog_t *an) {
+    circuit_input_t in = {.now = now_us};
     barcode_nav_begin(nv, &in);
     nv->mapping = mapping_YZAF();
     double w[2] = {0, 0};
@@ -147,10 +147,10 @@ static void begin_main(void) {
 }
 #define CAP_Z 2 /* z_fine_v03_run1: bars 28..165 mm, path to 222 mm */
 #define CAP_Y 3 /* y_original */
-static unsigned count_events(const BarcodeNav *n, unsigned type, char code, unsigned flagmask) {
+static unsigned count_events(const barcode_nav_t *n, unsigned type, char code, unsigned flagmask) {
     unsigned c = 0;
     for (unsigned k = 0; k < n->event_count; ++k) {
-        const BarcodeEvent *e = &n->events[(n->event_head + B_EVENTS - 1 - k) % B_EVENTS];
+        const barcode_event_t *e = &n->events[(n->event_head + B_EVENTS - 1 - k) % B_EVENTS];
         if (e->type == type && (!code || e->code == (uint8_t)code) &&
             (!flagmask || (e->flags & flagmask)))
             ++c;
@@ -203,8 +203,8 @@ static void test_low_contrast_applied(void) {
 
 static void test_duplicate_suppressed(void) {
     /* both decoders read the same label: one letter, and nav/decoder state bit-identical to the original alone */
-    static BarcodeNav ref_nav;
-    static BarcodeAnalog ref_an;
+    static barcode_nav_t ref_nav;
+    static barcode_analog_t ref_an;
     uint64_t t0 = now_us;
     ntlm = 0;
     begin_main();
@@ -316,8 +316,8 @@ static void test_cross_after_peak(void) {
 
 static void test_no_barcode_inactive(void) {
     /* no barcode: white noise, one junction stripe, two short bumps -> state identical to the original alone */
-    static BarcodeNav ref_nav;
-    static BarcodeAnalog ref_an;
+    static barcode_nav_t ref_nav;
+    static barcode_analog_t ref_an;
     uint64_t t0 = now_us;
     ntlm = 0;
     begin_main();
@@ -364,7 +364,7 @@ static void test_mixed_stream(void) {
         double x = i < c->n ? c->path100[i] / 100.0 : 212 + 0.1 * (i - c->n);
         step(x, i < c->n ? c->adc[i] : white_noise(i), true, &nav, &side_analog);
         if (i % 100 == 0) { /* ramp-assist report interleaved (~every 200 ms) */
-            RampAssistTlm t = {.uptime_ms = (uint32_t)(now_us / 1000),
+            ramp_assist_tlm_t t = {.uptime_ms = (uint32_t)(now_us / 1000),
                                .event = RA_EVT_PERIODIC,
                                .flags = (uint8_t)(1u | (2u << 4) | 0x80u),
                                .alpha_milli = 0,

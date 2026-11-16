@@ -7,30 +7,30 @@
 int main(void) {
     uint8_t *bank = calloc(1, 65536);
     assert(bank);
-    BarcodeSaved *s = (BarcodeSaved *)bank;
+    barcode_saved_t *s = (barcode_saved_t *)bank;
     s->magic = B_MAGIC;
     s->version = 26;
     s->profile = s->recorded_profile = 1;
-    s->calibration = (LineCalibration){{163, 160}, {3457, 3700}, 7};
-    s->side = (SideCalibration){0, 1, 3};
+    s->calibration = (line_calibration_t){{163, 160}, {3457, 3700}, 7};
+    s->side = (side_calibration_t){0, 1, 3};
     s->count = B_ROWS;
     s->decoded_total = 27;
-    s->crc = log_crc(bank + offsetof(BarcodeSaved, count), barcode_record_crc_size(26));
+    s->crc = log_crc(bank + offsetof(barcode_saved_t, count), barcode_record_crc_size(26));
     assert(barcode_record_valid(s));
     s->rows[B_ROWS - 1].motion.level[0] ^= 1;
     assert(!barcode_record_valid(s));
     s->version = 25;
     s->count = 1000;
     s->profile = 3;
-    s->crc = log_crc(bank + offsetof(BarcodeSaved, count), 64848u - offsetof(BarcodeSaved, count));
-    LineCalibration cal = {0};
+    s->crc = log_crc(bank + offsetof(barcode_saved_t, count), 64848u - offsetof(barcode_saved_t, count));
+    line_calibration_t cal = {0};
     uint8_t profile = 0;
     assert(!barcode_record_valid(s));
     assert(barcode_import_v25(bank, &cal, &profile));
     assert(profile == 3 && cal.white[0] == 163);
     bank[64800] ^= 1;
     assert(!barcode_import_v25(bank, &cal, &profile));
-    BarcodeRaw *raw = calloc(1, sizeof(*raw));
+    barcode_raw_t *raw = calloc(1, sizeof(*raw));
     assert(raw);
     barcode_raw_begin(raw, 1);
     for (unsigned k = 0; k < RAW_CAPACITY + 2; ++k)

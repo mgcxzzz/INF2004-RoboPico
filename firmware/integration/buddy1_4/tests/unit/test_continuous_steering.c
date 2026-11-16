@@ -3,14 +3,14 @@
 #include <stdio.h>
 #include "src/line_following/continuous_steering.h"
 
-static CircuitInput input(float left, float right) {
-    CircuitInput i = {0};
+static circuit_input_t input(float left, float right) {
+    circuit_input_t i = {0};
     i.speed[0] = left;
     i.speed[1] = right;
     return i;
 }
-static AnalogDemand demand(int left, int right, unsigned l, unsigned r, unsigned decision) {
-    AnalogDemand d = {0};
+static analog_demand_t demand(int left, int right, unsigned l, unsigned r, unsigned decision) {
+    analog_demand_t d = {0};
     d.target[0] = (int16_t)left;
     d.target[1] = (int16_t)right;
     d.level[0] = (uint16_t)l;
@@ -18,21 +18,21 @@ static AnalogDemand demand(int left, int right, unsigned l, unsigned r, unsigned
     d.decision = (uint8_t)decision;
     return d;
 }
-static void circuit(Circuit *c) {
-    *c = (Circuit){0};
+static void circuit(circuit_t *c) {
+    *c = (circuit_t){0};
     c->phase = C_FOLLOW;
 }
-static AnalogDemand step(ContinuousSteering *s, AnalogDemand d, Circuit *c, CircuitInput *i,
+static analog_demand_t step(continuous_steering_t *s, analog_demand_t d, circuit_t *c, circuit_input_t *i,
                          float dt) {
     return continuous_steering_step(s, d, c, i, false, 1, dt);
 }
 
 static void initial_gain_and_full_authority(void) {
-    Circuit c;
+    circuit_t c;
     circuit(&c);
-    ContinuousSteering s = {0};
-    CircuitInput i = input(45, 45);
-    AnalogDemand d = demand(0, 45, 900, 100, SYM_LEFT), out;
+    continuous_steering_t s = {0};
+    circuit_input_t i = input(45, 45);
+    analog_demand_t d = demand(0, 45, 900, 100, SYM_LEFT), out;
     out = step(&s, d, &c, &i, .01f);
     assert(fabsf(s.gain - .70f) < .0001f);
     assert(out.target[0] >= 0 && out.target[1] <= 47);
@@ -45,14 +45,14 @@ static void initial_gain_and_full_authority(void) {
 }
 
 static void mirrored_and_side_dwell(void) {
-    Circuit a, b;
+    circuit_t a, b;
     circuit(&a);
     circuit(&b);
-    ContinuousSteering sa = {0}, sb = {0};
-    CircuitInput ia = input(45, 45), ib = input(45, 45);
-    AnalogDemand da = demand(0, 45, 900, 100, SYM_LEFT);
-    AnalogDemand db = demand(45, 0, 100, 900, SYM_RIGHT);
-    AnalogDemand oa = {0}, ob = {0};
+    continuous_steering_t sa = {0}, sb = {0};
+    circuit_input_t ia = input(45, 45), ib = input(45, 45);
+    analog_demand_t da = demand(0, 45, 900, 100, SYM_LEFT);
+    analog_demand_t db = demand(45, 0, 100, 900, SYM_RIGHT);
+    analog_demand_t oa = {0}, ob = {0};
     const unsigned noisy_left[] = {800, 980, 650, 900, 720, 990};
     const unsigned noisy_right[] = {350, 150, 420, 300, 500, 200};
     for (unsigned k = 0; k < 30; ++k) {
@@ -77,14 +77,14 @@ static void mirrored_and_side_dwell(void) {
 }
 
 static void brightness_independent_gain(void) {
-    Circuit a, b;
+    circuit_t a, b;
     circuit(&a);
     circuit(&b);
-    ContinuousSteering sa = {0}, sb = {0};
-    CircuitInput ia = input(45, 45), ib = input(45, 45);
-    AnalogDemand da = demand(24, 42, 700, 300, SYM_LEFT);
-    AnalogDemand db = demand(24, 42, 950, 550, SYM_LEFT);
-    AnalogDemand oa = {0}, ob = {0};
+    continuous_steering_t sa = {0}, sb = {0};
+    circuit_input_t ia = input(45, 45), ib = input(45, 45);
+    analog_demand_t da = demand(24, 42, 700, 300, SYM_LEFT);
+    analog_demand_t db = demand(24, 42, 950, 550, SYM_LEFT);
+    analog_demand_t oa = {0}, ob = {0};
     for (unsigned k = 0; k < 20; ++k) {
         oa = step(&sa, da, &a, &ia, .01f);
         ob = step(&sb, db, &b, &ib, .01f);
@@ -95,34 +95,34 @@ static void brightness_independent_gain(void) {
 }
 
 static void dwell_uses_core_half_and_return_scales_with_fall_rate(void) {
-    Circuit c;
+    circuit_t c;
     circuit(&c);
-    ContinuousSteering s = {0};
-    CircuitInput i = input(45, 45);
-    AnalogDemand straight = demand(45, 45, 600, 590, SYM_STRAIGHT);
+    continuous_steering_t s = {0};
+    circuit_input_t i = input(45, 45);
+    analog_demand_t straight = demand(45, 45, 600, 590, SYM_STRAIGHT);
     for (unsigned k = 0; k < 500; ++k)
         (void)step(&s, straight, &c, &i, .01f);
     assert(s.same_side_duration == 0 && fabsf(s.gain - .70f) < .0001f);
-    AnalogDemand brief_turn = demand(40, 50, 700, 300, SYM_LEFT);
+    analog_demand_t brief_turn = demand(40, 50, 700, 300, SYM_LEFT);
     (void)step(&s, brief_turn, &c, &i, .01f);
     assert(s.same_side_duration == 0 && fabsf(s.gain - .70f) < .0001f);
 
-    Circuit tiny_c, large_c;
+    circuit_t tiny_c, large_c;
     circuit(&tiny_c);
     circuit(&large_c);
-    ContinuousSteering tiny = {.mean = 45,
+    continuous_steering_t tiny = {.mean = 45,
                                .emitted = {45, 45},
                                .previous_error = .601f,
                                .gain = .7f,
                                .active = 1,
                                .side = 1};
-    ContinuousSteering large = {.mean = 45,
+    continuous_steering_t large = {.mean = 45,
                                 .emitted = {45, 45},
                                 .previous_error = .8f,
                                 .gain = .7f,
                                 .active = 1,
                                 .side = 1};
-    AnalogDemand returning = demand(40, 50, 800, 200, SYM_LEFT);
+    analog_demand_t returning = demand(40, 50, 800, 200, SYM_LEFT);
     (void)continuous_steering_step(&tiny, returning, &tiny_c, &i, false, 1, .01f);
     (void)continuous_steering_step(&large, returning, &large_c, &i, false, 1, .01f);
     assert(tiny.damp_weight > 0 && tiny.damp_weight < .01f);
@@ -130,10 +130,10 @@ static void dwell_uses_core_half_and_return_scales_with_fall_rate(void) {
 }
 
 static void encoder_damping_only_on_return(void) {
-    Circuit yaw, still;
+    circuit_t yaw, still;
     circuit(&yaw);
     circuit(&still);
-    ContinuousSteering a = {.mean = 45,
+    continuous_steering_t a = {.mean = 45,
                             .half = 0,
                             .emitted = {45, 45},
                             .previous_error = .8f,
@@ -141,11 +141,11 @@ static void encoder_damping_only_on_return(void) {
                             .gain = 1,
                             .active = 1,
                             .side = 1};
-    ContinuousSteering b = a;
-    CircuitInput moving = input(15, 45), stopped = input(30, 30);
-    AnalogDemand d = demand(45, 45, 600, 200, SYM_STRAIGHT);
-    AnalogDemand out_yaw = continuous_steering_step(&a, d, &yaw, &moving, false, 1, .05f);
-    AnalogDemand out_still = continuous_steering_step(&b, d, &still, &stopped, false, 1, .05f);
+    continuous_steering_t b = a;
+    circuit_input_t moving = input(15, 45), stopped = input(30, 30);
+    analog_demand_t d = demand(45, 45, 600, 200, SYM_STRAIGHT);
+    analog_demand_t out_yaw = continuous_steering_step(&a, d, &yaw, &moving, false, 1, .05f);
+    analog_demand_t out_still = continuous_steering_step(&b, d, &still, &stopped, false, 1, .05f);
     assert(a.damp_weight > 0 && b.damp_weight > 0);
     assert(fabsf(a.damp_weight - b.damp_weight) < .0001f);
     assert(out_yaw.target[0] > out_yaw.target[1]);
@@ -153,7 +153,7 @@ static void encoder_damping_only_on_return(void) {
 
     /* On a persistent error the return confidence decays, restoring the full
      * optical bend instead of continuously fighting measured curve speed. */
-    a = (ContinuousSteering){.mean = 22.5f,
+    a = (continuous_steering_t){.mean = 22.5f,
                              .half = 20,
                              .emitted = {3, 43},
                              .previous_error = .8f,
@@ -161,8 +161,8 @@ static void encoder_damping_only_on_return(void) {
                              .gain = 1,
                              .active = 1,
                              .side = 1};
-    CircuitInput curve = input(25, 65);
-    AnalogDemand bend = demand(0, 45, 900, 100, SYM_LEFT);
+    circuit_input_t curve = input(25, 65);
+    analog_demand_t bend = demand(0, 45, 900, 100, SYM_LEFT);
     for (unsigned k = 0; k < 40; ++k)
         out_yaw = continuous_steering_step(&a, bend, &yaw, &curve, false, 1, .01f);
     assert(fabsf(a.gain - 1) < .0001f && a.damp_weight < .1f);
@@ -170,13 +170,13 @@ static void encoder_damping_only_on_return(void) {
 }
 
 static void bounded_changes_and_profile_limits(void) {
-    Circuit c;
+    circuit_t c;
     circuit(&c);
-    ContinuousSteering s = {0};
-    CircuitInput i = input(45, 45);
-    AnalogDemand left = demand(0, 45, 900, 100, SYM_LEFT);
-    AnalogDemand right = demand(45, 0, 100, 900, SYM_RIGHT);
-    AnalogDemand out = step(&s, left, &c, &i, .01f);
+    continuous_steering_t s = {0};
+    circuit_input_t i = input(45, 45);
+    analog_demand_t left = demand(0, 45, 900, 100, SYM_LEFT);
+    analog_demand_t right = demand(45, 0, 100, 900, SYM_RIGHT);
+    analog_demand_t out = step(&s, left, &c, &i, .01f);
     for (unsigned k = 0; k < 80; ++k)
         out = step(&s, left, &c, &i, .01f);
     int p0 = out.target[0], p1 = out.target[1];
@@ -187,7 +187,7 @@ static void bounded_changes_and_profile_limits(void) {
     continuous_steering_reset(&s);
     circuit(&c);
     i = input(45, 45);
-    AnalogDemand fast = demand(135, 135, 800, 800, C_FAST);
+    analog_demand_t fast = demand(135, 135, 800, 800, C_FAST);
     for (unsigned k = 0; k < 120; ++k)
         out = continuous_steering_step(&s, fast, &c, &i, false, 3, .01f);
     assert(out.target[0] == 135 && out.target[1] == 135 && c.fast);
@@ -204,14 +204,14 @@ static void bounded_changes_and_profile_limits(void) {
 }
 
 static void immediate_bypass_and_reset(void) {
-    Circuit c;
+    circuit_t c;
     circuit(&c);
-    ContinuousSteering s = {
+    continuous_steering_t s = {
         .mean = 45, .half = 8, .emitted = {37, 53}, .active = 1, .gain = .9f, .damp_weight = .8f};
-    CircuitInput i = input(45, 45);
-    AnalogDemand d = demand(0, 45, 0, 800, SYM_LEFT);
+    circuit_input_t i = input(45, 45);
+    analog_demand_t d = demand(0, 45, 0, 800, SYM_LEFT);
     c.follower.core.white = true;
-    AnalogDemand out = step(&s, d, &c, &i, .01f);
+    analog_demand_t out = step(&s, d, &c, &i, .01f);
     assert(out.target[0] == 0 && out.target[1] == 45 && !s.active && s.gain == 0);
     s.active = 1;
     c.follower.core.white = false;
@@ -230,14 +230,14 @@ static void immediate_bypass_and_reset(void) {
 }
 
 static void runtime_cruise_modes_are_opt_in_and_bounded(void) {
-    Circuit baseline_c, normal_c, trial_c;
+    circuit_t baseline_c, normal_c, trial_c;
     circuit(&baseline_c);
     circuit(&normal_c);
     circuit(&trial_c);
-    ContinuousSteering baseline = {0}, normal = {0}, trial = {0};
-    CircuitInput i = input(45, 45);
-    AnalogDemand straight = demand(45, 45, 500, 500, SYM_STRAIGHT);
-    AnalogDemand a = {0}, b = {0}, c = {0};
+    continuous_steering_t baseline = {0}, normal = {0}, trial = {0};
+    circuit_input_t i = input(45, 45);
+    analog_demand_t straight = demand(45, 45, 500, 500, SYM_STRAIGHT);
+    analog_demand_t a = {0}, b = {0}, c = {0};
     for (unsigned k = 0; k < 65; ++k) {
         a = continuous_steering_step(&baseline, straight, &baseline_c, &i, false, 1, .01f);
         b = continuous_steering_step_with_cruise(&normal, straight, &normal_c, &i, false, 1,
@@ -249,13 +249,13 @@ static void runtime_cruise_modes_are_opt_in_and_bounded(void) {
     assert(b.target[0] == 60 && b.target[1] == 60);
     assert(c.target[0] == 75 && c.target[1] == 75);
 
-    Circuit scan_c, turn_c, high_c;
+    circuit_t scan_c, turn_c, high_c;
     circuit(&scan_c);
-    turn_c = (Circuit){.phase = J_TURN};
+    turn_c = (circuit_t){.phase = J_TURN};
     circuit(&high_c);
-    ContinuousSteering scan = {0}, turn = {0}, high = {0};
-    AnalogDemand scanned = {0}, turning = {0};
-    AnalogDemand high_out = {0};
+    continuous_steering_t scan = {0}, turn = {0}, high = {0};
+    analog_demand_t scanned = {0}, turning = {0};
+    analog_demand_t high_out = {0};
     for (unsigned k = 0; k < 65; ++k) {
         scanned = continuous_steering_step_with_cruise(&scan, straight, &scan_c, &i, true, 1,
                                                        .01f, DRIVE_MODE_TRIAL_SPEED);
@@ -271,11 +271,11 @@ static void runtime_cruise_modes_are_opt_in_and_bounded(void) {
     assert(high_out.target[0] <= DRIVE_MODE_TRIAL_SPEED &&
            high_out.target[1] <= DRIVE_MODE_TRIAL_SPEED);
 
-    Circuit zero_a_c, zero_b_c;
+    circuit_t zero_a_c, zero_b_c;
     circuit(&zero_a_c);
     circuit(&zero_b_c);
-    ContinuousSteering zero_a = {0}, zero_b = {0};
-    AnalogDemand pivot = demand(0, 45, 900, 100, SYM_LEFT), pivot_a = {0}, pivot_b = {0};
+    continuous_steering_t zero_a = {0}, zero_b = {0};
+    analog_demand_t pivot = demand(0, 45, 900, 100, SYM_LEFT), pivot_a = {0}, pivot_b = {0};
     for (unsigned k = 0; k < 65; ++k) {
         pivot_a = continuous_steering_step(&zero_a, pivot, &zero_a_c, &i, false, 1, .01f);
         pivot_b = continuous_steering_step_with_cruise(&zero_b, pivot, &zero_b_c, &i, false, 1,

@@ -1,3 +1,10 @@
+/**
+ * @file wifi_transport.c
+ * @brief Wifi transport.
+ * @details Network helpers validate and explicitly encode bounded application records.
+ * Transport calls belong to the configured SDK or RTOS owner, not these codecs.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 #include "src/network/wifi_transport.h"
 #include "src/network/wifi_mqtt_diag.h"
 
@@ -32,33 +39,33 @@ typedef struct
     uint8_t topic;
     uint8_t len;
     uint8_t data[WIFI_PACKET_MAX];
-} TxPacket;
+} tx_packet_t;
 
 typedef struct
 {
     uint8_t len;
     uint8_t copied[WIFI_RX_COPY_MAX];
     size_t original_len;
-} RxPacket;
+} rx_packet_t;
 #endif
 
 static spin_lock_t * g_queue_lock;
 #if BUDDY_WIFI_ENABLED
-static WifiTransportConfig g_network_config;
+static wifi_transport_config_t g_network_config;
 static bool g_config_is_valid;
 static bool g_worker_launched;
 #endif
 #if BUDDY_WIFI_ENABLED
-static TxPacket g_tx[WIFI_TX_DEPTH];
+static tx_packet_t g_tx[WIFI_TX_DEPTH];
 static unsigned g_tx_count;
-static RxPacket g_rx[WIFI_RX_DEPTH];
+static rx_packet_t g_rx[WIFI_RX_DEPTH];
 static unsigned g_rx_head;
 static unsigned g_rx_tail;
 static unsigned g_rx_count;
-static TxPacket g_pending;
+static tx_packet_t g_pending;
 static bool g_pending_valid;
 #endif
-static WifiTransportStatus g_status;
+static wifi_transport_status_t g_status;
 static bool g_initialized;
 
 #if BUDDY_WIFI_ENABLED
@@ -112,7 +119,7 @@ static bool parse_ipv4_host_order (const char * text, uint32_t * address)
     return true;
 }
 
-static bool valid_config (const WifiTransportConfig * config)
+static bool valid_config (const wifi_transport_config_t * config)
 {
     return config != NULL &&
            has_terminator(config->ssid, sizeof(config->ssid)) &&
@@ -124,7 +131,7 @@ static bool valid_config (const WifiTransportConfig * config)
 }
 #endif
 
-bool wifi_transport_configure (const WifiTransportConfig * config)
+bool wifi_transport_configure (const wifi_transport_config_t * config)
 {
 #if BUDDY_WIFI_ENABLED
     if (g_initialized || !valid_config(config))
@@ -206,7 +213,7 @@ bool wifi_transport_send (unsigned topic, const uint8_t * data, size_t len)
 bool wifi_transport_receive (uint8_t data[8], size_t * original_len)
 {
 #if BUDDY_WIFI_ENABLED
-    RxPacket packet;
+    rx_packet_t packet;
     uint32_t irq_state;
 
     if (data == NULL || original_len == NULL || !g_initialized)
@@ -234,9 +241,9 @@ bool wifi_transport_receive (uint8_t data[8], size_t * original_len)
 #endif
 }
 
-WifiTransportStatus wifi_transport_status (void)
+wifi_transport_status_t wifi_transport_status (void)
 {
-    WifiTransportStatus snapshot;
+    wifi_transport_status_t snapshot;
     uint32_t irq_state;
 
     if (g_queue_lock == NULL)
@@ -456,7 +463,7 @@ static void enqueue_received_command (void)
     }
     else
     {
-        RxPacket * packet = &g_rx[g_rx_head];
+        rx_packet_t * packet = &g_rx[g_rx_head];
         packet->len = g_rx_staging_len;
         memcpy(packet->copied, g_rx_staging, g_rx_staging_len);
         packet->original_len = g_rx_original_len;
@@ -881,20 +888,20 @@ void wifi_transport_init (void)
 #if BUDDY_WIFI_ENABLED
 #if BUDDY_WIFI_LOCAL_CONFIG
     _Static_assert(sizeof(WIFI_SSID) <=
-                       sizeof(((WifiTransportConfig *)0)->ssid),
+                       sizeof(((wifi_transport_config_t *)0)->ssid),
                    "WIFI_SSID exceeds transport config");
     _Static_assert(sizeof(WIFI_PASSWORD) <=
-                       sizeof(((WifiTransportConfig *)0)->password),
+                       sizeof(((wifi_transport_config_t *)0)->password),
                    "WIFI_PASSWORD exceeds transport config");
     _Static_assert(sizeof(MQTT_BROKER_IP) <=
-                       sizeof(((WifiTransportConfig *)0)->broker),
+                       sizeof(((wifi_transport_config_t *)0)->broker),
                    "MQTT_BROKER_IP exceeds transport config");
     _Static_assert(sizeof(MQTT_CLIENT_ID) <=
-                       sizeof(((WifiTransportConfig *)0)->client_id),
+                       sizeof(((wifi_transport_config_t *)0)->client_id),
                    "MQTT_CLIENT_ID exceeds transport config");
     if (!g_config_is_valid)
     {
-        WifiTransportConfig local_config = {0};
+        wifi_transport_config_t local_config = {0};
         (void)snprintf(local_config.ssid, sizeof(local_config.ssid), "%s",
                        WIFI_SSID);
         (void)snprintf(local_config.password, sizeof(local_config.password),

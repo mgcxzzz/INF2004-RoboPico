@@ -1,3 +1,10 @@
+/**
+ * @file network_bridge.c
+ * @brief Network bridge.
+ * @details Application tasks exchange copied, bounded command and telemetry records.
+ * The kernel Wi-Fi service owns the transport; reconnect never restarts motion.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 #include "../rtos_bringup/bringup.h"
 #include "network_bridge.h"
 #include "network_policy.h"
@@ -18,18 +25,28 @@ enum
     ACK_CAPACITY = 256,
     RX_CAPACITY = 256
 };
-static ID tx, ack, rx, hb;
-static uint32_t barrier, urgent;
-static uint8_t accepted, rejected, last_command, last_result;
-static volatile uint32_t app_last_ms;
+static ID g_tx_queue;
+static ID g_ack;
+static ID g_rx_queue;
+static ID g_heartbeat_queue;
+static uint32_t g_barrier;
+static uint32_t g_urgent;
+static uint8_t g_accepted;
+static uint8_t g_rejected;
+static uint8_t g_last_command;
+static uint8_t g_last_result;
+static volatile uint32_t g_app_last_ms;
 uint32_t rn_app_last_ms (void)
 {
-    return __atomic_load_n(&app_last_ms, __ATOMIC_ACQUIRE);
+    return __atomic_load_n(&g_app_last_ms, __ATOMIC_ACQUIRE);
 }
-static T_SPLOCK lock;
-static volatile uint32_t ready;
-static RnStatus status;
-static uint32_t published, received, tx_dropped, rx_dropped;
+static T_SPLOCK g_lock;
+static volatile uint32_t g_ready;
+static rn_status_t g_network_status;
+static uint32_t g_published;
+static uint32_t g_received;
+static uint32_t g_tx_dropped;
+static uint32_t g_rx_dropped;
 /* Source9 motion and11 navigation describe the present, not queued history.
  * Other telemetry (including mapping replies), ACKs and heartbeat retain
  * their own MBFs. Every slot is copied under the short bridge lock. */
@@ -37,55 +54,62 @@ typedef struct
 {
     uint32_t ms;
     uint8_t data[RN_PACKET_MAX];
-    uint8_t len : 7, ready : 1;
-} LatestTelemetry;
-static LatestTelemetry latest[2];
-static unsigned next_latest;
-static uint32_t tx_coalesced;
-static uint32_t mapping_snapshot;
-static uint8_t source_sequence[16];
+    uint8_t len : 7;
+    uint8_t ready : 1;
+} latest_telemetry_t;
+static latest_telemetry_t g_latest[2];
+static unsigned g_next_latest;
+static uint32_t g_tx_coalesced;
+static uint32_t g_mapping_snapshot;
+static uint8_t g_source_sequence[16];
 #ifdef APP_RTOS_IMU
 static struct
 {
-    uint32_t samples, radio_us, timers_us, mqtt_us;
-    uint32_t max_radio_us, max_timers_us, max_mqtt_us, max_total_us;
-} service_timing;
+    uint32_t samples;
+    uint32_t radio_us;
+    uint32_t timers_us;
+    uint32_t mqtt_us;
+    uint32_t max_radio_us;
+    uint32_t max_timers_us;
+    uint32_t max_mqtt_us;
+    uint32_t max_total_us;
+} g_service_timing;
 #endif
 
 static UINT enter (void)
 {
     UINT key;
-    (void)ISpinLock(&lock, &key);
+    (void)ISpinLock(&g_lock, &key);
     return key;
 }
 static void leave (UINT key)
 {
-    (void)ISpinUnlock(&lock, key);
+    (void)ISpinUnlock(&g_lock, key);
 }
 #ifdef APP_RTOS_IMU
 void rn_service_sample (uint32_t radio_us, uint32_t timers_us, uint32_t mqtt_us)
 {
     UINT key = enter();
-    ++service_timing.samples;
-    service_timing.radio_us = radio_us;
-    service_timing.timers_us = timers_us;
-    service_timing.mqtt_us = mqtt_us;
-    if (radio_us > service_timing.max_radio_us)
+    ++g_service_timing.samples;
+    g_service_timing.radio_us = radio_us;
+    g_service_timing.timers_us = timers_us;
+    g_service_timing.mqtt_us = mqtt_us;
+    if (radio_us > g_service_timing.max_radio_us)
     {
-        service_timing.max_radio_us = radio_us;
+        g_service_timing.max_radio_us = radio_us;
     }
-    if (timers_us > service_timing.max_timers_us)
+    if (timers_us > g_service_timing.max_timers_us)
     {
-        service_timing.max_timers_us = timers_us;
+        g_service_timing.max_timers_us = timers_us;
     }
-    if (mqtt_us > service_timing.max_mqtt_us)
+    if (mqtt_us > g_service_timing.max_mqtt_us)
     {
-        service_timing.max_mqtt_us = mqtt_us;
+        g_service_timing.max_mqtt_us = mqtt_us;
     }
     uint32_t total = radio_us + timers_us + mqtt_us;
-    if (total > service_timing.max_total_us)
+    if (total > g_service_timing.max_total_us)
     {
-        service_timing.max_total_us = total;
+        g_service_timing.max_total_us = total;
     }
     leave(key);
 }
@@ -93,7 +117,7 @@ void rn_service_sample (uint32_t radio_us, uint32_t timers_us, uint32_t mqtt_us)
 uint32_t rn_mapping_snapshot (void)
 {
     UINT key = enter();
-    uint32_t value = mapping_snapshot;
+    uint32_t value = g_mapping_snapshot;
     leave(key);
     return value;
 }
@@ -104,17 +128,17 @@ uint8_t rn_next_sequence (unsigned source)
         return 0;
     }
     UINT key = enter();
-    uint8_t value = source_sequence[source]++;
+    uint8_t value = g_source_sequence[source]++;
     leave(key);
     return value;
 }
 static void count_drop (bool receive)
 {
     UINT key = enter();
-    uint32_t * value = receive ? &rx_dropped : &tx_dropped;
-    if (*value != UINT32_MAX)
+    uint32_t * p_value = receive ? &g_rx_dropped : &g_tx_dropped;
+    if (*p_value != UINT32_MAX)
     {
-        ++*value;
+        ++*p_value;
     }
     leave(key);
 }
@@ -128,17 +152,17 @@ static ID buffer (unsigned capacity, unsigned maximum)
 }
 int32_t rn_init (void)
 {
-    if ((tx = buffer(TX_CAPACITY, 70)) < E_OK)
+    if ((g_tx_queue = buffer(TX_CAPACITY, 70)) < E_OK)
     {
-        return tx;
+        return g_tx_queue;
     }
-    if ((ack = buffer(ACK_CAPACITY, 70)) < E_OK)
+    if ((g_ack = buffer(ACK_CAPACITY, 70)) < E_OK)
     {
-        return ack;
+        return g_ack;
     }
-    if ((hb = buffer(128, 70)) < E_OK)
+    if ((g_heartbeat_queue = buffer(128, 70)) < E_OK)
     {
-        return hb;
+        return g_heartbeat_queue;
     }
 #if defined(APP_RTOS_LINE)
     int32_t drive = rn_drive_init();
@@ -147,50 +171,51 @@ int32_t rn_init (void)
         return drive;
     }
 #endif
-    if ((rx = buffer(RX_CAPACITY, RN_RX_BYTES)) < E_OK)
+    if ((g_rx_queue = buffer(RX_CAPACITY, RN_RX_BYTES)) < E_OK)
     {
-        return rx;
+        return g_rx_queue;
     }
-    __atomic_store_n(&ready, 1U, __ATOMIC_RELEASE);
+    __atomic_store_n(&g_ready, 1U, __ATOMIC_RELEASE);
     return E_OK;
 }
 bool rn_ready (void)
 {
-    return __atomic_load_n(&ready, __ATOMIC_ACQUIRE) != 0;
+    return __atomic_load_n(&g_ready, __ATOMIC_ACQUIRE) != 0;
 }
-static void put32 (uint8_t * p, uint32_t value)
+static void put32 (uint8_t * p_data, uint32_t value)
 {
-    for (unsigned i = 0; i < 4; ++i)
+    for (unsigned index = 0; index < 4; ++index)
     {
-        p[i] = (uint8_t)(value >> (i * 8));
+        p_data[index] = (uint8_t)(value >> (index * 8));
     }
 }
-static uint32_t get32 (const uint8_t * p)
+static uint32_t get32 (const uint8_t * p_data)
 {
-    return (uint32_t)p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16) |
-           ((uint32_t)p[3] << 24);
+    return (uint32_t)p_data[0] | ((uint32_t)p_data[1] << 8) |
+           ((uint32_t)p_data[2] << 16) | ((uint32_t)p_data[3] << 24);
 }
-bool rn_tx_push (uint8_t topic, const uint8_t * data, uint8_t len, uint32_t now)
+bool rn_tx_push (uint8_t topic, const uint8_t * p_data_value, uint8_t len,
+                 uint32_t now)
 {
-    if (!rn_ready() || !data || len == 0 || len > RN_PACKET_MAX ||
+    if (!rn_ready() || !p_data_value || len == 0 || len > RN_PACKET_MAX ||
         topic > RN_HB)
     {
         return false;
     }
-    if (topic == RN_TLM &&
-        ((data[0] >> 4) == 9 ||
-         ((data[0] >> 4) == 11 && len >= 8 && data[7] == WPK_EVENT_STATUS)))
+    if (topic == RN_TLM && ((p_data_value[0] >> 4) == 9 ||
+                            ((p_data_value[0] >> 4) == 11 && len >= 8 &&
+                             p_data_value[7] == WPK_EVENT_STATUS)))
     {
-        unsigned index = (data[0] >> 4) == 9 ? 0 : 1;
+        unsigned index = (p_data_value[0] >> 4) == 9 ? 0 : 1;
         UINT key = enter();
-        if (latest[index].ready && tx_coalesced != UINT32_MAX)
+        if (g_latest[index].ready && g_tx_coalesced != UINT32_MAX)
         {
-            ++tx_coalesced;
+            ++g_tx_coalesced;
         }
-        memcpy(latest[index].data, data, len);
-        latest[index].len = len;
-        latest[index].ms = now;
-        latest[index].ready = true;
+        memcpy(g_latest[index].data, p_data_value, len);
+        g_latest[index].len = len;
+        g_latest[index].ms = now;
+        g_latest[index].ready = true;
         leave(key);
         return true;
     }
@@ -198,10 +223,10 @@ bool rn_tx_push (uint8_t topic, const uint8_t * data, uint8_t len, uint32_t now)
     put32(message, now);
     message[4] = topic;
     message[5] = len;
-    memcpy(message + 6, data, len);
-    if (tk_snd_mbf(topic == RN_ACK  ? ack
-                   : topic == RN_HB ? hb
-                                    : tx,
+    memcpy(message + 6, p_data_value, len);
+    if (tk_snd_mbf(topic == RN_ACK  ? g_ack
+                   : topic == RN_HB ? g_heartbeat_queue
+                                    : g_tx_queue,
                    message, len + 6, TMO_POL) == E_OK)
     {
         return true;
@@ -209,30 +234,30 @@ bool rn_tx_push (uint8_t topic, const uint8_t * data, uint8_t len, uint32_t now)
     count_drop(false);
     return false;
 }
-bool rn_tx_take (uint8_t * topic, uint8_t data[RN_PACKET_MAX], uint8_t * len,
-                 uint32_t now)
+bool rn_tx_take (uint8_t * p_topic_value, uint8_t data[RN_PACKET_MAX],
+                 uint8_t * p_len_value, uint32_t now)
 {
-    return rn_tx_take_budget(topic, data, len, now, true);
+    return rn_tx_take_budget(p_topic_value, data, p_len_value, now, true);
 }
-bool rn_tx_take_budget (uint8_t * topic, uint8_t data[RN_PACKET_MAX],
-                        uint8_t * len, uint32_t now, bool telemetry)
+bool rn_tx_take_budget (uint8_t * p_topic_value, uint8_t data[RN_PACKET_MAX],
+                        uint8_t * p_len_value, uint32_t now, bool telemetry)
 {
     if (!rn_ready())
     {
         return false;
     }
     /* Bound stale-message cleanup too: never block the kernel Wi-Fi service. */
-    for (unsigned n = 0; n < 4; ++n)
+    for (unsigned count_value = 0; count_value < 4; ++count_value)
     {
         uint8_t message[70];
-        INT count = tk_rcv_mbf(ack, message, TMO_POL);
+        INT count = tk_rcv_mbf(g_ack, message, TMO_POL);
         if (count < 0)
         {
-            count = tk_rcv_mbf(hb, message, TMO_POL);
+            count = tk_rcv_mbf(g_heartbeat_queue, message, TMO_POL);
         }
         if (count < 0 && telemetry)
         {
-            count = tk_rcv_mbf(tx, message, TMO_POL);
+            count = tk_rcv_mbf(g_tx_queue, message, TMO_POL);
         }
         if (count < 0)
         {
@@ -243,34 +268,35 @@ bool rn_tx_take_budget (uint8_t * topic, uint8_t data[RN_PACKET_MAX],
             now - get32(message) > (message[4] == RN_TLM ? 250U : 2000U))
         {
             count_drop(false);
-            if (n == 3)
+            if (count_value == 3)
             {
                 return false; /* Bound cleanup without bypassing remaining ACKs. */
             }
             continue;
         }
-        *topic = message[4];
-        *len = message[5];
-        memcpy(data, message + 6, *len);
+        *p_topic_value = message[4];
+        *p_len_value = message[5];
+        memcpy(data, message + 6, *p_len_value);
         return true;
     }
     if (telemetry)
     {
-        for (unsigned n = 0; n < 2; ++n)
+        for (unsigned count_value_value = 0; count_value_value < 2;
+             ++count_value_value)
         {
             UINT key = enter();
-            unsigned index = next_latest;
-            next_latest ^= 1;
-            LatestTelemetry * slot = &latest[index];
-            bool valid = slot->ready && now - slot->ms <= 250U;
-            bool stale = slot->ready && !valid;
+            unsigned index = g_next_latest;
+            g_next_latest ^= 1;
+            latest_telemetry_t * p_slot = &g_latest[index];
+            bool valid = p_slot->ready && now - p_slot->ms <= 250U;
+            bool stale = p_slot->ready && !valid;
             if (valid)
             {
-                *topic = RN_TLM;
-                *len = slot->len;
-                memcpy(data, slot->data, *len);
+                *p_topic_value = RN_TLM;
+                *p_len_value = p_slot->len;
+                memcpy(data, p_slot->data, *p_len_value);
             }
-            slot->ready = false;
+            p_slot->ready = false;
             leave(key);
             if (stale)
             {
@@ -284,40 +310,40 @@ bool rn_tx_take_budget (uint8_t * topic, uint8_t data[RN_PACKET_MAX],
     }
     return false;
 }
-bool rn_rx_push (const uint8_t * data, uint8_t copied, uint32_t original,
-                 uint32_t now)
+bool rn_rx_push (const uint8_t * p_data_value, uint8_t copied,
+                 uint32_t original, uint32_t now)
 {
-    if (!rn_ready() || !data || copied > RN_RX_MAX)
+    if (!rn_ready() || !p_data_value || copied > RN_RX_MAX)
     {
         return false;
     }
     uint8_t message[RN_RX_BYTES] = {0};
-    WifiCommand command;
+    wifi_command_t command;
     bool valid = original == copied &&
-                 wp_parse(data, original, &command) == WP_ACK_ACCEPTED;
+                 wp_parse(p_data_value, original, &command) == WP_ACK_ACCEPTED;
     UINT stamp_key = enter();
     if (valid && (command.code == WP_CMD_STOP || command.code == WP_CMD_ESTOP ||
                   command.code == WP_CMD_PAUSE))
     {
-        ++barrier;
-        urgent |= command.code == WP_CMD_ESTOP  ? RN_URGENT_ESTOP
-                  : command.code == WP_CMD_STOP ? RN_URGENT_STOP
-                                                : RN_URGENT_PAUSE;
+        ++g_barrier;
+        g_urgent |= command.code == WP_CMD_ESTOP  ? RN_URGENT_ESTOP
+                    : command.code == WP_CMD_STOP ? RN_URGENT_STOP
+                                                  : RN_URGENT_PAUSE;
     }
-    put32(message + 13, barrier);
-    put32(message + 17, status.connects);
+    put32(message + 13, g_barrier);
+    put32(message + 17, g_network_status.connects);
     put32(message + 21, (uint32_t)board_time_us());
     leave(stamp_key);
     put32(message, now);
     message[4] =
         original <= RN_RX_MAX && original == copied ? (uint8_t)original : 9;
-    memcpy(message + 5, data, copied);
-    if (tk_snd_mbf(rx, message, sizeof(message), TMO_POL) == E_OK)
+    memcpy(message + 5, p_data_value, copied);
+    if (tk_snd_mbf(g_rx_queue, message, sizeof(message), TMO_POL) == E_OK)
     {
         UINT key = enter();
-        if (received != UINT32_MAX)
+        if (g_received != UINT32_MAX)
         {
-            ++received;
+            ++g_received;
         }
         leave(key);
         return true;
@@ -330,115 +356,119 @@ void rn_command_result (uint8_t code, uint8_t result)
     UINT key = enter();
     if (result == WP_ACK_ACCEPTED)
     {
-        if (accepted != 255)
+        if (g_accepted != 255)
         {
-            ++accepted;
+            ++g_accepted;
         }
     }
-    else if (rejected != 255)
+    else if (g_rejected != 255)
     {
-        ++rejected;
+        ++g_rejected;
     }
-    last_command = code;
-    last_result = result;
+    g_last_command = code;
+    g_last_result = result;
     leave(key);
 }
 uint32_t rn_barrier (void)
 {
     UINT key = enter();
-    uint32_t value = barrier;
+    uint32_t value = g_barrier;
     leave(key);
     return value;
 }
 unsigned rn_take_urgent (void)
 {
     UINT key = enter();
-    unsigned value = urgent & (RN_URGENT_STOP | RN_URGENT_ESTOP);
-    urgent &= ~(RN_URGENT_STOP | RN_URGENT_ESTOP);
+    unsigned value = g_urgent & (RN_URGENT_STOP | RN_URGENT_ESTOP);
+    g_urgent &= ~(RN_URGENT_STOP | RN_URGENT_ESTOP);
     leave(key);
     return value;
 }
 bool rn_take_pause (void)
 {
     UINT key = enter();
-    bool value = (urgent & RN_URGENT_PAUSE) != 0;
-    urgent &= ~RN_URGENT_PAUSE;
+    bool value = (g_urgent & RN_URGENT_PAUSE) != 0;
+    g_urgent &= ~RN_URGENT_PAUSE;
     leave(key);
     return value;
 }
-void rn_status_update (const RnStatus * value)
+void rn_status_update (const rn_status_t * p_value)
 {
     if (!rn_ready())
     {
         return;
     }
     UINT key = enter();
-    status = *value;
+    g_network_status = *p_value;
     leave(key);
 }
-RnStatus rn_status (void)
+rn_status_t rn_status (void)
 {
     UINT key = enter();
-    RnStatus result = status;
-    result.published = published;
-    result.received = received;
-    result.tx_dropped = tx_dropped;
-    result.rx_dropped = rx_dropped;
-    result.tx_coalesced = tx_coalesced;
+    rn_status_t result = g_network_status;
+    result.published = g_published;
+    result.received = g_received;
+    result.tx_dropped = g_tx_dropped;
+    result.rx_dropped = g_rx_dropped;
+    result.tx_coalesced = g_tx_coalesced;
     leave(key);
     return result;
 }
-void rn_publish_result (bool ok)
+void rn_publish_result (bool ok_value_value)
 {
-    if (!ok)
+    if (!ok_value_value)
     {
         count_drop(false);
         return;
     }
     UINT key = enter();
-    if (published != UINT32_MAX)
+    if (g_published != UINT32_MAX)
     {
-        ++published;
+        ++g_published;
     }
     leave(key);
 }
 void rn_report (void)
 {
-    RnStatus s = rn_status();
+    rn_status_t state = rn_status();
 #ifdef APP_RTOS_LINE
-    const char * mode = "USB_SUPERVISED";
+    const char * p_mode = "USB_SUPERVISED";
 #else
-    const char * mode = "DISABLED";
+    const char * p_mode = "DISABLED";
 #endif
     tm_printf((UB *)"NET motors=%s configured=%u connected=%u subscribed=%u "
                     "link=%d polls=%u last_ms=%u published=%u received=%u "
                     "tx_drop=%u rx_drop=%u mqtt_result=%d\n",
-              mode, !!(s.flags & RN_CONFIGURED), !!(s.flags & RN_CONNECTED),
-              !!(s.flags & RN_SUBSCRIBED), s.link, s.polls, s.last_poll_ms,
-              s.published, s.received, s.tx_dropped, s.rx_dropped,
-              s.mqtt_result);
+              p_mode, !!(state.flags & RN_CONFIGURED),
+              !!(state.flags & RN_CONNECTED), !!(state.flags & RN_SUBSCRIBED),
+              state.link, state.polls, state.last_poll_ms, state.published,
+              state.received, state.tx_dropped, state.rx_dropped,
+              state.mqtt_result);
     tm_printf((UB *)"NET_ADDRESS ip=%u.%u.%u.%u broker=%u.%u.%u.%u\n",
-              s.ipv4 & 255U, (s.ipv4 >> 8) & 255U, (s.ipv4 >> 16) & 255U,
-              s.ipv4 >> 24, s.broker_ipv4 & 255U, (s.broker_ipv4 >> 8) & 255U,
-              (s.broker_ipv4 >> 16) & 255U, s.broker_ipv4 >> 24);
+              state.ipv4 & 255U, (state.ipv4 >> 8) & 255U,
+              (state.ipv4 >> 16) & 255U, state.ipv4 >> 24,
+              state.broker_ipv4 & 255U, (state.broker_ipv4 >> 8) & 255U,
+              (state.broker_ipv4 >> 16) & 255U, state.broker_ipv4 >> 24);
     tm_printf((UB *)"NET_TX coalesced=%u mem=%u errors=%u deferred=%u "
                     "result=%d free_req=%u ring_used=%u tcp_free=%u "
                     "nagle_off=%u admit_ms=%u complete_ms=%u\n",
-              s.tx_coalesced, s.publish_mem, s.publish_error, s.telemetry_wait,
-              s.publish_result, s.request_free, s.ring_used, s.tcp_free,
-              s.nagle_off, s.last_admit_ms, s.last_complete_ms);
+              state.tx_coalesced, state.publish_mem, state.publish_error,
+              state.telemetry_wait, state.publish_result, state.request_free,
+              state.ring_used, state.tcp_free, state.nagle_off,
+              state.last_admit_ms, state.last_complete_ms);
     tm_printf((UB *)"NET_MEMORY heap_used=%u heap_max=%u heap_capacity=%u "
                     "heap_errors=%u tcp_queue=%u tcp_retries=%u tcp_rto_ms=%u "
                     "oversize=0\n",
-              s.heap_used, s.heap_max, s.heap_capacity, s.heap_errors,
-              s.tcp_queue, s.tcp_retries, s.tcp_rto_ms);
+              state.heap_used, state.heap_max, state.heap_capacity,
+              state.heap_errors, state.tcp_queue, state.tcp_retries,
+              state.tcp_rto_ms);
 #ifdef APP_RTOS_IMU
     UINT key = enter();
     uint32_t sample[] = {
-        service_timing.samples,      service_timing.radio_us,
-        service_timing.timers_us,    service_timing.mqtt_us,
-        service_timing.max_radio_us, service_timing.max_timers_us,
-        service_timing.max_mqtt_us,  service_timing.max_total_us};
+        g_service_timing.samples,      g_service_timing.radio_us,
+        g_service_timing.timers_us,    g_service_timing.mqtt_us,
+        g_service_timing.max_radio_us, g_service_timing.max_timers_us,
+        g_service_timing.max_mqtt_us,  g_service_timing.max_total_us};
     leave(key);
     tm_printf((UB *)"NET_SERVICE core=0 samples=%u radio_us=%u timers_us=%u "
                     "mqtt_us=%u max_radio_us=%u max_timers_us=%u "
@@ -447,18 +477,18 @@ void rn_report (void)
               sample[6], sample[7]);
 #endif
 }
-void rn_app_task (int32_t code, void * exinf)
+void rn_app_task (int32_t code, void * p_exinf_value)
 {
     (void)code;
-    (void)exinf;
+    (void)p_exinf_value;
     uint32_t last_hb = board_kernel_ms(), mapping = 0, previous_connects = 0;
     uint8_t sequence = 0, map_sequence = 0;
     for (;;)
     {
         uint32_t now = board_kernel_ms();
-        __atomic_store_n(&app_last_ms, now, __ATOMIC_RELEASE);
-        RnStatus net = rn_status();
-        BringupStatus motion;
+        __atomic_store_n(&g_app_last_ms, now, __ATOMIC_RELEASE);
+        rn_status_t net = rn_status();
+        bringup_status_t motion;
         bringup_get_status(&motion);
         uint8_t state =
             rn_drive_state(motion.flags, false, false, motion.reason);
@@ -469,10 +499,12 @@ void rn_app_task (int32_t code, void * exinf)
 #endif
         bool force_hb = false;
         uint8_t message[RN_RX_BYTES];
-        for (unsigned n = 0;
-             n < 4 && tk_rcv_mbf(rx, message, TMO_POL) == RN_RX_BYTES; ++n)
+        for (unsigned count = 0;
+             count < 4 &&
+             tk_rcv_mbf(g_rx_queue, message, TMO_POL) == RN_RX_BYTES;
+             ++count)
         {
-            WifiCommand command;
+            wifi_command_t command;
 #ifdef APP_RTOS_LINE
             uint8_t parsed = wp_parse(message + 5, message[4], &command);
             if (!parsed &&
@@ -496,7 +528,7 @@ void rn_app_task (int32_t code, void * exinf)
                 continue;
             }
 #endif
-            RnCommandPlan plan =
+            rn_command_plan_t plan =
                 rn_bench_command(message + 5, message[4], get32(message), now,
                                  &mapping, &command);
 #ifdef APP_RTOS_LINE
@@ -509,7 +541,7 @@ void rn_app_task (int32_t code, void * exinf)
 #endif
             uint8_t result = plan.result;
             UINT map_key = enter();
-            mapping_snapshot = mapping;
+            g_mapping_snapshot = mapping;
             leave(map_key);
             bool send_map = (plan.flags & RN_PLAN_MAP) != 0;
             force_hb |= (plan.flags & RN_PLAN_HEARTBEAT) != 0;
@@ -600,26 +632,26 @@ void rn_app_task (int32_t code, void * exinf)
                                    rtos_line_pending(), motion.reason);
 #endif
             UINT key = enter();
-            WifiHeartbeat heartbeat = {
+            wifi_heartbeat_t heartbeat = {
                 .seq = sequence++,
                 .net = net.flags & RN_SUBSCRIBED ? 2
                        : net.link == 3           ? 1
                                                  : 0,
                 .state = state,
-                .last_cmd = last_command,
-                .last_result = last_result,
+                .last_cmd = g_last_command,
+                .last_result = g_last_result,
                 .uptime_s =
                     (uint16_t)(now / 1000U > 16383U ? 16383U : now / 1000U),
                 .published =
                     net.published > 65535U ? 65535U : (uint16_t)net.published,
                 .lost =
                     net.tx_dropped > 65535U ? 65535U : (uint16_t)net.tx_dropped,
-                .accepted = accepted,
-                .rejected = rejected,
+                .accepted = g_accepted,
+                .rejected = g_rejected,
                 .connects = net.connects > 255U ? 255U : (uint8_t)net.connects};
             leave(key);
             T_RMBF queue;
-            if (tk_ref_mbf(tx, &queue) == E_OK)
+            if (tk_ref_mbf(g_tx_queue, &queue) == E_OK)
             {
                 heartbeat.fill_pct = (uint8_t)((TX_CAPACITY - queue.frbufsz) *
                                                100U / TX_CAPACITY);

@@ -7,8 +7,8 @@
 #include "app_program/barcode_navigation/barcode_model.h"
 #include "src/motion/motion_port.h"
 #include "tests/barcode/bp_captured_fixtures.h"
-static RbDecoder d;
-static LinePlanner p;
+static rb_decoder_t d;
+static line_planner_t p;
 static uint64_t now = 1000000;
 static unsigned steps;
 static uint64_t clock_now(void *u) {
@@ -20,10 +20,10 @@ static uint32_t mapping(void) {
                           ('Y' - 'A') | ('Z' - 'A') << 5 | ('A' - 'A') << 10 | ('F' - 'A') << 15);
 }
 static void begin(uint32_t map) {
-    MotionPort port = {.now_us = clock_now};
+    motion_port_t port = {.now_us = clock_now};
     motion_init(&port);
     motion_session_begin(now);
-    CircuitInput i = {.now = now, .adc = {240, 260}};
+    circuit_input_t i = {.now = now, .adc = {240, 260}};
     rl_begin(&p, &i, 175);
     p.nav.mapping = map;
     rb_begin(&d, &p.nav, 175, now, i.wheel);
@@ -34,7 +34,7 @@ static void step(double mm, uint16_t adc) {
     double w[2] = {mm, mm};
     if (steps++ % 5 == 0) {
         assert(motion_submit_navigation(MOTION_BUDDY3, 45, 45) == MOTION_OK);
-        MotionFeedback f = {
+        motion_feedback_t f = {
             .now_us = now, .wheel_mm = {mm, mm}, .speed_mm_s = {45, 45}, .line_level = {700, 700}};
         (void)motion_update(&f);
     }
@@ -98,7 +98,7 @@ int main(void) {
     /* Full migrated sample -> planner path: stop bar is not a junction;
      * a later separate cross dispatches the frozen mapped action. */
     const char letters[] = "YAFZ", actions[] = "SLRU";
-    const LineCalibration cal = {{122, 138}, {246, 267}, 7};
+    const line_calibration_t cal = {{122, 138}, {246, 267}, 7};
     for (unsigned which = 0; which < 4; ++which) {
         begin(mapping());
         synthetic(letters[which], false);
@@ -106,13 +106,13 @@ int main(void) {
         for (double mm = 230; mm < 310; mm += .09) {
             step(mm, mm >= 260 && mm < 278 ? 3000 : 175);
             if (steps % 5 == 0) {
-                CircuitInput in = {.now = now,
+                circuit_input_t in = {.now = now,
                                    .path = mm,
                                    .wheel = {mm, mm},
                                    .speed = {45, 45},
                                    .adc = {246, 267},
                                    .side_black = d.analog.black};
-                AnalogDemand output = rb_follow(&p, &d, &cal, &in, .01f);
+                analog_demand_t output = rb_follow(&p, &d, &cal, &in, .01f);
                 assert(!output.stop);
             }
             if (p.nav.busy)
@@ -134,7 +134,7 @@ int main(void) {
     p.nav.mapping = changed_mapping;
     assert(barcode_nav_action(&p.nav, 'A') == 'L');
     uint32_t old_events = p.nav.event_sequence;
-    CircuitInput i = {.now = now, .wheel = {230, 230}, .adc = {240, 260}};
+    circuit_input_t i = {.now = now, .wheel = {230, 230}, .adc = {240, 260}};
     rb_resume(&p, &d, &i, 175);
     assert(p.nav.pending == 'A' && p.nav.pending_action == 'L' && p.nav.pending_revision == 1);
     assert(p.nav.event_sequence == old_events && p.nav.decoded_total == 1);

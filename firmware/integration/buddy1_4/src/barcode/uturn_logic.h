@@ -1,3 +1,10 @@
+/**
+ * @file uturn_logic.h
+ * @brief Uturn logic.
+ * @details Pure barcode/route logic is called by the ADC owner and emits requests.
+ * Native records are not wire packets; preserve both decode directions.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 #ifndef BARCODE_UTURN_LOGIC_H
 #define BARCODE_UTURN_LOGIC_H
 #include "src/line_following/circuit_logic.h"
@@ -17,11 +24,13 @@ enum
 };
 typedef struct
 {
-    uint64_t since, settle_since;
+    uint64_t since;
+    uint64_t settle_since;
     float reverse_origin[2];
     uint8_t stage;
-    bool started, settling;
-} BarcodeUTurn;
+    bool started;
+    bool settling;
+} barcode_u_turn_t;
 /* Position is signed; travelled distance must keep reverse increments too.
  * Encoder deltas are32-bit, so widen before negating INT32_MIN. */
 static inline uint64_t barcode_travel_ticks (int32_t delta)
@@ -33,171 +42,182 @@ static inline uint64_t barcode_travel_ticks (int32_t delta)
  * With equal wheel travel the final axle is on the original longitudinal
  * line. A single forward-only semicircle would instead be one track-width
  * beside it. Encoder geometry is provisional; optics must confirm return. */
-static inline AnalogDemand barcode_uturn_step (BarcodeUTurn * u, Junction * j,
-                                               const LineCalibration * cal,
-                                               const JunctionInput * i)
+static inline analog_demand_t
+barcode_uturn_step (barcode_u_turn_t * p_u_value, junction_t * p_other_index,
+                    const line_calibration_t * p_cal,
+                    const junction_input_t * p_index)
 {
-    if (j->phase == J_CENTRE)
+    if (p_other_index->phase == J_CENTRE)
     {
-        AnalogDemand d = junction_step(j, cal, i);
-        if (j->phase == J_TURN && !d.stop)
+        analog_demand_t demand = junction_step(p_other_index, p_cal, p_index);
+        if (p_other_index->phase == J_TURN && !demand.stop)
         {
-            d.target[1] = U_FORWARD_FAST;
+            demand.target[1] = U_FORWARD_FAST;
         }
-        return d;
+        return demand;
     }
-    AnalogDemand d = {0};
-    for (unsigned w = 0; w < 2; ++w)
+    analog_demand_t demand_value = {0};
+    for (unsigned wheel = 0; wheel < 2; ++wheel)
     {
-        d.level[w] = line_level(i->adc[w], cal->white[w], cal->black[w]);
+        demand_value.level[wheel] = line_level(
+            p_index->adc[wheel], p_cal->white[wheel], p_cal->black[wheel]);
     }
-    if (!calibration_valid(cal))
+    if (!calibration_valid(p_cal))
     {
-        j_fail(j, J_LINE_LOST);
+        j_fail(p_other_index, J_LINE_LOST);
     }
-    if (!u->started && j->phase == J_TURN)
+    if (!p_u_value->started && p_other_index->phase == J_TURN)
     {
-        u->started = true;
-        u->since = i->now;
+        p_u_value->started = true;
+        p_u_value->since = p_index->now;
     }
-    j->turn_degrees = j_rotation(j, i);
-    if (u->started && i->now - u->since >= U_TOTAL_US)
+    p_other_index->turn_degrees = j_rotation(p_other_index, p_index);
+    if (p_u_value->started && p_index->now - p_u_value->since >= U_TOTAL_US)
     {
-        j_fail(j, J_TURN_TIMEOUT);
+        j_fail(p_other_index, J_TURN_TIMEOUT);
     }
-    if (j->turn_degrees < -5 || j->turn_degrees >= 195)
+    if (p_other_index->turn_degrees < -5 || p_other_index->turn_degrees >= 195)
     {
-        j_fail(j, J_BRANCH_MISSING);
+        j_fail(p_other_index, J_BRANCH_MISSING);
     }
-    if (j->phase == J_TURN)
+    if (p_other_index->phase == J_TURN)
     {
-        if (i->now - j->phase_us >= U_SEGMENT_US)
+        if (p_index->now - p_other_index->phase_us >= U_SEGMENT_US)
         {
-            j_fail(j, J_TURN_TIMEOUT);
+            j_fail(p_other_index, J_TURN_TIMEOUT);
         }
-        float left = i->wheel[0] - j->turn_origin[0],
-              right = i->wheel[1] - j->turn_origin[1];
-        bool white = d.level[0] < 200 && d.level[1] < 200;
-        if ((white || JUNCTION_ANGLE_GATE_ONLY) && j->turn_degrees > 10)
+        float left = p_index->wheel[0] - p_other_index->turn_origin[0],
+              right = p_index->wheel[1] - p_other_index->turn_origin[1];
+        bool white = demand_value.level[0] < 200 && demand_value.level[1] < 200;
+        if ((white || JUNCTION_ANGLE_GATE_ONLY) &&
+            p_other_index->turn_degrees > 10)
         {
-            if (!j->off_timing)
+            if (!p_other_index->off_timing)
             {
-                j->off_timing = true;
-                j->off_us = i->now;
+                p_other_index->off_timing = true;
+                p_other_index->off_us = p_index->now;
             }
-            if (i->now - j->off_us >= 30000)
+            if (p_index->now - p_other_index->off_us >= 30000)
             {
-                j->off_line = true;
+                p_other_index->off_line = true;
             }
         }
         else
         {
-            j->off_timing = false;
+            p_other_index->off_timing = false;
         }
-        if (u->stage == 0)
+        if (p_u_value->stage == 0)
         {
             if (fabsf(left) > 12 || right < -5 || right > 220)
             {
-                j_fail(j, J_CENTRE_DRIFT);
+                j_fail(p_other_index, J_CENTRE_DRIFT);
             }
-            if (j->phase != J_FAULT && j->turn_degrees >= 90)
+            if (p_other_index->phase != J_FAULT &&
+                p_other_index->turn_degrees >= 90)
             {
-                u->stage = 1;
-                u->settling = false;
-                j_enter(j, J_TURN_SETTLE, i->now);
+                p_u_value->stage = 1;
+                p_u_value->settling = false;
+                j_enter(p_other_index, J_TURN_SETTLE, p_index->now);
             }
             else
             {
-                d.target[1] = j->turn_degrees >= 82   ? U_FORWARD_FINE
-                              : j->turn_degrees >= 60 ? U_FORWARD_MID
-                                                      : U_FORWARD_FAST;
+                demand_value.target[1] =
+                    p_other_index->turn_degrees >= 82   ? U_FORWARD_FINE
+                    : p_other_index->turn_degrees >= 60 ? U_FORWARD_MID
+                                                        : U_FORWARD_FAST;
             }
         }
-        else if (u->stage == 2)
+        else if (p_u_value->stage == 2)
         {
-            float reverse = u->reverse_origin[0] - i->wheel[0];
-            float stationary = i->wheel[1] - u->reverse_origin[1];
+            float reverse = p_u_value->reverse_origin[0] - p_index->wheel[0];
+            float stationary = p_index->wheel[1] - p_u_value->reverse_origin[1];
             if (fabsf(stationary) > 12 || reverse < -5 || reverse > 220)
             {
-                j_fail(j, J_CENTRE_DRIFT);
+                j_fail(p_other_index, J_CENTRE_DRIFT);
             }
-            bool branch = j->off_line && j->turn_degrees >= 165 &&
-                          (d.level[0] >= 400 || d.level[1] >= 400);
+            bool branch =
+                p_other_index->off_line && p_other_index->turn_degrees >= 165 &&
+                (demand_value.level[0] >= 400 || demand_value.level[1] >= 400);
             if (!branch)
             {
-                j->line_timing = false;
+                p_other_index->line_timing = false;
             }
             else
             {
-                if (!j->line_timing)
+                if (!p_other_index->line_timing)
                 {
-                    j->line_timing = true;
-                    j->line_us = i->now;
+                    p_other_index->line_timing = true;
+                    p_other_index->line_us = p_index->now;
                 }
-                if (i->now - j->line_us >= 30000 && j->phase != J_FAULT)
+                if (p_index->now - p_other_index->line_us >= 30000 &&
+                    p_other_index->phase != J_FAULT)
                 {
-                    u->stage = 3;
-                    u->settling = false;
-                    int error = (int)d.level[0] - d.level[1];
-                    j->follower =
-                        (SymmetricTracker){.direction = error > 80    ? 1
-                                                        : error < -80 ? -1
-                                                                      : 0,
-                                           .direction_us = i->now};
-                    j_enter(j, J_TURN_SETTLE, i->now);
+                    p_u_value->stage = 3;
+                    p_u_value->settling = false;
+                    int error =
+                        (int)demand_value.level[0] - demand_value.level[1];
+                    p_other_index->follower =
+                        (symmetric_tracker_t){.direction = error > 80    ? 1
+                                                           : error < -80 ? -1
+                                                                         : 0,
+                                              .direction_us = p_index->now};
+                    j_enter(p_other_index, J_TURN_SETTLE, p_index->now);
                 }
             }
-            if (j->phase == J_TURN)
+            if (p_other_index->phase == J_TURN)
             {
-                d.target[0] = -(j->turn_degrees >= 170   ? U_REVERSE_FINE
-                                : j->turn_degrees >= 150 ? U_REVERSE_MID
-                                                         : U_REVERSE_FAST);
+                demand_value.target[0] =
+                    -(p_other_index->turn_degrees >= 170   ? U_REVERSE_FINE
+                      : p_other_index->turn_degrees >= 150 ? U_REVERSE_MID
+                                                           : U_REVERSE_FAST);
             }
         }
     }
-    else if (j->phase == J_TURN_SETTLE)
+    else if (p_other_index->phase == J_TURN_SETTLE)
     {
-        if (i->now - j->phase_us >= U_SETTLE_US)
+        if (p_index->now - p_other_index->phase_us >= U_SETTLE_US)
         {
-            j_fail(j, J_SETTLE_TIMEOUT);
+            j_fail(p_other_index, J_SETTLE_TIMEOUT);
         }
-        bool still = fabsf(i->speed[0]) < 5 && fabsf(i->speed[1]) < 5;
+        bool still =
+            fabsf(p_index->speed[0]) < 5 && fabsf(p_index->speed[1]) < 5;
         if (!still)
         {
-            u->settling = false;
+            p_u_value->settling = false;
         }
         else
         {
-            if (!u->settling)
+            if (!p_u_value->settling)
             {
-                u->settling = true;
-                u->settle_since = i->now;
+                p_u_value->settling = true;
+                p_u_value->settle_since = p_index->now;
             }
-            if (i->now - u->settle_since >= U_STILL_US && j->phase != J_FAULT)
+            if (p_index->now - p_u_value->settle_since >= U_STILL_US &&
+                p_other_index->phase != J_FAULT)
             {
-                if (u->stage == 1)
+                if (p_u_value->stage == 1)
                 {
-                    memcpy(u->reverse_origin, i->wheel,
-                           sizeof(u->reverse_origin));
-                    u->stage = 2;
-                    j->line_timing = false;
-                    j_enter(j, J_TURN, i->now);
+                    memcpy(p_u_value->reverse_origin, p_index->wheel,
+                           sizeof(p_u_value->reverse_origin));
+                    p_u_value->stage = 2;
+                    p_other_index->line_timing = false;
+                    j_enter(p_other_index, J_TURN, p_index->now);
                 }
-                else if (u->stage == 3)
+                else if (p_u_value->stage == 3)
                 {
-                    u->stage = 4;
-                    j->exit_origin = i->path;
-                    j_enter(j, J_ACQUIRE, i->now);
+                    p_u_value->stage = 4;
+                    p_other_index->exit_origin = p_index->path;
+                    j_enter(p_other_index, J_ACQUIRE, p_index->now);
                 }
             }
         }
     }
-    if (j->phase == J_FAULT)
+    if (p_other_index->phase == J_FAULT)
     {
-        d.stop = true;
-        d.target[0] = d.target[1] = 0;
+        demand_value.stop = true;
+        demand_value.target[0] = demand_value.target[1] = 0;
     }
-    return d;
+    return demand_value;
 }
 #endif
 

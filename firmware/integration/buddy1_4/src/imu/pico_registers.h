@@ -1,3 +1,10 @@
+/**
+ * @file pico_registers.h
+ * @brief Pico registers.
+ * @details Sensor processing owns calibration/terrain state; RTOS readers use copies.
+ * Height acceptance and motor assistance are separate from end-run safety.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 /* Buddy4-on-v2.3: the only definitions the validated RTOS driver
  * (drv_lsm303.c) took from micro T-Kernel / sys_hal, re-expressed for the
  * Pico SDK build. Values are the RP2040 register addresses and bits from
@@ -15,21 +22,21 @@ board_time_us (void); /* Verified migration TIMER; no SDK runtime. */
 #include "hardware/timer.h" /* time_us_32() */
 #endif
 
-static inline void out_w (uint32_t a, uint32_t v)
+static inline void out_w (uint32_t first, uint32_t value)
 {
-    *(volatile uint32_t *)(uintptr_t)a = v;
+    *(volatile uint32_t *)(uintptr_t)first = value;
 }
-static inline uint32_t in_w (uint32_t a)
+static inline uint32_t in_w (uint32_t first)
 {
-    return *(volatile uint32_t *)(uintptr_t)a;
+    return *(volatile uint32_t *)(uintptr_t)first;
 }
-static inline void clr_w (uint32_t a, uint32_t v)
+static inline void clr_w (uint32_t first, uint32_t value)
 {
-    *(volatile uint32_t *)(uintptr_t)(a + 0x3000U) = v;
+    *(volatile uint32_t *)(uintptr_t)(first + 0x3000U) = value;
 }
-static inline void set_w (uint32_t a, uint32_t v)
+static inline void set_w (uint32_t first, uint32_t value)
 {
-    *(volatile uint32_t *)(uintptr_t)(a + 0x2000U) = v;
+    *(volatile uint32_t *)(uintptr_t)(first + 0x2000U) = value;
 }
 static inline uint32_t sys_time_us (void)
 {

@@ -1,6 +1,13 @@
+/**
+ * @file main.c
+ * @brief Main.
+ * @details Public feature contract. Requests cross coordinator ownership checks;
+ * callers observe completion/status separately and must respect task context.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 #include "src/telemetry/drive_diag.h"
-static DriveDiag diag_capture;
-static DiagValues diag_tick;
+static drive_diag_t diag_capture;
+static diag_values_t diag_tick;
 static bool diag_observing;
 #define DRIVE_DIAG_RAW(d)                                                      \
     do                                                                         \
@@ -72,14 +79,14 @@ enum
     PWM_TOP = 999
 };
 static const uint ea[2] = {0, 4}, eb[2] = {1, 5};
-static volatile BenchEncoder enc[2];
+static volatile bench_encoder_t enc[2];
 static spin_lock_t * interface_lock;
 static void interface_save_nav_log (void);
 static void interface_dump_nav_log (void);
 static void load_drive_diag (void);
 static void save_drive_diag (void);
 static void dump_drive_diag (void);
-static volatile DualGuard guard = {.consumed = true};
+static volatile dual_guard_t guard = {.consumed = true};
 static volatile unsigned run_mode = LINE_USB_HOLD;
 static volatile int64_t total_ticks[2], cut_ticks[2];
 static volatile uint32_t initial_invalid[2], cut_invalid[2];
@@ -87,17 +94,17 @@ static volatile int32_t output[2];
 static volatile uint64_t peak_until[2];
 static volatile bool ramp_output[2], signed_output[2], maneuver_output[2],
     continuous_output[2];
-static ManeuverPower maneuver_power[2];
+static maneuver_power_t maneuver_power[2];
 static volatile uint64_t travelled_ticks[2];
 static double restored_distance;
-static RampWheel ramp_wheel[2];
-static LineCalibration calibration;
-static SideCalibration side_cal;
-static Circuit circuit;
-static BarcodeNav nav;
-static BarcodeAnalog side_analog;
-static SmoothFollow steering;
-static ScanSmooth gentle;
+static ramp_wheel_t ramp_wheel[2];
+static line_calibration_t calibration;
+static side_calibration_t side_cal;
+static circuit_t circuit;
+static barcode_nav_t nav;
+static barcode_analog_t side_analog;
+static smooth_follow_t steering;
+static scan_smooth_t gentle;
 static uint16_t side_adc;
 static uint64_t last_side_sample;
 static bool status_enabled;
@@ -105,15 +112,15 @@ static uint32_t last_nav_event;
 static uint8_t test_mode = 1, recorded_mode = 1;
 static uint8_t recorded_version = 28;
 static bool last_fast;
-static CircuitCapture capture;
-static CircuitLoad load;
+static circuit_capture_t capture;
+static circuit_load_t load;
 static unsigned assist_code, feedback_mask;
 static uint16_t last_trace_state;
-static CircuitFeedback feedback[2];
+static circuit_feedback_t feedback[2];
 static int capture_outer = -1;
-static AnalogDemand demand;
-static SignedWheel controller[2];
-static LineRearm rearm;
+static analog_demand_t demand;
+static signed_wheel_t controller[2];
+static line_rearm_t rearm;
 static uint16_t analog_raw[2];
 static float adc_filtered[2], velocity[2];
 static uint64_t bad_direction_us[2], last_control, last_trace, stopped_us;
@@ -123,7 +130,7 @@ static char recorded_key = '-';
 static bool recorded_offline, imported_front, flash_loaded, save_failed,
     trace_settling;
 static BarcodeTrace trace[B_ROWS];
-static BarcodeSummary summaries[C_SUMMARIES];
+static barcode_summary_t summaries[C_SUMMARIES];
 static uint32_t trace_count, trace_head, trace_dropped, summary_count,
     summary_head;
 #define LOG_OFFSET (PICO_FLASH_SIZE_BYTES - 3 * C_STORE_BYTES)
@@ -134,17 +141,17 @@ _Static_assert(RAW_OFFSET + RAW_BANK_BYTES <=
 extern char __flash_binary_end;
 static union
 {
-    BarcodeSaved data;
+    barcode_saved_t data;
     uint8_t bytes[32768];
 } saved;
-static BarcodeRaw raw_capture;
+static barcode_raw_t raw_capture;
 static bool raw_new, raw_loaded, raw_persisted, raw_save_failed;
 static uint32_t wifi_mapping;
 static bool wifi_estop, wifi_stopped, wifi_start_pending;
 static void wifi_harness_init (void);
 static void wifi_harness_poll (uint64_t now);
 static bool wifi_console_byte (int ch);
-static void wifi_nav_event (const MotionEvent * e);
+static void wifi_nav_event (const motion_event_t * e);
 static void wifi_barcode_events (uint64_t now);
 
 static double wheel_mm (unsigned w, int64_t ticks)
@@ -275,7 +282,7 @@ static bool safety_tick (struct repeating_timer * t)
             if (capped != output[w])
             {
                 output[w] = capped;
-                DualLevels v =
+                dual_levels_t v =
                     continuous_output[w] ? continuous_output_levels(w, capped)
                     : maneuver_output[w]
                         ? maneuver_levels(w, capped, signed_output[w])
@@ -379,7 +386,7 @@ static void load_raw (void)
     {
         return;
     }
-    const BarcodeRaw * r = (const BarcodeRaw *)(XIP_BASE + RAW_OFFSET);
+    const barcode_raw_t * r = (const barcode_raw_t *)(XIP_BASE + RAW_OFFSET);
     if (barcode_raw_valid(r))
     {
         memcpy(&raw_capture, r, sizeof(raw_capture));
@@ -405,7 +412,8 @@ static void save_raw (void)
                         sizeof(raw_capture));
     restore_interrupts(irq);
     wifi_transport_flash_end();
-    const BarcodeRaw * written = (const BarcodeRaw *)(XIP_BASE + RAW_OFFSET);
+    const barcode_raw_t * written =
+        (const barcode_raw_t *)(XIP_BASE + RAW_OFFSET);
     raw_save_failed = !barcode_raw_valid(written) ||
                       memcmp(written, &raw_capture, sizeof(raw_capture)) != 0;
     raw_persisted = !raw_save_failed;
@@ -423,7 +431,7 @@ static void dump_raw (void)
         puts("RAW unavailable: make a new WiFi V1 driving run first.");
         return;
     }
-    const BarcodeRawMeta * m = &raw_capture.header.meta;
+    const barcode_raw_meta_t * m = &raw_capture.header.meta;
     bool matches = recorded_version >= 8 &&
                    m->duration_us == guard.duration_us &&
                    m->ticks[0] == cut_ticks[0] && m->ticks[1] == cut_ticks[1] &&
@@ -441,7 +449,7 @@ static void dump_raw (void)
         {
             return;
         }
-        const BarcodeRawRow * r = &raw_capture.rows[n];
+        const barcode_raw_row_t * r = &raw_capture.rows[n];
         printf("%u,%lu,%.2f,%u\n", n, (unsigned long)r->us,
                (double)r->path100 / 100, r->adc);
         stdio_flush();
@@ -456,13 +464,14 @@ static void load_log (void)
     {
         return;
     }
-    const BarcodeSaved * v = (const BarcodeSaved *)(XIP_BASE + LOG_OFFSET);
+    const barcode_saved_t * v =
+        (const barcode_saved_t *)(XIP_BASE + LOG_OFFSET);
     uint8_t imported_profile = 1;
     if (barcode_import_v25((const uint8_t *)v, &calibration, &imported_profile))
     {
         test_mode = recorded_mode = imported_profile;
         imported_front = true;
-        side_cal = (SideCalibration){0, 1, 3};
+        side_cal = (side_calibration_t){0, 1, 3};
         return;
     }
     if (barcode_record_valid(v))
@@ -508,15 +517,15 @@ static void load_log (void)
         nav.uturns = recorded_version >= 11 ? v->uturns : 0;
         nav.decoded_total = v->decoded_total;
         flash_loaded = true;
-        side_cal = (SideCalibration){
+        side_cal = (side_calibration_t){
             0, 1,
             3}; /* Legacy record field; no operator side calibration in V4. */
     }
     else
     {
-        const CircuitSaved * old =
-            (const CircuitSaved *)(XIP_BASE + PICO_FLASH_SIZE_BYTES -
-                                   2 * C_STORE_BYTES);
+        const circuit_saved_t * old =
+            (const circuit_saved_t *)(XIP_BASE + PICO_FLASH_SIZE_BYTES -
+                                      2 * C_STORE_BYTES);
         if (circuit_record_valid(old))
         {
             calibration = old->calibration;
@@ -526,8 +535,8 @@ static void load_log (void)
         else
         {
             imported_front = circuit_import(
-                (const CircuitLegacy *)(XIP_BASE + PICO_FLASH_SIZE_BYTES -
-                                        FLASH_SECTOR_SIZE),
+                (const circuit_legacy_t *)(XIP_BASE + PICO_FLASH_SIZE_BYTES -
+                                           FLASH_SECTOR_SIZE),
                 &calibration, &side_cal);
         }
     }
@@ -542,7 +551,7 @@ static void save_log (void)
     }
     outputs_off();
     memset(&saved, 0, sizeof(saved));
-    BarcodeSaved * v = &saved.data;
+    barcode_saved_t * v = &saved.data;
     v->magic = B_MAGIC;
     v->version = recorded_version;
     v->count = trace_count;
@@ -595,7 +604,7 @@ static void save_log (void)
             nav.events[(nav.event_head + B_EVENTS - nav.event_count + n) %
                        B_EVENTS];
     }
-    v->crc = log_crc((const uint8_t *)v + offsetof(BarcodeSaved, count),
+    v->crc = log_crc((const uint8_t *)v + offsetof(barcode_saved_t, count),
                      barcode_record_crc_size(v->version));
     if (!wifi_transport_flash_begin())
     {
@@ -607,8 +616,8 @@ static void save_log (void)
     flash_range_program(LOG_OFFSET, saved.bytes, sizeof(saved.bytes));
     restore_interrupts(irq);
     wifi_transport_flash_end();
-    const BarcodeSaved * written =
-        (const BarcodeSaved *)(XIP_BASE + LOG_OFFSET);
+    const barcode_saved_t * written =
+        (const barcode_saved_t *)(XIP_BASE + LOG_OFFSET);
     save_failed =
         !barcode_record_valid(written) || memcmp(written, v, sizeof(*v)) != 0;
     flash_loaded = false;
@@ -621,9 +630,9 @@ static void reset_log (void)
     trace_count = trace_head = trace_dropped = summary_count = summary_head = 0;
     guard.duration_us = 0;
     guard.reason = 0;
-    circuit = (Circuit){0};
-    nav = (BarcodeNav){0};
-    gentle = (ScanSmooth){0};
+    circuit = (circuit_t){0};
+    nav = (barcode_nav_t){0};
+    gentle = (scan_smooth_t){0};
     for (unsigned w = 0; w < 2; ++w)
     {
         cut_ticks[w] = 0;
@@ -732,9 +741,9 @@ static void calibrate (int key)
     }
     help();
 }
-static const CircuitTracker * current_tracker (void)
+static const circuit_tracker_t * current_tracker (void)
 {
-    static CircuitTracker real;
+    static circuit_tracker_t real;
     if (circuit.phase != J_ACQUIRE)
     {
         return &circuit.follower;
@@ -760,7 +769,7 @@ static void add_trace (uint64_t now)
 {
     BarcodeTrace * entry = &trace[trace_head];
     memset(entry, 0, sizeof(*entry));
-    CircuitTrace * r = &entry->motion;
+    circuit_trace_t * r = &entry->motion;
     entry->side_adc = side_adc;
     entry->ao_black = side_analog.black;
     entry->ao_bank = side_analog.selected;
@@ -805,9 +814,9 @@ static void add_trace (uint64_t now)
 }
 static void add_summary (uint64_t now, double path)
 {
-    BarcodeSummary * entry = &summaries[summary_head];
+    barcode_summary_t * entry = &summaries[summary_head];
     memset(entry, 0, sizeof(*entry));
-    entry->motion = (CircuitSummary){
+    entry->motion = (circuit_summary_t){
         .ms = (now - guard.start_us) / 1000,
         .path10 = trace_path10(path),
         .number = circuit.turns,
@@ -971,7 +980,7 @@ static void dump_events (void)
          "pattern_data,pattern_stop,map_revision");
     for (unsigned k = 0; k < nav.event_count; ++k)
     {
-        BarcodeEvent * e =
+        barcode_event_t * e =
             &nav.events[(nav.event_head + B_EVENTS - nav.event_count + k) %
                         B_EVENTS];
         printf("%lu,%" PRIu64 ",%.1f,%s,%.2f,%c,%c,%u,%03x,%03x,%03x,%u\n",
@@ -1050,9 +1059,9 @@ static void dump (void)
         }
         BarcodeTrace * entry =
             &trace[(trace_head + B_ROWS - trace_count + n) % B_ROWS];
-        CircuitTrace * r = &entry->motion;
+        circuit_trace_t * r = &entry->motion;
         printf("%" PRIu64 ",%u,%u,%u,%.1f,%.1f,%.1f,%.1f,%.1f,%d,%d,%u,%u,%u,%"
-                          "u,%d,%d,%u,%lu,%u,%u,%u,%u,%u,",
+               "u,%d,%d,%u,%lu,%u,%u,%u,%u,%u,",
                r->ms, r->active, r->phase & 15, r->side & 1,
                (double)r->path10 / 10, (double)r->wheel10[0] / 10,
                (double)r->wheel10[1] / 10, (double)r->speed10[0] / 10,
@@ -1083,10 +1092,10 @@ static void dump (void)
          "ms,left_positive_rotation_deg,code,action");
     for (unsigned n = 0; n < summary_count; ++n)
     {
-        BarcodeSummary * entry =
+        barcode_summary_t * entry =
             &summaries[(summary_head + C_SUMMARIES - summary_count + n) %
                        C_SUMMARIES];
-        CircuitSummary * v = &entry->motion;
+        circuit_summary_t * v = &entry->motion;
         printf("%lu,%" PRIu64 ",%.1f,%lu,%u,%u,%u,%.1f,%c,%c\n",
                (unsigned long)v->number, v->ms, (double)v->path10 / 10,
                (unsigned long)v->follow_ms, v->centre_ms, v->turn_ms,
@@ -1129,7 +1138,7 @@ static bool start_run (unsigned mode)
     if (ok)
     {
         ++runs;
-        rearm = (LineRearm){0};
+        rearm = (line_rearm_t){0};
         run_mode = mode;
         recorded_mode = test_mode;
         recorded_version = 28;
@@ -1144,10 +1153,10 @@ static bool start_run (unsigned mode)
         barcode_raw_begin(&raw_capture, recorded_mode);
         raw_new = true;
         raw_loaded = raw_persisted = raw_save_failed = false;
-        capture = (CircuitCapture){0};
-        load = (CircuitLoad){0};
-        steering = (SmoothFollow){0};
-        gentle = (ScanSmooth){0};
+        capture = (circuit_capture_t){0};
+        load = (circuit_load_t){0};
+        steering = (smooth_follow_t){0};
+        gentle = (scan_smooth_t){0};
         capture_outer = -1;
         assist_code = feedback_mask = 0;
         guard.deadline_us = UINT64_MAX;
@@ -1165,15 +1174,15 @@ static bool start_run (unsigned mode)
             peak_until[w] = 0;
             ramp_output[w] = signed_output[w] = maneuver_output[w] =
                 continuous_output[w] = false;
-            maneuver_power[w] = (ManeuverPower){0};
-            ramp_wheel[w] = (RampWheel){0};
-            controller[w] = (SignedWheel){0};
+            maneuver_power[w] = (maneuver_power_t){0};
+            ramp_wheel[w] = (ramp_wheel_t){0};
+            controller[w] = (signed_wheel_t){0};
             bad_direction_us[w] = 0;
-            feedback[w] = (CircuitFeedback){0};
+            feedback[w] = (circuit_feedback_t){0};
         }
-        CircuitInput input = {.now = now,
-                              .adc = {analog_raw[0], analog_raw[1]},
-                              .side_black = false};
+        circuit_input_t input = {.now = now,
+                                 .adc = {analog_raw[0], analog_raw[1]},
+                                 .side_black = false};
         barcode_nav_begin(&nav, &input);
         nav.mapping = wifi_mapping;
         double initial_wheel[2] = {0, 0};
@@ -1229,7 +1238,7 @@ static void control_step (uint64_t now)
     uint32_t irq = save_and_disable_interrupts();
     bool active = guard.active;
     uint32_t generation = guard.generation;
-    BenchEncoder e[2] = {enc[0], enc[1]};
+    bench_encoder_t e[2] = {enc[0], enc[1]};
     int64_t ticks[2];
     for (unsigned w = 0; w < 2; ++w)
     {
@@ -1276,7 +1285,7 @@ static void control_step (uint64_t now)
             diag_tick.v[D_FLAGS] |= DF_ACTIVE_BEFORE;
         }
     }
-    CircuitInput input = {
+    circuit_input_t input = {
         .now = now,
         .wheel = {wheel_mm(0, ticks[0]), wheel_mm(1, ticks[1])},
         .path = path_mm(ticks),
@@ -1285,7 +1294,7 @@ static void control_step (uint64_t now)
         .side_black = side_analog.black};
     unsigned previous_phase = circuit.phase,
              previous_decision = demand.decision;
-    const CircuitTracker * before_tracker = current_tracker();
+    const circuit_tracker_t * before_tracker = current_tracker();
     bool was_white = before_tracker->core.white,
          was_waiting = before_tracker->search.waiting,
          was_search = before_tracker->search.active;
@@ -1351,7 +1360,7 @@ static void control_step (uint64_t now)
     if (continuous_active)
     {
         capture_outer = -1;
-        load = (CircuitLoad){0};
+        load = (circuit_load_t){0};
     }
     assist_code = search_outer >= 0    ? (unsigned)search_outer + 5
                   : capture_outer >= 0 ? (unsigned)capture_outer + 1
@@ -1481,15 +1490,15 @@ static void control_step (uint64_t now)
         }
         else
         {
-            InterfaceCommit commit = {.next = {next[0], next[1]},
-                                      .ramp = ramp_drive,
-                                      .maneuver = maneuver_drive,
-                                      .continuous = continuous_active,
-                                      .turning = turning,
-                                      .external = external,
-                                      .loaded = {loaded[0], loaded[1]},
-                                      .profile = wheel_profile,
-                                      .now = now};
+            interface_commit_t commit = {.next = {next[0], next[1]},
+                                         .ramp = ramp_drive,
+                                         .maneuver = maneuver_drive,
+                                         .continuous = continuous_active,
+                                         .turning = turning,
+                                         .external = external,
+                                         .loaded = {loaded[0], loaded[1]},
+                                         .profile = wheel_profile,
+                                         .now = now};
             bool committed = motion_commit(interface_motion.generation,
                                            interface_commit_outputs, &commit);
             if (!committed)
@@ -1535,8 +1544,8 @@ int main (void)
     irq_set_priority(IO_IRQ_BANK0,
                      0x40); /* Encoder capture may pre-empt safety timer. */
     interface_lock = spin_lock_instance((uint)spin_lock_claim_unused(true));
-    MotionPort port = {interface_enter, interface_leave, interface_off,
-                       interface_now, NULL};
+    motion_port_t port = {interface_enter, interface_leave, interface_off,
+                          interface_now, NULL};
     motion_init(&port);
     struct repeating_timer timer;
     if (!add_repeating_timer_us(-1000, safety_tick, NULL, &timer))
@@ -1559,8 +1568,8 @@ int main (void)
     side_analog.selected = AO_DEFAULT_BANK;
     stdio_init_all();
     load_log();
-    const BarcodeSaved * startup_record =
-        (const BarcodeSaved *)(XIP_BASE + LOG_OFFSET);
+    const barcode_saved_t * startup_record =
+        (const barcode_saved_t *)(XIP_BASE + LOG_OFFSET);
     if (successful_calibration_boot(&calibration, startup_record->version,
                                     barcode_record_valid(startup_record)))
     {
@@ -1578,7 +1587,7 @@ int main (void)
     load_raw();
     load_drive_diag();
     buddy_extension_init();
-    side_cal = (SideCalibration){0, 1, 3};
+    side_cal = (side_calibration_t){0, 1, 3};
     last_control = time_us_64();
     wifi_harness_init();
     buddy4_init(); /* Buddy4 add-on */
@@ -1586,7 +1595,7 @@ int main (void)
     uint8_t raw_buttons = 0, buttons = 0;
     uint64_t changed = 0, last_status = 0, last_adc = 0, usb_start_at = 0;
     uint32_t seen_stops = 0;
-    BenchArm arm = {0};
+    bench_arm_t arm = {0};
     while (true)
     {
         uint64_t now = time_us_64();
@@ -1962,7 +1971,7 @@ int main (void)
                    (unsigned long)side_analog.selections,
                    (unsigned long)side_analog.max_gap_us,
                    (unsigned long)side_analog.gap_count);
-            MotionStatus state = nav_get_status();
+            motion_status_t state = nav_get_status();
             printf(
                 "NAV_COORD: mode=%u owner=%u session=%u stopped=%u "
                 "command_id=%lu command_state=%u fault=0x%03x targets=%d,%d\n",

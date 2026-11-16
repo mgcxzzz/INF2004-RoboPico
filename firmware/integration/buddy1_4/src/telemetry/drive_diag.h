@@ -1,3 +1,10 @@
+/**
+ * @file drive_diag.h
+ * @brief Drive diag.
+ * @details Diagnostic records have explicit lengths, signed domains and reserved bits.
+ * Never substitute native structure memory for the documented byte encoding.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 #ifndef BUDDY_DRIVE_DIAG_H
 #define BUDDY_DRIVE_DIAG_H
 #include <stdint.h>
@@ -11,27 +18,25 @@
     X(US, 32, 0)                                                               \
     X(DT, 17, 0)                                                               \
     X(COST, 17, 0)                                                             \
-    X(RAW_L, 12, 0) X(RAW_R, 12, 0) X(ADC_L, 12, 0) X(ADC_R, 12, 0)            \
-        X(LEVEL_L, 10, 0) X(LEVEL_R, 10, 0) X(OPT_L, 9, 1) X(OPT_R, 9, 1) X(   \
-            SOFT_L, 9, 1) X(SOFT_R, 9, 1) X(TARGET_L, 9, 1) X(TARGET_R, 9, 1)  \
-            X(SPEED_L, 12, 1) X(SPEED_R, 12, 1) X(REF_BEFORE_L, 9, 0)          \
-                X(REF_BEFORE_R, 9, 0) X(REF_L, 9, 0) X(REF_R, 9, 0)            \
-                    X(I_BEFORE_L, 11, 1) X(I_BEFORE_R, 11, 1) X(I_L, 11, 1)    \
-                        X(I_R, 11, 1) X(FF_L, 10, 0) X(FF_R, 10, 0)            \
-                            X(REQUEST_L, 11, 1) X(REQUEST_R, 11, 1)            \
-                                X(PWM_L, 11, 1) X(PWM_R, 11, 1)                \
-                                    X(TICKS_L, 12, 1) X(TICKS_R, 12, 1) X(     \
-                                        PHASE, 4, 0) X(OPT_DECISION, 5, 0)     \
-                                        X(DECISION, 5, 0) X(PROFILE, 2, 0) X(  \
-                                            ASSIST, 3, 0) X(FEEDBACK, 2,       \
-                                                            0) X(DRIVER, 2, 0) \
-                                            X(EXTERNAL, 1, 0) X(FLAGS, 19, 0)  \
-                                                X(MEAN_BEFORE, 9, 0)           \
-                                                    X(HALF_BEFORE, 9, 1)       \
-                                                        X(MEAN, 9, 0) X(HALF,  \
-                                                                        9, 1)  \
-                                                            X(GAIN, 3, 0)      \
-                                                                X(DAMP, 2, 0)
+    X(RAW_L, 12, 0)                                                            \
+    X(RAW_R, 12, 0)                                                            \
+    X(ADC_L, 12, 0)                                                            \
+    X(ADC_R, 12, 0) X(LEVEL_L, 10, 0) X(LEVEL_R, 10, 0) X(OPT_L, 9, 1)         \
+        X(OPT_R, 9, 1) X(SOFT_L, 9, 1) X(SOFT_R, 9, 1) X(TARGET_L, 9, 1)       \
+            X(TARGET_R, 9, 1) X(SPEED_L, 12, 1) X(SPEED_R, 12, 1) X(           \
+                REF_BEFORE_L, 9, 0) X(REF_BEFORE_R, 9, 0) X(REF_L, 9, 0)       \
+                X(REF_R, 9, 0) X(I_BEFORE_L, 11, 1) X(I_BEFORE_R, 11, 1) X(    \
+                    I_L, 11, 1) X(I_R, 11, 1) X(FF_L, 10, 0) X(FF_R, 10, 0)    \
+                    X(REQUEST_L, 11, 1) X(REQUEST_R, 11, 1) X(PWM_L, 11, 1) X( \
+                        PWM_R, 11, 1) X(TICKS_L, 12, 1)                        \
+                        X(TICKS_R, 12, 1) X(PHASE, 4, 0) X(OPT_DECISION, 5, 0) \
+                            X(DECISION, 5, 0) X(PROFILE, 2, 0) X(ASSIST, 3, 0) \
+                                X(FEEDBACK, 2, 0) X(DRIVER, 2, 0)              \
+                                    X(EXTERNAL, 1, 0) X(FLAGS, 19, 0)          \
+                                        X(MEAN_BEFORE, 9, 0)                   \
+                                            X(HALF_BEFORE, 9, 1) X(MEAN, 9, 0) \
+                                                X(HALF, 9, 1) X(GAIN, 3, 0)    \
+                                                    X(DAMP, 2, 0)
 enum
 {
 #define DIAG_ENUM(n, w, s) D_##n,
@@ -79,14 +84,14 @@ enum
 typedef struct
 {
     uint8_t bytes[DIAG_ROW_BYTES];
-} DiagRow;
+} diag_row_t;
 typedef struct
 {
     int64_t v[D_FIELDS];
-} DiagValues;
+} diag_values_t;
 typedef struct
 {
-    DiagRow rows[DIAG_ROWS];
+    diag_row_t rows[DIAG_ROWS];
     uint64_t start_us, duration_us;
     int64_t ticks[2];
     uint32_t total, max_gap, max_cost, max_pack, late20, trigger_us,
@@ -96,16 +101,16 @@ typedef struct
     uint8_t profile, reason, trigger;
     bool begun, frozen, triggered, previous_valid;
     int16_t previous_pwm[2], previous_half;
-} DriveDiag;
-_Static_assert(DIAG_ROWS * sizeof(DiagRow) + DIAG_HEADER <= DIAG_BANK,
+} drive_diag_t;
+_Static_assert(DIAG_ROWS * sizeof(diag_row_t) + DIAG_HEADER <= DIAG_BANK,
                "Diagnostic bank overflow");
-_Static_assert(DIAG_ROWS * sizeof(DiagRow) % 256 == 0,
+_Static_assert(DIAG_ROWS * sizeof(diag_row_t) % 256 == 0,
                "Diagnostic payload must be page aligned");
 static inline int64_t diag_half (float x)
 {
     return isfinite(x) ? (int64_t)lroundf(x * 2) : INT64_MAX;
 }
-static inline void diag_set_bits (DiagRow * r, unsigned bit, unsigned width,
+static inline void diag_set_bits (diag_row_t * r, unsigned bit, unsigned width,
                                   uint32_t x)
 {
     for (unsigned k = 0; k < width; ++k)
@@ -122,7 +127,7 @@ static inline void diag_set_bits (DiagRow * r, unsigned bit, unsigned width,
         }
     }
 }
-static inline uint32_t diag_get_bits (const DiagRow * r, unsigned bit,
+static inline uint32_t diag_get_bits (const diag_row_t * r, unsigned bit,
                                       unsigned width)
 {
     uint32_t x = 0;
@@ -132,9 +137,9 @@ static inline uint32_t diag_get_bits (const DiagRow * r, unsigned bit,
     }
     return x;
 }
-static inline void diag_pack (DiagRow * r, const DiagValues * values)
+static inline void diag_pack (diag_row_t * r, const diag_values_t * values)
 {
-    DiagValues a = *values;
+    diag_values_t a = *values;
     bool clipped = false;
     for (unsigned n = 0; n < D_FIELDS; ++n)
     {
@@ -163,7 +168,7 @@ static inline void diag_pack (DiagRow * r, const DiagValues * values)
         bit += diag_width[n];
     }
 }
-static inline void diag_unpack (const DiagRow * r, DiagValues * v)
+static inline void diag_unpack (const diag_row_t * r, diag_values_t * v)
 {
     unsigned bit = 0;
     for (unsigned n = 0; n < D_FIELDS; ++n)
@@ -184,8 +189,9 @@ static inline unsigned diag_bits (void)
     }
     return n;
 }
-static inline void diag_begin (DriveDiag * d, uint64_t start, unsigned profile,
-                               const uint16_t white[2], const uint16_t black[2])
+static inline void diag_begin (drive_diag_t * d, uint64_t start,
+                               unsigned profile, const uint16_t white[2],
+                               const uint16_t black[2])
 {
     memset(d, 0, sizeof(*d));
     d->start_us = start;
@@ -199,7 +205,7 @@ static inline void diag_begin (DriveDiag * d, uint64_t start, unsigned profile,
 }
 /* Always observe timing, even after the capture freezes. Never change targets.
  * Trigger thresholds select a diagnostic window; they are NOT control gates. */
-static inline int diag_push (DriveDiag * d, const DiagValues * v)
+static inline int diag_push (drive_diag_t * d, const diag_values_t * v)
 {
     if (!d->begun)
     {
@@ -282,7 +288,7 @@ static inline int diag_push (DriveDiag * d, const DiagValues * v)
     d->previous_half = (int16_t)half;
     return slot;
 }
-static inline void diag_cost (DriveDiag * d, int slot, uint32_t cost)
+static inline void diag_cost (drive_diag_t * d, int slot, uint32_t cost)
 {
     if (!d->begun)
     {
@@ -300,7 +306,7 @@ static inline void diag_cost (DriveDiag * d, int slot, uint32_t cost)
     diag_set_bits(&d->rows[slot], 49, 17, cost > 131071 ? 131071 : cost);
     if (cost > 131071)
     {
-        DiagValues v;
+        diag_values_t v;
         diag_unpack(&d->rows[slot], &v);
         v.v[D_FLAGS] |= DF_CLIPPED;
         diag_pack(&d->rows[slot], &v);

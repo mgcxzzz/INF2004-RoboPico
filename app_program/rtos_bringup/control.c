@@ -1,3 +1,10 @@
+/**
+ * @file control.c
+ * @brief Control.
+ * @details Core1 owns normal motor commits. Safety paths may only remove output;
+ * command/status access uses the existing kernel locks and copied records.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 /* Common migration motion/stop foundation. Step 1 uses USB fixed targets;
  * APP_RTOS_LINE adds the sensor/line provider. Both cross the unchanged shared
  * API/coordinator. Only this task calculates normal motor output. */
@@ -12,16 +19,18 @@
 #ifdef APP_RTOS_LINE
 #include "../line_navigation/line_service.h"
 #include "encoder_quality.h"
-static LineEnvelope committed_envelope;
+static line_envelope_t g_committed_envelope;
 #endif
 
-ID bringup_commands;
-static T_SPLOCK status_lock;
-static BringupStatus status;
-static BringupEncoderFaultSnapshot encoder_fault_snapshot;
-static uint32_t last_control_us, deadline_us, stopped_us;
-static int16_t bench_target[2];
-static volatile uint32_t urgent_stop;
+ID g_bringup_commands;
+static T_SPLOCK g_status_lock;
+static bringup_status_t g_status;
+static bringup_encoder_fault_snapshot_t g_encoder_fault_snapshot;
+static uint32_t g_last_control_us;
+static uint32_t g_deadline_us;
+static uint32_t g_stopped_us;
+static int16_t g_bench_target[2];
+static volatile uint32_t g_urgent_stop;
 static void start_pulse (unsigned selected);
 
 static bool imu_release_blocked (void)
@@ -36,28 +45,28 @@ static bool imu_release_blocked (void)
 static UINT status_enter (void)
 {
     UINT key;
-    (void)ISpinLock(&status_lock, &key);
+    (void)ISpinLock(&g_status_lock, &key);
     return key;
 }
 
 static void status_leave (UINT key)
 {
-    (void)ISpinUnlock(&status_lock, key);
+    (void)ISpinUnlock(&g_status_lock, key);
 }
 
-void bringup_get_status (BringupStatus * out)
+void bringup_get_status (bringup_status_t * p_out_value)
 {
     UINT key = status_enter();
-    *out = status;
+    *p_out_value = g_status;
     status_leave(key);
 }
 
 void bringup_encoder_fault_packet (uint8_t seq,
                                    uint8_t out[BR_ENCODER_FAULT_PACKET_BYTES])
 {
-    BringupEncoderFaultSnapshot copy;
+    bringup_encoder_fault_snapshot_t copy;
     UINT key = status_enter();
-    copy = encoder_fault_snapshot;
+    copy = g_encoder_fault_snapshot;
     status_leave(key);
     br_encoder_fault_encode(&copy, seq, out);
 }
@@ -66,9 +75,10 @@ void bringup_zero_status (void)
 {
     uintptr_t api_key = board_motion_lock(NULL);
     UINT key = status_enter();
-    status.pwm[0] = status.pwm[1] = status.target[0] = status.target[1] = 0;
+    g_status.pwm[0] = g_status.pwm[1] = g_status.target[0] =
+        g_status.target[1] = 0;
 #ifdef APP_RTOS_LINE
-    committed_envelope = (LineEnvelope){0};
+    g_committed_envelope = (line_envelope_t){0};
 #endif
     status_leave(key);
     board_motion_unlock(NULL, api_key);
@@ -77,16 +87,17 @@ bool bringup_can_start (void)
 {
     bool imu_blocked = imu_release_blocked();
     UINT key = status_enter();
-    bool ok =
-        br_can_start(status.flags, (uint32_t)board_time_us(), stopped_us,
+    bool ok_value =
+        br_can_start(g_status.flags, (uint32_t)board_time_us(), g_stopped_us,
                      tm_usb_state(),
                      !board_button_pressed(20) && !board_button_pressed(21)) &&
-        br_safety_allows_motion(status.flags, imu_blocked) && !bringup_irq_stop;
+        br_safety_allows_motion(g_status.flags, imu_blocked) &&
+        !g_bringup_irq_stop;
     status_leave(key);
 #ifdef APP_RTOS_RELEASE
-    ok = ok && rn_drive_online();
+    ok_value = ok_value && rn_drive_online();
 #endif
-    return ok;
+    return ok_value;
 }
 bool bringup_clear_latch (void)
 {
@@ -98,49 +109,50 @@ bool bringup_clear_latch (void)
     UINT key = status_enter();
     bool buttons_released =
         !board_button_pressed(20) && !board_button_pressed(21);
-    bool ok =
-        br_can_clear_latch(status.flags, buttons_released, imu_reset_allowed);
+    bool ok_value =
+        br_can_clear_latch(g_status.flags, buttons_released, imu_reset_allowed);
 #if defined(APP_RTOS_RELEASE) && defined(APP_RTOS_IMU)
     /* Recheck under the IMU copy lock while the bring-up latch is protected.
      * The IMU task drops that lock before requesting this stop path. */
-    if (ok && (status.flags & BR_IMU))
+    if (ok_value && (g_status.flags & BR_IMU))
     {
-        ok = ri_safety_reset_latch();
+        ok_value = ri_safety_reset_latch();
     }
 #endif
-    if (ok)
+    if (ok_value)
     {
-        bringup_irq_stop = 0;
-        status.flags &= (uint16_t)~BR_LATCHED;
-        stopped_us = (uint32_t)board_time_us();
-        br_encoder_fault_clear(&encoder_fault_snapshot);
+        g_bringup_irq_stop = 0;
+        g_status.flags &= (uint16_t)~BR_LATCHED;
+        g_stopped_us = (uint32_t)board_time_us();
+        br_encoder_fault_clear(&g_encoder_fault_snapshot);
     }
     status_leave(key);
 #ifdef APP_RTOS_IMU
-    if (ok)
+    if (ok_value)
     {
         ri_reset_request();
     }
 #endif
-    return ok;
+    return ok_value;
 }
 void bringup_stop (uint8_t reason, uint16_t latch)
 {
     bringup_stop_from(reason, latch, MOTION_BUDDY2);
 }
 
-void bringup_stop_from (uint8_t reason, uint16_t latch, MotionOwner requester)
+void bringup_stop_from (uint8_t reason, uint16_t latch,
+                        motion_owner_t requester)
 {
     UINT key = status_enter();
-    bool active = (status.flags & BR_ACTIVE) != 0U;
-    bool new_latch = (status.flags & latch) != latch;
-    status.flags = (uint16_t)((status.flags & ~BR_ACTIVE) | latch);
-    status.reason = reason;
-    status.pwm[0] = status.pwm[1] = 0;
-    status.target[0] = status.target[1] = 0;
+    bool active = (g_status.flags & BR_ACTIVE) != 0U;
+    bool new_latch = (g_status.flags & latch) != latch;
+    g_status.flags = (uint16_t)((g_status.flags & ~BR_ACTIVE) | latch);
+    g_status.reason = reason;
+    g_status.pwm[0] = g_status.pwm[1] = 0;
+    g_status.target[0] = g_status.target[1] = 0;
     if (active)
     {
-        stopped_us = (uint32_t)board_time_us();
+        g_stopped_us = (uint32_t)board_time_us();
     }
     status_leave(key);
 #ifdef APP_RTOS_LINE
@@ -180,7 +192,7 @@ void bringup_imu_safety_trip (unsigned reason)
         return;
     }
 
-    BringupStatus current;
+    bringup_status_t current;
     bringup_get_status(&current);
     bool pending = false;
 #ifdef APP_RTOS_LINE
@@ -206,56 +218,57 @@ ER bringup_create_objects (void)
     definition.mbfatr = TA_TFIFO;
     definition.bufsz = 256;
     definition.maxmsz = 5; /* ASCII command + received-at u32, explicit LE. */
-    bringup_commands = tk_cre_mbf(&definition);
-    return bringup_commands < E_OK ? bringup_commands : E_OK;
+    g_bringup_commands = tk_cre_mbf(&definition);
+    return g_bringup_commands < E_OK ? g_bringup_commands : E_OK;
 }
 
-static void apply_outputs (void * raw)
+static void apply_outputs (void * p_raw)
 {
 #ifdef APP_RTOS_NET_BENCH
-    (void)raw;
+    (void)p_raw;
     board_motor_off(); /* Hardware output gate, independent of command parsing. */
     return;
 #endif
 #ifdef APP_RTOS_LINE
-    const LineEnvelope * envelope = raw;
+    const line_envelope_t * p_envelope = p_raw;
 #else
-    const int32_t * pwm = raw;
+    const int32_t * pwm = p_raw;
 #endif
     bool imu_blocked = imu_release_blocked();
     UINT key = status_enter();
-    bool allowed =
-        !imu_blocked && urgent_stop == 0U &&
-        br_outputs_allowed(status.flags, bringup_irq_stop != 0U, tm_usb_state(),
-                           !board_button_pressed(20U) &&
-                               !board_button_pressed(21U));
+    bool allowed = !imu_blocked && g_urgent_stop == 0U &&
+                   br_outputs_allowed(g_status.flags, g_bringup_irq_stop != 0U,
+                                      tm_usb_state(),
+                                      !board_button_pressed(20U) &&
+                                          !board_button_pressed(21U));
 #if defined(APP_RTOS_LINE) && defined(APP_RTOS_NETWORK)
     allowed = allowed && !rn_drive_paused() && rn_drive_online();
 #endif
-    for (unsigned w = 0U; w < 2U; ++w)
+    for (unsigned wheel = 0U; wheel < 2U; ++wheel)
     {
 #ifdef APP_RTOS_LINE
-        DualLevels levels =
-            allowed ? rl_levels(envelope, w, board_time_us()) : (DualLevels){0};
-        board_motor_levels(w, levels.a, levels.b);
-        int sign = (w == 0 ? levels.a : levels.b) ? 1 : -1;
-        status.pwm[w] = (int16_t)(sign * (int)(levels.a + levels.b));
+        dual_levels_t levels =
+            allowed ? rl_levels(p_envelope, wheel, board_time_us())
+                    : (dual_levels_t){0};
+        board_motor_levels(wheel, levels.a, levels.b);
+        int sign = (wheel == 0 ? levels.a : levels.b) ? 1 : -1;
+        g_status.pwm[wheel] = (int16_t)(sign * (int)(levels.a + levels.b));
 #else
-        unsigned value = allowed && pwm[w] > 0 ? (unsigned)pwm[w] : 0U;
-        board_motor_write(w, value);
-        status.pwm[w] = (int16_t)value;
+        unsigned value = allowed && pwm[wheel] > 0 ? (unsigned)pwm[wheel] : 0U;
+        board_motor_write(wheel, value);
+        status.pwm[wheel] = (int16_t)value;
 #endif
     }
 #ifdef APP_RTOS_LINE
-    committed_envelope = allowed ? *envelope : (LineEnvelope){0};
+    g_committed_envelope = allowed ? *p_envelope : (line_envelope_t){0};
 #endif
     status_leave(key);
 }
 
-void bringup_control_task (INT code, void * exinf)
+void bringup_control_task (INT code, void * p_exinf_value)
 {
     (void)code;
-    (void)exinf;
+    (void)p_exinf_value;
     board_motor_init();
     bool gpio_ok =
         board_gpio_init(); /* This core owns IO_IRQ_BANK0 and encoder draining. */
@@ -269,7 +282,7 @@ void bringup_control_task (INT code, void * exinf)
     }
     double path = 0;
     uint32_t bad_direction_us[2] = {0, 0};
-    BrEncoderQuality encoder_quality[2] = {0};
+    br_encoder_quality_t encoder_quality[2] = {0};
 #endif
     uint64_t previous = board_time_us(), due = previous + BR_CONTROL_US;
     uint32_t clock_start = (uint32_t)previous, kernel_start = board_kernel_ms();
@@ -279,14 +292,14 @@ void bringup_control_task (INT code, void * exinf)
     int64_t totals[2] = {0, 0};
     float speed[2] = {0, 0};
 #ifndef APP_RTOS_LINE
-    ContinuousDrive drive[2] = {0};
-    SignedWheel wheel[2] = {0};
+    continuous_drive_t drive[2] = {0};
+    signed_wheel_t wheel[2] = {0};
 #endif
     UINT key = status_enter();
-    status.flags |= gpio_ok ? BR_READY : BR_ENCODER;
-    status.min_dt_us = UINT32_MAX;
-    stopped_us = (uint32_t)previous;
-    last_control_us = (uint32_t)previous;
+    g_status.flags |= gpio_ok ? BR_READY : BR_ENCODER;
+    g_status.min_dt_us = UINT32_MAX;
+    g_stopped_us = (uint32_t)previous;
+    g_last_control_us = (uint32_t)previous;
     status_leave(key);
 
     for (;;)
@@ -310,13 +323,15 @@ void bringup_control_task (INT code, void * exinf)
         int32_t delta[2];
         uint32_t edges[2], invalid[2];
         board_encoder_drain(delta, edges, invalid);
-        float dt = (float)dt_us / 1000000.0f;
-        for (unsigned w = 0U; w < 2U; ++w)
+        float delta_time = (float)dt_us / 1000000.0f;
+        for (unsigned wheel = 0U; wheel < 2U; ++wheel)
         {
-            totals[w] += delta[w];
-            speed[w] += 0.25f * (raw_to_mm(w, delta[w]) / dt - speed[w]);
+            totals[wheel] += delta[wheel];
+            speed[wheel] +=
+                0.25f *
+                (raw_to_mm(wheel, delta[wheel]) / delta_time - speed[wheel]);
 #ifdef APP_RTOS_LINE
-            path += fabs((double)raw_to_mm(w, delta[w])) * .5;
+            path += fabs((double)raw_to_mm(wheel, delta[wheel])) * .5;
 #endif
         }
 
@@ -324,14 +339,14 @@ void bringup_control_task (INT code, void * exinf)
          * its timing evidence and require three NEW valid clock windows.
          * Never clear an existing stop latch or forgive an active-run gap. */
         key = status_enter();
-        unsigned gap_action = br_control_gap_action(status.flags, dt_us);
+        unsigned gap_action = br_control_gap_action(g_status.flags, dt_us);
         if (gap_action == BR_GAP_REVALIDATE)
         {
-            status.flags &= (uint16_t)~BR_CLOCK_OK;
-            status.clock_good = 0U;
-            if ((status.flags & BR_LATCHED) == 0U)
+            g_status.flags &= (uint16_t)~BR_CLOCK_OK;
+            g_status.clock_good = 0U;
+            if ((g_status.flags & BR_LATCHED) == 0U)
             {
-                status.reason = BR_REASON_LATE;
+                g_status.reason = BR_REASON_LATE;
             }
         }
         status_leave(key);
@@ -357,23 +372,23 @@ void bringup_control_task (INT code, void * exinf)
             bool good = board_clock_registers_ok() &&
                         br_clock_elapsed_ok(timer_delta, kernel_delta);
             key = status_enter();
-            status.clock_kernel_ms = kernel_delta;
-            status.clock_timer_us = timer_delta;
-            status.clock_samples++;
-            status.clock_good = good
-                                    ? (status.clock_good < BR_CLOCK_GOOD_WINDOWS
-                                           ? status.clock_good + 1U
-                                           : BR_CLOCK_GOOD_WINDOWS)
-                                    : 0U;
-            if (status.clock_good >= BR_CLOCK_GOOD_WINDOWS)
+            g_status.clock_kernel_ms = kernel_delta;
+            g_status.clock_timer_us = timer_delta;
+            g_status.clock_samples++;
+            g_status.clock_good =
+                good ? (g_status.clock_good < BR_CLOCK_GOOD_WINDOWS
+                            ? g_status.clock_good + 1U
+                            : BR_CLOCK_GOOD_WINDOWS)
+                     : 0U;
+            if (g_status.clock_good >= BR_CLOCK_GOOD_WINDOWS)
             {
-                status.flags |= BR_CLOCK_OK;
+                g_status.flags |= BR_CLOCK_OK;
             }
             else
             {
-                status.flags &= (uint16_t)~BR_CLOCK_OK;
+                g_status.flags &= (uint16_t)~BR_CLOCK_OK;
             }
-            bool running = (status.flags & BR_ACTIVE) != 0U;
+            bool running = (g_status.flags & BR_ACTIVE) != 0U;
             status_leave(key);
             if (!good && running)
             {
@@ -383,18 +398,19 @@ void bringup_control_task (INT code, void * exinf)
             kernel_start = kernel_now;
         }
 
-        MotionFeedback feedback = {
+        motion_feedback_t feedback = {
             .now_us = now,
             .wheel_mm = {raw_to_mm(0U, totals[0]), raw_to_mm(1U, totals[1])},
             .speed_mm_s = {speed[0], speed[1]}};
-        BringupStatus snapshot;
+        bringup_status_t snapshot;
         bringup_get_status(&snapshot);
         bool active = (snapshot.flags & BR_ACTIVE) != 0U;
 #ifdef APP_RTOS_LINE
-        bool start_line = rtos_line_prepare(&feedback, path, dt, active);
+        bool start_line =
+            rtos_line_prepare(&feedback, path, delta_time, active);
         if (!rtos_line_ready() && active)
         {
-            BringupStatus current;
+            bringup_status_t current;
             bringup_get_status(&current);
             if (current.flags & BR_ACTIVE)
             {
@@ -429,19 +445,20 @@ void bringup_control_task (INT code, void * exinf)
 #ifdef APP_RTOS_NETWORK
                 rn_drive_begin();
 #endif
-                for (unsigned w = 0; w < 2; ++w)
+                for (unsigned wheel_value = 0; wheel_value < 2; ++wheel_value)
                 {
-                    br_encoder_reset(&encoder_quality[w], (uint32_t)now,
-                                     edges[w], invalid[w]);
-                    bad_direction_us[w] = 0;
+                    br_encoder_reset(&encoder_quality[wheel_value],
+                                     (uint32_t)now, edges[wheel_value],
+                                     invalid[wheel_value]);
+                    bad_direction_us[wheel_value] = 0;
                 }
                 key = status_enter();
-                status.encoder_kind = status.encoder_wheel = 0;
+                g_status.encoder_kind = g_status.encoder_wheel = 0;
                 status_leave(key);
             }
         }
 #ifdef APP_RTOS_IMU
-        MotionStatus imu_status = motion_get_status();
+        motion_status_t imu_status = motion_get_status();
         bool imu_running = active && !paused && imu_status.session_active &&
                            imu_status.mode == MOTION_AUTO;
         ri_observe(&feedback, invalid, dt_us, imu_running);
@@ -450,14 +467,14 @@ void bringup_control_task (INT code, void * exinf)
             ri_ramp_halt(now);
         }
 #endif
-        AnalogDemand optical = {0};
+        analog_demand_t optical = {0};
         if (active && paused)
         {
             rtos_line_feedback(&feedback, NULL);
         }
         else if (active)
         {
-            optical = rtos_line_follow(dt);
+            optical = rtos_line_follow(delta_time);
             rtos_line_feedback(&feedback, &optical);
             if (optical.stop)
             {
@@ -469,7 +486,7 @@ void bringup_control_task (INT code, void * exinf)
             {
                 /* A simultaneous normal STOP already invalidated the API
                  * session; do not turn that successful stop into a new fault. */
-                BringupStatus current;
+                bringup_status_t current;
                 bringup_get_status(&current);
                 if (current.flags & BR_ACTIVE)
                 {
@@ -478,10 +495,10 @@ void bringup_control_task (INT code, void * exinf)
                 active = false;
             }
         }
-        MotionOutput demand = motion_update(&feedback);
+        motion_output_t demand = motion_update(&feedback);
         if (active && demand.external && !paused)
         {
-            BringupStatus current;
+            bringup_status_t current;
             bringup_get_status(&current);
             if (current.flags & BR_ACTIVE)
             {
@@ -496,71 +513,85 @@ void bringup_control_task (INT code, void * exinf)
             active = false;
         }
 #endif
-        LineEnvelope envelope = {0};
+        line_envelope_t envelope = {0};
         if (active)
         {
             /* Age the quality window during Pause too. Resume is not a new
              * session and cannot turn sparse lifetime errors into a fault. */
-            for (unsigned w = 0; w < 2; ++w)
+            for (unsigned wheel_value_value = 0; wheel_value_value < 2;
+                 ++wheel_value_value)
             {
                 unsigned kind = br_encoder_quality(
-                    &encoder_quality[w], (uint32_t)now, edges[w], invalid[w]);
-                bad_direction_us[w] =
-                    !paused && optical.target[w] != 0 &&
-                            speed[w] * (optical.target[w] > 0 ? 1 : -1) < -20
-                        ? bad_direction_us[w] + dt_us
+                    &encoder_quality[wheel_value_value], (uint32_t)now,
+                    edges[wheel_value_value], invalid[wheel_value_value]);
+                bad_direction_us[wheel_value_value] =
+                    !paused && optical.target[wheel_value_value] != 0 &&
+                            speed[wheel_value_value] *
+                                    (optical.target[wheel_value_value] > 0
+                                         ? 1
+                                         : -1) <
+                                -20
+                        ? bad_direction_us[wheel_value_value] + dt_us
                         : 0;
-                if (bad_direction_us[w] >= 50000)
+                if (bad_direction_us[wheel_value_value] >= 50000)
                 {
                     kind = BR_ENC_DIRECTION;
                 }
                 bool trip = !paused && kind != BR_ENC_OK;
-                BringupEncoderFaultSnapshot candidate = {0};
+                bringup_encoder_fault_snapshot_t candidate = {0};
                 if (trip)
                 {
                     candidate.valid = 1U;
                     candidate.kind = (uint8_t)kind;
-                    candidate.wheel = (uint8_t)(w + 1U);
+                    candidate.wheel = (uint8_t)(wheel_value_value + 1U);
                     candidate.control_timer_us = (uint32_t)now;
                     candidate.kernel_ms = board_kernel_ms();
                     candidate.direction_duration_us =
-                        kind == BR_ENC_DIRECTION ? bad_direction_us[w] : 0U;
-                    candidate.recent_window_bad = encoder_quality[w].window_bad;
+                        kind == BR_ENC_DIRECTION
+                            ? bad_direction_us[wheel_value_value]
+                            : 0U;
+                    candidate.recent_window_bad =
+                        encoder_quality[wheel_value_value].window_bad;
                     candidate.recent_window_changes =
-                        encoder_quality[w].window_changes;
-                    for (unsigned i = 0U; i < 2U; ++i)
+                        encoder_quality[wheel_value_value].window_changes;
+                    for (unsigned index = 0U; index < 2U; ++index)
                     {
-                        candidate.lifetime_edges[i] = edges[i];
-                        candidate.lifetime_invalid[i] = invalid[i];
-                        candidate.optical_target_mm_s[i] = optical.target[i];
-                        candidate.measured_speed_x10[i] =
-                            (int16_t)continuous_clampf(speed[i] * 10.0f, -32767,
-                                                       32767);
+                        candidate.lifetime_edges[index] = edges[index];
+                        candidate.lifetime_invalid[index] = invalid[index];
+                        candidate.optical_target_mm_s[index] =
+                            optical.target[index];
+                        candidate.measured_speed_x10[index] =
+                            (int16_t)continuous_clampf(speed[index] * 10.0f,
+                                                       -32767, 32767);
                     }
                 }
                 key = status_enter();
-                status.encoder_bad[w] = encoder_quality[w].window_bad;
-                status.encoder_changes[w] = encoder_quality[w].window_changes;
-                if (!paused && kind && !status.encoder_kind)
+                g_status.encoder_bad[wheel_value_value] =
+                    encoder_quality[wheel_value_value].window_bad;
+                g_status.encoder_changes[wheel_value_value] =
+                    encoder_quality[wheel_value_value].window_changes;
+                if (!paused && kind && !g_status.encoder_kind)
                 {
-                    status.encoder_kind = kind;
-                    status.encoder_wheel = w + 1;
+                    g_status.encoder_kind = kind;
+                    g_status.encoder_wheel = wheel_value_value + 1;
                 }
                 if (trip)
                 {
-                    candidate.previous_pwm[0] = status.pwm[0];
-                    candidate.previous_pwm[1] = status.pwm[1];
-                    (void)br_encoder_fault_capture_once(&encoder_fault_snapshot,
-                                                        &candidate);
+                    candidate.previous_pwm[0] = g_status.pwm[0];
+                    candidate.previous_pwm[1] = g_status.pwm[1];
+                    (void)br_encoder_fault_capture_once(
+                        &g_encoder_fault_snapshot, &candidate);
                 }
                 status_leave(key);
                 if (!paused && kind)
                 {
                     bringup_stop(BR_REASON_ENCODER, BR_ENCODER);
-                    tm_printf((UB *)"ENCODER_TRIP wheel=%u trip_kind=%u "
-                                    "window_bad=%u window_changes=%u\n",
-                              w + 1, kind, encoder_quality[w].window_bad,
-                              encoder_quality[w].window_changes);
+                    tm_printf(
+                        (UB *)"ENCODER_TRIP wheel=%u trip_kind=%u "
+                              "window_bad=%u window_changes=%u\n",
+                        wheel_value_value + 1, kind,
+                        encoder_quality[wheel_value_value].window_bad,
+                        encoder_quality[wheel_value_value].window_changes);
                     active = false;
                     break;
                 }
@@ -569,43 +600,52 @@ void bringup_control_task (INT code, void * exinf)
         if (active && !paused)
         {
             uintptr_t api_key = board_motion_lock(NULL);
-            LineEnvelope previous_envelope = committed_envelope;
+            line_envelope_t previous_envelope = g_committed_envelope;
             board_motion_unlock(NULL, api_key);
-            for (unsigned w = 0; w < 2; ++w)
+            for (unsigned wheel_value_value_value = 0;
+                 wheel_value_value_value < 2; ++wheel_value_value_value)
             {
-                rtos_line_actual_output(
-                    w, rl_cap(&previous_envelope, w, board_time_us()));
+                rtos_line_actual_output(wheel_value_value_value,
+                                        rl_cap(&previous_envelope,
+                                               wheel_value_value_value,
+                                               board_time_us()));
             }
-            envelope = rtos_line_power(&demand, &optical, dt);
+            envelope = rtos_line_power(&demand, &optical, delta_time);
             bool committed =
                 motion_commit(demand.generation, apply_outputs, &envelope);
-            for (unsigned w = 0; w < 2; ++w)
+            for (unsigned wheel_value_value_value_value = 0;
+                 wheel_value_value_value_value < 2;
+                 ++wheel_value_value_value_value)
             {
                 rtos_line_actual_output(
-                    w, committed ? rl_cap(&envelope, w, board_time_us()) : 0);
+                    wheel_value_value_value_value,
+                    committed ? rl_cap(&envelope, wheel_value_value_value_value,
+                                       board_time_us())
+                              : 0);
             }
         }
 #else
-        MotionOutput demand = motion_update(&feedback);
+        motion_output_t demand = motion_update(&feedback);
         int32_t pwm[2] = {0, 0};
-        for (unsigned w = 0U; w < 2U; ++w)
+        for (unsigned wheel = 0U; wheel < 2U; ++wheel)
         {
             if (!active || demand.reset_controllers)
             {
-                continuous_drive_reset(&drive[w], &wheel[w]);
+                continuous_drive_reset(&drive[wheel], &wheel[wheel]);
             }
             if (active)
             {
-                pwm[w] = continuous_drive_step(&drive[w], &wheel[w], w,
-                                               demand.target_mm_s[w], speed[w],
-                                               dt, now, snapshot.pwm[w]);
+                pwm[wheel] = continuous_drive_step(
+                    &drive[wheel], &wheel[wheel], wheel,
+                    demand.target_mm_s[wheel], speed[wheel], delta_time, now,
+                    snapshot.pwm[wheel]);
             }
-            if (!active || demand.target_mm_s[w] == 0 || delta[w] != 0 ||
-                pwm[w] < 120)
+            if (!active || demand.target_mm_s[wheel] == 0 ||
+                delta[wheel] != 0 || pwm[wheel] < 120)
             {
-                last_progress[w] = (uint32_t)now;
+                last_progress[wheel] = (uint32_t)now;
             }
-            else if ((uint32_t)now - last_progress[w] >= BR_STALL_US)
+            else if ((uint32_t)now - last_progress[wheel] >= BR_STALL_US)
             {
                 bringup_stop(BR_REASON_STALL, BR_STALL);
             }
@@ -617,40 +657,51 @@ void bringup_control_task (INT code, void * exinf)
 #endif
 
         key = status_enter();
-        status.kernel_ms = board_kernel_ms();
-        status.timer_us = (uint32_t)now;
-        status.control_count++;
-        status.dt_us = dt_us;
-        if (dt_us < status.min_dt_us)
+        g_status.kernel_ms = board_kernel_ms();
+        g_status.timer_us = (uint32_t)now;
+        g_status.control_count++;
+        g_status.dt_us = dt_us;
+        if (dt_us < g_status.min_dt_us)
         {
-            status.min_dt_us = dt_us;
+            g_status.min_dt_us = dt_us;
         }
-        if (dt_us > status.max_dt_us)
+        if (dt_us > g_status.max_dt_us)
         {
-            status.max_dt_us = dt_us;
+            g_status.max_dt_us = dt_us;
         }
         if (dt_us > 15000U)
         {
-            status.late_count++;
+            g_status.late_count++;
         }
-        for (unsigned w = 0U; w < 2U; ++w)
+        for (unsigned wheel_value_value_value_value_value = 0U;
+             wheel_value_value_value_value_value < 2U;
+             ++wheel_value_value_value_value_value)
         {
             /* Raw diagnostic count saturates; odometry remains 64-bit. */
-            status.ticks[w] = totals[w] > INT32_MAX   ? INT32_MAX
-                              : totals[w] < INT32_MIN ? INT32_MIN
-                                                      : (int32_t)totals[w];
-            status.edges[w] = edges[w];
-            status.invalid[w] = invalid[w];
-            status.speed_x10[w] =
-                (int16_t)(continuous_clampf(speed[w] * 10.0f, -32767, 32767));
-            status.target[w] =
-                (status.flags & BR_ACTIVE) ? demand.target_mm_s[w] : 0;
+            g_status.ticks[wheel_value_value_value_value_value] =
+                totals[wheel_value_value_value_value_value] > INT32_MAX
+                    ? INT32_MAX
+                : totals[wheel_value_value_value_value_value] < INT32_MIN
+                    ? INT32_MIN
+                    : (int32_t)totals[wheel_value_value_value_value_value];
+            g_status.edges[wheel_value_value_value_value_value] =
+                edges[wheel_value_value_value_value_value];
+            g_status.invalid[wheel_value_value_value_value_value] =
+                invalid[wheel_value_value_value_value_value];
+            g_status.speed_x10[wheel_value_value_value_value_value] =
+                (int16_t)(continuous_clampf(
+                    speed[wheel_value_value_value_value_value] * 10.0f, -32767,
+                    32767));
+            g_status.target[wheel_value_value_value_value_value] =
+                (g_status.flags & BR_ACTIVE)
+                    ? demand.target_mm_s[wheel_value_value_value_value_value]
+                    : 0;
         }
-        last_control_us = (uint32_t)now;
+        g_last_control_us = (uint32_t)now;
         uint32_t cost = (uint32_t)(board_time_us() - now);
-        if (cost > status.max_cost_us)
+        if (cost > g_status.max_cost_us)
         {
-            status.max_cost_us = cost;
+            g_status.max_cost_us = cost;
         }
         status_leave(key);
 #ifdef APP_RTOS_LINE
@@ -660,18 +711,18 @@ void bringup_control_task (INT code, void * exinf)
     }
 }
 
-void bringup_safety_task (INT code, void * exinf)
+void bringup_safety_task (INT code, void * p_exinf_value)
 {
     (void)code;
-    (void)exinf;
+    (void)p_exinf_value;
     for (;;)
     {
-        BringupStatus snapshot;
+        bringup_status_t snapshot;
         UINT key = status_enter();
-        snapshot = status;
-        uint32_t last = last_control_us, end = deadline_us;
-        uint32_t urgent = urgent_stop;
-        urgent_stop = 0U;
+        snapshot = g_status;
+        uint32_t last = g_last_control_us, end = g_deadline_us;
+        uint32_t urgent = g_urgent_stop;
+        g_urgent_stop = 0U;
         status_leave(key);
         uint32_t now = (uint32_t)board_time_us();
 #if defined(APP_RTOS_RELEASE) && defined(APP_RTOS_IMU)
@@ -703,7 +754,7 @@ void bringup_safety_task (INT code, void * exinf)
 #endif
         if ((snapshot.flags & BR_READY) != 0U)
         {
-            if ((bringup_irq_stop != 0U || board_button_pressed(20U) ||
+            if ((g_bringup_irq_stop != 0U || board_button_pressed(20U) ||
                  urgent == 'e') &&
                 (active || (snapshot.flags & BR_ESTOP) == 0U))
             {
@@ -736,26 +787,27 @@ void bringup_safety_task (INT code, void * exinf)
          * PWM or edit PI state; it can only reduce the committed output. */
         uintptr_t api_key = board_motion_lock(NULL);
         key = status_enter();
-        if ((status.flags & BR_ACTIVE) && !bringup_irq_stop)
+        if ((g_status.flags & BR_ACTIVE) && !g_bringup_irq_stop)
         {
             bool allowed =
                 !imu_release_blocked() &&
                 br_outputs_allowed(
-                    status.flags, bringup_irq_stop != 0U, tm_usb_state(),
+                    g_status.flags, g_bringup_irq_stop != 0U, tm_usb_state(),
                     !board_button_pressed(20U) && !board_button_pressed(21U));
-            for (unsigned w = 0; w < 2; ++w)
+            for (unsigned wheel = 0; wheel < 2; ++wheel)
             {
-                DualLevels cap =
-                    allowed ? rl_levels(&committed_envelope, w, board_time_us())
-                            : (DualLevels){0};
-                DualLevels actual = board_motor_current(w);
-                DualLevels reduced = rl_reduce(actual, cap);
+                dual_levels_t cap = allowed ? rl_levels(&g_committed_envelope,
+                                                        wheel, board_time_us())
+                                            : (dual_levels_t){0};
+                dual_levels_t actual = board_motor_current(wheel);
+                dual_levels_t reduced = rl_reduce(actual, cap);
                 if (reduced.a != actual.a || reduced.b != actual.b)
                 {
-                    board_motor_levels(w, reduced.a, reduced.b);
+                    board_motor_levels(wheel, reduced.a, reduced.b);
                 }
-                int sign = (w == 0 ? reduced.a : reduced.b) ? 1 : -1;
-                status.pwm[w] = (int16_t)(sign * (int)(reduced.a + reduced.b));
+                int sign = (wheel == 0 ? reduced.a : reduced.b) ? 1 : -1;
+                g_status.pwm[wheel] =
+                    (int16_t)(sign * (int)(reduced.a + reduced.b));
             }
         }
         status_leave(key);
@@ -773,10 +825,10 @@ static void start_pulse (unsigned selected)
                     "for driving.\n");
     return;
 #endif
-    BringupStatus snapshot;
+    bringup_status_t snapshot;
     UINT key = status_enter();
-    snapshot = status;
-    uint32_t stopped = stopped_us;
+    snapshot = g_status;
+    uint32_t stopped = g_stopped_us;
     status_leave(key);
     uint64_t now = board_time_us();
 #ifdef APP_RTOS_RELEASE
@@ -789,7 +841,7 @@ static void start_pulse (unsigned selected)
                       !board_button_pressed(20U) &&
                           !board_button_pressed(21U)) ||
         !br_safety_allows_motion(snapshot.flags, imu_release_blocked()) ||
-        bringup_irq_stop)
+        g_bringup_irq_stop)
     {
         tm_printf((UB *)"REQUEST rejected: wait for CLOCK PASS, release "
                         "buttons, clear a latch with x, and allow 1s rest.\n");
@@ -798,7 +850,8 @@ static void start_pulse (unsigned selected)
     motion_session_begin(now);
     int16_t left = selected == 2U ? 0 : BR_SPEED_MM_S;
     int16_t right = selected == 1U ? 0 : BR_SPEED_MM_S;
-    MotionResult result = motion_submit_navigation(MOTION_BUDDY3, left, right);
+    motion_result_t result =
+        motion_submit_navigation(MOTION_BUDDY3, left, right);
     if (result != MOTION_OK)
     {
         bringup_stop(BR_REASON_API, 0U);
@@ -806,22 +859,22 @@ static void start_pulse (unsigned selected)
     }
     key = status_enter();
     bool accepted =
-        bringup_irq_stop == 0U && urgent_stop == 0U &&
-        br_safety_allows_motion(status.flags, imu_release_blocked());
+        g_bringup_irq_stop == 0U && g_urgent_stop == 0U &&
+        br_safety_allows_motion(g_status.flags, imu_release_blocked());
 #ifdef APP_RTOS_LINE
     accepted = accepted && rtos_line_start_valid();
 #endif
     if (accepted)
     {
-        deadline_us = (uint32_t)now + BR_PULSE_US;
+        g_deadline_us = (uint32_t)now + BR_PULSE_US;
 #ifdef APP_RTOS_LINE
-        deadline_us =
+        g_deadline_us =
             0; /* Line session ends on a stop/fault, not a 3s bench pulse. */
 #endif
-        bench_target[0] = left;
-        bench_target[1] = right;
-        status.flags |= BR_ACTIVE;
-        br_encoder_fault_clear(&encoder_fault_snapshot);
+        g_bench_target[0] = left;
+        g_bench_target[1] = right;
+        g_status.flags |= BR_ACTIVE;
+        br_encoder_fault_clear(&g_encoder_fault_snapshot);
     }
     status_leave(key);
     if (!accepted)
@@ -839,19 +892,19 @@ static void start_pulse (unsigned selected)
 #endif
 }
 
-void bringup_nav_task (INT code, void * exinf)
+void bringup_nav_task (INT code, void * p_exinf_value)
 {
     (void)code;
-    (void)exinf;
+    (void)p_exinf_value;
     for (;;)
     {
         uint8_t msg[5];
-        INT count = tk_rcv_mbf(bringup_commands, msg, 10);
+        INT count = tk_rcv_mbf(g_bringup_commands, msg, 10);
         /* Keep the existing coordinator's 100ms stale-target watchdog.
          * The bench target provider, like Buddy 3 later, must keep reporting. */
         UINT key = status_enter();
-        bool active = (status.flags & BR_ACTIVE) != 0U;
-        int16_t left = bench_target[0], right = bench_target[1];
+        bool active = (g_status.flags & BR_ACTIVE) != 0U;
+        int16_t left = g_bench_target[0], right = g_bench_target[1];
         status_leave(key);
 #ifdef APP_RTOS_LINE
         (void)active;
@@ -861,7 +914,7 @@ void bringup_nav_task (INT code, void * exinf)
         if (active &&
             motion_submit_navigation(MOTION_BUDDY3, left, right) != MOTION_OK)
         {
-            BringupStatus after;
+            bringup_status_t after;
             bringup_get_status(&after);
             if ((after.flags & BR_ACTIVE) != 0U)
             {
@@ -903,14 +956,14 @@ void bringup_nav_task (INT code, void * exinf)
             }
 #else
             UINT key = status_enter();
-            if ((status.flags & BR_ACTIVE) == 0U &&
+            if ((g_status.flags & BR_ACTIVE) == 0U &&
                 !board_button_pressed(20U) && !board_button_pressed(21U) &&
-                (status.flags & BR_CLOCK_OK) != 0U)
+                (g_status.flags & BR_CLOCK_OK) != 0U)
             {
-                bringup_irq_stop = 0U;
-                status.flags &= (uint16_t)~BR_LATCHED;
-                stopped_us = (uint32_t)board_time_us();
-                br_encoder_fault_clear(&encoder_fault_snapshot);
+                g_bringup_irq_stop = 0U;
+                g_status.flags &= (uint16_t)~BR_LATCHED;
+                g_stopped_us = (uint32_t)board_time_us();
+                br_encoder_fault_clear(&g_encoder_fault_snapshot);
             }
             status_leave(key);
 #endif
@@ -937,7 +990,8 @@ void bringup_nav_task (INT code, void * exinf)
                             "USB L/R/U disabled.\n");
 #else
             char route = command == 'L' ? 'A' : command == 'R' ? 'F' : 'Z';
-            MotionResult result = motion_submit_barcode(MOTION_BUDDY3, route);
+            motion_result_t result =
+                motion_submit_barcode(MOTION_BUDDY3, route);
             tm_printf((UB *)"USB route %c -> Buddy3 -> NAV result=%u; await "
                             "separate junction.\n",
                       command, result);
@@ -955,8 +1009,9 @@ void bringup_nav_task (INT code, void * exinf)
         }
         else if (command == 'z')
         {
-            MotionEvent event;
-            for (unsigned n = 0U; n < 12U && motion_pop_event(&event); ++n)
+            motion_event_t event;
+            for (unsigned count_value = 0U;
+                 count_value < 12U && motion_pop_event(&event); ++count_value)
             {
                 tm_printf((UB *)"NAV time_us=%u owner=%u requester=%u event=%u "
                                 "state=%u fault=%u result=%u target=%d,%d\n",
@@ -968,13 +1023,13 @@ void bringup_nav_task (INT code, void * exinf)
     }
 }
 
-void bringup_console_task (INT code, void * exinf)
+void bringup_console_task (INT code, void * p_exinf_value)
 {
     (void)code;
-    (void)exinf;
+    (void)p_exinf_value;
     for (;;)
     {
-        for (unsigned n = 0U; n < 32U; ++n)
+        for (unsigned count = 0U; count < 32U; ++count)
         {
             INT value = tm_usb_console_get();
             if (value < 0)
@@ -994,13 +1049,13 @@ void bringup_console_task (INT code, void * exinf)
             if (value == 's' || value == 'e')
             {
                 UINT key = status_enter();
-                if (urgent_stop != 'e')
+                if (g_urgent_stop != 'e')
                 {
-                    urgent_stop = (uint32_t)value;
+                    g_urgent_stop = (uint32_t)value;
                 }
                 status_leave(key);
             }
-            (void)tk_snd_mbf(bringup_commands, msg, 5, TMO_POL);
+            (void)tk_snd_mbf(g_bringup_commands, msg, 5, TMO_POL);
         }
         (void)tk_dly_tsk(1);
     }

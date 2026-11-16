@@ -3,13 +3,13 @@
 #include <string.h>
 #include "config/calibration_presets.h"
 #include "src/barcode/barcode_record.h"
-static void seal(BarcodeSaved *saved) {
-    saved->crc = log_crc((const uint8_t *)saved + offsetof(BarcodeSaved, count),
+static void seal(barcode_saved_t *saved) {
+    saved->crc = log_crc((const uint8_t *)saved + offsetof(barcode_saved_t, count),
                          barcode_record_crc_size(saved->version));
 }
 int main(void) {
-    LineCalibration old = {.white = {99, 100}, .black = {800, 900}, .mask = 7};
-    LineCalibration good = successful_calibration(), chosen = old;
+    line_calibration_t old = {.white = {99, 100}, .black = {800, 900}, .mask = 7};
+    line_calibration_t good = successful_calibration(), chosen = old;
     assert(calibration_valid(&good));
     assert(good.white[0] == 163 && good.white[1] == 160 && good.black[0] == 3457 &&
            good.black[1] == 3700);
@@ -23,7 +23,7 @@ int main(void) {
     assert(memcmp(&chosen, &old, sizeof(old)) == 0);
     assert(successful_calibration_boot(&chosen, 28, false));
     assert(memcmp(&chosen, &good, sizeof(good)) == 0);
-    BarcodeSaved saved = {.magic = B_MAGIC,
+    barcode_saved_t saved = {.magic = B_MAGIC,
                           .version = 28,
                           .profile = 1,
                           .recorded_profile = 1,

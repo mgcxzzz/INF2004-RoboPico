@@ -14,7 +14,7 @@ static void emit(const uint8_t *p, size_t n) {
 }
 static void line_status(unsigned event) { /* as wifi_line_status() */
     uint8_t pk[WPK_LINE_BYTES];
-    WifiLinePacket p = {
+    wifi_line_packet_t p = {
         .seq = seq_line++,
         .uptime_ms = (uint32_t)(now_us / 1000),
         .event = (uint8_t)event,
@@ -36,7 +36,7 @@ static void line_status(unsigned event) { /* as wifi_line_status() */
 static void nav_event(unsigned event, char letter, char action,
                       unsigned revision) { /* as wifi_event() */
     uint8_t pk[WPK_NAV_BYTES];
-    WifiNavPacket p = {.seq = seq_nav++,
+    wifi_nav_packet_t p = {.seq = seq_nav++,
                        .uptime_ms = (uint32_t)(now_us / 1000),
                        .event = (uint8_t)event,
                        .letter = (uint8_t)((letter >= 'A' && letter <= 'Z') ? letter : 0),
@@ -70,7 +70,7 @@ int main(void) {
         step(x, i < c->n ? c->adc[i] : white_noise(i), true, &nav, &side_analog);
         for (; seen < nav.event_sequence;
              ++seen) { /* as wifi_barcode_events(): B_DECODE -> DECODED + QUEUED */
-            const BarcodeEvent *e =
+            const barcode_event_t *e =
                 &nav.events[(nav.event_head + B_EVENTS - (nav.event_sequence - seen)) % B_EVENTS];
             if (e->type != B_DECODE)
                 continue;
@@ -79,7 +79,7 @@ int main(void) {
                       (char)e->action, e->map_revision);
         }
         if (i % 100 == 0) {
-            RampAssistTlm t = {.uptime_ms = (uint32_t)(now_us / 1000),
+            ramp_assist_tlm_t t = {.uptime_ms = (uint32_t)(now_us / 1000),
                                .event = RA_EVT_PERIODIC,
                                .flags = (uint8_t)(1u | (2u << 4) | 0x80u),
                                .height_mm = 3,

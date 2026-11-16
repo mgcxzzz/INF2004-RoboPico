@@ -1,19 +1,19 @@
 #include <assert.h>
 #include <stdio.h>
 #include "src/line_following/scan_smooth.h"
-static const LineCalibration cal = {{164, 168}, {3514, 3389}, 7};
+static const line_calibration_t cal = {{164, 168}, {3514, 3389}, 7};
 typedef struct {
-    Circuit c;
-    BarcodeNav n;
-    BarcodeAnalog a;
-    SmoothFollow old;
-    ScanSmooth s;
-    CircuitInput i;
-    AnalogDemand d;
+    circuit_t c;
+    barcode_nav_t n;
+    barcode_analog_t a;
+    smooth_follow_t old;
+    scan_smooth_t s;
+    circuit_input_t i;
+    analog_demand_t d;
 } Rig;
 static void init(Rig *r) {
     memset(r, 0, sizeof(*r));
-    r->i = (CircuitInput){.now = 1000, .adc = {3514, 3389}, .speed = {45, 45}};
+    r->i = (circuit_input_t){.now = 1000, .adc = {3514, 3389}, .speed = {45, 45}};
     circuit_begin(&r->c, &r->i);
     barcode_nav_begin(&r->n, &r->i);
     barcode_analog_begin(&r->a, &r->n, 180, r->i.now, r->i.wheel);
@@ -61,16 +61,16 @@ static void basics(void) {
 static void jitter(void) {
     Rig r;
     init(&r);
-    Circuit c = r.c;
-    BarcodeNav n = r.n;
-    SmoothFollow old = {0};
+    circuit_t c = r.c;
+    barcode_nav_t n = r.n;
+    smooth_follow_t old = {0};
     int prev[2] = {45, 45}, prev_old[2] = {45, 45};
     long variation = 0, old_variation = 0;
     for (unsigned k = 0; k < 400; ++k) {
         r.i.adc[0] = k % 2 ? 2400 : 3000;
         r.i.adc[1] = k % 2 ? 3000 : 2400;
         tick(&r, 220);
-        AnalogDemand before = barcode_drive_step(&c, &n, &cal, &r.i, 1, &old, .01f);
+        analog_demand_t before = barcode_drive_step(&c, &n, &cal, &r.i, 1, &old, .01f);
         for (unsigned w = 0; w < 2; ++w) {
             variation += abs(r.d.target[w] - prev[w]);
             prev[w] = r.d.target[w];

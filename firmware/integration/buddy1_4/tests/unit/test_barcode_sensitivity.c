@@ -25,9 +25,9 @@ static double make_frame(char c, bool reverse, double widths[29]) {
     return total;
 }
 static void measured_frame(char code, bool reverse, bool missing) {
-    BarcodeAnalog a;
-    BarcodeNav n;
-    CircuitInput i = {.now = 1000};
+    barcode_analog_t a;
+    barcode_nav_t n;
+    circuit_input_t i = {.now = 1000};
     barcode_nav_begin(&n, &i);
     barcode_analog_begin(&a, &n, 181, i.now, i.wheel);
     double w[29], total = make_frame(code, reverse, w);

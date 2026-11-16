@@ -1,3 +1,10 @@
+/**
+ * @file nav_log_storage.h
+ * @brief Nav log storage.
+ * @details The shared facade/coordinator arbitrates ownership and generations.
+ * Acceptance is not completion; external callers never write motor registers.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 #ifndef BUDDY_NAV_LOG_STORAGE_H
 #define BUDDY_NAV_LOG_STORAGE_H
 #include "src/navigation/nav_codec.h"

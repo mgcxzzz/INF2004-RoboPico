@@ -7,7 +7,7 @@
 #include "tests/fixtures/pdf_runs.h"
 #include "tests/fixtures/captured_a.h"
 #include "tests/fixtures/captured_a_v2.h"
-static const LineCalibration cal = {{184, 184}, {3464, 3692}, 7};
+static const line_calibration_t cal = {{184, 184}, {3464, 3692}, 7};
 static uint16_t encoding(char code) {
     for (unsigned p = 0; p < 512; ++p)
         if (barcode_character((uint16_t)p) == code)
@@ -34,15 +34,15 @@ static double make_frame(char code, double narrow, double ratio, bool reverse, d
         total += w[j];
     return total;
 }
-static BarcodeRead read_frame(const double w[29], char expected) {
-    BarcodeReader r;
+static barcode_read_t read_frame(const double w[29], char expected) {
+    barcode_reader_t r;
     uint64_t now = 1000;
     double mm = 0;
     barcode_reader_reset(&r, false, now, mm);
     now += 100000;
     mm = 20;
     (void)barcode_reader_edge(&r, true, now, mm);
-    BarcodeRead result = {0};
+    barcode_read_t result = {0};
     for (unsigned j = 0; j < 29; ++j) {
         mm += w[j];
         now += (uint64_t)(w[j] / (j % 3 ? 37 : 80) * 1e6); /* changing speed */
@@ -60,7 +60,7 @@ static void decoder_tests(void) {
             for (unsigned letter = 0; letter < 2; ++letter) {
                 double w[29];
                 make_frame(letter ? 'F' : 'A', size ? 3 : 1.5, 3, reverse, w);
-                BarcodeRead r = read_frame(w, letter ? 'F' : 'A');
+                barcode_read_t r = read_frame(w, letter ? 'F' : 'A');
                 assert(r.reverse == (bool)reverse);
                 for (unsigned j = 0; j < 29; ++j)
                     w[j] *= j % 3 == 0 ? 1.08 : j % 3 == 1 ? .94 : 1.02;
@@ -95,10 +95,10 @@ static void decoder_tests(void) {
                 (void)read_frame(biased, letter ? 'F' : 'A');
             }
     /* No symbol is decoded from one wide stripe, a malformed stop or noise. */
-    BarcodeReader r;
+    barcode_reader_t r;
     barcode_reader_reset(&r, false, 1000, 0);
     (void)barcode_reader_edge(&r, true, 2000, 20);
-    BarcodeRead result = barcode_reader_edge(&r, false, 400000, 38);
+    barcode_read_t result = barcode_reader_edge(&r, false, 400000, 38);
     assert(!(result.events & (1u << B_DECODE)) && !r.frame);
     double w[29];
     make_frame('F', 3, 3, false, w);
@@ -142,8 +142,8 @@ static void decoder_tests(void) {
     }
 }
 static void capture_tests(void) {
-    BarcodeCapture c = {0};
-    BarcodeEdge e;
+    barcode_capture_t c = {0};
+    barcode_edge_t e;
     barcode_capture_reset(&c, false, 1000);
     barcode_capture_tick(&c, 2000, true, 12, 14);
     barcode_capture_tick(&c, 3000, false, 13, 15);
@@ -168,7 +168,7 @@ static void capture_tests(void) {
         ++count;
     assert(count == 255);
 }
-static void feed_nav_frame(BarcodeNav *n, char code, double narrow, bool reverse, double *mm,
+static void feed_nav_frame(barcode_nav_t *n, char code, double narrow, bool reverse, double *mm,
                            uint64_t *now) {
     double w[29];
     make_frame(code, narrow, 3, reverse, w);
@@ -184,8 +184,8 @@ static void feed_nav_frame(BarcodeNav *n, char code, double narrow, bool reverse
     }
 }
 static void queue_tests(void) {
-    BarcodeNav n;
-    CircuitInput i = {.now = 1000};
+    barcode_nav_t n;
+    circuit_input_t i = {.now = 1000};
     barcode_nav_begin(&n, &i);
     double mm = 20;
     uint64_t now = 100000;
@@ -240,8 +240,8 @@ static void queue_tests(void) {
     assert(!n.cross_ready && n.rejected == 1);
 }
 static void captured_a_replay(unsigned source) {
-    BarcodeNav n;
-    CircuitInput i = {.now = 1000};
+    barcode_nav_t n;
+    circuit_input_t i = {.now = 1000};
     barcode_nav_begin(&n, &i);
     n.allow_cross = true;
     const double *widths = source == 1 ? captured_a_widths : captured_a_v2_widths;
@@ -293,8 +293,8 @@ static void captured_a_replay(unsigned source) {
     assert(n.cross_candidate && !n.cross_ready && n.pending == 'A');
     barcode_cross_confirm(&n, now + 100000, mm + 4, true);
     assert(n.cross_ready);
-    Circuit c;
-    i = (CircuitInput){.now = now + 100000,
+    circuit_t c;
+    i = (circuit_input_t){.now = now + 100000,
                        .path = mm + 4,
                        .wheel = {mm + 4, mm + 4},
                        .adc = {3464, 3692},
@@ -325,16 +325,16 @@ static void captured_a_replay(unsigned source) {
     assert(!n.cross_ready && !n.cross_candidate && n.pending == 'A');
 }
 static void navigation_simulation(unsigned profile) {
-    SmoothFollow smoothing = {0};
-    Circuit c;
-    BarcodeNav nav;
-    CircuitInput i = {.now = 1000, .adc = {3464, 3692}};
+    smooth_follow_t smoothing = {0};
+    circuit_t c;
+    barcode_nav_t nav;
+    circuit_input_t i = {.now = 1000, .adc = {3464, 3692}};
     circuit_begin(&c, &i);
     barcode_nav_begin(&nav, &i);
     double start = 100, w[29], length = make_frame('A', 3, 3, false, w), gap = 100;
     bool old = false, acquired = false;
     unsigned completed = 0;
-    AnalogDemand d = {.target = {45, 45}};
+    analog_demand_t d = {.target = {45, 45}};
     for (unsigned step = 0; step < 1500000 && completed < 12; ++step) {
         for (unsigned k = 0; k < 2; ++k) {
             i.speed[k] = d.target[k];
@@ -410,9 +410,9 @@ static void navigation_simulation(unsigned profile) {
            nav.decoded_f == 6);
 }
 static void no_command_and_record(void) {
-    Circuit c;
-    BarcodeNav n;
-    CircuitInput i = {.now = 1000, .adc = {3464, 3692}};
+    circuit_t c;
+    barcode_nav_t n;
+    circuit_input_t i = {.now = 1000, .adc = {3464, 3692}};
     circuit_begin(&c, &i);
     barcode_nav_begin(&n, &i);
     n.cross_ready = n.cross_gate = true;
@@ -438,17 +438,17 @@ static void no_command_and_record(void) {
     n.cross_us = 500000;
     (void)barcode_circuit_step(&c, &n, &cal, &i, 1);
     assert(c.busy && n.busy && n.action == 'F' && !n.pending);
-    static BarcodeSaved s;
+    static barcode_saved_t s;
     s.magic = B_MAGIC;
     s.version = 1;
     s.profile = s.recorded_profile = 1;
     s.calibration = cal;
-    s.side = (SideCalibration){0, 1, 3};
+    s.side = (side_calibration_t){0, 1, 3};
     s.count = B_ROWS;
     s.event_count = B_EVENTS;
     s.summary_count = C_SUMMARIES;
     s.crc =
-        log_crc((uint8_t *)&s + offsetof(BarcodeSaved, count), barcode_record_crc_size(s.version));
+        log_crc((uint8_t *)&s + offsetof(barcode_saved_t, count), barcode_record_crc_size(s.version));
     assert(barcode_record_valid(&s));
     s.version = 2;
     assert(barcode_record_valid(&s));
@@ -470,7 +470,7 @@ static void no_command_and_record(void) {
     assert(barcode_record_valid(&s));
     s.version = 11;
     s.crc =
-        log_crc((uint8_t *)&s + offsetof(BarcodeSaved, count), barcode_record_crc_size(s.version));
+        log_crc((uint8_t *)&s + offsetof(barcode_saved_t, count), barcode_record_crc_size(s.version));
     assert(barcode_record_valid(&s));
     s.version = 12;
     assert(barcode_record_valid(&s));
@@ -494,7 +494,7 @@ static void no_command_and_record(void) {
     s.events[10].code ^= 1;
     assert(!barcode_record_valid(&s));
     printf("record_bytes=%zu trace=%zu summary=%zu\n", sizeof(s), sizeof(BarcodeTrace),
-           sizeof(BarcodeSummary));
+           sizeof(barcode_summary_t));
 }
 int main(void) {
     decoder_tests();

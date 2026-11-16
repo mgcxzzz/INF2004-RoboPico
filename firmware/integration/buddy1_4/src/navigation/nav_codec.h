@@ -1,3 +1,10 @@
+/**
+ * @file nav_codec.h
+ * @brief Nav codec.
+ * @details The shared facade/coordinator arbitrates ownership and generations.
+ * Acceptance is not completion; external callers never write motor registers.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 #ifndef BUDDY_NAV_CODEC_H
 #define BUDDY_NAV_CODEC_H
 #include "src/motion/motion_port.h"
@@ -21,26 +28,33 @@ typedef enum
     NAV_VERIFIED_BARCODE,
     NAV_RAMP_ASSIST,
     NAV_SPEED_MODE
-} NavKind;
+} nav_kind_t;
 typedef struct
 {
-    unsigned kind : 4, owner : 3, style : 1, flag : 1, speed : 7, bitmap : 10;
+    unsigned kind : 4;
+    unsigned owner : 3;
+    unsigned style : 1;
+    unsigned flag : 1;
+    unsigned speed : 7;
+    unsigned bitmap : 10;
     uint32_t lease;
     float value;
     int16_t wheels[2];
-    MotionRampAssist assist;
-} NavRequest;
+    motion_ramp_assist_t assist;
+} nav_request_t;
 /* Canonical little-bit-order binary, independent of compiler bitfield layout.
  * Request length is exact per kind; unused final-byte bits must be zero. */
 unsigned nav_packet_encode (uint8_t out[NAV_PACKET_BYTES],
-                            const NavRequest * request);
-bool nav_packet_decode (NavRequest * request, const uint8_t * packet,
+                            const nav_request_t * p_request);
+bool nav_packet_decode (nav_request_t * p_request, const uint8_t * p_packet,
                         unsigned bytes);
 /* Log quantisation only: goal0.1unit, progress0.1mm signed24, yaw0.1deg signed16.
  * Overflow is explicit; control/command result float calculations are untouched. */
-void nav_event_encode (uint8_t out[NAV_EVENT_BYTES], const MotionEvent * event);
-bool nav_event_decode (MotionEvent * event, const uint8_t in[NAV_EVENT_BYTES],
-                       bool * overflow);
+void nav_event_encode (uint8_t out[NAV_EVENT_BYTES],
+                       const motion_event_t * p_event);
+bool nav_event_decode (motion_event_t * p_event,
+                       const uint8_t in_value[NAV_EVENT_BYTES],
+                       bool * p_overflow);
 #endif
 
 /* End of file. */

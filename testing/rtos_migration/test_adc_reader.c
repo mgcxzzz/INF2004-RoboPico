@@ -24,8 +24,8 @@ static void conversions(void) {
         time_reads = 0;
         uint16_t value = 4321;
         uint32_t elapsed = 0, observed = 0, avoided = 0;
-        RlAdcPort p = {.cs = &cs, .result = &result, .now = now_mock};
-        RlAdcReason reason = rl_adc_conversion(&p, &value, &elapsed, &observed, &avoided);
+        rl_adc_port_t p = {.cs = &cs, .result = &result, .now = now_mock};
+        rl_adc_reason_t reason = rl_adc_conversion(&p, &value, &elapsed, &observed, &avoided);
         if (scenario == 0 || scenario == 1) {
             assert(reason == RL_ADC_NONE && value == 1234 && (observed & RL_ADC_READY));
             assert(avoided == (scenario == 1 ? 1U : 0U));
@@ -39,7 +39,7 @@ static void conversions(void) {
 }
 
 static void recovery(void) {
-    RlAdcHealth h = {.state = RL_ADC_QUALIFYING};
+    rl_adc_health_t h = {.state = RL_ADC_QUALIFYING};
     assert(!rl_adc_good_frame(&h) && h.good == 1);
     assert(!rl_adc_good_frame(&h) && h.good == 2);
     assert(rl_adc_good_frame(&h) && h.state == RL_ADC_HEALTHY && h.good == 3);
@@ -49,11 +49,11 @@ static void recovery(void) {
     assert(!rl_adc_can_retry(&h, 101000, true)); /* Never reset the ADC while moving. */
     assert(rl_adc_can_retry(&h, 101000, false));
     assert(!rl_adc_good_frame(&h));
-    h = (RlAdcHealth){.state = RL_ADC_QUALIFYING};
+    h = (rl_adc_health_t){.state = RL_ADC_QUALIFYING};
     assert(!rl_adc_good_frame(&h));
     rl_adc_failed(&h, 200000);
     assert(h.good == 0 && !rl_adc_good_frame(&h)); /* Invalid frame resets qualification. */
-    h = (RlAdcHealth){.state = RL_ADC_QUALIFYING};
+    h = (rl_adc_health_t){.state = RL_ADC_QUALIFYING};
     assert(!rl_adc_good_frame(&h));
     assert(!rl_adc_good_frame(&h));
     assert(rl_adc_good_frame(&h));

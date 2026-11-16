@@ -228,7 +228,7 @@ void mqtt_utk_start(void) {
             robot_pending = false;
         }
     }
-    RnStatus status = {.polls = ++robot_polls,
+    rn_status_t status = {.polls = ++robot_polls,
                        .last_poll_ms = now,
                        .ipv4 = radio.link_status == 3 ? radio.ip_addr : 0,
                        .broker_ipv4 = configured ? ip4_addr_get_u32(ip_2_ip4(&robot_broker)) : 0,

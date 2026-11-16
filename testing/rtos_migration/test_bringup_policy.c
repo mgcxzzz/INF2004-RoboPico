@@ -60,7 +60,7 @@ int main(void) {
     assert(!br_outputs_allowed(ready | BR_ACTIVE, false, 3U, false));
     assert(!br_outputs_allowed(ready, false, 3U, true));
     assert(!br_outputs_allowed(BR_READY | BR_ACTIVE, false, 3U, true));
-    BenchEncoder encoder = {0};
+    bench_encoder_t encoder = {0};
     const uint8_t forward[] = {1, 3, 2, 0};
     for (unsigned i = 0; i < 4; ++i)
         bench_encoder_update(&encoder, forward[i]);

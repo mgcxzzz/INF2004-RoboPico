@@ -1,3 +1,10 @@
+/**
+ * @file line_search.h
+ * @brief Line search.
+ * @details The control task owns mutable steering/recovery state.
+ * Keep straight, scan, turn and recovery behavior distinct; no direct PWM here.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 #ifndef BARCODE_LINE_SEARCH_H
 #define BARCODE_LINE_SEARCH_H
 #include <math.h>
@@ -46,21 +53,35 @@ enum
 };
 typedef struct
 {
-    uint64_t since, wait_since;
-    uint64_t settle_since, progress_since, still_since;
+    uint64_t since;
+    uint64_t wait_since;
+    uint64_t settle_since;
+    uint64_t progress_since;
+    uint64_t still_since;
     uint32_t mm;
     signed first : 2;
-    unsigned phase : 3, stage : 3;
-    double origin_wheel[2], last_wheel[2], progress_wheel[2];
-    float relative_yaw_deg, target_yaw_deg;
-    unsigned active : 1, waiting : 1, still_timing : 1, wheel_valid : 1,
-        progress_valid : 1, found_candidate : 1;
-} LineSearch;
+    unsigned phase : 3;
+    unsigned stage : 3;
+    double origin_wheel[2];
+    double last_wheel[2];
+    double progress_wheel[2];
+    float relative_yaw_deg;
+    float target_yaw_deg;
+    unsigned active : 1;
+    unsigned waiting : 1;
+    unsigned still_timing : 1;
+    unsigned wheel_valid : 1;
+    unsigned progress_valid : 1;
+    unsigned found_candidate : 1;
+} line_search_t;
 typedef struct
 {
     int16_t target[2];
-    unsigned stage : 3, phase : 3, reason : 6, complete : 1;
-} LineSearchDemand;
+    unsigned stage : 3;
+    unsigned phase : 3;
+    unsigned reason : 6;
+    unsigned complete : 1;
+} line_search_demand_t;
 static inline int line_search_outer (bool active, int left, int right)
 {
     return !active                  ? -1
@@ -71,282 +92,294 @@ static inline int line_search_outer (bool active, int left, int right)
 /* Count a continuous both-white interval, with a150..199 hysteresis band.
  * A credible return resets this pre-search timer; once sweeping, flashes
  * cannot renew its separate time/distance budget. */
-static inline bool line_search_ready (LineSearch * s, uint64_t now,
+static inline bool line_search_ready (line_search_t * p_state, uint64_t now,
                                       uint16_t left, uint16_t right)
 {
-    if (s->active)
+    if (p_state->active)
     {
         return true;
     }
     if (left >= 200 || right >= 200)
     {
-        s->waiting = false;
-        s->phase = LS_PHASE_IDLE;
+        p_state->waiting = false;
+        p_state->phase = LS_PHASE_IDLE;
         return false;
     }
-    if (!s->waiting)
+    if (!p_state->waiting)
     {
         if (left >= 150 || right >= 150)
         {
             return false;
         }
-        s->waiting = true;
-        s->phase = LS_PHASE_WHITE_WAIT;
-        s->wait_since = now;
+        p_state->waiting = true;
+        p_state->phase = LS_PHASE_WHITE_WAIT;
+        p_state->wait_since = now;
     }
-    return now - s->wait_since >= LS_CONFIRM_US;
+    return now - p_state->wait_since >= LS_CONFIRM_US;
 }
-static inline void line_search_begin (LineSearch * s, uint64_t now, uint32_t mm,
-                                      int direction)
+static inline void line_search_begin (line_search_t * p_state, uint64_t now,
+                                      uint32_t mm_value, int direction)
 {
-    *s = (LineSearch){.since = now,
-                      .mm = mm,
-                      .first = direction < 0 ? -1 : 1,
-                      .active = true};
+    *p_state = (line_search_t){.since = now,
+                               .mm = mm_value,
+                               .first = direction < 0 ? -1 : 1,
+                               .active = true};
 }
 /* Forward-only arcs: coast one wheel and drive the other. Their directions
  * alternate;350/700/1050/1400/1750ms durations widen the angular sweep if
  * motion is comparable in both directions. This does not claim a stationary
  * pivot or an encoder-guaranteed angle. Time also expires with zero ticks. */
-static inline LineSearchDemand line_search_step (const LineSearch * s,
-                                                 uint64_t now, uint32_t mm,
-                                                 bool confirming)
+static inline line_search_demand_t
+line_search_step (const line_search_t * p_state, uint64_t now,
+                  uint32_t mm_value, bool confirming)
 {
-    LineSearchDemand d = {0};
-    uint64_t elapsed = now - s->since;
+    line_search_demand_t demand = {0};
+    uint64_t elapsed = now - p_state->since;
     if (elapsed >= LS_TOTAL_US)
     {
-        d.reason = LS_TIMEOUT;
-        return d;
+        demand.reason = LS_TIMEOUT;
+        return demand;
     }
-    if (mm - s->mm >= LS_MAX_MM)
+    if (mm_value - p_state->mm >= LS_MAX_MM)
     {
-        d.reason = LS_DISTANCE;
-        return d;
+        demand.reason = LS_DISTANCE;
+        return demand;
     }
     uint64_t end = 350000;
-    while (d.stage < 4 && elapsed >= end)
+    while (demand.stage < 4 && elapsed >= end)
     {
-        ++d.stage;
-        end += (uint64_t)(d.stage + 1) * 350000;
+        ++demand.stage;
+        end += (uint64_t)(demand.stage + 1) * 350000;
     }
-    int direction = d.stage % 2 ? -s->first : s->first;
-    d.target[direction > 0 ? 1 : 0] = confirming ? LS_CONFIRM_SPEED : LS_SPEED;
-    return d;
+    int direction = demand.stage % 2 ? -p_state->first : p_state->first;
+    demand.target[direction > 0 ? 1 : 0] =
+        confirming ? LS_CONFIRM_SPEED : LS_SPEED;
+    return demand;
 }
 
 /* Production-only stationary search. Encoder coordinates use the same
  * forward-positive millimetres as CircuitInput.wheel; positive `first` keeps
  * the established left-recovery convention (-left,+right). Every change of
  * wheel direction crosses a zero-target, encoder-still dwell. */
-static inline float line_search_target_yaw (const LineSearch * s)
+static inline float line_search_target_yaw (const line_search_t * p_state)
 {
-    int direction = (s->stage & 1U) ? -s->first : s->first;
-    int degrees = s->stage < 2 ? LS_SMALL_ANGLE_DEG : LS_WIDE_ANGLE_DEG;
+    int direction = (p_state->stage & 1U) ? -p_state->first : p_state->first;
+    int degrees = p_state->stage < 2 ? LS_SMALL_ANGLE_DEG : LS_WIDE_ANGLE_DEG;
     /* heading_deg() uses left-minus-right, so this sign maps a left pivot to
        a negative observed yaw while preserving the optical recovery sign. */
     return (float)(-direction * degrees);
 }
-static inline void line_search_settle (LineSearch * s, uint8_t phase,
+static inline void line_search_settle (line_search_t * p_state, uint8_t phase,
                                        uint64_t now)
 {
-    s->phase = phase;
-    s->settle_since = now;
-    s->still_timing = false;
+    p_state->phase = phase;
+    p_state->settle_since = now;
+    p_state->still_timing = false;
 }
-static inline void line_search_stationary_begin (LineSearch * s, uint64_t now,
-                                                 uint32_t mm, int direction,
+static inline void line_search_stationary_begin (line_search_t * p_state,
+                                                 uint64_t now,
+                                                 uint32_t mm_value,
+                                                 int direction,
                                                  const double wheel[2])
 {
     /* With no directional memory, left is only the deterministic first leg;
        the subsequent bounded sweep covers the opposite side as well. */
-    *s = (LineSearch){.since = now,
-                      .mm = mm,
-                      .first = direction < 0 ? -1 : 1,
-                      .phase = LS_PHASE_SETTLE_START,
-                      .active = true,
-                      .wheel_valid =
-                          wheel && isfinite(wheel[0]) && isfinite(wheel[1]),
-                      .progress_valid = true};
-    if (!s->wheel_valid)
+    *p_state = (line_search_t){.since = now,
+                               .mm = mm_value,
+                               .first = direction < 0 ? -1 : 1,
+                               .phase = LS_PHASE_SETTLE_START,
+                               .active = true,
+                               .wheel_valid = wheel && isfinite(wheel[0]) &&
+                                              isfinite(wheel[1]),
+                               .progress_valid = true};
+    if (!p_state->wheel_valid)
     {
         return; /* The first step reports LS_INPUT without dereferencing pose. */
     }
-    s->origin_wheel[0] = s->last_wheel[0] = s->progress_wheel[0] = wheel[0];
-    s->origin_wheel[1] = s->last_wheel[1] = s->progress_wheel[1] = wheel[1];
-    s->target_yaw_deg = line_search_target_yaw(s);
-    s->settle_since = s->progress_since = now;
+    p_state->origin_wheel[0] = p_state->last_wheel[0] =
+        p_state->progress_wheel[0] = wheel[0];
+    p_state->origin_wheel[1] = p_state->last_wheel[1] =
+        p_state->progress_wheel[1] = wheel[1];
+    p_state->target_yaw_deg = line_search_target_yaw(p_state);
+    p_state->settle_since = p_state->progress_since = now;
 }
-static inline bool line_search_at_target (const LineSearch * s)
+static inline bool line_search_at_target (const line_search_t * p_state)
 {
-    return s->target_yaw_deg >= 0 ? s->relative_yaw_deg >= s->target_yaw_deg
-                                  : s->relative_yaw_deg <= s->target_yaw_deg;
+    return p_state->target_yaw_deg >= 0
+               ? p_state->relative_yaw_deg >= p_state->target_yaw_deg
+               : p_state->relative_yaw_deg <= p_state->target_yaw_deg;
 }
-static inline LineSearchDemand
-line_search_stationary_step (LineSearch * s, uint64_t now, uint32_t mm,
-                             const double wheel[2], const float speed[2],
-                             bool candidate, bool confirmed)
+static inline line_search_demand_t line_search_stationary_step (
+    line_search_t * p_state, uint64_t now, uint32_t mm_value,
+    const double wheel[2], const float speed[2], bool candidate, bool confirmed)
 {
-    LineSearchDemand d = {.stage = s->stage, .phase = s->phase};
-    if (!s->active)
+    line_search_demand_t demand = {.stage = p_state->stage,
+                                   .phase = p_state->phase};
+    if (!p_state->active)
     {
-        return d;
+        return demand;
     }
-    if (!s->wheel_valid || !wheel || !speed || !isfinite(wheel[0]) ||
+    if (!p_state->wheel_valid || !wheel || !speed || !isfinite(wheel[0]) ||
         !isfinite(wheel[1]) || !isfinite(speed[0]) || !isfinite(speed[1]))
     {
-        d.reason = LS_INPUT;
-        return d;
+        demand.reason = LS_INPUT;
+        return demand;
     }
-    uint64_t elapsed = now - s->since;
+    uint64_t elapsed = now - p_state->since;
     if (elapsed >= LS_TOTAL_US)
     {
-        d.reason = LS_TIMEOUT;
-        return d;
+        demand.reason = LS_TIMEOUT;
+        return demand;
     }
-    if (mm - s->mm >= LS_MAX_PATH_MM)
+    if (mm_value - p_state->mm >= LS_MAX_PATH_MM)
     {
-        d.reason = LS_DISTANCE;
-        return d;
+        demand.reason = LS_DISTANCE;
+        return demand;
     }
-    s->relative_yaw_deg = heading_deg((float)(wheel[0] - s->origin_wheel[0]),
-                                      (float)(wheel[1] - s->origin_wheel[1]));
-    if (fabsf(s->relative_yaw_deg) > LS_MAX_ANGLE_DEG)
+    p_state->relative_yaw_deg =
+        heading_deg((float)(wheel[0] - p_state->origin_wheel[0]),
+                    (float)(wheel[1] - p_state->origin_wheel[1]));
+    if (fabsf(p_state->relative_yaw_deg) > LS_MAX_ANGLE_DEG)
     {
-        d.reason = LS_ANGLE;
-        return d;
+        demand.reason = LS_ANGLE;
+        return demand;
     }
-    double delta_left = wheel[0] - s->last_wheel[0];
-    double delta_right = wheel[1] - s->last_wheel[1];
+    double delta_left = wheel[0] - p_state->last_wheel[0];
+    double delta_right = wheel[1] - p_state->last_wheel[1];
     bool ticked = fabs(delta_left) > LS_STILL_DELTA_MM_X100 / 100.0 ||
                   fabs(delta_right) > LS_STILL_DELTA_MM_X100 / 100.0;
-    s->last_wheel[0] = wheel[0];
-    s->last_wheel[1] = wheel[1];
+    p_state->last_wheel[0] = wheel[0];
+    p_state->last_wheel[1] = wheel[1];
     bool stopped = fabsf(speed[0]) < 5.0f && fabsf(speed[1]) < 5.0f && !ticked;
 
-    if (s->phase == LS_PHASE_SWEEP && ticked)
+    if (p_state->phase == LS_PHASE_SWEEP && ticked)
     {
-        s->progress_wheel[0] = wheel[0];
-        s->progress_wheel[1] = wheel[1];
-        s->progress_since = now;
+        p_state->progress_wheel[0] = wheel[0];
+        p_state->progress_wheel[1] = wheel[1];
+        p_state->progress_since = now;
     }
-    else if (s->phase == LS_PHASE_SWEEP && s->progress_valid &&
-             now - s->progress_since >= LS_STALL_US)
+    else if (p_state->phase == LS_PHASE_SWEEP && p_state->progress_valid &&
+             now - p_state->progress_since >= LS_STALL_US)
     {
-        d.reason = LS_STALL;
-        return d;
+        demand.reason = LS_STALL;
+        return demand;
     }
-    if (s->phase == LS_PHASE_SWEEP && candidate)
+    if (p_state->phase == LS_PHASE_SWEEP && candidate)
     {
-        s->found_candidate = false;
-        line_search_settle(s, LS_PHASE_CONFIRMING, now);
+        p_state->found_candidate = false;
+        line_search_settle(p_state, LS_PHASE_CONFIRMING, now);
     }
-    else if (s->phase == LS_PHASE_SWEEP && line_search_at_target(s))
+    else if (p_state->phase == LS_PHASE_SWEEP && line_search_at_target(p_state))
     {
-        line_search_settle(s, LS_PHASE_SETTLE_REVERSAL, now);
+        line_search_settle(p_state, LS_PHASE_SETTLE_REVERSAL, now);
     }
-    else if ((s->phase == LS_PHASE_SETTLE_START ||
-              s->phase == LS_PHASE_SETTLE_REVERSAL ||
-              s->phase == LS_PHASE_SETTLE_RESUME) &&
+    else if ((p_state->phase == LS_PHASE_SETTLE_START ||
+              p_state->phase == LS_PHASE_SETTLE_REVERSAL ||
+              p_state->phase == LS_PHASE_SETTLE_RESUME) &&
              candidate)
     {
-        s->found_candidate = false;
+        p_state->found_candidate = false;
         line_search_settle(
-            s, confirmed ? LS_PHASE_SETTLE_FOUND : LS_PHASE_CONFIRMING, now);
+            p_state, confirmed ? LS_PHASE_SETTLE_FOUND : LS_PHASE_CONFIRMING,
+            now);
     }
-    else if (s->phase == LS_PHASE_CONFIRMING && !candidate)
+    else if (p_state->phase == LS_PHASE_CONFIRMING && !candidate)
     {
-        s->found_candidate = false;
-        line_search_settle(s, LS_PHASE_SETTLE_RESUME, now);
+        p_state->found_candidate = false;
+        line_search_settle(p_state, LS_PHASE_SETTLE_RESUME, now);
     }
-    else if (s->phase == LS_PHASE_CONFIRMING && confirmed)
+    else if (p_state->phase == LS_PHASE_CONFIRMING && confirmed)
     {
-        s->found_candidate = true;
-        line_search_settle(s, LS_PHASE_SETTLE_FOUND, now);
+        p_state->found_candidate = true;
+        line_search_settle(p_state, LS_PHASE_SETTLE_FOUND, now);
     }
-    else if (s->phase == LS_PHASE_SETTLE_FOUND && !candidate)
+    else if (p_state->phase == LS_PHASE_SETTLE_FOUND && !candidate)
     {
-        s->found_candidate = false;
-        line_search_settle(s, LS_PHASE_SETTLE_RESUME, now);
+        p_state->found_candidate = false;
+        line_search_settle(p_state, LS_PHASE_SETTLE_RESUME, now);
     }
-    else if (s->phase == LS_PHASE_SETTLE_RESUME && confirmed)
+    else if (p_state->phase == LS_PHASE_SETTLE_RESUME && confirmed)
     {
-        s->found_candidate = true;
-        line_search_settle(s, LS_PHASE_SETTLE_FOUND, now);
+        p_state->found_candidate = true;
+        line_search_settle(p_state, LS_PHASE_SETTLE_FOUND, now);
     }
 
-    if (s->phase == LS_PHASE_SETTLE_START ||
-        s->phase == LS_PHASE_SETTLE_REVERSAL ||
-        s->phase == LS_PHASE_SETTLE_FOUND ||
-        s->phase == LS_PHASE_SETTLE_RESUME || s->phase == LS_PHASE_CONFIRMING)
+    if (p_state->phase == LS_PHASE_SETTLE_START ||
+        p_state->phase == LS_PHASE_SETTLE_REVERSAL ||
+        p_state->phase == LS_PHASE_SETTLE_FOUND ||
+        p_state->phase == LS_PHASE_SETTLE_RESUME ||
+        p_state->phase == LS_PHASE_CONFIRMING)
     {
-        if (now - s->settle_since >= LS_SETTLE_LIMIT_US &&
-            (!s->still_timing || now - s->still_since < LS_STILL_US))
+        if (now - p_state->settle_since >= LS_SETTLE_LIMIT_US &&
+            (!p_state->still_timing ||
+             now - p_state->still_since < LS_STILL_US))
         {
-            d.reason = LS_SETTLE_TIMEOUT;
-            return d;
+            demand.reason = LS_SETTLE_TIMEOUT;
+            return demand;
         }
         if (stopped)
         {
-            if (!s->still_timing)
+            if (!p_state->still_timing)
             {
-                s->still_timing = true;
-                s->still_since = now;
+                p_state->still_timing = true;
+                p_state->still_since = now;
             }
-            if (now - s->still_since >= LS_STILL_US)
+            if (now - p_state->still_since >= LS_STILL_US)
             {
-                if (s->phase == LS_PHASE_SETTLE_FOUND && s->found_candidate)
+                if (p_state->phase == LS_PHASE_SETTLE_FOUND &&
+                    p_state->found_candidate)
                 {
-                    d.complete = true;
-                    d.phase = s->phase;
-                    return d;
+                    demand.complete = true;
+                    demand.phase = p_state->phase;
+                    return demand;
                 }
-                if (s->phase == LS_PHASE_CONFIRMING)
+                if (p_state->phase == LS_PHASE_CONFIRMING)
                 {
                     /* Candidate is still being qualified; remain stopped. */
                 }
-                else if (s->phase == LS_PHASE_SETTLE_START)
+                else if (p_state->phase == LS_PHASE_SETTLE_START)
                 {
-                    s->target_yaw_deg = line_search_target_yaw(s);
-                    s->phase = LS_PHASE_SWEEP;
-                    s->progress_since = now;
-                    s->progress_valid = true;
+                    p_state->target_yaw_deg = line_search_target_yaw(p_state);
+                    p_state->phase = LS_PHASE_SWEEP;
+                    p_state->progress_since = now;
+                    p_state->progress_valid = true;
                 }
-                else if (line_search_at_target(s))
+                else if (line_search_at_target(p_state))
                 {
-                    if (++s->stage >= 4)
+                    if (++p_state->stage >= 4)
                     {
-                        d.reason = LS_SWEEPS_EXHAUSTED;
-                        return d;
+                        demand.reason = LS_SWEEPS_EXHAUSTED;
+                        return demand;
                     }
-                    s->target_yaw_deg = line_search_target_yaw(s);
-                    s->phase = LS_PHASE_SWEEP;
-                    s->progress_since = now;
+                    p_state->target_yaw_deg = line_search_target_yaw(p_state);
+                    p_state->phase = LS_PHASE_SWEEP;
+                    p_state->progress_since = now;
                 }
                 else
                 {
-                    s->phase = LS_PHASE_SWEEP;
-                    s->progress_since = now;
+                    p_state->phase = LS_PHASE_SWEEP;
+                    p_state->progress_since = now;
                 }
-                s->progress_wheel[0] = wheel[0];
-                s->progress_wheel[1] = wheel[1];
-                s->still_timing = false;
+                p_state->progress_wheel[0] = wheel[0];
+                p_state->progress_wheel[1] = wheel[1];
+                p_state->still_timing = false;
             }
         }
         else
         {
-            s->still_timing = false;
+            p_state->still_timing = false;
         }
     }
-    if (s->phase == LS_PHASE_SWEEP)
+    if (p_state->phase == LS_PHASE_SWEEP)
     {
-        int direction = (s->stage & 1U) ? -s->first : s->first;
-        d.target[0] = (int16_t)(-direction * LS_STATIONARY_SPEED);
-        d.target[1] = (int16_t)(direction * LS_STATIONARY_SPEED);
+        int direction =
+            (p_state->stage & 1U) ? -p_state->first : p_state->first;
+        demand.target[0] = (int16_t)(-direction * LS_STATIONARY_SPEED);
+        demand.target[1] = (int16_t)(direction * LS_STATIONARY_SPEED);
     }
-    d.stage = s->stage;
-    d.phase = s->phase;
-    return d;
+    demand.stage = p_state->stage;
+    demand.phase = p_state->phase;
+    return demand;
 }
 #endif
 

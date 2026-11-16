@@ -10,16 +10,16 @@ static uint64_t now(void *p) {
     (void)p;
     return clock_us;
 }
-static const LineCalibration cal = {{164, 168}, {3514, 3389}, 7};
+static const line_calibration_t cal = {{164, 168}, {3514, 3389}, 7};
 typedef struct {
-    Circuit c;
-    BarcodeNav n;
-    BarcodeAnalog a;
-    SmoothFollow old;
-    ScanSmooth s;
-    SignedWheel wheel[2];
+    circuit_t c;
+    barcode_nav_t n;
+    barcode_analog_t a;
+    smooth_follow_t old;
+    scan_smooth_t s;
+    signed_wheel_t wheel[2];
 } Rig;
-static void init(Rig *r, const CircuitInput *i) {
+static void init(Rig *r, const circuit_input_t *i) {
     memset(r, 0, sizeof(*r));
     circuit_begin(&r->c, i);
     barcode_nav_begin(&r->n, i);
@@ -29,11 +29,11 @@ int main(void) {
     unsigned ticks = 0, restarts = 0;
     for (unsigned profile = 1; profile <= 3; ++profile) {
         Rig baseline, routed;
-        CircuitInput i = {.now = 1000, .adc = {3514, 3389}, .speed = {45, 45}};
+        circuit_input_t i = {.now = 1000, .adc = {3514, 3389}, .speed = {45, 45}};
         init(&baseline, &i);
         init(&routed, &i);
         clock_us = i.now;
-        MotionPort p = {.now_us = now};
+        motion_port_t p = {.now_us = now};
         motion_init(&p);
         motion_session_begin(clock_us);
         for (unsigned k = 0; k < 3000; ++k) {
@@ -53,9 +53,9 @@ int main(void) {
                 barcode_analog_sample(&routed.a, &routed.n, adc, i.now - 8000 + 2000 * t, i.wheel);
             }
             i.side_black = baseline.a.black;
-            AnalogDemand a = scan_smooth_step(&baseline.c, &baseline.n, &cal, &i, profile,
+            analog_demand_t a = scan_smooth_step(&baseline.c, &baseline.n, &cal, &i, profile,
                                               &baseline.old, &baseline.a, &baseline.s, .01f);
-            AnalogDemand b = scan_smooth_step(&routed.c, &routed.n, &cal, &i, profile, &routed.old,
+            analog_demand_t b = scan_smooth_step(&routed.c, &routed.n, &cal, &i, profile, &routed.old,
                                               &routed.a, &routed.s, .01f);
             assert(a.stop == b.stop && a.decision == b.decision &&
                    baseline.c.phase == routed.c.phase);
@@ -68,13 +68,13 @@ int main(void) {
                 continue;
             }
             assert(nav_submit_navigation(MOTION_BUDDY3, b.target[0], b.target[1]) == MOTION_OK);
-            MotionFeedback f = {.now_us = i.now,
+            motion_feedback_t f = {.now_us = i.now,
                                 .wheel_mm = {i.wheel[0], i.wheel[1]},
                                 .speed_mm_s = {45, 45},
                                 .line_level = {b.level[0], b.level[1]},
                                 .navigation_busy = routed.c.busy,
                                 .pending_route = routed.n.pending};
-            MotionOutput o = motion_update(&f);
+            motion_output_t o = motion_update(&f);
             assert(!o.external && !o.reset_controllers && !o.resume_navigation);
             for (unsigned w = 0; w < 2; ++w) {
                 assert(a.target[w] == o.target_mm_s[w]);

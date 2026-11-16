@@ -1,3 +1,10 @@
+/**
+ * @file barcode_capture.h
+ * @brief Barcode capture.
+ * @details Pure barcode/route logic is called by the ADC owner and emits requests.
+ * Native records are not wire packets; preserve both decode directions.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 #ifndef BARCODE_CAPTURE_H
 #define BARCODE_CAPTURE_H
 #include "src/barcode/barcode_scan.h"
@@ -6,18 +13,18 @@ typedef struct
     uint64_t us;
     int64_t ticks[2];
     bool black;
-} BarcodeEdge;
+} barcode_edge_t;
 typedef struct
 {
-    BarcodeEdge edge[B_EDGE_QUEUE];
+    barcode_edge_t edge[B_EDGE_QUEUE];
     volatile uint16_t head, tail;
     volatile uint32_t overflow;
     uint64_t candidate_us;
     int64_t candidate_ticks[2];
     volatile bool stable;
     bool candidate;
-} BarcodeCapture;
-static inline void barcode_capture_reset (BarcodeCapture * s, bool black,
+} barcode_capture_t;
+static inline void barcode_capture_reset (barcode_capture_t * s, bool black,
                                           uint64_t now)
 {
     s->head = s->tail = 0;
@@ -27,7 +34,7 @@ static inline void barcode_capture_reset (BarcodeCapture * s, bool black,
 }
 /* 1ms producer: only integer snapshots, no floating point or decoding in ISR.
    Require2ms stable D0; timestamp/counts retain the FIRST candidate sample. */
-static inline void barcode_capture_tick (BarcodeCapture * s, uint64_t now,
+static inline void barcode_capture_tick (barcode_capture_t * s, uint64_t now,
                                          bool black, int64_t left,
                                          int64_t right)
 {
@@ -49,14 +56,15 @@ static inline void barcode_capture_tick (BarcodeCapture * s, uint64_t now,
         ++s->overflow;
         return;
     }
-    s->edge[s->head] =
-        (BarcodeEdge){.us = s->candidate_us,
-                      .ticks = {s->candidate_ticks[0], s->candidate_ticks[1]},
-                      .black = s->stable};
+    s->edge[s->head] = (barcode_edge_t){
+        .us = s->candidate_us,
+        .ticks = {s->candidate_ticks[0], s->candidate_ticks[1]},
+        .black = s->stable};
     s->head = (uint16_t)next;
 }
 /* Call only with IRQs masked; producer and consumer share the same core. */
-static inline bool barcode_capture_pop (BarcodeCapture * s, BarcodeEdge * e)
+static inline bool barcode_capture_pop (barcode_capture_t * s,
+                                        barcode_edge_t * e)
 {
     if (s->head == s->tail)
     {

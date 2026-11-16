@@ -1,3 +1,10 @@
+/**
+ * @file imu_service.h
+ * @brief Imu service.
+ * @details Sensor processing owns calibration/terrain state; RTOS readers use copies.
+ * Height acceptance and motor assistance are separate from end-run safety.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 /* Buddy4 IMU/ramp add-on for the v2.3 SDK firmware: narrow interface used by
  * buddy4_harness.h (included in the v2.3 main translation unit). Plain types
  * only, so no Buddy4 macro reaches v2.3's translation unit. */
@@ -16,8 +23,10 @@ typedef struct
     uint32_t age_ms;   /* since that interval was drained             */
     double centre_mm;  /* signed net centre distance since boot       */
     double heading_dd; /* (left-right)/110 mm track, 0.1 degree        */
-    float left_mm_s, right_mm_s; /* v2.3 velocity[] (0.25 EMA)          */
-    uint32_t invalid_left, invalid_right; /* v2.3 cumulative counters       */
+    float left_mm_s;
+    float right_mm_s; /* v2.3 velocity[] (0.25 EMA)          */
+    uint32_t invalid_left;
+    uint32_t invalid_right; /* v2.3 cumulative counters       */
 } b4v23_odo_t;
 
 /* Mission edge requests, mapped from v2.3 run state by the harness. */
@@ -30,13 +39,13 @@ typedef enum
     B4V23_RESET
 } b4v23_mission_t;
 
-typedef bool (*b4v23_send_fn)(const uint8_t * frame, uint32_t len);
+typedef bool (*b4v23_send_fn)(const uint8_t * p_frame, uint32_t len);
 
-void b4v23_init (b4v23_send_fn send, bool console);
+void b4v23_init (b4v23_send_fn p_send, bool console);
 /* Call each superloop pass; does work only when a 20 ms period is due. */
 bool b4v23_due (uint64_t now_us);
 void b4v23_tick (uint64_t now_us, b4v23_mission_t mission,
-                 const b4v23_odo_t * odo);
+                 const b4v23_odo_t * p_odo);
 uint32_t
 b4v23_last_tick_us (void); /* duration of the last tick (I2C + processing) */
 uint32_t b4v23_max_tick_us (void);
@@ -55,7 +64,7 @@ typedef struct
     bool tracking; /* this period processed while Tracking/Hump      */
     uint8_t quality_reasons; /* this period's side exclusion bitmask (B4_Q_*) */
 } b4v23_tilt_t;
-void b4v23_tilt (b4v23_tilt_t * out);
+void b4v23_tilt (b4v23_tilt_t * p_out);
 #endif
 
 /* End of file. */

@@ -6,7 +6,7 @@
 #undef main
 int main(void) {
     now_us = 1000000;
-    MotionPort port = {0};
+    motion_port_t port = {0};
     motion_init(&port);
     motion_session_begin(now_us);
     begin_main();

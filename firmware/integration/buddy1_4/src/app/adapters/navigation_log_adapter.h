@@ -1,3 +1,10 @@
+/**
+ * @file navigation_log_adapter.h
+ * @brief Navigation log adapter.
+ * @details Public feature contract. Requests cross coordinator ownership checks;
+ * callers observe completion/status separately and must respect task context.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 /* Included in the standalone hardware main. z is independent of p/j. */
 #include "src/navigation/nav_log_storage.h"
 #define INTERFACE_LOG_OFFSET (RAW_OFFSET - NAV_LOG_FLASH_BYTES)
@@ -15,7 +22,7 @@ static void interface_save_nav_log (void)
     }
     unsigned count = motion_log_count(), overwritten = motion_log_overwritten();
     uint8_t header[NAV_LOG_HEADER], packet[NAV_EVENT_BYTES], page[256];
-    MotionEvent e;
+    motion_event_t e;
     uint32_t crc = UINT32_MAX;
     for (unsigned n = 0; n < count; ++n)
     {
@@ -121,7 +128,7 @@ static void interface_dump_nav_log (void)
          "rotation_deg,targetL_mm_s,targetR_mm_s,overflow");
     for (unsigned n = 0; n < count; ++n)
     {
-        MotionEvent e;
+        motion_event_t e;
         bool overflow = false;
         if (restored)
         {
@@ -142,7 +149,7 @@ static void interface_dump_nav_log (void)
                e.owner, (unsigned long)e.id, interface_event(e.type),
                interface_kind(e.kind), (double)e.goal, e.speed,
                e.style ? "IN_PLACE" : "ROLLING",
-               motion_result_name((MotionResult)e.result), e.state, e.fault,
+               motion_result_name((motion_result_t)e.result), e.state, e.fault,
                (double)e.progress_mm, (double)e.rotation_deg, e.target_mm_s[0],
                e.target_mm_s[1], overflow);
         stdio_flush();

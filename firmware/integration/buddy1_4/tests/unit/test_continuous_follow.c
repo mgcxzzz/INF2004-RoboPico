@@ -3,7 +3,7 @@
 #include <string.h>
 #include "src/barcode/barcode_nav.h"
 
-static AnalogDemand observed_raw, observed_soft;
+static analog_demand_t observed_raw, observed_soft;
 static unsigned raw_calls, soft_calls;
 #define DRIVE_DIAG_RAW(d)                                                                          \
     do {                                                                                           \
@@ -20,35 +20,35 @@ static unsigned raw_calls, soft_calls;
     } while (0)
 #include "src/line_following/continuous_follow.h"
 
-static const LineCalibration cal = {{163, 160}, {3457, 3700}, 7};
+static const line_calibration_t cal = {{163, 160}, {3457, 3700}, 7};
 
 typedef struct {
-    Circuit c;
-    BarcodeNav n;
-    BarcodeAnalog a;
-    SmoothFollow legacy;
-    ScanSmooth scan;
-    ContinuousSteering steering;
-    CircuitInput i;
-    AnalogDemand d;
+    circuit_t c;
+    barcode_nav_t n;
+    barcode_analog_t a;
+    smooth_follow_t legacy;
+    scan_smooth_t scan;
+    continuous_steering_t steering;
+    circuit_input_t i;
+    analog_demand_t d;
 } Rig;
 
 static void init(Rig *r) {
     memset(r, 0, sizeof(*r));
-    r->i = (CircuitInput){.now = 1000, .adc = {3457, 3700}, .speed = {45, 45}};
+    r->i = (circuit_input_t){.now = 1000, .adc = {3457, 3700}, .speed = {45, 45}};
     circuit_begin(&r->c, &r->i);
     barcode_nav_begin(&r->n, &r->i);
     barcode_analog_begin(&r->a, &r->n, 180, r->i.now, r->i.wheel);
 }
 
-static void same_demand(AnalogDemand a, AnalogDemand b) {
+static void same_demand(analog_demand_t a, analog_demand_t b) {
     assert(a.target[0] == b.target[0] && a.target[1] == b.target[1]);
     assert(a.level[0] == b.level[0] && a.level[1] == b.level[1]);
     assert(a.decision == b.decision && a.stop == b.stop);
 }
 
-static void same_navigation(const Circuit *a, const Circuit *b, const BarcodeNav *na,
-                            const BarcodeNav *nb) {
+static void same_navigation(const circuit_t *a, const circuit_t *b, const barcode_nav_t *na,
+                            const barcode_nav_t *nb) {
     assert(a->phase == b->phase && a->busy == b->busy && a->fault == b->fault);
     assert(a->turns == b->turns && a->ignored == b->ignored);
     assert(memcmp(&a->follower, &b->follower, sizeof(a->follower)) == 0);
@@ -94,7 +94,7 @@ static void ordinary_and_optical_parity(unsigned profile) {
         follow.d =
             continuous_follow_step(&follow.c, &follow.n, &cal, &follow.i, profile, &follow.legacy,
                                    &follow.a, &follow.scan, &follow.steering, .01f);
-        AnalogDemand expected = barcode_circuit_step(&raw.c, &raw.n, &cal, &raw.i, profile);
+        analog_demand_t expected = barcode_circuit_step(&raw.c, &raw.n, &cal, &raw.i, profile);
         same_demand(observed_raw, expected);
         same_navigation(&follow.c, &raw.c, &follow.n, &raw.n);
         bool eligible = follow.c.phase == C_FOLLOW && !follow.c.busy && !expected.stop &&
@@ -143,7 +143,7 @@ static void profile2_is_exact_legacy(void) {
         sample_bars(&modern, &legacy, bar_adc);
         modern.d = continuous_follow_step(&modern.c, &modern.n, &cal, &modern.i, 2, &modern.legacy,
                                           &modern.a, &modern.scan, &modern.steering, .01f);
-        AnalogDemand expected = scan_smooth_step(&legacy.c, &legacy.n, &cal, &legacy.i, 2,
+        analog_demand_t expected = scan_smooth_step(&legacy.c, &legacy.n, &cal, &legacy.i, 2,
                                                  &legacy.legacy, &legacy.a, &legacy.scan, .01f);
         same_demand(modern.d, expected);
         same_navigation(&modern.c, &legacy.c, &modern.n, &legacy.n);
@@ -158,8 +158,8 @@ static void profile2_is_exact_legacy(void) {
         if (modern.d.stop) {
             circuit_begin(&modern.c, &modern.i);
             circuit_begin(&legacy.c, &legacy.i);
-            modern.scan = (ScanSmooth){0};
-            legacy.scan = (ScanSmooth){0};
+            modern.scan = (scan_smooth_t){0};
+            legacy.scan = (scan_smooth_t){0};
         }
     }
 }
@@ -171,7 +171,7 @@ static void bypass_paths(void) {
         init(&modern);
         init(&oracle);
         modern.steering =
-            (ContinuousSteering){.mean = 42, .half = 7, .emitted = {35, 49}, .active = true};
+            (continuous_steering_t){.mean = 42, .half = 7, .emitted = {35, 49}, .active = true};
         oracle.i = modern.i;
         if (ncase == 0) {
             modern.c.follower.core.white = true;
@@ -189,10 +189,10 @@ static void bypass_paths(void) {
             modern.n.busy = oracle.n.busy = true;
             modern.n.action = oracle.n.action = 'A';
         }
-        AnalogDemand out =
+        analog_demand_t out =
             continuous_follow_step(&modern.c, &modern.n, &cal, &modern.i, 1, &modern.legacy,
                                    &modern.a, &modern.scan, &modern.steering, .01f);
-        AnalogDemand original = barcode_circuit_step(&oracle.c, &oracle.n, &cal, &oracle.i, 1);
+        analog_demand_t original = barcode_circuit_step(&oracle.c, &oracle.n, &cal, &oracle.i, 1);
         same_demand(observed_raw, original);
         same_demand(out, original);
         assert(!modern.steering.active);
@@ -245,7 +245,7 @@ static void route_parity(char code, bool reverse) {
         sample_bars(&modern, &oracle, adc);
         modern.d = continuous_follow_step(&modern.c, &modern.n, &cal, &modern.i, 1, &modern.legacy,
                                           &modern.a, &modern.scan, &modern.steering, .01f);
-        AnalogDemand expected = barcode_circuit_step(&oracle.c, &oracle.n, &cal, &oracle.i, 1);
+        analog_demand_t expected = barcode_circuit_step(&oracle.c, &oracle.n, &cal, &oracle.i, 1);
         same_demand(observed_raw, expected);
         same_navigation(&modern.c, &oracle.c, &modern.n, &oracle.n);
         if (modern.c.busy) {

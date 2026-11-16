@@ -41,8 +41,8 @@ static void tick(const b4v23_odo_t *odo) {
     host_now_us += 20000;
     b4v23_tick(host_now_us, B4V23_NONE, odo);
 }
-static RiCalibration view(void) {
-    RiCalibration d;
+static ri_calibration_t view(void) {
+    ri_calibration_t d;
     b4v23_calibration(&d);
     return d;
 }
@@ -60,7 +60,7 @@ int main(void) {
     fake_ok = true;
     for (unsigned i = 0; i < 110; ++i)
         tick(NULL);
-    RiCalibration d = view();
+    ri_calibration_t d = view();
     assert(d.state == IMU_ST_IDLE && !d.fault && d.progress == 100 && d.best == 100);
     assert(!d.restarts && d.failed_reads == 1);
 

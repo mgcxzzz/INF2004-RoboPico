@@ -6,13 +6,13 @@
 #ifndef CIRCUIT_SWEEP_SEARCH
 #error Build with CIRCUIT_SWEEP_SEARCH=1
 #endif
-static const LineCalibration cal = {{184, 184}, {3464, 3692}, 7};
+static const line_calibration_t cal = {{184, 184}, {3464, 3692}, 7};
 static void continuous_white_wait(void) {
-    CircuitTracker t = {0};
+    circuit_tracker_t t = {0};
     uint64_t now = 1000;
     (void)circuit_line_demand(&t, &cal, 3464, 184, now, 0);
     now += 10000;
-    AnalogDemand d = circuit_line_demand(&t, &cal, 184, 184, now, 0);
+    analog_demand_t d = circuit_line_demand(&t, &cal, 184, 184, now, 0);
     assert(t.search.waiting && !t.search.active);
     uint64_t first = now;
     now = first + LS_BRIDGE_US;
@@ -34,16 +34,16 @@ static void continuous_white_wait(void) {
     ++now;
     d = circuit_line_demand(&t, &cal, 184, 184, now, 2);
     assert(t.search.active && d.decision == 19);
-    BarcodeNav nav = {.start_us = 1000};
+    barcode_nav_t nav = {.start_us = 1000};
     barcode_recovery_events(&nav, now, 0, true, true, false, 11, &t, &d, 0);
     assert(nav.event_count == 1 && nav.events[0].type == B_RECOVERY_SWEEP &&
            nav.events[0].flags == 1);
     t.core.white = false;
-    t.search = (LineSearch){0};
-    d = (AnalogDemand){.target = {45, 45}};
+    t.search = (line_search_t){0};
+    d = (analog_demand_t){.target = {45, 45}};
     barcode_recovery_events(&nav, now + 10000, 1, true, false, true, 19, &t, &d, 0);
     assert(nav.event_count == 2 && nav.events[1].type == B_RECOVERY_FOUND);
-    LineSearch s = {0};
+    line_search_t s = {0};
     assert(!line_search_ready(&s, 1000, 0, 0));
     assert(!line_search_ready(&s, LS_CONFIRM_US, 170, 190));
     assert(line_search_ready(&s, 1000 + LS_CONFIRM_US, 170, 190));
@@ -52,10 +52,10 @@ static void continuous_white_wait(void) {
 static void schedule_tests(void) {
     const unsigned at[] = {0, 350000, 1050000, 2100000, 3500000};
     for (int direction = -1; direction <= 1; direction += 2) {
-        LineSearch s;
+        line_search_t s;
         line_search_begin(&s, 1000, 10, direction);
         for (unsigned stage = 0; stage < 5; ++stage) {
-            LineSearchDemand d = line_search_step(&s, 1000 + at[stage], 10, false);
+            line_search_demand_t d = line_search_step(&s, 1000 + at[stage], 10, false);
             assert(!d.reason && d.stage == stage);
             int wanted = stage % 2 ? -direction : direction;
             assert(d.target[wanted > 0 ? 1 : 0] == LS_SPEED && !d.target[wanted > 0 ? 0 : 1]);
@@ -70,10 +70,10 @@ static void schedule_tests(void) {
     }
 }
 static void mirrored_reacquire(int direction) {
-    CircuitTracker t = {0};
+    circuit_tracker_t t = {0};
     uint64_t now = 1000;
     uint16_t l = direction > 0 ? 3464 : 184, r = direction > 0 ? 184 : 3692;
-    AnalogDemand d = circuit_line_demand(&t, &cal, l, r, now, 0);
+    analog_demand_t d = circuit_line_demand(&t, &cal, l, r, now, 0);
     assert(!d.stop);
     assert(t.core.direction == direction);
     now += 10000;
@@ -111,7 +111,7 @@ static void mirrored_reacquire(int direction) {
     assert(d.target[0] == expected[0] && d.target[1] == expected[1]);
 }
 static void short_gap_and_visible(void) {
-    CircuitTracker t = {0};
+    circuit_tracker_t t = {0};
     uint64_t now = 1000;
     circuit_line_demand(&t, &cal, 3464, 184, now, 0);
     now += 10000;
@@ -119,39 +119,39 @@ static void short_gap_and_visible(void) {
     now += 50000;
     circuit_line_demand(&t, &cal, 3464, 184, now, 0);
     now += 40000;
-    AnalogDemand d = circuit_line_demand(&t, &cal, 3464, 184, now, 0);
+    analog_demand_t d = circuit_line_demand(&t, &cal, 3464, 184, now, 0);
     assert(!d.stop && !t.search.active && !t.core.white);
     for (unsigned k = 0; k < 1000; ++k) {
         now += 10000;
         d = circuit_line_demand(&t, &cal, 3464, 184, now, k);
         assert(!d.stop && !t.search.active && d.target[0] == 0 && d.target[1] == 45);
     }
-    LineCalibration bad = cal;
+    line_calibration_t bad = cal;
     bad.mask = 0;
-    t = (CircuitTracker){0};
+    t = (circuit_tracker_t){0};
     assert(circuit_line_demand(&t, &bad, 184, 184, now, 0).stop && !t.search.active);
 }
 static void effort_and_queue(void) {
     for (unsigned outer = 0; outer < 2; ++outer) {
-        SignedWheel p = {0};
-        ManeuverPower power = {0};
+        signed_wheel_t p = {0};
+        maneuver_power_t power = {0};
         int32_t pwm = maneuver_wheel_step(&power, &p, outer, LS_SPEED, 0, .01f, 1000);
         assert(pwm == M_PEAK && p.peak_active && p.peak_used);
-        DualLevels levels = maneuver_levels(outer, pwm, false);
+        dual_levels_t levels = maneuver_levels(outer, pwm, false);
         assert((outer == 0 ? levels.a : levels.b) == pwm);
         assert(line_search_outer(true, outer == 0 ? 45 : 0, outer == 1 ? 45 : 0) == (int)outer);
         assert(!maneuver_wheel_step(&power, &p, outer, 0, 20, .01f, 2000));
     }
     assert(line_search_outer(false, 0, 45) == -1 && line_search_outer(true, 30, 45) == -1);
-    Circuit c;
-    BarcodeNav n;
-    CircuitInput i = {.now = 1000, .adc = {184, 184}};
+    circuit_t c;
+    barcode_nav_t n;
+    circuit_input_t i = {.now = 1000, .adc = {184, 184}};
     circuit_begin(&c, &i);
     barcode_nav_begin(&n, &i);
     n.pending = 'A';
     n.cross_ready = n.cross_gate = true;
     n.cross_width = 18;
-    AnalogDemand d = barcode_circuit_step(&c, &n, &cal, &i, 1);
+    analog_demand_t d = barcode_circuit_step(&c, &n, &cal, &i, 1);
     assert(!d.stop && !c.busy && n.pending == 'A' && !n.allow_cross && c.ignored == 1);
     i.now += LS_CONFIRM_US;
     d = barcode_circuit_step(&c, &n, &cal, &i, 1);
@@ -161,10 +161,10 @@ static void effort_and_queue(void) {
     assert(d.stop && c.fault && c.reason == LS_TIMEOUT && n.pending == 'A');
 }
 static void alignment_allows_search_budget(void) {
-    Circuit c = {.busy = true, .phase = J_ACQUIRE, .turn = {.phase = J_ACQUIRE, .phase_us = 1000}};
-    BarcodeNav nav = {.busy = true, .action = 'A'};
-    CircuitInput i = {.now = 1000, .adc = {184, 184}};
-    AnalogDemand d = barcode_circuit_step(&c, &nav, &cal, &i, 1);
+    circuit_t c = {.busy = true, .phase = J_ACQUIRE, .turn = {.phase = J_ACQUIRE, .phase_us = 1000}};
+    barcode_nav_t nav = {.busy = true, .action = 'A'};
+    circuit_input_t i = {.now = 1000, .adc = {184, 184}};
+    analog_demand_t d = barcode_circuit_step(&c, &nav, &cal, &i, 1);
     assert(!d.stop);
     i.now += LS_CONFIRM_US;
     d = barcode_circuit_step(&c, &nav, &cal, &i, 1);

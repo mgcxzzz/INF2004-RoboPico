@@ -1,3 +1,10 @@
+/**
+ * @file bringup_policy.h
+ * @brief Bringup policy.
+ * @details Core1 owns normal motor commits. Safety paths may only remove output;
+ * command/status access uses the existing kernel locks and copied records.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 #ifndef RTOS_BRINGUP_POLICY_H
 #define RTOS_BRINGUP_POLICY_H
 

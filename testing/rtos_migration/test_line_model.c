@@ -5,24 +5,24 @@
 #define CIRCUIT_SWEEP_SEARCH 1
 #include "app_program/line_navigation/line_model.h"
 
-static void same(AnalogDemand a, AnalogDemand b) {
+static void same(analog_demand_t a, analog_demand_t b) {
     assert(a.target[0] == b.target[0] && a.target[1] == b.target[1]);
     assert(a.level[0] == b.level[0] && a.level[1] == b.level[1]);
     assert(a.decision == b.decision && a.stop == b.stop);
 }
 
 static void test_planner_parity(void) {
-    static LinePlanner p;
-    static BarcodeAnalog a;
-    CircuitInput i = {.now = 1000, .adc = {3400, 3600}, .speed = {45, 45}};
+    static line_planner_t p;
+    static barcode_analog_t a;
+    circuit_input_t i = {.now = 1000, .adc = {3400, 3600}, .speed = {45, 45}};
     rl_begin(&p, &i, 180);
-    Circuit ref = p.circuit;
-    BarcodeNav nav = p.nav;
-    ContinuousSteering steering = {0};
-    ScanSmooth scan = {0};
-    SmoothFollow legacy = {0};
+    circuit_t ref = p.circuit;
+    barcode_nav_t nav = p.nav;
+    continuous_steering_t steering = {0};
+    scan_smooth_t scan = {0};
+    smooth_follow_t legacy = {0};
     a.baseline = a.adc = 180;
-    LineCalibration cal = successful_calibration();
+    line_calibration_t cal = successful_calibration();
     /* Straight, sustained bend, alternating return, brief white, recovery,
      * scan-activity entry/exit and long white search. No manufactured ADCs
      * are used by the firmware: these samples are host-only stimuli. */
@@ -44,8 +44,8 @@ static void test_planner_parity(void) {
         else
             i.adc[0] = 3000, i.adc[1] = 2300;
         a.adc = p.side_adc = n >= 420 && n < 460 ? 250 : 180;
-        AnalogDemand actual = rl_follow(&p, &cal, &i, .01f);
-        AnalogDemand expected =
+        analog_demand_t actual = rl_follow(&p, &cal, &i, .01f);
+        analog_demand_t expected =
             continuous_follow_step(&ref, &nav, &cal, &i, 1, &legacy, &a, &scan, &steering, .01f);
         same(actual, expected);
         assert(p.circuit.phase == ref.phase && p.circuit.reason == ref.reason);
@@ -53,7 +53,7 @@ static void test_planner_parity(void) {
     }
 }
 
-static void cross_sample(LinePlanner *p, unsigned adc, uint64_t t, double mm) {
+static void cross_sample(line_planner_t *p, unsigned adc, uint64_t t, double mm) {
     const double wheel[2] = {mm, mm};
     rl_side(p, (uint16_t)adc, t, wheel);
     rl_side(p, (uint16_t)adc, t + 2000, wheel);
@@ -62,24 +62,24 @@ static void cross_sample(LinePlanner *p, unsigned adc, uint64_t t, double mm) {
 static void test_join_parity(void) {
     const char routes[] = {'A', 'F', 'Z'};
     for (unsigned route = 0; route < 3; ++route) {
-        static LinePlanner p;
-        static BarcodeAnalog a;
+        static line_planner_t p;
+        static barcode_analog_t a;
         memset(&a, 0, sizeof(a));
-        CircuitInput i = {.now = 1000000, .path = 100, .speed = {45, 45}};
+        circuit_input_t i = {.now = 1000000, .path = 100, .speed = {45, 45}};
         i.wheel[route == 1 ? 0 : 1] = 172.7876;
         rl_begin(&p, &i, 180);
         p.circuit.phase = J_ACQUIRE;
         p.circuit.busy = p.nav.busy = true;
         p.circuit.turn =
-            (Junction){.phase = J_ACQUIRE, .phase_us = i.now, .rolling = true, .exit_origin = 100};
+            (junction_t){.phase = J_ACQUIRE, .phase_us = i.now, .rolling = true, .exit_origin = 100};
         p.nav.action = routes[route];
-        Circuit ref = p.circuit;
-        BarcodeNav nav = p.nav;
-        ContinuousSteering steering = {0};
-        ScanSmooth scan = {0};
-        SmoothFollow legacy = {0};
+        circuit_t ref = p.circuit;
+        barcode_nav_t nav = p.nav;
+        continuous_steering_t steering = {0};
+        scan_smooth_t scan = {0};
+        smooth_follow_t legacy = {0};
         a.baseline = a.adc = 180;
-        LineCalibration cal = successful_calibration();
+        line_calibration_t cal = successful_calibration();
         for (unsigned n = 0; n < 100; ++n) {
             i.now += 10000;
             i.path += .45;
@@ -98,8 +98,8 @@ static void test_join_parity(void) {
 }
 
 static void test_cross(void) {
-    LinePlanner p;
-    CircuitInput i = {.now = 1000};
+    line_planner_t p;
+    circuit_input_t i = {.now = 1000};
     rl_begin(&p, &i, 180);
     p.nav.allow_cross = true;
     assert(barcode_set_pending(&p.nav, 'A'));
@@ -123,31 +123,31 @@ static void test_cross(void) {
 }
 
 static void test_calibration(void) {
-    static BarcodeSaved sdk;
+    static barcode_saved_t sdk;
     uint8_t page[256];
     memset(page, 0xff, sizeof(page));
     memset(&sdk, 0, sizeof(sdk));
     uint32_t origin = 99;
-    LineCalibration cal = rl_boot_cal(page, &sdk, &origin);
+    line_calibration_t cal = rl_boot_cal(page, &sdk, &origin);
     assert(origin == 0 && cal.black[1] == 3700);
     sdk.magic = B_MAGIC;
     sdk.version = 28;
     sdk.profile = sdk.recorded_profile = 1;
-    sdk.side = (SideCalibration){0, 1, 3};
-    sdk.calibration = (LineCalibration){{122, 138}, {246, 267}, 7};
+    sdk.side = (side_calibration_t){0, 1, 3};
+    sdk.calibration = (line_calibration_t){{122, 138}, {246, 267}, 7};
     sdk.crc =
-        log_crc((const uint8_t *)&sdk + offsetof(BarcodeSaved, count), barcode_record_crc_size(28));
+        log_crc((const uint8_t *)&sdk + offsetof(barcode_saved_t, count), barcode_record_crc_size(28));
     assert(barcode_record_valid(&sdk));
     cal = rl_boot_cal(page, &sdk, &origin);
     assert(origin == 1 && cal.white[0] == 122 && cal.black[1] == 267);
-    LineCalibration own = {{180, 190}, {900, 1000}, 7};
+    line_calibration_t own = {{180, 190}, {900, 1000}, 7};
     rl_cal_encode(page, &own);
     cal = rl_boot_cal(page, &sdk, &origin);
     assert(origin == 2 && cal.white[0] == own.white[0] && cal.white[1] == own.white[1] &&
            cal.black[0] == own.black[0] && cal.black[1] == own.black[1] && cal.mask == own.mask);
     for (unsigned n = 0; n < 256; ++n) {
         page[n] ^= 1;
-        LineCalibration invalid;
+        line_calibration_t invalid;
         assert(!rl_cal_decode(page, &invalid));
         page[n] ^= 1;
     }
@@ -160,26 +160,26 @@ static void test_calibration(void) {
 }
 
 static void test_envelopes(void) {
-    LineEnvelope e = {
+    line_envelope_t e = {
         .output = {750, -750}, .until = {10000, 10000}, .maneuver = true, .reverse = true};
     for (unsigned w = 0; w < 2; ++w) {
-        DualLevels before = rl_levels(&e, w, 9999);
-        DualLevels after = rl_levels(&e, w, 10000);
+        dual_levels_t before = rl_levels(&e, w, 9999);
+        dual_levels_t after = rl_levels(&e, w, 10000);
         assert(before.a + before.b == 750 && after.a + after.b == 600);
         assert(!before.b && !after.b); /* Left forward and right reverse. */
         e.reverse = false;
-        DualLevels forward = rl_levels(&e, w, 10000);
+        dual_levels_t forward = rl_levels(&e, w, 10000);
         assert(w == 0 ? forward.a == 600 : forward.a + forward.b == 0);
         e.reverse = true;
     }
-    e = (LineEnvelope){.output = {1000, 1000}, .continuous = true};
+    e = (line_envelope_t){.output = {1000, 1000}, .continuous = true};
     assert(rl_levels(&e, 0, 0).a == 420 && rl_levels(&e, 1, 0).b == 420);
     /* Exercise selected drive mode, U-turn and active search adapters. */
-    LinePlanner p;
-    CircuitInput i = {.now = 100000, .adc = {3400, 3600}, .speed = {45, 45}};
+    line_planner_t p;
+    circuit_input_t i = {.now = 100000, .adc = {3400, 3600}, .speed = {45, 45}};
     rl_begin(&p, &i, 180);
-    LinePower power = {0};
-    AnalogDemand d = {.target = {45, 45}, .level = {900, 900}, .decision = SYM_STRAIGHT};
+    line_power_t power = {0};
+    analog_demand_t d = {.target = {45, 45}, .level = {900, 900}, .decision = SYM_STRAIGHT};
     e = rl_power(&power, &p, &i, &d, C_FOLLOW, .01f);
     assert(e.continuous && !e.maneuver);
     p.circuit.phase = J_TURN;
@@ -199,11 +199,11 @@ static void test_envelopes(void) {
     d.target[1] = 45;
     e = rl_power(&power, &p, &i, &d, C_FOLLOW, .01f);
     assert(e.maneuver && !e.continuous && !e.reverse);
-    DualLevels stopped = rl_reduce((DualLevels){0}, (DualLevels){750, 0});
+    dual_levels_t stopped = rl_reduce((dual_levels_t){0}, (dual_levels_t){750, 0});
     assert(stopped.a == 0 && stopped.b == 0);
-    DualLevels limit = rl_reduce((DualLevels){750, 0}, (DualLevels){600, 0});
+    dual_levels_t limit = rl_reduce((dual_levels_t){750, 0}, (dual_levels_t){600, 0});
     assert(limit.a == 600 && limit.b == 0);
-    DualLevels reverse = rl_reduce((DualLevels){420, 0}, (DualLevels){0, 600});
+    dual_levels_t reverse = rl_reduce((dual_levels_t){420, 0}, (dual_levels_t){0, 600});
     assert(reverse.a == 0 && reverse.b == 0);
 }
 
@@ -213,8 +213,8 @@ static void test_log_pack(void) {
         assert(rl_route_ascii(rl_route_bits(routes[n])) == (unsigned)routes[n]);
     for (unsigned side = 0; side <= 4095; ++side) {
         uint16_t raw[3] = {0, 4095, (uint16_t)side};
-        AnalogDemand d = {.level = {0, 1000}};
-        LineLogRow r = {0};
+        analog_demand_t d = {.level = {0, 1000}};
+        line_log_row_t r = {0};
         rl_pack_optics(&r, raw, &d, J_ACQUIRE);
         assert((r.optics[0] & 4095) == 0 && ((r.optics[0] >> 12) & 4095) == 4095);
         assert(((r.optics[0] >> 24) | ((r.optics[1] & 15) << 8)) == side);

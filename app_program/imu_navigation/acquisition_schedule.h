@@ -1,3 +1,10 @@
+/**
+ * @file acquisition_schedule.h
+ * @brief Acquisition schedule.
+ * @details The IMU task owns sensor acquisition and calibration; readers use snapshots.
+ * Ramp requests expire through the coordinator; lift safety may remove output.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 #ifndef RTOS_IMU_ACQUISITION_SCHEDULE_H
 #define RTOS_IMU_ACQUISITION_SCHEDULE_H
 #include <stdint.h>
@@ -10,9 +17,9 @@ static inline uint64_t ri_next_release (uint64_t due, uint64_t now)
 }
 static inline uint32_t ri_release_delay_ms (uint64_t due, uint64_t now)
 {
-    uint64_t ms = due > now ? (due - now) / 1000U : 0U;
+    uint64_t milliseconds = due > now ? (due - now) / 1000U : 0U;
     /* Kernel relative waits add one timer tick (1ms in this profile). */
-    return ms > 1U ? (uint32_t)(ms - 1U) : 1U;
+    return milliseconds > 1U ? (uint32_t)(milliseconds - 1U) : 1U;
 }
 #endif
 

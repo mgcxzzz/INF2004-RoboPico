@@ -1,3 +1,10 @@
+/**
+ * @file app_main.c
+ * @brief App main.
+ * @details Core1 owns normal motor commits. Safety paths may only remove output;
+ * command/status access uses the existing kernel locks and copied records.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 #include "bringup.h"
 #ifdef APP_RTOS_IMU
 #include "../imu_navigation/imu_service.h"
@@ -9,33 +16,33 @@
 #include "../line_navigation/line_service.h"
 #endif
 
-static uint64_t port_now (void * user)
+static uint64_t port_now (void * p_user)
 {
-    (void)user;
+    (void)p_user;
     return board_time_us();
 }
-static void port_off (void * user)
+static void port_off (void * p_user)
 {
-    (void)user;
+    (void)p_user;
     board_motor_off();
 }
 
-static ER start (FP entry, PRI priority, UW processor, const char * name)
+static ER start (FP p_entry, PRI priority, UW processor, const char * p_name)
 {
     T_CTSK definition = {0};
-    definition.task = entry;
+    definition.task = p_entry;
     definition.tskatr = TA_HLNG | TA_RNG1 | TA_ASSPRC;
     definition.assprc = processor;
     definition.itskpri = priority;
     definition.stksz = 4096;
-    ID id = tk_cre_tsk(&definition);
-    if (id < E_OK)
+    ID identifier = tk_cre_tsk(&definition);
+    if (identifier < E_OK)
     {
-        return id;
+        return identifier;
     }
-    ER result = tk_sta_tsk(id, 0);
-    tm_printf((UB *)"TASK name=%s id=%d priority=%d core=%d result=%d\n", name,
-              id, priority, processor - 1U, result);
+    ER result = tk_sta_tsk(identifier, 0);
+    tm_printf((UB *)"TASK name=%s id=%d priority=%d core=%d result=%d\n",
+              p_name, identifier, priority, processor - 1U, result);
     return result;
 }
 
@@ -179,35 +186,38 @@ static void report_pause (bool paced)
 
 static void bringup_report_impl (bool paced)
 {
-    BringupStatus s;
-    bringup_get_status(&s);
+    bringup_status_t state;
+    bringup_get_status(&state);
     tm_printf((UB *)"CLOCK kernel_ms=%u timer_us=%u window_kernel_ms=%u "
                     "window_timer_us=%u samples=%u good=%u status=%s\n",
-              s.kernel_ms, s.timer_us, s.clock_kernel_ms, s.clock_timer_us,
-              s.clock_samples, s.clock_good,
-              s.flags & BR_CLOCK_OK ? "PASS"
-              : s.clock_samples     ? "CHECK"
-                                    : "PENDING");
+              state.kernel_ms, state.timer_us, state.clock_kernel_ms,
+              state.clock_timer_us, state.clock_samples, state.clock_good,
+              state.flags & BR_CLOCK_OK ? "PASS"
+              : state.clock_samples     ? "CHECK"
+                                        : "PENDING");
     report_pause(paced);
     tm_printf((UB *)"CONTROL count=%u dt_us=%u min_dt_us=%u max_dt_us=%u "
                     "max_cost_us=%u late=%u flags=0x%x active=%u reason=%u "
                     "usb=%u tx_drop=%u rx_drop=%u\n",
-              s.control_count, s.dt_us, s.min_dt_us, s.max_dt_us, s.max_cost_us,
-              s.late_count, s.flags, (s.flags & BR_ACTIVE) != 0U, s.reason,
-              tm_usb_state(), tm_usb_dropped, tm_usb_rx_dropped);
+              state.control_count, state.dt_us, state.min_dt_us,
+              state.max_dt_us, state.max_cost_us, state.late_count, state.flags,
+              (state.flags & BR_ACTIVE) != 0U, state.reason, tm_usb_state(),
+              tm_usb_dropped, tm_usb_rx_dropped);
     report_pause(paced);
     tm_printf(
         (UB *)"WHEELS ticks=%d,%d edges=%u,%u invalid=%u,%u speed_x10=%d,%d "
               "target=%d,%d pwm=%d,%d gp20=%u gp21=%u irq_stop=%u\n",
-        s.ticks[0], s.ticks[1], s.edges[0], s.edges[1], s.invalid[0],
-        s.invalid[1], s.speed_x10[0], s.speed_x10[1], s.target[0], s.target[1],
-        s.pwm[0], s.pwm[1], board_button_pressed(20U),
-        board_button_pressed(21U), bringup_irq_stop);
+        state.ticks[0], state.ticks[1], state.edges[0], state.edges[1],
+        state.invalid[0], state.invalid[1], state.speed_x10[0],
+        state.speed_x10[1], state.target[0], state.target[1], state.pwm[0],
+        state.pwm[1], board_button_pressed(20U), board_button_pressed(21U),
+        g_bringup_irq_stop);
 #ifdef APP_RTOS_LINE
     tm_printf((UB *)"ENCODER_GUARD bad=%u,%u changes=%u,%u trip_kind=%u "
                     "trip_wheel=%u\n",
-              s.encoder_bad[0], s.encoder_bad[1], s.encoder_changes[0],
-              s.encoder_changes[1], s.encoder_kind, s.encoder_wheel);
+              state.encoder_bad[0], state.encoder_bad[1],
+              state.encoder_changes[0], state.encoder_changes[1],
+              state.encoder_kind, state.encoder_wheel);
     rtos_line_report();
     report_pause(paced);
 #endif
@@ -232,10 +242,10 @@ void bringup_report (void)
     bringup_report_impl(false);
 }
 
-void bringup_status_task (INT code, void * exinf)
+void bringup_status_task (INT code, void * p_exinf_value)
 {
     (void)code;
-    (void)exinf;
+    (void)p_exinf_value;
     uint32_t next = board_kernel_ms();
     unsigned reports = 0U;
     for (;;)
@@ -276,10 +286,10 @@ EXPORT INT usermain (void)
         (UB *)"KERNEL spec=0x%x product=0x%x tick_ms=%u initial_core=%u\n",
         version.spver, version.prver, CNF_TIMER_PERIOD, tk_get_prc() - 1U);
     board_clock_report();
-    const MotionPort port = {.lock = board_motion_lock,
-                             .unlock = board_motion_unlock,
-                             .outputs_off = port_off,
-                             .now_us = port_now};
+    const motion_port_t port = {.lock = board_motion_lock,
+                                .unlock = board_motion_unlock,
+                                .outputs_off = port_off,
+                                .now_us = port_now};
     motion_init(&port);
     ER result = bringup_create_objects();
 #ifdef APP_RTOS_IMU

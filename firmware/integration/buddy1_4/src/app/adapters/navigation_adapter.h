@@ -1,11 +1,18 @@
+/**
+ * @file navigation_adapter.h
+ * @brief Navigation adapter.
+ * @details Public feature contract. Requests cross coordinator ownership checks;
+ * callers observe completion/status separately and must respect task context.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 #include "src/line_following/cruise_handover.h"
 #include "src/line_following/continuous_follow.h"
-static ContinuousDrive continuous_wheel[2];
-static ContinuousSteering continuous_steering;
+static continuous_drive_t continuous_wheel[2];
+static continuous_steering_t continuous_steering;
 static bool continuous_active;
 /* Included by the frozen V12.2 main after globals and log helpers. Hardware
  * stays in that one owner; buddy code only sees nav_api.h. */
-static MotionOutput interface_motion;
+static motion_output_t interface_motion;
 static unsigned interface_last_phase, interface_a, interface_f, interface_z;
 static uint32_t interface_session_generation;
 static void interface_reset_controllers (void)
@@ -15,34 +22,34 @@ static void interface_reset_controllers (void)
     memset(continuous_wheel, 0, sizeof(continuous_wheel));
     for (unsigned w = 0; w < 2; ++w)
     {
-        controller[w] = (SignedWheel){0};
-        maneuver_power[w] = (ManeuverPower){0};
-        ramp_wheel[w] = (RampWheel){0};
-        feedback[w] = (CircuitFeedback){0};
+        controller[w] = (signed_wheel_t){0};
+        maneuver_power[w] = (maneuver_power_t){0};
+        ramp_wheel[w] = (ramp_wheel_t){0};
+        feedback[w] = (circuit_feedback_t){0};
         bad_direction_us[w] = 0;
     }
-    capture = (CircuitCapture){0};
-    load = (CircuitLoad){0};
+    capture = (circuit_capture_t){0};
+    load = (circuit_load_t){0};
     capture_outer = -1;
     last_fast = false;
 }
 static void barcode_partial_reset (void);
-static void interface_resume_navigation (const CircuitInput * i)
+static void interface_resume_navigation (const circuit_input_t * i)
 {
     /* Preserve completed navigation counters and a fully decoded pending route.
      * Partial barcode frames and interrupted manoeuvre goals are not reusable. */
     circuit.busy = nav.busy = false;
     circuit.phase = C_FOLLOW;
     circuit.completed = false;
-    circuit.turn = (Junction){0};
-    circuit.follower = (CircuitTracker){0};
-    circuit.joining = (CircuitTracker){0};
+    circuit.turn = (junction_t){0};
+    circuit.follower = (circuit_tracker_t){0};
+    circuit.joining = (circuit_tracker_t){0};
     circuit.gate_timing = circuit.white_timing = circuit.cruise_timing =
         circuit.join_timing = circuit.fast = false;
     circuit.clear_path = circuit.follow_path = i->path;
     circuit.leg_since = i->now;
     nav.action = 0;
-    nav.uturn = (BarcodeUTurn){0};
+    nav.uturn = (barcode_u_turn_t){0};
     nav.cross_ready = nav.cross_candidate = nav.allow_cross = false;
     nav.leading_gate = nav.cross_gate = false;
     nav.leading_us = 0;
@@ -50,22 +57,23 @@ static void interface_resume_navigation (const CircuitInput * i)
                          (i->wheel[0] + i->wheel[1]) * .5);
     barcode_analog_begin(&side_analog, &nav, side_adc, i->now, i->wheel);
     barcode_partial_reset();
-    steering = (SmoothFollow){0};
-    gentle = (ScanSmooth){0};
+    steering = (smooth_follow_t){0};
+    gentle = (scan_smooth_t){0};
     interface_reset_controllers();
 }
 static void interface_drain_events (void)
 {
-    MotionEvent e;
+    motion_event_t e;
     while (motion_pop_event(&e))
     {
         wifi_nav_event(&e); /* z retains the independent audit ring. */
     }
 }
-static AnalogDemand interface_navigation_step (const CircuitInput * i, float dt)
+static analog_demand_t interface_navigation_step (const circuit_input_t * i,
+                                                  float dt)
 {
-    MotionStatus status = nav_get_status();
-    AnalogDemand d = {0};
+    motion_status_t status = nav_get_status();
+    analog_demand_t d = {0};
     if (status.session_active && status.mode == MOTION_AUTO)
     {
         d = continuous_follow_step(&circuit, &nav, &calibration, i,
@@ -104,12 +112,12 @@ static AnalogDemand interface_navigation_step (const CircuitInput * i, float dt)
                                     calibration.black[w]);
         }
     }
-    MotionFeedback f = {.now_us = i->now,
-                        .wheel_mm = {i->wheel[0], i->wheel[1]},
-                        .speed_mm_s = {i->speed[0], i->speed[1]},
-                        .line_level = {d.level[0], d.level[1]},
-                        .navigation_busy = circuit.busy,
-                        .pending_route = nav.pending};
+    motion_feedback_t f = {.now_us = i->now,
+                           .wheel_mm = {i->wheel[0], i->wheel[1]},
+                           .speed_mm_s = {i->speed[0], i->speed[1]},
+                           .line_level = {d.level[0], d.level[1]},
+                           .navigation_busy = circuit.busy,
+                           .pending_route = nav.pending};
     interface_motion = motion_update(&f);
     if (interface_motion.reset_controllers)
     {
@@ -143,10 +151,10 @@ typedef struct
     bool ramp, maneuver, continuous, turning, external, loaded[2];
     unsigned profile;
     uint64_t now;
-} InterfaceCommit;
+} interface_commit_t;
 static void interface_commit_outputs (void * argument)
 {
-    InterfaceCommit * p = argument;
+    interface_commit_t * p = argument;
     for (unsigned w = 0; w < 2; ++w)
     {
         ramp_output[w] = p->ramp;
@@ -167,7 +175,7 @@ static void interface_commit_outputs (void * argument)
                 ? maneuver_output_cap(p->next[w], peak_until[w], time_us_64())
                 : barcode_output_cap(p->next[w], p->ramp, peak_until[w],
                                      time_us_64());
-        DualLevels v =
+        dual_levels_t v =
             p->continuous ? continuous_output_levels(w, output[w])
             : p->maneuver ? maneuver_levels(w, output[w], signed_output[w])
             : signed_output[w]

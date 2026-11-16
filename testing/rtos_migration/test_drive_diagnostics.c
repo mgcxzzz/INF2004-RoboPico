@@ -12,7 +12,7 @@ int main(void) {
         assert(((meta>>31)|((aux>>31)<<1))==phase);
     }
     uint8_t f[RL_DRIVE_DIAG_BYTES];
-    RlDriveDiagnostic d=rl_drive_diag_make(2,1,100,3,4,-123,-35,35);
+    rl_drive_diagnostic_t d=rl_drive_diag_make(2,1,100,3,4,-123,-35,35);
     rl_drive_diag_pack(&d,123456,7,9,f);
     assert(f[0]==0xf2 && f[1]==15 && f[2]==9 && f[3]==0xc8 && f[4]==0x22);
     const uint8_t *p=f+3;

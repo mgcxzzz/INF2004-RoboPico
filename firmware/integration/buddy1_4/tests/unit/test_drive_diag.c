@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include "src/telemetry/drive_diag_storage.h"
-static DriveDiag capture, restored;
+static drive_diag_t capture, restored;
 static uint8_t bank[DIAG_BANK];
 static void snapshot(void) {
     memset(bank, 255, sizeof(bank));
@@ -15,16 +15,16 @@ static void codec(void) {
         int64_t hi = (INT64_C(1) << (diag_width[field] - diag_signed[field])) - 1;
         int64_t checks[] = {lo, lo + 1, 0, hi - 1, hi};
         for (unsigned k = 0; k < 5; ++k) {
-            DiagValues v = {0}, out = {0};
-            DiagRow r;
+            diag_values_t v = {0}, out = {0};
+            diag_row_t r;
             v.v[field] = checks[k];
             diag_pack(&r, &v);
             diag_unpack(&r, &out);
             for (unsigned j = 0; j < D_FIELDS; ++j)
                 assert(v.v[j] == out.v[j]);
         }
-        DiagValues v = {0}, out;
-        DiagRow r;
+        diag_values_t v = {0}, out;
+        diag_row_t r;
         v.v[field] = hi + 1;
         diag_pack(&r, &v);
         diag_unpack(&r, &out);
@@ -37,7 +37,7 @@ static void codec(void) {
 static void capture_and_flash(void) {
     const uint16_t white[] = {163, 160}, black[] = {3457, 3700};
     diag_begin(&capture, 1234567, 1, white, black);
-    DiagValues v = {0};
+    diag_values_t v = {0};
     v.v[D_DT] = 10000;
     v.v[D_PROFILE] = 1;
     v.v[D_PHASE] = 10;
@@ -53,7 +53,7 @@ static void capture_and_flash(void) {
            capture.trigger_us == 3000000);
     assert(capture.count == 256 && capture.total == 600 && capture.max_cost == 1234 &&
            capture.max_gap == 10000 && !capture.late20);
-    DiagValues first, last;
+    diag_values_t first, last;
     diag_unpack(&capture.rows[(capture.head + DIAG_ROWS - capture.count) % DIAG_ROWS], &first);
     diag_unpack(&capture.rows[(capture.head + DIAG_ROWS - 1) % DIAG_ROWS], &last);
     assert(first.v[D_US] == 1730000 && last.v[D_US] == 4280000);
@@ -134,6 +134,6 @@ static void capture_and_flash(void) {
 int main(void) {
     codec();
     capture_and_flash();
-    printf("DIAG row=%zu bits=%u RAM=%zu flash=%u\n", sizeof(DiagRow), diag_bits(),
-           sizeof(DriveDiag), DIAG_BANK);
+    printf("DIAG row=%zu bits=%u RAM=%zu flash=%u\n", sizeof(diag_row_t), diag_bits(),
+           sizeof(drive_diag_t), DIAG_BANK);
 }

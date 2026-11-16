@@ -7,9 +7,9 @@
 #include <string.h>
 #include "app_program/barcode_navigation/barcode_model.h"
 
-static RbDecoder decoder;
-static LinePlanner planner;
-static RbRaw pinned[RB_RAW_ROWS];
+static rb_decoder_t decoder;
+static line_planner_t planner;
+static rb_raw_t pinned[RB_RAW_ROWS];
 static uint64_t now_us = 1000000;
 static double position_mm;
 
@@ -42,7 +42,7 @@ static void begin_attempt(unsigned bars, double first_bar_mm) {
 }
 
 int main(void) {
-    CircuitInput input = {.now = now_us, .wheel = {0, 0}};
+    circuit_input_t input = {.now = now_us, .wheel = {0, 0}};
     rl_begin(&planner, &input, 175);
     rb_begin(&decoder, &planner.nav, 175, now_us, input.wheel);
 
@@ -50,7 +50,7 @@ int main(void) {
      * every 5ms. Restart the decoder before checking long-run coverage. */
     add_raw(10, 2000);
     assert(decoder.preroll_count == 4);
-    input = (CircuitInput){.now = now_us, .wheel = {position_mm, position_mm}};
+    input = (circuit_input_t){.now = now_us, .wheel = {position_mm, position_mm}};
     rb_begin(&decoder, &planner.nav, 175, now_us, input.wheel);
 
     /* The 5ms logger receives 2ms calls, retains a bounded 512-row pre-roll,
@@ -63,7 +63,7 @@ int main(void) {
     now_us += RB_RAW_INTERVAL_US;
     position_mm += 0.09;
     rb_raw(&decoder, &planner.nav, 0x0ABC, now_us, position_mm);
-    const RbRaw *last = &decoder.preroll[(decoder.preroll_head + RB_RAW_PREROLL_ROWS - 1) %
+    const rb_raw_t *last = &decoder.preroll[(decoder.preroll_head + RB_RAW_PREROLL_ROWS - 1) %
                                          RB_RAW_PREROLL_ROWS];
     assert(rb_get32(last->bytes) == (uint32_t)((now_us - planner.nav.start_us) / 1000));
     assert((int32_t)rb_get32(last->bytes + 4) == (int32_t)lround(position_mm * 100));
@@ -76,7 +76,7 @@ int main(void) {
     assert(decoder.attempt.sequence == 1);
     assert(decoder.attempt.flags & RB_ATTEMPT_START_VALID);
     add_raw(12, 6000);
-    BpResult first = {.decoded = true, .code = 'Y', .reason = BP_OK, .nbars = 15};
+    bp_result_t first = {.decoded = true, .code = 'Y', .reason = BP_OK, .nbars = 15};
     rb_attempt_finish(&decoder, &first, true);
     bp_reset(&decoder.peak);
     assert(decoder.raw_frozen && !decoder.raw_capture_active);
@@ -92,7 +92,7 @@ int main(void) {
     begin_attempt(14, position_mm - 25.0);
     assert(decoder.attempt.code == 0); /* No stale Y from attempt 1. */
     add_raw(8, 6000);
-    BpResult failed = {.decoded = false, .code = '?', .reason = BP_R_FEW, .nbars = 14};
+    bp_result_t failed = {.decoded = false, .code = '?', .reason = BP_R_FEW, .nbars = 14};
     rb_attempt_finish(&decoder, &failed, true);
     bp_reset(&decoder.peak);
     assert(decoder.attempt.sequence == 2 && decoder.attempt.bars == 14);
@@ -100,7 +100,7 @@ int main(void) {
     assert(!(decoder.attempt.flags & RB_ATTEMPT_DECODED));
     snapshot_raw();
 
-    input = (CircuitInput){.now = now_us, .wheel = {position_mm, position_mm}};
+    input = (circuit_input_t){.now = now_us, .wheel = {position_mm, position_mm}};
     rb_partial_reset(&decoder, &planner.nav, 175, now_us, input.wheel);
     bool saw_single_bar = false;
     double junction_start = position_mm + 5.0;
@@ -163,7 +163,7 @@ int main(void) {
 
     /* Resume preserves the stopped diagnostic. A partial attempt is preserved
      * as unfinished, and a fresh run clears its sequence and raw snapshot. */
-    input = (CircuitInput){.now = now_us, .wheel = {position_mm, position_mm}};
+    input = (circuit_input_t){.now = now_us, .wheel = {position_mm, position_mm}};
     rb_resume(&planner, &decoder, &input, 175);
     assert(decoder.attempt.sequence == 3);
     assert(decoder.attempt.flags & RB_ATTEMPT_FINALIZED);
@@ -172,7 +172,7 @@ int main(void) {
     begin_attempt(8, position_mm - 25.0);
     assert(decoder.attempt.code == 0); /* No stale F on an unfinished attempt. */
     add_raw(20, 6000);
-    input = (CircuitInput){.now = now_us, .wheel = {position_mm, position_mm}};
+    input = (circuit_input_t){.now = now_us, .wheel = {position_mm, position_mm}};
     rb_resume(&planner, &decoder, &input, 175);
     assert(decoder.attempt.sequence == 4);
     assert(decoder.attempt.reason == RB_ATTEMPT_IN_PROGRESS);

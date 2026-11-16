@@ -1,3 +1,10 @@
+/**
+ * @file line_logic.h
+ * @brief Line logic.
+ * @details The control task owns mutable steering/recovery state.
+ * Keep straight, scan, turn and recovery behavior distinct; no direct PWM here.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 #ifndef ANALOG_LINE_LOGIC_H
 #define ANALOG_LINE_LOGIC_H
 #include <stdbool.h>
@@ -5,9 +12,10 @@
 
 typedef struct
 {
-    uint16_t white[2], black[2];
+    uint16_t white[2];
+    uint16_t black[2];
     uint8_t mask;
-} LineCalibration;
+} line_calibration_t;
 /* Standalone test targets may use a measured lower-contrast calibration.
  * Existing targets keep the historical100-count minimum by default. */
 #ifndef LINE_CAL_MIN_SPAN
@@ -25,17 +33,20 @@ enum
 };
 typedef struct
 {
-    uint64_t white_since, both_since;
+    uint64_t white_since;
+    uint64_t both_since;
     uint32_t white_mm;
-    bool white, both, black_hold;
-} AnalogTracker;
+    bool white;
+    bool both;
+    bool black_hold;
+} analog_tracker_t;
 typedef struct
 {
     int16_t target[2];
     uint16_t level[2];
     uint8_t decision;
     bool stop;
-} AnalogDemand;
+} analog_demand_t;
 enum
 {
     LINE_BASE_MM_S = 45,
@@ -65,35 +76,36 @@ enum
 typedef struct
 {
     uint64_t since;
-    bool timing, ready;
-} LineRearm;
+    bool timing;
+    bool ready;
+} line_rearm_t;
 /* Readiness is permission for a NEW explicit request, never auto-start.
  * Holding GP21 after readiness is allowed for the original USB hold mode. */
-static inline void line_rearm_step (LineRearm * r, uint64_t now, bool released,
-                                    bool stationary, bool busy)
+static inline void line_rearm_step (line_rearm_t * p_result, uint64_t now,
+                                    bool released, bool stationary, bool busy)
 {
     if (busy || !stationary)
     {
-        *r = (LineRearm){0};
+        *p_result = (line_rearm_t){0};
         return;
     }
-    if (r->ready)
+    if (p_result->ready)
     {
         return;
     }
     if (!released)
     {
-        r->timing = false;
+        p_result->timing = false;
         return;
     }
-    if (!r->timing)
+    if (!p_result->timing)
     {
-        r->timing = true;
-        r->since = now;
+        p_result->timing = true;
+        p_result->since = now;
     }
-    if (now - r->since >= 1000000)
+    if (now - p_result->since >= 1000000)
     {
-        r->ready = true;
+        p_result->ready = true;
     }
 }
 static inline unsigned line_start_block (bool active, bool settling, bool valid,
@@ -153,19 +165,19 @@ enum
     RESPONSE_US = 6000000,
     RESPONSE_MM = 450
 };
-static inline AnalogDemand response_demand (uint64_t elapsed)
+static inline analog_demand_t response_demand (uint64_t elapsed)
 {
-    AnalogDemand d = {0};
+    analog_demand_t demand = {0};
     unsigned phase = (unsigned)(elapsed / 2000000u);
-    d.decision = (uint8_t)(5 + (phase > 2 ? 2 : phase));
+    demand.decision = (uint8_t)(5 + (phase > 2 ? 2 : phase));
     if (elapsed >= RESPONSE_US)
     {
-        d.stop = true;
-        return d;
+        demand.stop = true;
+        return demand;
     }
-    d.target[0] = phase == 1 ? 35 : phase == 2 ? 95 : 65;
-    d.target[1] = phase == 1 ? 95 : phase == 2 ? 35 : 65;
-    return d;
+    demand.target[0] = phase == 1 ? 35 : phase == 2 ? 95 : 65;
+    demand.target[1] = phase == 1 ? 95 : phase == 2 ? 35 : 65;
+    return demand;
 }
 static inline unsigned run_start_block (bool response, bool active,
                                         bool settling, bool valid, bool stop,
@@ -206,33 +218,35 @@ enum
 };
 typedef struct
 {
-    uint64_t end_us, cooldown_until;
+    uint64_t end_us;
+    uint64_t cooldown_until;
     bool active;
-} LineBreakaway;
+} line_breakaway_t;
 /* Forward-only floor breakaway. Independent drive-off guards still own the
  * outputs. Pulse ends on the first control update at120ms or speed>=20mm/s;
  * it cannot trigger again until100ms cooldown and near-stationary feedback. */
-static inline int32_t line_breakaway (LineBreakaway * b, uint64_t now,
+static inline int32_t line_breakaway (line_breakaway_t * p_second, uint64_t now,
                                       int16_t wanted, float ramp, float speed,
                                       int32_t pwm)
 {
     if (wanted <= 0)
     {
-        *b = (LineBreakaway){0};
+        *p_second = (line_breakaway_t){0};
         return 0;
     }
-    if (b->active && (now >= b->end_us || speed >= 20 || speed < -8))
+    if (p_second->active &&
+        (now >= p_second->end_us || speed >= 20 || speed < -8))
     {
-        b->active = false;
-        b->cooldown_until = now + AL_KICK_COOLDOWN_US;
+        p_second->active = false;
+        p_second->cooldown_until = now + AL_KICK_COOLDOWN_US;
     }
-    if (!b->active && now >= b->cooldown_until && wanted >= 20 && ramp >= 20 &&
-        speed >= -8 && speed < 8)
+    if (!p_second->active && now >= p_second->cooldown_until && wanted >= 20 &&
+        ramp >= 20 && speed >= -8 && speed < 8)
     {
-        b->active = true;
-        b->end_us = now + AL_KICK_US;
+        p_second->active = true;
+        p_second->end_us = now + AL_KICK_US;
     }
-    if (b->active && pwm < AL_KICK_PWM)
+    if (p_second->active && pwm < AL_KICK_PWM)
     {
         pwm = AL_KICK_PWM;
     }
@@ -246,12 +260,13 @@ static inline int32_t line_breakaway (LineBreakaway * b, uint64_t now,
     }
     return pwm;
 }
-static inline bool calibration_valid (const LineCalibration * c)
+static inline bool calibration_valid (const line_calibration_t * p_character)
 {
-    return c->mask == 7 && c->white[0] <= 4095 && c->white[1] <= 4095 &&
-           c->black[0] <= 4095 && c->black[1] <= 4095 &&
-           c->black[0] >= c->white[0] + LINE_CAL_MIN_SPAN &&
-           c->black[1] >= c->white[1] + LINE_CAL_MIN_SPAN;
+    return p_character->mask == 7 && p_character->white[0] <= 4095 &&
+           p_character->white[1] <= 4095 && p_character->black[0] <= 4095 &&
+           p_character->black[1] <= 4095 &&
+           p_character->black[0] >= p_character->white[0] + LINE_CAL_MIN_SPAN &&
+           p_character->black[1] >= p_character->white[1] + LINE_CAL_MIN_SPAN;
 }
 static inline uint16_t line_level (uint16_t raw, uint16_t white, uint16_t black)
 {
@@ -269,19 +284,22 @@ static inline uint16_t line_level (uint16_t raw, uint16_t white, uint16_t black)
  * blackness above midpoint -> steer right, below midpoint -> steer left.
  * Positive differential means left wheel faster, which turns chassis right.
  * Right sensor assists after larger rightward line displacement. No barcode. */
-static inline AnalogDemand analog_demand (AnalogTracker * t,
-                                          const LineCalibration * c, uint16_t l,
-                                          uint16_t r, uint64_t now, uint32_t mm)
+static inline analog_demand_t
+analog_demand (analog_tracker_t * p_sample,
+               const line_calibration_t * p_character, uint16_t l_value,
+               uint16_t result, uint64_t now, uint32_t mm_value)
 {
-    AnalogDemand d = {0};
-    if (!calibration_valid(c))
+    analog_demand_t demand = {0};
+    if (!calibration_valid(p_character))
     {
-        d.stop = true;
-        return d;
+        demand.stop = true;
+        return demand;
     }
-    d.level[0] = line_level(l, c->white[0], c->black[0]);
-    d.level[1] = line_level(r, c->white[1], c->black[1]);
-    int32_t error = (int32_t)d.level[0] - 500;
+    demand.level[0] =
+        line_level(l_value, p_character->white[0], p_character->black[0]);
+    demand.level[1] =
+        line_level(result, p_character->white[1], p_character->black[1]);
+    int32_t error = (int32_t)demand.level[0] - 500;
     if (error > -60 && error < 60)
     {
         error = 0;
@@ -289,105 +307,107 @@ static inline AnalogDemand analog_demand (AnalogTracker * t,
     /* V6 halves the proportional steering differential and lowers cruise.
        Keep the same optical target/deadband and all loss/crossing guards. */
     int32_t differential = error * (2 * LINE_DIFFERENTIAL_MM_S) / 1000;
-    if (d.level[1] >= 650)
+    if (demand.level[1] >= 650)
     {
         differential = LINE_DIFFERENTIAL_MM_S;
-        d.decision = AL_RIGHT_GUARD;
+        demand.decision = AL_RIGHT_GUARD;
     }
-    bool both = d.level[0] >= 750 && d.level[1] >= 750;
+    bool both = demand.level[0] >= 750 && demand.level[1] >= 750;
     if (both)
     {
-        if (!t->both)
+        if (!p_sample->both)
         {
-            t->both_since = now;
+            p_sample->both_since = now;
         }
-        t->both = true;
-        d.decision = AL_BOTH_BLACK;
-        d.target[0] = d.target[1] = 35;
-        if (now - t->both_since >= 120000)
+        p_sample->both = true;
+        demand.decision = AL_BOTH_BLACK;
+        demand.target[0] = demand.target[1] = 35;
+        if (now - p_sample->both_since >= 120000)
         {
-            d.stop = true;
+            demand.stop = true;
         }
     }
     else
     {
-        t->both = false;
-        d.target[0] = (int16_t)(LINE_BASE_MM_S + differential);
-        d.target[1] = (int16_t)(LINE_BASE_MM_S - differential);
+        p_sample->both = false;
+        demand.target[0] = (int16_t)(LINE_BASE_MM_S + differential);
+        demand.target[1] = (int16_t)(LINE_BASE_MM_S - differential);
     }
-    bool white = d.level[0] < 150 && d.level[1] < 150;
+    bool white = demand.level[0] < 150 && demand.level[1] < 150;
     if (white)
     {
-        if (!t->white)
+        if (!p_sample->white)
         {
-            t->white_since = now;
-            t->white_mm = mm;
+            p_sample->white_since = now;
+            p_sample->white_mm = mm_value;
         }
-        t->white = true;
-        d.decision = AL_SEEK_LEFT;
-        if (now - t->white_since >= 650000 || mm - t->white_mm >= 40)
+        p_sample->white = true;
+        demand.decision = AL_SEEK_LEFT;
+        if (now - p_sample->white_since >= 650000 ||
+            mm_value - p_sample->white_mm >= 40)
         {
-            d.stop = true;
-            d.decision = AL_LOST;
+            demand.stop = true;
+            demand.decision = AL_LOST;
         }
     }
     else
     {
-        t->white = false;
+        p_sample->white = false;
     }
-    if (d.stop)
+    if (demand.stop)
     {
-        d.target[0] = d.target[1] = 0;
+        demand.target[0] = demand.target[1] = 0;
     }
-    return d;
+    return demand;
 }
 /* Experimental profile4: black plateau means straight, not an estimated centre.
  * Reuse the existing white-loss and both-dark guards, then replace edge demands.
  * Hysteresis prevents flickering near a single black threshold. All-white
  * recovery assumes the strip is to the left; two widely spaced spots cannot
  * disambiguate every departure. This is deliberately a short test, not a search. */
-static inline AnalogDemand black_straight_demand (AnalogTracker * t,
-                                                  const LineCalibration * c,
-                                                  uint16_t l, uint16_t r,
-                                                  uint64_t now, uint32_t mm)
+static inline analog_demand_t
+black_straight_demand (analog_tracker_t * p_sample,
+                       const line_calibration_t * p_character, uint16_t l_value,
+                       uint16_t result, uint64_t now, uint32_t mm_value)
 {
-    AnalogDemand d = analog_demand(t, c, l, r, now, mm);
-    if (d.stop || d.decision == AL_BOTH_BLACK)
+    analog_demand_t demand =
+        analog_demand(p_sample, p_character, l_value, result, now, mm_value);
+    if (demand.stop || demand.decision == AL_BOTH_BLACK)
     {
-        t->black_hold = false;
-        return d;
+        p_sample->black_hold = false;
+        return demand;
     }
-    if (d.level[1] >= 650)
+    if (demand.level[1] >= 650)
     {
-        t->black_hold = false;
-        d.target[0] = 60;
-        d.target[1] = 30;
-        d.decision = AL_RIGHT_GUARD;
-        return d;
+        p_sample->black_hold = false;
+        demand.target[0] = 60;
+        demand.target[1] = 30;
+        demand.decision = AL_RIGHT_GUARD;
+        return demand;
     }
-    if (d.level[0] >= 850)
+    if (demand.level[0] >= 850)
     {
-        t->black_hold = true;
+        p_sample->black_hold = true;
     }
-    else if (d.level[0] <= 650)
+    else if (demand.level[0] <= 650)
     {
-        t->black_hold = false;
+        p_sample->black_hold = false;
     }
-    if (t->black_hold)
+    if (p_sample->black_hold)
     {
-        d.target[0] = d.target[1] = 45;
-        d.decision = 8;
+        demand.target[0] = demand.target[1] = 45;
+        demand.decision = 8;
     }
     else
     {
-        d.target[0] = 30;
-        d.target[1] = 60;
-        if (d.decision != AL_SEEK_LEFT)
+        demand.target[0] = 30;
+        demand.target[1] = 60;
+        if (demand.decision != AL_SEEK_LEFT)
         {
-            d.decision = 9;
+            demand.decision = 9;
         }
     }
-    return d;
+    return demand;
 }
 /* Profile5 only: tighter left recovery on BOTH WHITE after edge tracking.
  * No reverse drive. Left output becomes zero, right speed45mm/s. Recovery
@@ -399,24 +419,26 @@ enum
     CURVE_RECOVERY_US = 1200000,
     CURVE_RECOVERY_MM = 30
 };
-static inline AnalogDemand curve_demand (AnalogTracker * t,
-                                         const LineCalibration * c, uint16_t l,
-                                         uint16_t r, uint64_t now, uint32_t mm)
+static inline analog_demand_t
+curve_demand (analog_tracker_t * p_sample,
+              const line_calibration_t * p_character, uint16_t l_value,
+              uint16_t result, uint64_t now, uint32_t mm_value)
 {
-    AnalogDemand d = analog_demand(t, c, l, r, now, mm);
-    if (!calibration_valid(c))
+    analog_demand_t demand =
+        analog_demand(p_sample, p_character, l_value, result, now, mm_value);
+    if (!calibration_valid(p_character))
     {
-        return d;
+        return demand;
     }
-    if (d.level[0] < 150 && d.level[1] < 150)
+    if (demand.level[0] < 150 && demand.level[1] < 150)
     {
-        d.stop = now - t->white_since >= CURVE_RECOVERY_US ||
-                 mm - t->white_mm >= CURVE_RECOVERY_MM;
-        d.decision = d.stop ? AL_LOST : 10;
-        d.target[0] = 0;
-        d.target[1] = d.stop ? 0 : 45;
+        demand.stop = now - p_sample->white_since >= CURVE_RECOVERY_US ||
+                      mm_value - p_sample->white_mm >= CURVE_RECOVERY_MM;
+        demand.decision = demand.stop ? AL_LOST : 10;
+        demand.target[0] = 0;
+        demand.target[1] = demand.stop ? 0 : 45;
     }
-    return d;
+    return demand;
 }
 #endif
 

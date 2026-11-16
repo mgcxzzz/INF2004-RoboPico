@@ -62,7 +62,7 @@ static unsigned free_slots = 16, successes, drops, takes;
 static uint8_t queued_topic;
 static bool queued, allow_seen, radio_up = true;
 static int8_t publish_error;
-static RnStatus copied_status;
+static rn_status_t copied_status;
 static void (*complete)(void *, err_t);
 static uint32_t sys_now(void) {
     return now;
@@ -160,7 +160,7 @@ void rn_publish_result(bool ok) {
     else
         ++drops;
 }
-void rn_status_update(const RnStatus *s) {
+void rn_status_update(const rn_status_t *s) {
     copied_status = *s;
 }
 bool rn_tx_take_budget(uint8_t *topic, uint8_t data[64], uint8_t *len, uint32_t ms,

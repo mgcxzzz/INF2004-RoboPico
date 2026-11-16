@@ -61,9 +61,9 @@
  * Generic helpers: clamp, then mask and shift
  * --------------------------------------------------------------------- */
 
-static inline int32_t sys_clamp (int32_t value, int32_t lo, int32_t hi)
+static inline int32_t sys_clamp (int32_t value, int32_t low, int32_t high)
 {
-    return (value < lo) ? lo : ((value > hi) ? hi : value);
+    return (value < low) ? low : ((value > high) ? high : value);
 }
 
 /** Mask of the low n bits (n = 1..32). */
@@ -83,9 +83,9 @@ static inline uint32_t sys_sat_u (uint32_t value, uint32_t bits)
 static inline uint32_t sys_put_u (uint32_t word, uint32_t shift, uint32_t bits,
                                   uint32_t value)
 {
-    uint32_t m = sys_mask(bits);
+    uint32_t m_value = sys_mask(bits);
 
-    return (word & ~(m << shift)) | ((value & m) << shift);
+    return (word & ~(m_value << shift)) | ((value & m_value) << shift);
 }
 
 static inline uint32_t sys_get_u (uint32_t word, uint32_t shift, uint32_t bits)
@@ -109,18 +109,18 @@ static inline int32_t sys_get_s (uint32_t word, uint32_t shift, uint32_t bits)
     return (int32_t)(raw ^ sign) - (int32_t)sign;
 }
 
-static inline void sys_put_le32 (uint8_t * p, uint32_t word)
+static inline void sys_put_le32 (uint8_t * p_data, uint32_t word)
 {
-    p[0] = (uint8_t)(word & 0xFFU);
-    p[1] = (uint8_t)((word >> 8) & 0xFFU);
-    p[2] = (uint8_t)((word >> 16) & 0xFFU);
-    p[3] = (uint8_t)((word >> 24) & 0xFFU);
+    p_data[0] = (uint8_t)(word & 0xFFU);
+    p_data[1] = (uint8_t)((word >> 8) & 0xFFU);
+    p_data[2] = (uint8_t)((word >> 16) & 0xFFU);
+    p_data[3] = (uint8_t)((word >> 24) & 0xFFU);
 }
 
-static inline uint32_t sys_get_le32 (uint8_t const * p)
+static inline uint32_t sys_get_le32 (uint8_t const * p_data)
 {
-    return (uint32_t)p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16) |
-           ((uint32_t)p[3] << 24);
+    return (uint32_t)p_data[0] | ((uint32_t)p_data[1] << 8) |
+           ((uint32_t)p_data[2] << 16) | ((uint32_t)p_data[3] << 24);
 }
 
 /* ------------------------------------------------------------------------
@@ -520,18 +520,27 @@ bool b1_tlm_unpack (uint8_t const * p_frame, uint32_t len, b1_tlm_t * p_out);
 #define B2_TLM_PASSIVE (8U)
 typedef struct
 {
-    uint8_t seq, flags;
-    int16_t left_mm_s, right_mm_s, centre_mm_s;
-    int16_t roll_dd, side_height_mm;
+    uint8_t seq;
+    uint8_t flags;
+    int16_t left_mm_s;
+    int16_t right_mm_s;
+    int16_t centre_mm_s;
+    int16_t roll_dd;
+    int16_t side_height_mm;
     int32_t distance_mm;
-    uint16_t invalid_left, invalid_right;
+    uint16_t invalid_left;
+    uint16_t invalid_right;
     /* Extension: exclusions ORed since previous source2 publication, current
      * ramp state (level/candidate/rising/returning bits0..3), interval counts. */
-    uint8_t quality_reasons, ramp_state, quality_bad_samples,
-        quality_total_samples;
+    uint8_t quality_reasons;
+    uint8_t ramp_state;
+    uint8_t quality_bad_samples;
+    uint8_t quality_total_samples;
     /* v0.4 interval maxima (not simultaneous), absolute rates. Offset30:
      * number of ticks with refreshed rates; offset31 reserved zero. */
-    uint16_t max_spread_mg, max_accel_mm_s2, max_turn_dd_s;
+    uint16_t max_spread_mg;
+    uint16_t max_accel_mm_s2;
+    uint16_t max_turn_dd_s;
     uint8_t rate_samples;
     /* v0.5: offset32 uint16 maximum axis MAD mg; offset34 minimum FIFO
      * sample count in the interval; offset35 reserved zero. */
@@ -544,8 +553,9 @@ typedef struct
      * preserved exactly (41 mg -> 11 -> 44 mg; 40 mg -> 10 -> 40 mg). */
     uint16_t max_axis_mad_mg[3];
 } b2_tlm_t;
-void b2_tlm_pack (b2_tlm_t const * in, uint8_t frame[B2_TLM_FRAME_BYTES]);
-bool b2_tlm_unpack (uint8_t const * frame, uint32_t len, b2_tlm_t * out);
+void b2_tlm_pack (b2_tlm_t const * p_in_value,
+                  uint8_t frame[B2_TLM_FRAME_BYTES]);
+bool b2_tlm_unpack (uint8_t const * p_frame, uint32_t len, b2_tlm_t * p_out);
 
 #endif /* SYS_TLM_H */
 

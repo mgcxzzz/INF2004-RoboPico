@@ -1,3 +1,10 @@
+/**
+ * @file imu_adapter.h
+ * @brief Imu adapter.
+ * @details Public feature contract. Requests cross coordinator ownership checks;
+ * callers observe completion/status separately and must respect task context.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 /* Buddy4 add-on glue for the v2.3 SDK firmware. Included by the v2.3 main
  * (circuit_with_barcode/main.c) after wifi_harness.h, like v2.3's own
  * harness_adapter.h / wifi_harness.h, so it can read v2.3 state. It only
@@ -24,7 +31,7 @@ static uint32_t b4h_run_generation;
 /* control_step: called right after v2.3 drains its encoders (copy e[]),
  * before its own active-run check. Observer only. Interval rule as the RTOS
  * odometry: clean = no new invalid transition and 0 < interval <= 50 ms. */
-static void buddy4_odometry_note (const BenchEncoder e[2], uint64_t now,
+static void buddy4_odometry_note (const bench_encoder_t e[2], uint64_t now,
                                   uint64_t elapsed)
 {
     bool clean = b4h_have && elapsed > 0u && elapsed <= 50000u &&
@@ -88,7 +95,7 @@ static void buddy4_poll (uint64_t now)
     }
     b4h_due_since = 0u;
 
-    MotionStatus st = nav_get_status();
+    motion_status_t st = nav_get_status();
     bool run = guard.active && st.session_active && st.mode == MOTION_AUTO;
     b4v23_mission_t m = B4V23_NONE;
     if (b4h_reset_pending)

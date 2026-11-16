@@ -1,3 +1,10 @@
+/**
+ * @file network_stop.h
+ * @brief Network stop.
+ * @details Application tasks exchange copied, bounded command and telemetry records.
+ * The kernel Wi-Fi service owns the transport; reconnect never restarts motion.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 #ifndef RTOS_NETWORK_STOP_H
 #define RTOS_NETWORK_STOP_H
 
@@ -23,7 +30,7 @@ typedef struct
     uint32_t ack_age_ms;
     uint32_t connects;
     uint32_t last_complete_ms;
-} RnNetworkStopSnapshot;
+} rn_network_stop_snapshot_t;
 
 enum
 {
@@ -36,25 +43,24 @@ enum
     RN_STOP_FAIL_ACK_BEFORE_CONNECT = 1U << 6
 };
 
-static inline uint8_t rn_network_stop_failure_mask (const RnStatus * status,
-                                                    uint32_t now_ms,
-                                                    uint32_t app_last_ms,
-                                                    uint32_t connected_since_ms)
+static inline uint8_t
+rn_network_stop_failure_mask (const rn_status_t * p_status, uint32_t now_ms,
+                              uint32_t app_last_ms, uint32_t connected_since_ms)
 {
     uint8_t mask = 0U;
-    if (status->link != 3)
+    if (p_status->link != 3)
     {
         mask |= RN_STOP_FAIL_LINK_DOWN;
     }
-    if ((status->flags & RN_CONNECTED) == 0U)
+    if ((p_status->flags & RN_CONNECTED) == 0U)
     {
         mask |= RN_STOP_FAIL_NOT_CONNECTED;
     }
-    if ((status->flags & RN_SUBSCRIBED) == 0U)
+    if ((p_status->flags & RN_SUBSCRIBED) == 0U)
     {
         mask |= RN_STOP_FAIL_NOT_SUBSCRIBED;
     }
-    if (status->polls == 0U || now_ms - status->last_poll_ms > 250U)
+    if (p_status->polls == 0U || now_ms - p_status->last_poll_ms > 250U)
     {
         mask |= RN_STOP_FAIL_POLL_STALE;
     }
@@ -62,91 +68,92 @@ static inline uint8_t rn_network_stop_failure_mask (const RnStatus * status,
     {
         mask |= RN_STOP_FAIL_APP_STALE;
     }
-    if (now_ms - status->last_complete_ms > 3000U)
+    if (now_ms - p_status->last_complete_ms > 3000U)
     {
         mask |= RN_STOP_FAIL_ACK_STALE;
     }
-    if ((int32_t)(status->last_complete_ms - connected_since_ms) < 0)
+    if ((int32_t)(p_status->last_complete_ms - connected_since_ms) < 0)
     {
         mask |= RN_STOP_FAIL_ACK_BEFORE_CONNECT;
     }
     return mask;
 }
 
-static inline RnNetworkStopSnapshot
-rn_network_stop_candidate (const RnStatus * status, uint32_t now_ms,
+static inline rn_network_stop_snapshot_t
+rn_network_stop_candidate (const rn_status_t * p_status, uint32_t now_ms,
                            uint32_t app_last_ms, uint32_t connected_since_ms)
 {
-    return (RnNetworkStopSnapshot){
+    return (rn_network_stop_snapshot_t){
         .valid = 1U,
-        .flags = (unsigned)(status->flags & 7U),
-        .link = status->link,
-        .failmask = rn_network_stop_failure_mask(status, now_ms, app_last_ms,
+        .flags = (unsigned)(p_status->flags & 7U),
+        .link = p_status->link,
+        .failmask = rn_network_stop_failure_mask(p_status, now_ms, app_last_ms,
                                                  connected_since_ms),
         .stop_ms = now_ms,
-        .poll_age_ms =
-            status->polls == 0U ? UINT32_MAX : now_ms - status->last_poll_ms,
+        .poll_age_ms = p_status->polls == 0U ? UINT32_MAX
+                                             : now_ms - p_status->last_poll_ms,
         .app_age_ms = now_ms - app_last_ms,
-        .ack_age_ms = now_ms - status->last_complete_ms,
-        .connects = status->connects,
-        .last_complete_ms = status->last_complete_ms};
+        .ack_age_ms = now_ms - p_status->last_complete_ms,
+        .connects = p_status->connects,
+        .last_complete_ms = p_status->last_complete_ms};
 }
 
-static inline void rn_network_stop_clear (RnNetworkStopSnapshot * snapshot)
+static inline void
+rn_network_stop_clear (rn_network_stop_snapshot_t * p_snapshot)
 {
-    *snapshot = (RnNetworkStopSnapshot){0};
+    *p_snapshot = (rn_network_stop_snapshot_t){0};
 }
 
 /* Latch the first failed session guard until accepted Start clears it. */
 static inline bool
-rn_network_stop_capture_once (RnNetworkStopSnapshot * stored,
-                              const RnNetworkStopSnapshot * candidate)
+rn_network_stop_capture_once (rn_network_stop_snapshot_t * p_stored,
+                              const rn_network_stop_snapshot_t * p_candidate)
 {
-    if (stored->valid)
+    if (p_stored->valid)
     {
         return false;
     }
-    *stored = *candidate;
-    stored->valid = 1U;
+    *p_stored = *p_candidate;
+    p_stored->valid = 1U;
     return true;
 }
 
-static inline void rn_network_stop_put32 (uint8_t * out, unsigned at,
+static inline void rn_network_stop_put32 (uint8_t * p_out, unsigned at_value,
                                           uint32_t value)
 {
-    out[at] = (uint8_t)value;
-    out[at + 1U] = (uint8_t)(value >> 8U);
-    out[at + 2U] = (uint8_t)(value >> 16U);
-    out[at + 3U] = (uint8_t)(value >> 24U);
+    p_out[at_value] = (uint8_t)value;
+    p_out[at_value + 1U] = (uint8_t)(value >> 8U);
+    p_out[at_value + 2U] = (uint8_t)(value >> 16U);
+    p_out[at_value + 3U] = (uint8_t)(value >> 24U);
 }
 
 static inline void
-rn_network_stop_encode (const RnNetworkStopSnapshot * snapshot, uint8_t seq,
-                        uint8_t out[RN_NETWORK_STOP_PACKET_BYTES])
+rn_network_stop_encode (const rn_network_stop_snapshot_t * p_snapshot,
+                        uint8_t seq, uint8_t out[RN_NETWORK_STOP_PACKET_BYTES])
 {
-    for (unsigned i = 0U; i < RN_NETWORK_STOP_PACKET_BYTES; ++i)
+    for (unsigned index = 0U; index < RN_NETWORK_STOP_PACKET_BYTES; ++index)
     {
-        out[i] = 0U;
+        out[index] = 0U;
     }
     out[0] = 0xf2U;
     out[1] = RN_NETWORK_STOP_PACKET_BYTES - 3U;
     out[2] = seq;
     out[3] = 0xc6U;
     out[4] = 0x21U; /* v0.2.1 */
-    if (!snapshot->valid)
+    if (!p_snapshot->valid)
     {
         return;
     }
 
-    rn_network_stop_put32(out, 6U, snapshot->stop_ms);
-    rn_network_stop_put32(out, 10U, snapshot->poll_age_ms);
-    rn_network_stop_put32(out, 14U, snapshot->app_age_ms);
-    rn_network_stop_put32(out, 18U, snapshot->ack_age_ms);
-    rn_network_stop_put32(out, 22U, snapshot->connects);
-    rn_network_stop_put32(out, 26U, snapshot->last_complete_ms);
-    uint16_t metadata = (uint16_t)(snapshot->flags & 7U) |
-                        (uint16_t)(((uint16_t)snapshot->link & 7U) << 3U) |
-                        (uint16_t)((snapshot->failmask & 0x7fU) << 6U) |
+    rn_network_stop_put32(out, 6U, p_snapshot->stop_ms);
+    rn_network_stop_put32(out, 10U, p_snapshot->poll_age_ms);
+    rn_network_stop_put32(out, 14U, p_snapshot->app_age_ms);
+    rn_network_stop_put32(out, 18U, p_snapshot->ack_age_ms);
+    rn_network_stop_put32(out, 22U, p_snapshot->connects);
+    rn_network_stop_put32(out, 26U, p_snapshot->last_complete_ms);
+    uint16_t metadata = (uint16_t)(p_snapshot->flags & 7U) |
+                        (uint16_t)(((uint16_t)p_snapshot->link & 7U) << 3U) |
+                        (uint16_t)((p_snapshot->failmask & 0x7fU) << 6U) |
                         (1U << 13U);
     out[30] = (uint8_t)metadata;
     out[31] = (uint8_t)(metadata >> 8U);

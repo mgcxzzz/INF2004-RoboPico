@@ -1,3 +1,10 @@
+/**
+ * @file delivery_policy.h
+ * @brief Delivery policy.
+ * @details Application tasks exchange copied, bounded command and telemetry records.
+ * The kernel Wi-Fi service owns the transport; reconnect never restarts motion.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 #ifndef RTOS_DELIVERY_POLICY_H
 #define RTOS_DELIVERY_POLICY_H
 #include <stdbool.h>

@@ -1,3 +1,10 @@
+/**
+ * @file wifi_link_state.h
+ * @brief Wifi link state.
+ * @details Network helpers validate and explicitly encode bounded application records.
+ * Transport calls belong to the configured SDK or RTOS owner, not these codecs.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 #ifndef WIFI_LINK_STATE_H
 #define WIFI_LINK_STATE_H
 /* Called only by the core1 network owner after cyw43_arch_poll().

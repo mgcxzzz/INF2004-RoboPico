@@ -1,27 +1,38 @@
+/**
+ * @file nav_codec.c
+ * @brief Nav codec.
+ * @details The shared facade/coordinator arbitrates ownership and generations.
+ * Acceptance is not completion; external callers never write motor registers.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 #include "src/navigation/nav_codec.h"
 #include <math.h>
 #include <string.h>
-static void put (uint8_t * p, unsigned * at, uint64_t value, unsigned bits)
+static void put (uint8_t * p_data, unsigned * p_at_value, uint64_t value,
+                 unsigned bits)
 {
-    for (unsigned k = 0; k < bits; ++k, ++*at)
+    for (unsigned item_index = 0; item_index < bits;
+         ++item_index, ++*p_at_value)
     {
-        if ((value >> k) & 1)
+        if ((value >> item_index) & 1)
         {
-            p[*at / 8] |= (uint8_t)(1u << (*at % 8));
+            p_data[*p_at_value / 8] |= (uint8_t)(1u << (*p_at_value % 8));
         }
     }
 }
-static uint64_t get (const uint8_t * p, unsigned * at, unsigned bits)
+static uint64_t get (const uint8_t * p_data, unsigned * p_at_value,
+                     unsigned bits)
 {
-    uint64_t v = 0;
-    for (unsigned k = 0; k < bits; ++k, ++*at)
+    uint64_t value = 0;
+    for (unsigned item_index = 0; item_index < bits;
+         ++item_index, ++*p_at_value)
     {
-        if ((p[*at / 8] >> (*at % 8)) & 1)
+        if ((p_data[*p_at_value / 8] >> (*p_at_value % 8)) & 1)
         {
-            v |= UINT64_C(1) << k;
+            value |= UINT64_C(1) << item_index;
         }
     }
-    return v;
+    return value;
 }
 static unsigned payload_bits (unsigned kind)
 {
@@ -34,257 +45,276 @@ static unsigned payload_bits (unsigned kind)
                                     2, 18, 5,  11, 5,  39, 2};
     return kind < 13 ? bits[kind] : UINT32_MAX;
 }
-unsigned nav_packet_encode (uint8_t out[NAV_PACKET_BYTES], const NavRequest * r)
+unsigned nav_packet_encode (uint8_t out[NAV_PACKET_BYTES],
+                            const nav_request_t * p_result)
 {
-    if (!r || r->kind > 12 || r->owner < 1 || r->owner > 5 ||
-        !isfinite(r->value))
+    if (!p_result || p_result->kind > 12 || p_result->owner < 1 ||
+        p_result->owner > 5 || !isfinite(p_result->value))
     {
         return 0;
     }
     memset(out, 0, NAV_PACKET_BYTES);
-    unsigned at = 0;
-    put(out, &at, r->kind, 4);
-    put(out, &at, r->owner, 3);
-    if (r->kind == NAV_DRIVE || r->kind == NAV_TURN || r->kind == NAV_RESUME)
+    unsigned at_value = 0;
+    put(out, &at_value, p_result->kind, 4);
+    put(out, &at_value, p_result->owner, 3);
+    if (p_result->kind == NAV_DRIVE || p_result->kind == NAV_TURN ||
+        p_result->kind == NAV_RESUME)
     {
-        put(out, &at, r->lease, 32);
+        put(out, &at_value, p_result->lease, 32);
     }
-    switch (r->kind)
+    switch (p_result->kind)
     {
     case NAV_DRIVE:
-        if (fabsf(r->value) < 1 || fabsf(r->value) > 1000 ||
-            (r->speed && (r->speed < 20 || r->speed > 60)))
+        if (fabsf(p_result->value) < 1 || fabsf(p_result->value) > 1000 ||
+            (p_result->speed && (p_result->speed < 20 || p_result->speed > 60)))
         {
             return 0;
         }
-        put(out, &at, (unsigned)(lroundf(r->value * 10) + 10000), 15);
-        put(out, &at, r->speed, 6);
+        put(out, &at_value, (unsigned)(lroundf(p_result->value * 10) + 10000),
+            15);
+        put(out, &at_value, p_result->speed, 6);
         break;
     case NAV_TURN:
-        if (fabsf(r->value) < 1 || fabsf(r->value) > 180 ||
-            (r->speed && (r->speed < 20 || r->speed > 90)))
+        if (fabsf(p_result->value) < 1 || fabsf(p_result->value) > 180 ||
+            (p_result->speed && (p_result->speed < 20 || p_result->speed > 90)))
         {
             return 0;
         }
-        put(out, &at, (unsigned)(lroundf(r->value * 10) + 1800), 12);
-        put(out, &at, r->speed, 7);
-        put(out, &at, r->style, 1);
+        put(out, &at_value, (unsigned)(lroundf(p_result->value * 10) + 1800),
+            12);
+        put(out, &at_value, p_result->speed, 7);
+        put(out, &at_value, p_result->style, 1);
         break;
     case NAV_RESUME:
-        put(out, &at, r->flag, 1);
+        put(out, &at_value, p_result->flag, 1);
         break;
     case NAV_ROUTE:
 #ifdef BUDDY_RUNTIME_MAPPING
-        if (r->value < 0 || r->value > 25 || floorf(r->value) != r->value)
+        if (p_result->value < 0 || p_result->value > 25 ||
+            floorf(p_result->value) != p_result->value)
         {
             return 0;
         }
-        put(out, &at, (unsigned)r->value, 5);
+        put(out, &at_value, (unsigned)p_result->value, 5);
         break;
 #else
-        if (r->value != 0 && r->value != 1 && r->value != 2)
+        if (p_result->value != 0 && p_result->value != 1 &&
+            p_result->value != 2)
         {
             return 0;
         }
-        put(out, &at, (unsigned)r->value, 2);
+        put(out, &at_value, (unsigned)p_result->value, 2);
         break;
 #endif
     case NAV_TERRAIN:
-        if (r->value < 0 || r->value > 3 || floorf(r->value) != r->value)
+        if (p_result->value < 0 || p_result->value > 3 ||
+            floorf(p_result->value) != p_result->value)
         {
             return 0;
         }
-        put(out, &at, (unsigned)r->value, 2);
+        put(out, &at_value, (unsigned)p_result->value, 2);
         break;
     case NAV_WHEELS:
-        if (r->wheels[0] < -180 || r->wheels[0] > 180 || r->wheels[1] < -180 ||
-            r->wheels[1] > 180)
+        if (p_result->wheels[0] < -180 || p_result->wheels[0] > 180 ||
+            p_result->wheels[1] < -180 || p_result->wheels[1] > 180)
         {
             return 0;
         }
-        put(out, &at, (unsigned)(r->wheels[0] + 180), 9);
-        put(out, &at, (unsigned)(r->wheels[1] + 180), 9);
+        put(out, &at_value, (unsigned)(p_result->wheels[0] + 180), 9);
+        put(out, &at_value, (unsigned)(p_result->wheels[1] + 180), 9);
         break;
     case NAV_VERIFIED_BARCODE:
-        if (r->value < 0 || r->value > 25 || floorf(r->value) != r->value)
+        if (p_result->value < 0 || p_result->value > 25 ||
+            floorf(p_result->value) != p_result->value)
         {
             return 0;
         }
-        put(out, &at, (unsigned)r->value, 5);
+        put(out, &at_value, (unsigned)p_result->value, 5);
         break;
     case NAV_RAMP_ASSIST:
-        if (r->assist.boost_milli > 200 || r->assist.push_pwm_x100 > 6000 ||
-            r->assist.hold_milli > 1000 || !r->assist.ttl_ms ||
-            r->assist.ttl_ms > 200)
+        if (p_result->assist.boost_milli > 200 ||
+            p_result->assist.push_pwm_x100 > 6000 ||
+            p_result->assist.hold_milli > 1000 || !p_result->assist.ttl_ms ||
+            p_result->assist.ttl_ms > 200)
         {
             return 0;
         }
-        put(out, &at, r->assist.boost_milli, 8);
-        put(out, &at, r->assist.push_pwm_x100, 13);
-        put(out, &at, r->assist.hold_milli, 10);
-        put(out, &at, r->assist.ttl_ms, 8);
+        put(out, &at_value, p_result->assist.boost_milli, 8);
+        put(out, &at_value, p_result->assist.push_pwm_x100, 13);
+        put(out, &at_value, p_result->assist.hold_milli, 10);
+        put(out, &at_value, p_result->assist.ttl_ms, 8);
         break;
     case NAV_ASSIST:
-        if (r->value < 0 || r->value > 20 || floorf(r->value) != r->value)
+        if (p_result->value < 0 || p_result->value > 20 ||
+            floorf(p_result->value) != p_result->value)
         {
             return 0;
         }
-        put(out, &at, (unsigned)r->value, 5);
+        put(out, &at_value, (unsigned)p_result->value, 5);
         break;
     case NAV_FAULT_REPORT:
-        put(out, &at, r->bitmap, 10);
-        put(out, &at, r->flag, 1);
+        put(out, &at_value, p_result->bitmap, 10);
+        put(out, &at_value, p_result->flag, 1);
         break;
     case NAV_SPEED_MODE:
-        if (r->speed > DRIVE_MODE_NONE)
+        if (p_result->speed > DRIVE_MODE_NONE)
         {
             return 0;
         }
-        put(out, &at, r->speed, 2);
+        put(out, &at_value, p_result->speed, 2);
         break;
     default:
         break;
     }
-    return (at + 7) / 8;
+    return (at_value + 7) / 8;
 }
-bool nav_packet_decode (NavRequest * r, const uint8_t * p, unsigned bytes)
+bool nav_packet_decode (nav_request_t * p_result, const uint8_t * p_data,
+                        unsigned bytes)
 {
-    if (!r || !p || !bytes || bytes > NAV_PACKET_BYTES)
+    if (!p_result || !p_data || !bytes || bytes > NAV_PACKET_BYTES)
     {
         return false;
     }
-    memset(r, 0, sizeof(*r));
-    unsigned at = 0;
-    r->kind = (unsigned)get(p, &at, 4);
-    r->owner = (unsigned)get(p, &at, 3);
-    if (r->kind > 12 || r->owner < 1 || r->owner > 5)
+    memset(p_result, 0, sizeof(*p_result));
+    unsigned at_value = 0;
+    p_result->kind = (unsigned)get(p_data, &at_value, 4);
+    p_result->owner = (unsigned)get(p_data, &at_value, 3);
+    if (p_result->kind > 12 || p_result->owner < 1 || p_result->owner > 5)
     {
         return false;
     }
-    unsigned bits = 7 + payload_bits(r->kind);
+    unsigned bits = 7 + payload_bits(p_result->kind);
     if (bytes != (bits + 7) / 8)
     {
         return false;
     }
     for (unsigned bit = bits; bit < bytes * 8; ++bit)
     {
-        if ((p[bit / 8] >> (bit % 8)) & 1)
+        if ((p_data[bit / 8] >> (bit % 8)) & 1)
         {
             return false;
         }
     }
-    if (r->kind == NAV_DRIVE || r->kind == NAV_TURN || r->kind == NAV_RESUME)
+    if (p_result->kind == NAV_DRIVE || p_result->kind == NAV_TURN ||
+        p_result->kind == NAV_RESUME)
     {
-        r->lease = (uint32_t)get(p, &at, 32);
+        p_result->lease = (uint32_t)get(p_data, &at_value, 32);
     }
-    switch (r->kind)
+    switch (p_result->kind)
     {
     case NAV_DRIVE:
-        r->value = ((int)get(p, &at, 15) - 10000) / 10.0f;
-        r->speed = (unsigned)get(p, &at, 6);
+        p_result->value = ((int)get(p_data, &at_value, 15) - 10000) / 10.0f;
+        p_result->speed = (unsigned)get(p_data, &at_value, 6);
         break;
     case NAV_TURN:
-        r->value = ((int)get(p, &at, 12) - 1800) / 10.0f;
-        r->speed = (unsigned)get(p, &at, 7);
-        r->style = (unsigned)get(p, &at, 1);
+        p_result->value = ((int)get(p_data, &at_value, 12) - 1800) / 10.0f;
+        p_result->speed = (unsigned)get(p_data, &at_value, 7);
+        p_result->style = (unsigned)get(p_data, &at_value, 1);
         break;
     case NAV_RESUME:
-        r->flag = (unsigned)get(p, &at, 1);
+        p_result->flag = (unsigned)get(p_data, &at_value, 1);
         break;
     case NAV_ROUTE:
 #ifdef BUDDY_RUNTIME_MAPPING
-        r->value = (float)get(p, &at, 5);
+        p_result->value = (float)get(p_data, &at_value, 5);
         break;
 #else
-        r->value = (float)get(p, &at, 2);
+        p_result->value = (float)get(p_data, &at_value, 2);
         break;
 #endif
     case NAV_TERRAIN:
-        r->value = (float)get(p, &at, 2);
+        p_result->value = (float)get(p_data, &at_value, 2);
         break;
     case NAV_WHEELS:
-        r->wheels[0] = (int16_t)((int)get(p, &at, 9) - 180);
-        r->wheels[1] = (int16_t)((int)get(p, &at, 9) - 180);
+        p_result->wheels[0] = (int16_t)((int)get(p_data, &at_value, 9) - 180);
+        p_result->wheels[1] = (int16_t)((int)get(p_data, &at_value, 9) - 180);
         break;
     case NAV_VERIFIED_BARCODE:
-        r->value = (float)get(p, &at, 5);
+        p_result->value = (float)get(p_data, &at_value, 5);
         break;
     case NAV_RAMP_ASSIST:
-        r->assist.boost_milli = (uint16_t)get(p, &at, 8);
-        r->assist.push_pwm_x100 = (uint16_t)get(p, &at, 13);
-        r->assist.hold_milli = (uint16_t)get(p, &at, 10);
-        r->assist.ttl_ms = (uint8_t)get(p, &at, 8);
+        p_result->assist.boost_milli = (uint16_t)get(p_data, &at_value, 8);
+        p_result->assist.push_pwm_x100 = (uint16_t)get(p_data, &at_value, 13);
+        p_result->assist.hold_milli = (uint16_t)get(p_data, &at_value, 10);
+        p_result->assist.ttl_ms = (uint8_t)get(p_data, &at_value, 8);
         break;
     case NAV_ASSIST:
-        r->value = (float)get(p, &at, 5);
+        p_result->value = (float)get(p_data, &at_value, 5);
         break;
     case NAV_FAULT_REPORT:
-        r->bitmap = (unsigned)get(p, &at, 10);
-        r->flag = (unsigned)get(p, &at, 1);
+        p_result->bitmap = (unsigned)get(p_data, &at_value, 10);
+        p_result->flag = (unsigned)get(p_data, &at_value, 1);
         break;
     case NAV_SPEED_MODE:
-        r->speed = (unsigned)get(p, &at, 2);
+        p_result->speed = (unsigned)get(p_data, &at_value, 2);
         break;
     default:
         break;
     }
     uint8_t canonical[NAV_PACKET_BYTES];
-    unsigned n = nav_packet_encode(canonical, r);
-    return n == bytes && !memcmp(p, canonical, n);
+    unsigned count = nav_packet_encode(canonical, p_result);
+    return count == bytes && !memcmp(p_data, canonical, count);
 }
-static int32_t quant (float value, float scale, int32_t lo, int32_t hi,
-                      bool * overflow)
+static int32_t quant (float value, float scale, int32_t low, int32_t high,
+                      bool * p_overflow)
 {
-    double x = (double)value * scale;
-    if (!isfinite(x))
+    double value_x = (double)value * scale;
+    if (!isfinite(value_x))
     {
-        *overflow = true;
+        *p_overflow = true;
         return 0;
     }
-    if (x < lo)
+    if (value_x < low)
     {
-        *overflow = true;
-        return lo;
+        *p_overflow = true;
+        return low;
     }
-    if (x > hi)
+    if (value_x > high)
     {
-        *overflow = true;
-        return hi;
+        *p_overflow = true;
+        return high;
     }
-    return (int32_t)llround(x);
+    return (int32_t)llround(value_x);
 }
-void nav_event_encode (uint8_t out[NAV_EVENT_BYTES], const MotionEvent * e)
+void nav_event_encode (uint8_t out[NAV_EVENT_BYTES],
+                       const motion_event_t * p_event_value)
 {
     memset(out, 0, NAV_EVENT_BYTES);
-    unsigned at = 0;
+    unsigned at_value = 0;
     bool overflow = false;
-    put(out, &at, e->now_us, 64);
-    put(out, &at, e->sequence, 32);
-    put(out, &at, e->id, 32);
-    put(out, &at, e->requester, 3);
-    put(out, &at, e->owner, 3);
-    put(out, &at, e->type, 4);
-    put(out, &at, e->kind, 4);
-    put(out, &at, e->state, 3);
-    put(out, &at, e->fault, 10);
-    put(out, &at, e->result, 4);
-    put(out, &at, e->style, 1);
-    put(out, &at, e->speed, 7);
-    put(out, &at,
-        (uint32_t)(quant(e->goal, 10, -10000, 10230, &overflow) + 10000), 15);
-    put(out, &at,
-        (uint32_t)(quant(e->progress_mm, 10, -8388608, 8388607, &overflow) +
+    put(out, &at_value, p_event_value->now_us, 64);
+    put(out, &at_value, p_event_value->sequence, 32);
+    put(out, &at_value, p_event_value->id, 32);
+    put(out, &at_value, p_event_value->requester, 3);
+    put(out, &at_value, p_event_value->owner, 3);
+    put(out, &at_value, p_event_value->type, 4);
+    put(out, &at_value, p_event_value->kind, 4);
+    put(out, &at_value, p_event_value->state, 3);
+    put(out, &at_value, p_event_value->fault, 10);
+    put(out, &at_value, p_event_value->result, 4);
+    put(out, &at_value, p_event_value->style, 1);
+    put(out, &at_value, p_event_value->speed, 7);
+    put(out, &at_value,
+        (uint32_t)(quant(p_event_value->goal, 10, -10000, 10230, &overflow) +
+                   10000),
+        15);
+    put(out, &at_value,
+        (uint32_t)(quant(p_event_value->progress_mm, 10, -8388608, 8388607,
+                         &overflow) +
                    8388608),
         24);
-    put(out, &at,
-        (uint32_t)(quant(e->rotation_deg, 10, -32768, 32767, &overflow) +
+    put(out, &at_value,
+        (uint32_t)(quant(p_event_value->rotation_deg, 10, -32768, 32767,
+                         &overflow) +
                    32768),
         16);
-    put(out, &at, overflow, 1);
-    for (unsigned w = 0; w < 2; ++w)
+    put(out, &at_value, overflow, 1);
+    for (unsigned wheel = 0; wheel < 2; ++wheel)
     {
-        put(out, &at,
-            (uint32_t)(quant(e->target_mm_s[w], 1, -180, 180, &overflow) + 180),
+        put(out, &at_value,
+            (uint32_t)(quant(p_event_value->target_mm_s[wheel], 1, -180, 180,
+                             &overflow) +
+                       180),
             9);
     }
     if (overflow)
@@ -292,51 +322,60 @@ void nav_event_encode (uint8_t out[NAV_EVENT_BYTES], const MotionEvent * e)
         out[222 / 8] |= (uint8_t)(1u << (222 % 8));
     }
 }
-bool nav_event_decode (MotionEvent * e, const uint8_t in[NAV_EVENT_BYTES],
-                       bool * overflow)
+bool nav_event_decode (motion_event_t * p_event_value,
+                       const uint8_t in_value_value[NAV_EVENT_BYTES],
+                       bool * p_overflow_value)
 {
-    if (!e || !in)
+    if (!p_event_value || !in_value_value)
     {
         return false;
     }
-    memset(e, 0, sizeof(*e));
-    unsigned at = 0;
-    e->now_us = get(in, &at, 64);
-    e->sequence = (uint32_t)get(in, &at, 32);
-    e->id = (uint32_t)get(in, &at, 32);
-    e->requester = (unsigned)get(in, &at, 3);
-    e->owner = (unsigned)get(in, &at, 3);
-    e->type = (unsigned)get(in, &at, 4);
-    e->kind = (unsigned)get(in, &at, 4);
-    e->state = (unsigned)get(in, &at, 3);
-    e->fault = (unsigned)get(in, &at, 10);
-    e->result = (unsigned)get(in, &at, 4);
-    e->style = (unsigned)get(in, &at, 1);
-    e->speed = (unsigned)get(in, &at, 7);
-    e->goal = ((int)get(in, &at, 15) - 10000) / 10.0f;
-    e->progress_mm = ((int)get(in, &at, 24) - 8388608) / 10.0f;
-    e->rotation_deg = ((int)get(in, &at, 16) - 32768) / 10.0f;
-    bool clipped = get(in, &at, 1) != 0;
-    for (unsigned w = 0; w < 2; ++w)
+    memset(p_event_value, 0, sizeof(*p_event_value));
+    unsigned at_value = 0;
+    p_event_value->now_us = get(in_value_value, &at_value, 64);
+    p_event_value->sequence = (uint32_t)get(in_value_value, &at_value, 32);
+    p_event_value->id = (uint32_t)get(in_value_value, &at_value, 32);
+    p_event_value->requester = (unsigned)get(in_value_value, &at_value, 3);
+    p_event_value->owner = (unsigned)get(in_value_value, &at_value, 3);
+    p_event_value->type = (unsigned)get(in_value_value, &at_value, 4);
+    p_event_value->kind = (unsigned)get(in_value_value, &at_value, 4);
+    p_event_value->state = (unsigned)get(in_value_value, &at_value, 3);
+    p_event_value->fault = (unsigned)get(in_value_value, &at_value, 10);
+    p_event_value->result = (unsigned)get(in_value_value, &at_value, 4);
+    p_event_value->style = (unsigned)get(in_value_value, &at_value, 1);
+    p_event_value->speed = (unsigned)get(in_value_value, &at_value, 7);
+    p_event_value->goal =
+        ((int)get(in_value_value, &at_value, 15) - 10000) / 10.0f;
+    p_event_value->progress_mm =
+        ((int)get(in_value_value, &at_value, 24) - 8388608) / 10.0f;
+    p_event_value->rotation_deg =
+        ((int)get(in_value_value, &at_value, 16) - 32768) / 10.0f;
+    bool clipped = get(in_value_value, &at_value, 1) != 0;
+    for (unsigned wheel = 0; wheel < 2; ++wheel)
     {
-        e->target_mm_s[w] = (int16_t)((int)get(in, &at, 9) - 180);
+        p_event_value->target_mm_s[wheel] =
+            (int16_t)((int)get(in_value_value, &at_value, 9) - 180);
     }
-    if (overflow)
+    if (p_overflow_value)
     {
-        *overflow = clipped;
+        *p_overflow_value = clipped;
     }
-    for (unsigned bit = at; bit < NAV_EVENT_BYTES * 8; ++bit)
+    for (unsigned bit = at_value; bit < NAV_EVENT_BYTES * 8; ++bit)
     {
-        if ((in[bit / 8] >> (bit % 8)) & 1)
+        if ((in_value_value[bit / 8] >> (bit % 8)) & 1)
         {
             return false;
         }
     }
-    return e->requester <= 5 && e->owner <= 5 &&
-           e->type <= MOTION_EVENT_SESSION_END && e->kind <= 11 &&
-           e->state <= MOTION_CMD_FAILED && e->result <= MOTION_NEED_RECOVERY &&
-           e->target_mm_s[0] >= -180 && e->target_mm_s[0] <= 180 &&
-           e->target_mm_s[1] >= -180 && e->target_mm_s[1] <= 180;
+    return p_event_value->requester <= 5 && p_event_value->owner <= 5 &&
+           p_event_value->type <= MOTION_EVENT_SESSION_END &&
+           p_event_value->kind <= 11 &&
+           p_event_value->state <= MOTION_CMD_FAILED &&
+           p_event_value->result <= MOTION_NEED_RECOVERY &&
+           p_event_value->target_mm_s[0] >= -180 &&
+           p_event_value->target_mm_s[0] <= 180 &&
+           p_event_value->target_mm_s[1] >= -180 &&
+           p_event_value->target_mm_s[1] <= 180;
 }
 
 /* End of file. */

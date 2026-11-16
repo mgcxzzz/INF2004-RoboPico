@@ -125,7 +125,7 @@ typedef struct {
     int16_t tilt_mm;     /* right-minus-left, only meaningful when valid                  */
     bool tilt_skip;      /* v0.3: not valid ONLY because of Buddy4 ACCEL/SPREAD exclusion  */
     float speed_mm_s[2]; /* v0.4: measured wheel speeds (v2.3 velocity[])                 */
-} RampAssistInput;
+} ramp_assist_input_t;
 
 typedef struct {
     /* activation */
@@ -164,15 +164,15 @@ typedef struct {
     /* 500 ms interval statistics (reset by the caller after each report) */
     int16_t int_max_mm, int_min_mm;
     uint8_t int_valid, int_invalid, int_run, int_longest;
-} RampAssist;
+} ramp_assist_t;
 
-static inline void ra_interval_reset(RampAssist *a) {
+static inline void ra_interval_reset(ramp_assist_t *a) {
     a->int_max_mm = -128;
     a->int_min_mm = 127;
     a->int_valid = a->int_invalid = a->int_run = a->int_longest = 0;
 }
-static inline void ra_reset(RampAssist *a) {
-    *a = (RampAssist){0};
+static inline void ra_reset(ramp_assist_t *a) {
+    *a = (ramp_assist_t){0};
     a->pending_event = 0xff;
     ra_interval_reset(a);
 }
@@ -202,7 +202,7 @@ static inline uint8_t ra_inc8(uint8_t v) {
     return (uint8_t)(v < 255 ? v + 1 : 255);
 }
 
-static inline void ra_end(RampAssist *a, uint8_t reason, uint64_t now, bool latch) {
+static inline void ra_end(ramp_assist_t *a, uint8_t reason, uint64_t now, bool latch) {
     if (!a->assisting)
         return;
     a->assisting = false;
@@ -214,7 +214,7 @@ static inline void ra_end(RampAssist *a, uint8_t reason, uint64_t now, bool latc
     a->skip_since_us = 0;
     a->pending_event = RA_EVT_END;
 }
-static inline void ra_end_episode(RampAssist *a) {
+static inline void ra_end_episode(ramp_assist_t *a) {
     a->latched = false;
     a->episode_us = 0;
     a->peak_mm = 0;
@@ -225,7 +225,7 @@ static inline void ra_end_episode(RampAssist *a) {
 /* One call per control step (10 ms). Returns the alpha (milli) to apply to
  * both wheels this step. Ineligible states force 0 immediately (the existing
  * controller is being reset or left at that moment anyway). */
-static inline float ramp_assist_step(RampAssist *a, const RampAssistInput *in) {
+static inline float ramp_assist_step(ramp_assist_t *a, const ramp_assist_input_t *in) {
     const uint64_t now = in->now_us;
     if (!in->run_active) { /* Stop, ESTOP, fault, run end */
         ra_end(a, RA_END_STOPPED, now, false);
@@ -460,7 +460,7 @@ typedef struct {
     uint8_t valid, invalid, longest, max_i_l, max_i_r, sat_ticks;
     uint16_t active_ms;
     int16_t peak_pwm;
-} RampAssistTlm;
+} ramp_assist_tlm_t;
 static inline int8_t ra_i8(int v) {
     return (int8_t)(v < -127 ? -127 : v > 126 ? 126 : v);
 }
@@ -468,7 +468,7 @@ static inline void ra_put16(uint8_t *p, uint16_t v) {
     p[0] = (uint8_t)v;
     p[1] = (uint8_t)(v >> 8);
 }
-static inline void ra_tlm_pack(const RampAssistTlm *t, uint8_t seq,
+static inline void ra_tlm_pack(const ramp_assist_tlm_t *t, uint8_t seq,
                                uint8_t out[RA_TLM_FRAME_BYTES]) {
     uint8_t *p = out + 3;
     out[0] = (uint8_t)((RA_TLM_SOURCE << 4) | 2u);

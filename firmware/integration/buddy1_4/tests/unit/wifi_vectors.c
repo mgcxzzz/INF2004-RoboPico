@@ -14,8 +14,8 @@ static uint32_t map_word(void) {
 }
 int main(void) {
     uint8_t out[WIFI_PACKET_MAX], ack[4], log_len;
-    WifiCommand command = {0};
-    WifiHeartbeat hb = {.seq = 201,
+    wifi_command_t command = {0};
+    wifi_heartbeat_t hb = {.seq = 201,
                         .net = 2,
                         .state = 1,
                         .last_cmd = 11,
@@ -27,7 +27,7 @@ int main(void) {
                         .rejected = 1,
                         .connects = 3,
                         .fill_pct = 75};
-    WifiMotionPacket motion = {.seq = 9,
+    wifi_motion_packet_t motion = {.seq = 9,
                                .uptime_ms = 0x12345678u,
                                .elapsed_ms = 70000u,
                                .run_id = 42,
@@ -49,7 +49,7 @@ int main(void) {
                                .target_right_mm_s = 50,
                                .pwm_left = 111,
                                .pwm_right = 222};
-    WifiLinePacket line = {.seq = 10,
+    wifi_line_packet_t line = {.seq = 10,
                            .event = WPK_EVENT_QUEUED,
                            .uptime_ms = 999,
                            .last_decoded_letter = 'Z',
@@ -63,7 +63,7 @@ int main(void) {
                            .adc_barcode = 1003,
                            .calibrated_level_left = 450,
                            .calibrated_level_right = 550};
-    WifiNavPacket nav = {.seq = 11,
+    wifi_nav_packet_t nav = {.seq = 11,
                          .event = WPK_EVENT_DISPATCH,
                          .letter = 'A',
                          .action = 'S',
@@ -76,7 +76,7 @@ int main(void) {
                          .generation = 0x10203040u,
                          .fault_bitmap = 2,
                          .detail = 99};
-    WifiSummaryPacket summary = {.seq = 12,
+    wifi_summary_packet_t summary = {.seq = 12,
                                  .result = 3,
                                  .flags = 1,
                                  .uptime_ms = 1200,
@@ -86,7 +86,7 @@ int main(void) {
                                  .line_events = 7,
                                  .nav_events = 8,
                                  .recoveries = 2};
-    WifiDiagnosticsPacket diagnostics = {.seq = 14,
+    wifi_diagnostics_packet_t diagnostics = {.seq = 14,
                                          .uptime_ms = 0x78563412u,
                                          .threshold_adc = 2048,
                                          .bank = 31,

@@ -86,7 +86,7 @@ static void test_upward_acceleration_dwell_and_latch(void) {
     assert(guard.last_candidate == IMU_LIFT_CANDIDATE_UP_ACCEL &&
            guard.last_rejection == IMU_LIFT_REJECT_NORM);
     /* Repeated diagnostic encodes are readers: they must not clear history. */
-    RiLiftPeakPacket peak = {.last_candidate=guard.last_candidate,
+    ri_lift_peak_packet_t peak = {.last_candidate=guard.last_candidate,
                              .last_rejection=guard.last_rejection};
     uint8_t frame[RI_LIFT_PEAK_PACKET_BYTES];
     ri_lift_peak_packet_encode(&peak, 1, frame);

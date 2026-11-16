@@ -15,7 +15,7 @@ int main(void) {
         }
     /* Latest saved references plus previously reported normal black readings.
        Reproduce reason11 without assuming this represents the current mount. */
-    LineCalibration cal = {{137, 153}, {303, 1461}, 7};
+    line_calibration_t cal = {{137, 153}, {303, 1461}, 7};
     unsigned l = line_level(197, 137, 303), r = line_level(230, 153, 1461);
     assert(calibration_valid(&cal) && l < 650 && r < 650);
     assert(profile_start_block(5, false, false, true, false, true, l, r, false, LINE_USB_FREE) ==
@@ -25,10 +25,10 @@ int main(void) {
     assert(barcode_start_block(false, false, true, false, true, true, LINE_USB_HOLD) == START_OK);
     /* No-history starts still require an explicit request. The opt-in search
        waits150ms then alternates, with a deadline even when no ticks arrive. */
-    Circuit c;
-    CircuitInput i = {.now = 1000, .adc = {137, 153}};
+    circuit_t c;
+    circuit_input_t i = {.now = 1000, .adc = {137, 153}};
     circuit_begin(&c, &i);
-    AnalogDemand d = circuit_follow(&c, &cal, &i, 1);
+    analog_demand_t d = circuit_follow(&c, &cal, &i, 1);
 #ifdef CIRCUIT_SWEEP_SEARCH
     assert(!d.stop && !d.target[0] && !d.target[1]);
     i.now += LS_CONFIRM_US;

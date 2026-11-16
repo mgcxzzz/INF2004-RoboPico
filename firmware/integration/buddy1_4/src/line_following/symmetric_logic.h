@@ -1,3 +1,10 @@
+/**
+ * @file symmetric_logic.h
+ * @brief Symmetric logic.
+ * @details The control task owns mutable steering/recovery state.
+ * Keep straight, scan, turn and recovery behavior distinct; no direct PWM here.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 #ifndef SYMMETRIC_LINE_LOGIC_H
 #define SYMMETRIC_LINE_LOGIC_H
 #include "src/line_following/line_logic.h"
@@ -24,11 +31,13 @@ enum
 };
 typedef struct
 {
-    uint64_t direction_us, white_since;
+    uint64_t direction_us;
+    uint64_t white_since;
     uint32_t white_mm;
-    int8_t direction, recovery;
+    int8_t direction;
+    int8_t recovery;
     bool white;
-} SymmetricTracker;
+} symmetric_tracker_t;
 /* V11 adaptive forward speed. Level difference is reflectance error, not mm.
  * Piecewise interpolation keeps target changes <=1mm/s per error count:
  * |error|80:45/45,250:40/50,500:25/50,1000:0/45 (inner/outer).
@@ -66,63 +75,68 @@ static inline void symmetric_targets (int32_t error, int16_t target[2])
     target[0] = (int16_t)(error >= 0 ? inner : outer);
     target[1] = (int16_t)(error >= 0 ? outer : inner);
 }
-static inline AnalogDemand symmetric_demand (SymmetricTracker * t,
-                                             const LineCalibration * c,
-                                             uint16_t l, uint16_t r,
-                                             uint64_t now, uint32_t mm)
+static inline analog_demand_t
+symmetric_demand (symmetric_tracker_t * p_sample,
+                  const line_calibration_t * p_character, uint16_t l_value,
+                  uint16_t result, uint64_t now, uint32_t mm_value)
 {
-    AnalogDemand d = {.decision = SYM_STRAIGHT};
-    if (!calibration_valid(c))
+    analog_demand_t demand = {.decision = SYM_STRAIGHT};
+    if (!calibration_valid(p_character))
     {
-        d.stop = true;
-        d.decision = AL_LOST;
-        return d;
+        demand.stop = true;
+        demand.decision = AL_LOST;
+        return demand;
     }
-    d.level[0] = line_level(l, c->white[0], c->black[0]);
-    d.level[1] = line_level(r, c->white[1], c->black[1]);
-    if (d.level[0] < 150 && d.level[1] < 150)
+    demand.level[0] =
+        line_level(l_value, p_character->white[0], p_character->black[0]);
+    demand.level[1] =
+        line_level(result, p_character->white[1], p_character->black[1]);
+    if (demand.level[0] < 150 && demand.level[1] < 150)
     {
-        if (!t->white)
+        if (!p_sample->white)
         {
-            t->white = true;
-            t->white_since = now;
-            t->white_mm = mm;
-            t->recovery = t->direction && now - t->direction_us <= SYM_MEMORY_US
-                              ? t->direction
-                              : 0;
+            p_sample->white = true;
+            p_sample->white_since = now;
+            p_sample->white_mm = mm_value;
+            p_sample->recovery =
+                p_sample->direction &&
+                        now - p_sample->direction_us <= SYM_MEMORY_US
+                    ? p_sample->direction
+                    : 0;
         }
-        if (!t->recovery || now - t->white_since >= SYM_LOSS_US ||
-            mm - t->white_mm >= SYM_LOSS_MM)
+        if (!p_sample->recovery || now - p_sample->white_since >= SYM_LOSS_US ||
+            mm_value - p_sample->white_mm >= SYM_LOSS_MM)
         {
-            d.stop = true;
-            d.decision = AL_LOST;
-            return d;
+            demand.stop = true;
+            demand.decision = AL_LOST;
+            return demand;
         }
-        d.decision = t->recovery > 0 ? SYM_RECOVER_LEFT : SYM_RECOVER_RIGHT;
-        d.target[0] = t->recovery > 0 ? 0 : 45;
-        d.target[1] = t->recovery > 0 ? 45 : 0;
-        return d;
+        demand.decision =
+            p_sample->recovery > 0 ? SYM_RECOVER_LEFT : SYM_RECOVER_RIGHT;
+        demand.target[0] = p_sample->recovery > 0 ? 0 : 45;
+        demand.target[1] = p_sample->recovery > 0 ? 45 : 0;
+        return demand;
     }
-    t->white = false;
-    t->recovery = 0;
-    int32_t error = (int32_t)d.level[0] - d.level[1];
+    p_sample->white = false;
+    p_sample->recovery = 0;
+    int32_t error = (int32_t)demand.level[0] - demand.level[1];
     /* Only a clear, recent asymmetric observation may choose loss recovery. */
     if ((error >= 200 || error <= -200) &&
-        (d.level[0] >= 400 || d.level[1] >= 400))
+        (demand.level[0] >= 400 || demand.level[1] >= 400))
     {
-        t->direction = error > 0 ? 1 : -1;
-        t->direction_us = now;
+        p_sample->direction = error > 0 ? 1 : -1;
+        p_sample->direction_us = now;
     }
-    symmetric_targets(error, d.target);
-    if (d.target[0] < d.target[1])
+    symmetric_targets(error, demand.target);
+    if (demand.target[0] < demand.target[1])
     {
-        d.decision = SYM_LEFT;
+        demand.decision = SYM_LEFT;
     }
-    else if (d.target[0] > d.target[1])
+    else if (demand.target[0] > demand.target[1])
     {
-        d.decision = SYM_RIGHT;
+        demand.decision = SYM_RIGHT;
     }
-    return d;
+    return demand;
 }
 #endif
 

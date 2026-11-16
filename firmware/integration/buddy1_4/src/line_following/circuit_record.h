@@ -1,3 +1,10 @@
+/**
+ * @file circuit_record.h
+ * @brief Circuit record.
+ * @details The control task owns mutable steering/recovery state.
+ * Keep straight, scan, turn and recovery behavior distinct; no direct PWM here.
+ * @see docs/architecture.md and this feature's README for the full logic.
+ */
 #ifndef CIRCUIT_RECORD_H
 #define CIRCUIT_RECORD_H
 #include <stddef.h>
@@ -12,16 +19,17 @@ enum
 #define C_MAGIC 0x31524343u
 /* V5 uses unused phase/side bits for diagnostics without changing the record
    ABI. Older rows have zero high bits. Printed phase and side remain raw. */
-static inline uint8_t
-circuit_trace_phase (unsigned phase, const CircuitTracker * t, uint64_t now)
+static inline uint8_t circuit_trace_phase (unsigned phase,
+                                           const circuit_tracker_t * p_sample,
+                                           uint64_t now)
 {
     if (phase != C_FOLLOW && phase != J_ACQUIRE)
     {
         return (uint8_t)phase;
     }
-    return (uint8_t)(phase | (circuit_memory(t, now) << 4) |
-                     (t->core.white ? 64 : 0) |
-                     (t->reacquire_timing ? 128 : 0));
+    return (uint8_t)(phase | (circuit_memory(p_sample, now) << 4) |
+                     (p_sample->core.white ? 64 : 0) |
+                     (p_sample->reacquire_timing ? 128 : 0));
 }
 static inline uint8_t circuit_trace_side (unsigned raw, unsigned feedback)
 {
@@ -32,75 +40,114 @@ typedef struct
     uint64_t ms;
     uint32_t path10;
     int32_t wheel10[2];
-    int16_t speed10[2], pwm[2], target[2];
-    uint16_t level[2], adc[2];
+    int16_t speed10[2];
+    int16_t pwm[2];
+    int16_t target[2];
+    uint16_t level[2];
+    uint16_t adc[2];
     uint32_t turns;
-    uint8_t phase, side, decision, active;
-} CircuitTrace;
+    uint8_t phase;
+    uint8_t side;
+    uint8_t decision;
+    uint8_t active;
+} circuit_trace_t;
 typedef struct
 {
     uint64_t ms;
-    uint32_t path10, number, follow_ms;
-    uint16_t centre_ms, turn_ms, align_ms;
+    uint32_t path10;
+    uint32_t number;
+    uint32_t follow_ms;
+    uint16_t centre_ms;
+    uint16_t turn_ms;
+    uint16_t align_ms;
     int16_t angle10;
-} CircuitSummary;
+} circuit_summary_t;
 typedef struct
 {
-    uint32_t magic, version, crc, count, summary_count, overwritten;
-    uint64_t duration_us, path10;
+    uint32_t magic;
+    uint32_t version;
+    uint32_t crc;
+    uint32_t count;
+    uint32_t summary_count;
+    uint32_t overwritten;
+    uint64_t duration_us;
+    uint64_t path10;
     int64_t ticks[2];
-    uint32_t invalid[2], turns, ignored;
-    uint8_t reason, key, offline, profile, recorded_profile, imported;
-    LineCalibration calibration;
-    SideCalibration side;
-    CircuitTrace rows[C_ROWS];
-    CircuitSummary summaries[C_SUMMARIES];
-} CircuitSaved;
-_Static_assert(sizeof(CircuitTrace) == 48 && sizeof(CircuitSummary) == 32,
+    uint32_t invalid[2];
+    uint32_t turns;
+    uint32_t ignored;
+    uint8_t reason;
+    uint8_t key;
+    uint8_t offline;
+    uint8_t profile;
+    uint8_t recorded_profile;
+    uint8_t imported;
+    line_calibration_t calibration;
+    side_calibration_t side;
+    circuit_trace_t rows[C_ROWS];
+    circuit_summary_t summaries[C_SUMMARIES];
+} circuit_saved_t;
+_Static_assert(sizeof(circuit_trace_t) == 48 && sizeof(circuit_summary_t) == 32,
                "Circuit trace ABI changed");
-_Static_assert(sizeof(CircuitSaved) <= C_STORE_BYTES,
+_Static_assert(sizeof(circuit_saved_t) <= C_STORE_BYTES,
                "Circuit saved log exceeds64KiB");
-static inline bool circuit_record_valid (const CircuitSaved * s)
+static inline bool circuit_record_valid (const circuit_saved_t * p_state)
 {
-    return s->magic == C_MAGIC && s->version >= 1 && s->version <= 6 &&
-           s->count <= C_ROWS && s->summary_count <= C_SUMMARIES &&
-           s->profile >= 1 && s->profile <= 3 && s->recorded_profile >= 1 &&
-           s->recorded_profile <= 3 && calibration_valid(&s->calibration) &&
-           side_valid(&s->side) &&
-           s->crc == log_crc((const uint8_t *)s + offsetof(CircuitSaved, count),
-                             sizeof(*s) - offsetof(CircuitSaved, count));
+    return p_state->magic == C_MAGIC && p_state->version >= 1 &&
+           p_state->version <= 6 && p_state->count <= C_ROWS &&
+           p_state->summary_count <= C_SUMMARIES && p_state->profile >= 1 &&
+           p_state->profile <= 3 && p_state->recorded_profile >= 1 &&
+           p_state->recorded_profile <= 3 &&
+           calibration_valid(&p_state->calibration) &&
+           side_valid(&p_state->side) &&
+           p_state->crc ==
+               log_crc((const uint8_t *)p_state +
+                           offsetof(circuit_saved_t, count),
+                       sizeof(*p_state) - offsetof(circuit_saved_t, count));
 }
 typedef struct
 {
-    uint32_t magic, version, crc, count, dropped;
+    uint32_t magic;
+    uint32_t version;
+    uint32_t crc;
+    uint32_t count;
+    uint32_t dropped;
     uint64_t duration;
     int32_t cutoff[2];
     uint32_t invalid[2];
-    uint8_t reason, key, offline, mode;
-    LineCalibration calibration;
-    SideCalibration side;
-    uint8_t selected_mode, firmware;
-    Junction junction;
+    uint8_t reason;
+    uint8_t key;
+    uint8_t offline;
+    uint8_t mode;
+    line_calibration_t calibration;
+    side_calibration_t side;
+    uint8_t selected_mode;
+    uint8_t firmware;
+    junction_t junction;
     uint8_t rows[3600];
-} CircuitLegacy;
-_Static_assert(sizeof(CircuitLegacy) == 3792 &&
-                   offsetof(CircuitLegacy, rows) == 192,
+} circuit_legacy_t;
+_Static_assert(sizeof(circuit_legacy_t) == 3792 &&
+                   offsetof(circuit_legacy_t, rows) == 192,
                "V10 import ABI changed");
-static inline bool circuit_import (const CircuitLegacy * s,
-                                   LineCalibration * cal,
-                                   SideCalibration * side)
+static inline bool circuit_import (const circuit_legacy_t * p_state,
+                                   line_calibration_t * p_cal,
+                                   side_calibration_t * p_side)
 {
-    if (s->magic != 0x314e434au || s->version != 1 || s->firmware > 10 ||
-        s->count > 100 || s->mode < 1 || s->mode > 3 || s->selected_mode < 1 ||
-        s->selected_mode > 3 || !calibration_valid(&s->calibration) ||
-        !side_valid(&s->side) ||
-        s->crc != log_crc((const uint8_t *)s + offsetof(CircuitLegacy, count),
-                          sizeof(*s) - offsetof(CircuitLegacy, count)))
+    if (p_state->magic != 0x314e434au || p_state->version != 1 ||
+        p_state->firmware > 10 || p_state->count > 100 || p_state->mode < 1 ||
+        p_state->mode > 3 || p_state->selected_mode < 1 ||
+        p_state->selected_mode > 3 ||
+        !calibration_valid(&p_state->calibration) ||
+        !side_valid(&p_state->side) ||
+        p_state->crc !=
+            log_crc((const uint8_t *)p_state +
+                        offsetof(circuit_legacy_t, count),
+                    sizeof(*p_state) - offsetof(circuit_legacy_t, count)))
     {
         return false;
     }
-    *cal = s->calibration;
-    *side = s->side;
+    *p_cal = p_state->calibration;
+    *p_side = p_state->side;
     return true;
 }
 #endif

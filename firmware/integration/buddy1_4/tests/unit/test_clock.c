@@ -12,23 +12,23 @@ static void off(void *p) {
     (void)p;
     ++off_count;
 }
-static void begin(MotionFeedback *f) {
+static void begin(motion_feedback_t *f) {
     clock_us = 1000;
     off_count = 0;
-    MotionPort p = {.now_us = now, .outputs_off = off};
+    motion_port_t p = {.now_us = now, .outputs_off = off};
     motion_init(&p);
     motion_session_begin(clock_us);
-    *f = (MotionFeedback){.now_us = clock_us, .line_level = {700, 700}};
+    *f = (motion_feedback_t){.now_us = clock_us, .line_level = {700, 700}};
 }
 static void fresh_after_snapshot(void) {
     const unsigned lag[] = {1, 2, 7, 50, 500, 1000, 5000};
     for (unsigned k = 0; k < sizeof(lag) / sizeof(lag[0]); ++k) {
-        MotionFeedback f;
+        motion_feedback_t f;
         begin(&f);
         clock_us = f.now_us + lag[k];
         assert(nav_submit_navigation(MOTION_BUDDY3, 45, 45) == MOTION_OK);
-        MotionOutput out = motion_update(&f);
-        MotionStatus s = nav_get_status();
+        motion_output_t out = motion_update(&f);
+        motion_status_t s = nav_get_status();
         if (s.mode != MOTION_AUTO)
             fprintf(
                 stderr,
@@ -56,12 +56,12 @@ static void fresh_after_snapshot(void) {
     }
 }
 static void takeover_and_handback(void) {
-    MotionFeedback f;
+    motion_feedback_t f;
     begin(&f);
     clock_us = f.now_us + 50;
     uint32_t lease;
     assert(nav_request_takeover(MOTION_BUDDY5, &lease) == MOTION_OK);
-    MotionOutput out = motion_update(&f);
+    motion_output_t out = motion_update(&f);
     assert(nav_get_status().mode == MOTION_STOPPING && !nav_get_status().fault && out.external);
     for (unsigned k = 0; k < 17; ++k) {
         f.now_us += 10000;
