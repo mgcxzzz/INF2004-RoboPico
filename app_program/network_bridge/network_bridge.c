@@ -432,7 +432,7 @@ void rn_app_task(int32_t code, void *exinf) {
 #ifdef APP_RTOS_IMU
             uint8_t lift_stop[30];
             uint16_t run = (uint16_t)info[13] | ((uint16_t)info[14] << 8);
-            ri_safety_packet(rn_next_sequence(15), now, run, lift_stop);
+            ri_safety_packet(rn_next_sequence(15), run, lift_stop);
             (void)rn_tx_push(RN_TLM, lift_stop, sizeof(lift_stop), now);
             if (rn_drive_telemetry_enabled()) {
                 uint8_t diagnostics[63];

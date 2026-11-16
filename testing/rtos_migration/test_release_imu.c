@@ -36,8 +36,16 @@ int main(void) {
     }
     assert(ri_safety_can_reset() && shared.lift.latched);
     uint8_t safety[30];
-    ri_safety_packet(17,host_now_us/1000,22,safety);
+    host_kernel_offset_ms=137; /* hardware timer starts before kernel uptime */
+    ri_safety_packet(17,22,safety);
     assert(safety[0]==0xf2 && safety[3]==0xc9 && (safety[23]&0x3f)==0x3d);
+    uint32_t packet_ms=0;
+    for(unsigned b=0;b<4;++b) packet_ms|=(uint32_t)safety[5+b]<<(8*b);
+    assert(packet_ms==host_now_us/1000 && packet_ms!=board_kernel_ms());
+    /* Both offset directions must leave C9 consistent with the actual guard. */
+    host_kernel_offset_ms=(uint32_t)-137;
+    ri_safety_packet(18,22,safety);
+    assert((safety[23]&0x3f)==0x3d && ri_safety_blocked());
     /* A last-good age just outside the limit must invalidate an earlier Reset check. */
     host_now_us+=101000;
     assert(!ri_safety_can_reset() && !ri_safety_reset_latch());

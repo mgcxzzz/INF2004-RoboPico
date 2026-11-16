@@ -1,8 +1,8 @@
 # RoboPico — provisional Buddy 1–4 RTOS integration
 
-**Current main release: v0.2.3, micro T-Kernel SMP. Buddy 5 is NOT integrated.**
+**Current main release: v0.2.4, micro T-Kernel SMP. Buddy 5 is NOT integrated.**
 
-[Download firmware and full bundle](firmware/integration/buddy1_4/artifacts/v0_2_3_rtos/)
+[Download firmware and full bundle](firmware/integration/buddy1_4/artifacts/v0_2_4_rtos/)
  · [Setup / powerbank / log downloads](docs/setup.md)
  · [Validation and pending circuit checks](firmware/integration/buddy1_4/STATUS.md)
  · [Architecture and interfaces](docs/architecture.md)
@@ -47,3 +47,7 @@ detection now latches all motors off through the safety/coordinator path; Reset
 requires eligible IMU evidence, and Start remains explicit. Production collision
 classification is removed. The user reports improved v0.2.2 junction detection;
 bends remain untested and recovery awaits diagnostic logs.
+
+[v0.2.4 status correction](docs/imu_status_clock_v0_2_4.md) uses a single hardware
+clock inside C9 reporting, preventing false IMU-not-ready labels from kernel/
+hardware uptime offsets. Actual safety gates and controllers are unchanged.

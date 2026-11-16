@@ -1,4 +1,4 @@
-# Provisional Buddy 1–4 RTOS v0.2.3 status
+# Provisional Buddy 1–4 RTOS v0.2.4 status
 
 Main is intentionally promoted before the remaining full-circuit checks, per
 user instruction. Buddy 5 remains a blank integration point, not a working feature.
@@ -72,3 +72,12 @@ of the lift/overturn gesture, output stop and ramp false-positive checks is pend
 User update: v0.2.2 junction width change never missed a junction in the reported
 test. Bends were not tested. Recovery reportedly did not visibly sweep; no logs
 are currently available, so this release leaves those algorithms unchanged.
+
+## IMU reporting clock correction v0.2.4
+
+User screenshot after flat/still Reset showed armed,500ms upright, no candidate
+dwell and a false not-ready label. The actual service test reproduced mixed-clock
+freshness failure with137ms kernel/hardware offset. C9 now owns its hardware-clock
+read. It retains both-direction offset regression coverage. This correction does
+not certify the actual cause of every failed Start; full frames/acknowledgment
+are needed if motion remains blocked after the display becomes consistent.

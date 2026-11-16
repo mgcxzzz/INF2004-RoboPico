@@ -1,4 +1,4 @@
-# Buddy 1–4 RTOS integration v0.2.3
+# Buddy 1–4 RTOS integration v0.2.4
 
 **PROVISIONAL. Buddy 5 obstacle avoidance is NOT integrated.**
 
@@ -11,7 +11,7 @@ while micro T-Kernel owns task scheduling and the kernel Wi-Fi service.
 - [Release status / hardware evidence](STATUS.md)
 - [Build](../../../docs/build.md) and [focused checks](../../../docs/testing.md)
 - [Architecture](../../../docs/architecture.md) and include/interfaces/
-- [Current UF2 + full bundle](artifacts/v0_2_3_rtos/)
+- [Current UF2 + full bundle](artifacts/v0_2_4_rtos/)
 - [Historical SDK reference](SDK_REFERENCE.md)
 
 Profile 1 keeps 45 mm/s nominal straight travel. v0.2.2 adds qualified bend
@@ -33,3 +33,7 @@ no Wi-Fi password. The manifest pins the tested baseline and build inputs.
 The [v0.2.3 IMU safety addition](../../../docs/imu_end_run_v0_2_3.md) replaces
 collision classification with a latched lift/overturn stop. It does not tune the
 line/barcode/ramp controllers. Use the complete new dashboard bundle.
+
+v0.2.4 corrects C9 diagnostic freshness to use the same hardware-timer epoch as
+its samples. It retains v0.2.3 detection/stop/reset behavior; see
+[the status correction guide](../../../docs/imu_status_clock_v0_2_4.md).

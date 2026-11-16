@@ -11,10 +11,10 @@ from package_line_following import linked_checks
 
 ROOT = common.ROOT
 CORE = ROOT / 'firmware/integration/buddy1_4'
-ART = CORE / 'artifacts/v0_2_3_rtos'
-NAME = 'robopico_buddy1_4_rtos_v0_2_3'
+ART = CORE / 'artifacts/v0_2_4_rtos'
+NAME = 'robopico_buddy1_4_rtos_v0_2_4'
 TESTED = '75325f29ad604c75a9d9ab8111658aa1536543d5'
-PREVIOUS = '6e594e2ae2207f8538ce7103bfb21acd8aea2d03'
+PREVIOUS = '7cdcd9f3540edd794c63dd688562061559778fab'
 # Exact fingerprints for the reviewed v0.2.3 change boundary. Other tested
 # algorithms must remain identical to their accepted baseline.
 REVIEWED = {'firmware/integration/buddy1_4/src/line_following/continuous_steering.h': {'sha256': '417a0af222cb156fb0dea0b8e38197d167a7eb8ee6007b84e69239eae88a3dce',
@@ -154,13 +154,13 @@ def main():
     firmware = ART / built.name
     shutil.copyfile(built, firmware)
     manifest = {
-        'name': NAME, 'version': '0.2.3', 'target_branch': 'main',
+        'name': NAME, 'version': '0.2.4', 'target_branch': 'main',
         'status': 'PROVISIONAL Buddy1-4 RTOS; Buddy5 NOT integrated',
         'source_commit': common.command('git', 'rev-parse', 'HEAD'),
         'tested_step5_baseline': TESTED, 'previous_sdk_main': common.BASE,
         'previous_rtos_main': PREVIOUS,
         'reviewed_release_algorithms': REVIEWED,
-        'change_boundary': 'Add release-only IMU lift/overturn latch, authoritative reset gate and C9 evidence; remove production collision classification. Retain v0.2.2 junction/bend/recovery and existing calibration/decoder/ramp/network thresholds.',
+        'change_boundary': 'C9 uses the hardware timer internally for freshness and all its timestamps. Eliminate caller-provided kernel clock; retain v0.2.3 safety/gesture/control algorithms.',
         'build_profile': 'APP=rtos_buddy1_4 SMP=1 CONSOLE=usb_cdc WIFI=cyw43 NET=lwip MQTT=1 CRASH_REPORT=0 TEST=0',
         'compiler': common.command(ROOT.parent / '.buddy2-tools/arm-gcc/bin/arm-none-eabi-gcc.exe', '--version').splitlines()[0],
         'sdk_commit': common.command('git', '-C', ROOT.parent / '.buddy2-tools/pico-sdk', 'rev-parse', 'HEAD'),
@@ -184,10 +184,10 @@ def main():
                                    'navigation': '31-byte coordinator event'},
                           'capacity': '640 line rows,2048 raw rows for latest reportable attempt,512-row preroll, diagnostic5ms decimation, bounded navigation history',
                           'new_source15': 'C2 release/calibration15,C3 runtime63,C4 encoder fault48,C5 barcode attempt30,C6 network stop32,C7 junction20,C8 drive18,C9 IMU lift30 bytes;1Hz; C3/C5/C7/C8 ordinary telemetry enabled only; C9 always'},
-        'software_checks': ['Seven focused native C programs: qualification, C9 codec, safety policy, real production IMU hook/reset, release bridge/export, retained legacy service/ramp',
-                            'Four Node C9 malformed/range/C3-flag checks plus actual C release/runtime decoder fixture',
-                            'Headless browser simulated-MQTT lift/overturn/unready/stale panels and stopped export compatibility',
-                            'ARM image, required safety symbols, UF2 flash bounds, stack/RAM, protected source fingerprints and ZIP integrity'],
+        'software_checks': ['Actual release IMU service reproduces mixed-clock failure and verifies both kernel-offset directions, retained lift latch/reset checks',
+                            'Release metadata/export identity and actual C-to-browser decoder fixture',
+                            'Four unchanged C9 wire codec checks; no schema/gesture changes',
+                            'ARM image, required symbols, flash/RAM/stack limits, protected source hashes and archive integrity'],
         'hardware_evidence': 'Step5v0.1.5: flat0 humps; one nominal10mm one-sided ramp1 accepted/13mm max; assist active; about50Hz IMU/100Hz control; no new measured motion-window timing/acquisition/logging faults. Not a repeatability claim.',
         'pending': ['Physical IMU lift/overturn stop and no-false-positive ramp acceptance; software checks cannot certify lift discrimination or physical stop latency',
                     'Bend untested; stationary recovery reported not sweeping, awaiting logs; v0.2.2 logic retained',
@@ -199,6 +199,8 @@ def main():
                            'baseline_static_ram_end': '0x2002e710',
                            'static_ram_growth_bytes': int(linked['static_ram_end'],16) - 0x2002e710,
                            'previous_v022_static_ram_end': '0x2002fd90',
+                           'previous_v023_static_ram_end': '0x2002fda8',
+                           'growth_vs_v023_bytes': int(linked['static_ram_end'],16) - 0x2002fda8,
                            'growth_vs_v022_bytes': int(linked['static_ram_end'],16) - 0x2002fd90,
                            'message_extensions_bytes_per_second': 256,
                            'scope': 'Linked static RAM only, not dynamic stack high-water or whole-firmware Tribunal completion'},
@@ -214,7 +216,7 @@ def main():
             z.write(p, p.relative_to(ROOT).as_posix())
         z.write(firmware, 'firmware/' + firmware.name)
         z.writestr('START_HERE.md', (ROOT / 'docs/setup.md').read_text(encoding='utf-8'))
-        z.writestr('TEST_CHANGES.md', (ROOT/'docs/imu_end_run_v0_2_3.md').read_text(encoding='utf-8'))
+        z.writestr('TEST_CHANGES.md', (ROOT/'docs/imu_status_clock_v0_2_4.md').read_text(encoding='utf-8'))
         commands = [('Start dashboard.cmd', 'tools/dashboard/run_dashboard.py', ''),
                     ('Setup Wi-Fi.cmd', 'tools/rtos_migration/provision_network.py', ''),
                     ('Capture wireless test.cmd', 'tools/rtos_migration/capture_wireless.py', ''),

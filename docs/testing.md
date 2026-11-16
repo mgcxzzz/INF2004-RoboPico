@@ -1,3 +1,12 @@
+# v0.2.4 focused clock-domain regression
+
+Run `test_release_imu` and `test_release_exports`, then the actual C release codec
+and four `test_imu_lift_v023.js` cases. C9 layout stays0x23. The actual service
+fixture supplies independently offset kernel uptime, reproduces v0.2.3 failure,
+and checks both offset directions after the correction. ARM/package checks verify
+the updated diagnostic API and unchanged protected control inputs. Prior v0.2.3
+checks below remain historical; no unrelated full-suite rerun is needed.
+
 # Focused checks for Buddy 1–4 RTOS v0.2.3
 
 This release adds IMU end-run safety while retaining v0.2.2 controls. Purposeful

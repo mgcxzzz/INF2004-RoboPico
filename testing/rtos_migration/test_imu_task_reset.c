@@ -17,6 +17,7 @@ uint32_t host_now_us = 1000000;
 static jmp_buf finished;
 static bool requested, checked_calibrating;
 static unsigned sleeps;
+static uint32_t host_kernel_offset_ms;
 static RiAcquisition acq;
 static uint32_t fifo_start_us, init_start_us;
 static int ISpinLock(T_SPLOCK *p, UINT *key) {
@@ -40,7 +41,7 @@ uint64_t board_time_us(void) {
     return host_now_us;
 }
 uint32_t board_kernel_ms(void) {
-    return host_now_us / 1000;
+    return host_now_us / 1000 - host_kernel_offset_ms;
 }
 static int tk_dly_tsk(uint32_t ms);
 static int tk_get_prc(void) {

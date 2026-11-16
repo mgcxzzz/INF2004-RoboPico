@@ -119,7 +119,10 @@ bool ri_safety_reset_latch(void) {
     leave(key);
     return ready;
 }
-void ri_safety_packet(uint8_t seq, uint32_t now_ms, uint16_t run, uint8_t out[30]) {
+void ri_safety_packet(uint8_t seq, uint16_t run, uint8_t out[30]) {
+    /* Sample age, trip and packet uptime must share the hardware timer epoch.
+     * Kernel uptime has a different origin; callers cannot supply this clock. */
+    uint32_t now_ms = (uint32_t)(board_time_us()/1000U);
     BringupStatus control;
     bringup_get_status(&control);
     bool stopped = (control.flags & BR_IMU) != 0U;

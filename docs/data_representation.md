@@ -197,3 +197,12 @@ C9 is emitted at1Hz including telemetry-off; C2-C9 total256 frame bytes/s at the
 1Hz cadence, excluding other telemetry/MQTT/TCP. Before/after linked RAM evidence
 is in the build manifest. This remains scoped evidence, not completion of the
 remaining whole-firmware Tribunal audit.
+
+## v0.2.4 clock-domain correction
+
+C9 layout and field widths remain unchanged (codec0x23). Its uptime, sample and
+trip fields now consistently use hardware-timer milliseconds. The diagnostic API
+reads that clock internally rather than accepting kernel uptime from its caller.
+Actual safety uses that same sample-clock domain already; no threshold/flag/queue
+width changes are introduced. This changes clock consistency, not timestamp bit
+packing or the remaining Tribunal evidence scope.
