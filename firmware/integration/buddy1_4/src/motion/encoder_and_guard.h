@@ -11,7 +11,8 @@
 #include <stdint.h>
 #include <limits.h>
 
-/* Hardware-independent diagnostic logic; single-core caller provides locking. */
+/* Hardware-independent diagnostic logic; single-core caller provides locking.
+ */
 enum
 {
     DRIVE_OFF = 0,
@@ -41,17 +42,17 @@ static inline bench_levels_t bench_levels (uint8_t selected, uint8_t wheel,
                                            uint8_t drive, uint8_t duty)
 {
     bench_levels_t value = {0, 0};
-    if (selected > 1 || wheel > 1 || selected != wheel || duty > 40)
+    if ((((selected > 1) || (wheel > 1)) || (selected != wheel)) || (duty > 40))
     {
         return value;
     }
     /* Current bench uses a 1000-count PWM period. */
     uint16_t level = (uint16_t)(10u * duty);
-    if (drive == DRIVE_A)
+    if (DRIVE_A == drive)
     {
         value.a = level;
     }
-    else if (drive == DRIVE_B)
+    else if (DRIVE_B == drive)
     {
         value.b = level;
     }
@@ -93,11 +94,11 @@ static inline void bench_tick (volatile bench_control_t * p_character,
     {
         bench_stop(p_character, now, STOP_GP21_RELEASE);
     }
-    else if (p_character->drive && now >= p_character->deadline_us)
+    else if ((p_character->drive) && (now >= p_character->deadline_us))
     {
         bench_stop(p_character, now, STOP_TIMEOUT);
     }
-    if (!hold && !stop)
+    if ((!hold) && (!stop))
     {
         p_character->consumed = false;
     }
@@ -106,9 +107,10 @@ static inline bool bench_start (volatile bench_control_t * p_character,
                                 uint64_t now, bool hold, bool stop,
                                 uint8_t direction)
 {
-    if (!hold || stop || p_character->consumed || p_character->drive ||
-        now < p_character->next_start_us ||
-        (direction != DRIVE_A && direction != DRIVE_B))
+    if ((((((!hold) || stop) || (p_character->consumed)) ||
+          (p_character->drive)) ||
+         (now < p_character->next_start_us)) ||
+        ((direction != DRIVE_A) && (direction != DRIVE_B)))
     {
         return false;
     }
@@ -150,16 +152,16 @@ static inline void bench_encoder_update (volatile bench_encoder_t * p_event,
     {
         count_up(&p_event->b_edges);
     }
-    if (changed == 3u)
+    if (3u == changed)
     {
         count_up(&p_event->invalid);
     }
     int8_t demand = step[(p_event->ab << 2) | ab_value];
-    if (demand > 0 && p_event->position < INT32_MAX)
+    if ((demand > 0) && (p_event->position < INT32_MAX))
     {
         ++p_event->position;
     }
-    if (demand < 0 && p_event->position > INT32_MIN)
+    if ((demand < 0) && (p_event->position > INT32_MIN))
     {
         --p_event->position;
     }

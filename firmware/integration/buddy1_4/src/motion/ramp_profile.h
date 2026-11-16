@@ -34,14 +34,14 @@ static inline bool ramp_profile_active (unsigned profile,
                                         const circuit_t * p_character,
                                         const analog_demand_t * p_demand)
 {
-    return profile == 2 && p_character->phase == C_FOLLOW &&
-           !p_character->busy && !p_demand->stop &&
-           !p_character->follower.core.white &&
-           (p_demand->level[0] >= 400 || p_demand->level[1] >= 400);
+    return 2 == profile && C_FOLLOW == p_character->phase &&
+           (!p_character->busy) && (!p_demand->stop) &&
+           (!p_character->follower.core.white) &&
+           ((p_demand->level[0] >= 400) || (p_demand->level[1] >= 400));
 }
 static inline unsigned barcode_profile_cruise (unsigned profile)
 {
-    return profile == 2 ? RAMP2_SPEED : (unsigned)circuit_cruise(profile);
+    return 2 == profile ? RAMP2_SPEED : (unsigned)circuit_cruise(profile);
 }
 /* Higher effort follows EACH wheel's own target, so an intentionally slow or
  * off inner wheel is never driven toward the outer wheel's speed. Physical
@@ -57,7 +57,7 @@ static inline int32_t ramp_wheel_step (ramp_wheel_t * p_state,
         *p_data = (signed_wheel_t){0};
         return 0;
     }
-    if (!p_state->active || p_data->sign != 1)
+    if ((!p_state->active) || (p_data->sign != 1))
     {
         *p_state = (ramp_wheel_t){.active = true};
         p_data->pi.integral = 0;
@@ -78,8 +78,10 @@ static inline int32_t ramp_wheel_step (ramp_wheel_t * p_state,
         p_data->pi.ramp += fminf(wanted - p_data->pi.ramp, 400 * delta_time);
     }
     float error = p_data->pi.ramp - speed;
-    bool loaded = !falling && wanted >= 20 && p_data->pi.ramp >= 20 &&
-                  speed >= -8 && error > fmaxf(12, .30f * p_data->pi.ramp);
+    bool loaded =
+        ((((!falling) && (wanted >= 20)) && (p_data->pi.ramp >= 20)) &&
+         (speed >= -8)) &&
+        (error > fmaxf(12, .30f * p_data->pi.ramp));
     if (!loaded)
     {
         p_state->deficit = false;
@@ -91,8 +93,8 @@ static inline int32_t ramp_wheel_step (ramp_wheel_t * p_state,
             p_state->deficit = true;
             p_state->deficit_since = now;
         }
-        if (now - p_state->deficit_since >= RAMP2_QUALIFY_US &&
-            !p_state->boost_used)
+        if ((now - p_state->deficit_since >= RAMP2_QUALIFY_US) &&
+            (!p_state->boost_used))
         {
             p_state->boost_used = true;
             p_state->boost_until = now + RAMP2_BOOST_US;
@@ -100,9 +102,9 @@ static inline int32_t ramp_wheel_step (ramp_wheel_t * p_state,
     }
     /* Persistent stalls cannot continually renew the high-power deadline.
      * Re-arm only after200ms genuinely close to the requested wheel speed. */
-    bool recovered = !falling && p_data->pi.ramp >= 20 &&
-                     speed >= .85f * p_data->pi.ramp &&
-                     fabsf(error) <= fmaxf(8, .15f * p_data->pi.ramp);
+    bool recovered = (((!falling) && (p_data->pi.ramp >= 20)) &&
+                      (speed >= .85f * p_data->pi.ramp)) &&
+                     (fabsf(error) <= fmaxf(8, .15f * p_data->pi.ramp));
     if (!recovered)
     {
         p_state->recovered = false;
@@ -120,7 +122,8 @@ static inline int32_t ramp_wheel_step (ramp_wheel_t * p_state,
             p_state->boost_until = 0;
         }
     }
-    bool boost = loaded && p_state->boost_used && now < p_state->boost_until;
+    bool boost =
+        (loaded && (p_state->boost_used)) && (now < p_state->boost_until);
     if (boost)
     {
         p_state->extra = fminf(220, p_state->extra + 2000 * delta_time);
@@ -129,7 +132,7 @@ static inline int32_t ramp_wheel_step (ramp_wheel_t * p_state,
     {
         p_state->extra = fmaxf(0, p_state->extra - 1600 * delta_time);
     }
-    if (falling || error <= 0)
+    if (falling || (error <= 0))
     {
         p_state->extra = 0;
         if (p_data->pi.integral > 0)
@@ -139,7 +142,7 @@ static inline int32_t ramp_wheel_step (ramp_wheel_t * p_state,
     }
     /* Coast immediately when a wheel is already too fast for its target.
      * No reverse braking and no positive boost through a slowdown command. */
-    if (speed > wanted + 10 || error < -10)
+    if ((speed > wanted + 10) || (error < -10))
     {
         p_data->pi.integral = 0;
         p_state->extra = 0;
@@ -151,7 +154,8 @@ static inline int32_t ramp_wheel_step (ramp_wheel_t * p_state,
     float candidate =
         clampf(p_data->pi.integral + 10 * error * delta_time, -180, 180);
     float proposed = ff_value + 3.5f * error + candidate + p_state->extra;
-    if (!((proposed > limit && error > 0) || (proposed < 0 && error < 0)))
+    if (!(((proposed > limit) && (error > 0)) ||
+          ((proposed < 0) && (error < 0))))
     {
         p_data->pi.integral = candidate;
     }
@@ -206,7 +210,7 @@ static inline dual_levels_t barcode_output_levels (unsigned wheel, int32_t pwm,
     {
         pwm = RAMP2_BOOST;
     }
-    if (wheel == 0)
+    if (0 == wheel)
     {
         value.a = (uint16_t)pwm;
     }

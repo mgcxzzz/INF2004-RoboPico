@@ -1,8 +1,9 @@
 /**
  * @file uturn_logic.h
  * @brief Uturn logic.
- * @details Pure barcode/route logic is called by the ADC owner and emits requests.
- * Native records are not wire packets; preserve both decode directions.
+ * @details Pure barcode/route logic is called by the ADC owner and emits
+ * requests. Native records are not wire packets; preserve both decode
+ * directions.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 #ifndef BARCODE_UTURN_LOGIC_H
@@ -47,10 +48,10 @@ barcode_uturn_step (barcode_u_turn_t * p_u_value, junction_t * p_other_index,
                     const line_calibration_t * p_cal,
                     const junction_input_t * p_index)
 {
-    if (p_other_index->phase == J_CENTRE)
+    if (J_CENTRE == p_other_index->phase)
     {
         analog_demand_t demand = junction_step(p_other_index, p_cal, p_index);
-        if (p_other_index->phase == J_TURN && !demand.stop)
+        if (J_TURN == p_other_index->phase && (!demand.stop))
         {
             demand.target[1] = U_FORWARD_FAST;
         }
@@ -66,21 +67,22 @@ barcode_uturn_step (barcode_u_turn_t * p_u_value, junction_t * p_other_index,
     {
         j_fail(p_other_index, J_LINE_LOST);
     }
-    if (!p_u_value->started && p_other_index->phase == J_TURN)
+    if ((!p_u_value->started) && J_TURN == p_other_index->phase)
     {
         p_u_value->started = true;
         p_u_value->since = p_index->now;
     }
     p_other_index->turn_degrees = j_rotation(p_other_index, p_index);
-    if (p_u_value->started && p_index->now - p_u_value->since >= U_TOTAL_US)
+    if ((p_u_value->started) && (p_index->now - p_u_value->since >= U_TOTAL_US))
     {
         j_fail(p_other_index, J_TURN_TIMEOUT);
     }
-    if (p_other_index->turn_degrees < -5 || p_other_index->turn_degrees >= 195)
+    if ((p_other_index->turn_degrees < -5) ||
+        (p_other_index->turn_degrees >= 195))
     {
         j_fail(p_other_index, J_BRANCH_MISSING);
     }
-    if (p_other_index->phase == J_TURN)
+    if (J_TURN == p_other_index->phase)
     {
         if (p_index->now - p_other_index->phase_us >= U_SEGMENT_US)
         {
@@ -88,9 +90,10 @@ barcode_uturn_step (barcode_u_turn_t * p_u_value, junction_t * p_other_index,
         }
         float left = p_index->wheel[0] - p_other_index->turn_origin[0],
               right = p_index->wheel[1] - p_other_index->turn_origin[1];
-        bool white = demand_value.level[0] < 200 && demand_value.level[1] < 200;
+        bool white =
+            (demand_value.level[0] < 200) && (demand_value.level[1] < 200);
         if ((white || JUNCTION_ANGLE_GATE_ONLY) &&
-            p_other_index->turn_degrees > 10)
+            (p_other_index->turn_degrees > 10))
         {
             if (!p_other_index->off_timing)
             {
@@ -106,14 +109,14 @@ barcode_uturn_step (barcode_u_turn_t * p_u_value, junction_t * p_other_index,
         {
             p_other_index->off_timing = false;
         }
-        if (p_u_value->stage == 0)
+        if (0 == p_u_value->stage)
         {
-            if (fabsf(left) > 12 || right < -5 || right > 220)
+            if (((fabsf(left) > 12) || (right < -5)) || (right > 220))
             {
                 j_fail(p_other_index, J_CENTRE_DRIFT);
             }
-            if (p_other_index->phase != J_FAULT &&
-                p_other_index->turn_degrees >= 90)
+            if ((p_other_index->phase != J_FAULT) &&
+                (p_other_index->turn_degrees >= 90))
             {
                 p_u_value->stage = 1;
                 p_u_value->settling = false;
@@ -127,17 +130,18 @@ barcode_uturn_step (barcode_u_turn_t * p_u_value, junction_t * p_other_index,
                                                         : U_FORWARD_FAST;
             }
         }
-        else if (p_u_value->stage == 2)
+        else if (2 == p_u_value->stage)
         {
             float reverse = p_u_value->reverse_origin[0] - p_index->wheel[0];
             float stationary = p_index->wheel[1] - p_u_value->reverse_origin[1];
-            if (fabsf(stationary) > 12 || reverse < -5 || reverse > 220)
+            if (((fabsf(stationary) > 12) || (reverse < -5)) || (reverse > 220))
             {
                 j_fail(p_other_index, J_CENTRE_DRIFT);
             }
-            bool branch =
-                p_other_index->off_line && p_other_index->turn_degrees >= 165 &&
-                (demand_value.level[0] >= 400 || demand_value.level[1] >= 400);
+            bool branch = ((p_other_index->off_line) &&
+                           (p_other_index->turn_degrees >= 165)) &&
+                          ((demand_value.level[0] >= 400) ||
+                           (demand_value.level[1] >= 400));
             if (!branch)
             {
                 p_other_index->line_timing = false;
@@ -149,8 +153,8 @@ barcode_uturn_step (barcode_u_turn_t * p_u_value, junction_t * p_other_index,
                     p_other_index->line_timing = true;
                     p_other_index->line_us = p_index->now;
                 }
-                if (p_index->now - p_other_index->line_us >= 30000 &&
-                    p_other_index->phase != J_FAULT)
+                if ((p_index->now - p_other_index->line_us >= 30000) &&
+                    (p_other_index->phase != J_FAULT))
                 {
                     p_u_value->stage = 3;
                     p_u_value->settling = false;
@@ -164,7 +168,7 @@ barcode_uturn_step (barcode_u_turn_t * p_u_value, junction_t * p_other_index,
                     j_enter(p_other_index, J_TURN_SETTLE, p_index->now);
                 }
             }
-            if (p_other_index->phase == J_TURN)
+            if (J_TURN == p_other_index->phase)
             {
                 demand_value.target[0] =
                     -(p_other_index->turn_degrees >= 170   ? U_REVERSE_FINE
@@ -173,14 +177,14 @@ barcode_uturn_step (barcode_u_turn_t * p_u_value, junction_t * p_other_index,
             }
         }
     }
-    else if (p_other_index->phase == J_TURN_SETTLE)
+    else if (J_TURN_SETTLE == p_other_index->phase)
     {
         if (p_index->now - p_other_index->phase_us >= U_SETTLE_US)
         {
             j_fail(p_other_index, J_SETTLE_TIMEOUT);
         }
         bool still =
-            fabsf(p_index->speed[0]) < 5 && fabsf(p_index->speed[1]) < 5;
+            (fabsf(p_index->speed[0]) < 5) && (fabsf(p_index->speed[1]) < 5);
         if (!still)
         {
             p_u_value->settling = false;
@@ -192,10 +196,10 @@ barcode_uturn_step (barcode_u_turn_t * p_u_value, junction_t * p_other_index,
                 p_u_value->settling = true;
                 p_u_value->settle_since = p_index->now;
             }
-            if (p_index->now - p_u_value->settle_since >= U_STILL_US &&
-                p_other_index->phase != J_FAULT)
+            if ((p_index->now - p_u_value->settle_since >= U_STILL_US) &&
+                (p_other_index->phase != J_FAULT))
             {
-                if (p_u_value->stage == 1)
+                if (1 == p_u_value->stage)
                 {
                     memcpy(p_u_value->reverse_origin, p_index->wheel,
                            sizeof(p_u_value->reverse_origin));
@@ -203,7 +207,7 @@ barcode_uturn_step (barcode_u_turn_t * p_u_value, junction_t * p_other_index,
                     p_other_index->line_timing = false;
                     j_enter(p_other_index, J_TURN, p_index->now);
                 }
-                else if (p_u_value->stage == 3)
+                else if (3 == p_u_value->stage)
                 {
                     p_u_value->stage = 4;
                     p_other_index->exit_origin = p_index->path;
@@ -212,7 +216,7 @@ barcode_uturn_step (barcode_u_turn_t * p_u_value, junction_t * p_other_index,
             }
         }
     }
-    if (p_other_index->phase == J_FAULT)
+    if (J_FAULT == p_other_index->phase)
     {
         demand_value.stop = true;
         demand_value.target[0] = demand_value.target[1] = 0;

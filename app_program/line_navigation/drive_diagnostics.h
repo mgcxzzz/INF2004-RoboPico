@@ -1,8 +1,9 @@
 /**
  * @file drive_diagnostics.h
  * @brief Drive diagnostics.
- * @details ADC/control ownership covers sensor acquisition, planning and calibration.
- * Other tasks consume protected copies; flash and stored exports require Stop.
+ * @details ADC/control ownership covers sensor acquisition, planning and
+ * calibration. Other tasks consume protected copies; flash and stored exports
+ * require Stop.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 #ifndef RTOS_DRIVE_DIAGNOSTICS_H

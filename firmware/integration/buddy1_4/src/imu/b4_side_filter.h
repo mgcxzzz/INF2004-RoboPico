@@ -1,11 +1,13 @@
 /**
  * @file b4_side_filter.h
  * @brief B4 side filter.
- * @details Sensor processing owns calibration/terrain state; RTOS readers use copies.
- * Height acceptance and motor assistance are separate from end-run safety.
+ * @details Sensor processing owns calibration/terrain state; RTOS readers use
+ * copies. Height acceptance and motor assistance are separate from end-run
+ * safety.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
-/* Robust per-FIFO gravity for side height only. Raw samples still feed shocks. */
+/* Robust per-FIFO gravity for side height only. Raw samples still feed shocks.
+ */
 #ifndef B4_SIDE_FILTER_H
 #define B4_SIDE_FILTER_H
 #include "src/imu/imu_proc.h"
@@ -15,7 +17,7 @@ static inline int32_t b4_median (int32_t * p_value, unsigned count)
     {
         int32_t value_x = p_value[index];
         unsigned other_index = index;
-        while (other_index && p_value[other_index - 1] > value_x)
+        while (other_index && (p_value[other_index - 1] > value_x))
         {
             p_value[other_index] = p_value[other_index - 1];
             other_index--;
@@ -32,7 +34,7 @@ static inline bool b4_side_filter (b4_vec_t const * p_samples, unsigned count,
     int32_t value[B4_FIFO_DEPTH];
     *p_max_mad = 0;
     axis_mad[0] = axis_mad[1] = axis_mad[2] = 0;
-    if (count < 3U || count > B4_FIFO_DEPTH)
+    if ((count < 3U) || (count > B4_FIFO_DEPTH))
     {
         return false;
     }
@@ -40,8 +42,8 @@ static inline bool b4_side_filter (b4_vec_t const * p_samples, unsigned count,
     {
         for (unsigned index = 0; index < count; index++)
         {
-            value[index] = axis == 0   ? p_samples[index].fwd_mg
-                           : axis == 1 ? p_samples[index].lat_mg
+            value[index] = 0 == axis   ? p_samples[index].fwd_mg
+                           : 1 == axis ? p_samples[index].lat_mg
                                        : p_samples[index].up_mg;
         }
         int32_t median = b4_median(value, count);

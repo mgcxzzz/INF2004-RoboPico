@@ -1,8 +1,9 @@
 /**
  * @file wifi_protocol.c
  * @brief Wifi protocol.
- * @details Network helpers validate and explicitly encode bounded application records.
- * Transport calls belong to the configured SDK or RTOS owner, not these codecs.
+ * @details Network helpers validate and explicitly encode bounded application
+ * records. Transport calls belong to the configured SDK or RTOS owner, not
+ * these codecs.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 #include "src/network/wifi_protocol.h"
@@ -23,7 +24,7 @@ bool wp_map_valid (uint32_t word)
     for (index_value = 0u; index_value < WP_MAP_SLOTS; ++index_value)
     {
         uint32_t index = map_slot(word, index_value);
-        if (index >= 26u || (seen & (1u << index)) != 0u)
+        if ((index >= 26u) || ((seen & (1u << index)) != 0u))
         {
             return false;
         }
@@ -37,7 +38,7 @@ uint8_t wp_parse (const uint8_t * p_data_value, size_t original_len,
 {
     size_t expected;
     uint32_t param, value;
-    if (p_cmd_value == NULL)
+    if (NULL == p_cmd_value)
     {
         return WP_ACK_FORMAT;
     }
@@ -46,7 +47,7 @@ uint8_t wp_parse (const uint8_t * p_data_value, size_t original_len,
     p_cmd_value->id = 0u;
     p_cmd_value->arg = 0u;
     p_cmd_value->mapping = 0u;
-    if (p_data_value == NULL || original_len == 0u)
+    if (NULL == p_data_value || 0u == original_len)
     {
         return WP_ACK_FORMAT;
     }
@@ -57,14 +58,14 @@ uint8_t wp_parse (const uint8_t * p_data_value, size_t original_len,
         p_cmd_value->id = p_data_value[1];
     }
     expected =
-        (p_cmd_value->code == WP_CMD_MAP) ? WP_MAP_CMD_BYTES : WP_CMD_BYTES;
-    if ((p_data_value[0] & 0x0fu) != WP_VERSION || original_len != expected)
+        (WP_CMD_MAP == p_cmd_value->code) ? WP_MAP_CMD_BYTES : WP_CMD_BYTES;
+    if (((p_data_value[0] & 0x0fu) != WP_VERSION) || (original_len != expected))
     {
         return WP_ACK_FORMAT;
     }
     p_cmd_value->arg = (uint16_t)((uint16_t)p_data_value[2] |
                                   ((uint16_t)p_data_value[3] << 8));
-    if (p_cmd_value->code == WP_CMD_MAP)
+    if (WP_CMD_MAP == p_cmd_value->code)
     {
         p_cmd_value->mapping =
             (uint32_t)p_cmd_value->arg | ((uint32_t)p_data_value[4] << 16);
@@ -75,8 +76,8 @@ uint8_t wp_parse (const uint8_t * p_data_value, size_t original_len,
         }
         return WP_ACK_ACCEPTED;
     }
-    if (p_cmd_value->code == WP_CMD_STEER ||
-        p_cmd_value->code == WP_CMD_DRIVE || p_cmd_value->code == WP_CMD_TURN)
+    if (WP_CMD_STEER == p_cmd_value->code ||
+        WP_CMD_DRIVE == p_cmd_value->code || WP_CMD_TURN == p_cmd_value->code)
     {
         return WP_ACK_PROHIBITED;
     }
@@ -93,7 +94,7 @@ uint8_t wp_parse (const uint8_t * p_data_value, size_t original_len,
     case WP_CMD_CONFIG:
         /* Stopped drive mode: low byte key2, high byte mode0..2. The legacy
          * telemetry1 nibble encoding0x1000/0x1001 remains unchanged. */
-        if ((p_cmd_value->arg & 0xffu) == WP_CONFIG_DRIVE_MODE_KEY)
+        if (WP_CONFIG_DRIVE_MODE_KEY == (p_cmd_value->arg & 0xffu))
         {
             return (p_cmd_value->arg >> 8) <= 2u ? WP_ACK_ACCEPTED
                                                  : WP_ACK_FORMAT;
@@ -106,7 +107,7 @@ uint8_t wp_parse (const uint8_t * p_data_value, size_t original_len,
         }
         return value <= 1u ? WP_ACK_ACCEPTED : WP_ACK_FORMAT;
     case WP_CMD_GET:
-        return p_cmd_value->arg == 0u ? WP_ACK_ACCEPTED : WP_ACK_FORMAT;
+        return 0u == p_cmd_value->arg ? WP_ACK_ACCEPTED : WP_ACK_FORMAT;
     case WP_CMD_GET_LOG:
         return ((p_cmd_value->arg >> 12) <= WP_LOG_NAVIGATION)
                    ? WP_ACK_ACCEPTED
@@ -123,8 +124,8 @@ uint32_t wp_map_replace (uint32_t snapshot, uint32_t word)
     {
         return snapshot;
     }
-    if ((snapshot & WP_MAP_CONFIGURED) != 0u &&
-        (snapshot & WP_MAP_MASK) == word)
+    if (((snapshot & WP_MAP_CONFIGURED) != 0u) &&
+        ((snapshot & WP_MAP_MASK) == word))
     {
         return snapshot;
     }
@@ -135,9 +136,10 @@ uint32_t wp_map_replace (uint32_t snapshot, uint32_t word)
 char wp_map_action (uint32_t snapshot, char letter)
 {
     unsigned index;
-    if ((snapshot & WP_MAP_CONFIGURED) == 0u ||
-        (snapshot & ~WP_MAP_STATUS_MASK) != 0u ||
-        !wp_map_valid(snapshot & WP_MAP_MASK) || letter < 'A' || letter > 'Z')
+    if (0u == (snapshot & WP_MAP_CONFIGURED) ||
+        ((snapshot & ~WP_MAP_STATUS_MASK) != 0u) ||
+        (!wp_map_valid(snapshot & WP_MAP_MASK)) || (letter < 'A') ||
+        (letter > 'Z'))
     {
         return '-';
     }
@@ -154,7 +156,7 @@ char wp_map_action (uint32_t snapshot, char letter)
 void wp_ack (const wifi_command_t * p_cmd_value, uint8_t result, uint8_t state,
              uint8_t out[4])
 {
-    if (out == NULL)
+    if (NULL == out)
     {
         return;
     }

@@ -1,8 +1,9 @@
 /**
  * @file barcode_model.h
  * @brief Barcode model.
- * @details The ADC owner feeds both optical decoders and junction qualification.
- * Accepted navigation crosses the coordinator; this module never writes PWM.
+ * @details The ADC owner feeds both optical decoders and junction
+ * qualification. Accepted navigation crosses the coordinator; this module never
+ * writes PWM.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 #ifndef RTOS_BARCODE_MODEL_H
@@ -40,7 +41,7 @@ typedef struct
 {
     uint8_t bytes[RB_RAW_BYTES];
 } rb_raw_t;
-_Static_assert(sizeof(rb_raw_t) == 10,
+_Static_assert(10 == sizeof(rb_raw_t),
                "Raw GP27 record must stay explicitly packed");
 typedef struct
 {
@@ -54,7 +55,7 @@ typedef struct
     unsigned bars : 5;
     unsigned flags : 6;
 } rb_attempt_info_t;
-_Static_assert(RB_RAW_ROWS <= 2048 && RB_RAW_PREROLL_ROWS <= 512,
+_Static_assert((RB_RAW_ROWS <= 2048) && (RB_RAW_PREROLL_ROWS <= 512),
                "Raw ring sizes exceed their bounded counters");
 typedef struct
 {
@@ -88,7 +89,7 @@ typedef struct
 static inline char rb_log_route (const barcode_nav_t * p_count, char code)
 {
     char first = barcode_nav_action(p_count, code);
-    return first == 'L' ? 'A' : first == 'R' ? 'F' : first == 'U' ? 'Z' : 0;
+    return 'L' == first ? 'A' : 'R' == first ? 'F' : 'U' == first ? 'Z' : 0;
 }
 static inline void rb_put32 (uint8_t * p_data, uint32_t value)
 {
@@ -216,7 +217,8 @@ static inline void rb_attempt_begin (rb_decoder_t * p_demand,
     if (p_demand->preroll_count)
     {
         const rb_raw_t * p_oldest = &p_demand->preroll[begin];
-        if (isfinite(first_bar_mm) && rb_raw_position(p_oldest) <= first_bar_mm)
+        if ((isfinite(first_bar_mm)) &&
+            (rb_raw_position(p_oldest) <= first_bar_mm))
         {
             p_demand->attempt.flags |= RB_ATTEMPT_START_VALID;
         }
@@ -234,8 +236,8 @@ static inline void rb_attempt_begin (rb_decoder_t * p_demand,
         p_demand->attempt.flags |=
             RB_ATTEMPT_ORIGINAL_ACCEPTED | RB_ATTEMPT_DECODED;
     }
-    if (original_success && p_count->last_code >= 'A' &&
-        p_count->last_code <= 'Z')
+    if ((original_success && (p_count->last_code >= 'A')) &&
+        (p_count->last_code <= 'Z'))
     {
         p_demand->attempt.code = (uint8_t)p_count->last_code;
     }
@@ -275,7 +277,7 @@ static inline void rb_attempt_original_success (rb_decoder_t * p_demand,
     rb_attempt_begin(p_demand, p_count, first_bar_mm, true);
     p_demand->attempt.flags |=
         RB_ATTEMPT_ORIGINAL_ACCEPTED | RB_ATTEMPT_DECODED;
-    if (p_count->last_code >= 'A' && p_count->last_code <= 'Z')
+    if ((p_count->last_code >= 'A') && (p_count->last_code <= 'Z'))
     {
         p_demand->attempt.code = (uint8_t)p_count->last_code;
     }
@@ -310,7 +312,7 @@ static inline void rb_attempt_pack (const rb_attempt_info_t * p_m_value,
     rb_put32(p_data + 17, p_m_value->raw_overwritten);
     p_data[21] = (uint8_t)run_id;
     p_data[22] = (uint8_t)(run_id >> 8);
-    unsigned code = p_m_value->code >= 'A' && p_m_value->code <= 'Z'
+    unsigned code = (p_m_value->code >= 'A') && (p_m_value->code <= 'Z')
                         ? p_m_value->code - 'A' + 1U
                         : 0U;
     unsigned reason = p_m_value->reason <= RB_ATTEMPT_IN_PROGRESS
@@ -373,8 +375,8 @@ static inline void rb_raw (rb_decoder_t * p_demand,
                            uint64_t now, double mm_value)
 {
     ++p_demand->samples;
-    if (p_demand->raw_have_time &&
-        now - p_demand->raw_last_us < RB_RAW_INTERVAL_US)
+    if ((p_demand->raw_have_time) &&
+        (now - p_demand->raw_last_us < RB_RAW_INTERVAL_US))
     {
         return;
     }
@@ -446,14 +448,14 @@ static inline void rb_sample (rb_decoder_t * p_demand, barcode_nav_t * p_count,
     }
     bp_result_t result;
     bool group_ended = bp_sample(&p_demand->peak, adc, mm_value, &result);
-    if (!p_demand->raw_capture_active &&
-        p_demand->peak.nbars >= BP_REPORT_MIN_BARS)
+    if ((!p_demand->raw_capture_active) &&
+        (p_demand->peak.nbars >= BP_REPORT_MIN_BARS))
     {
         rb_attempt_begin(p_demand, p_count, p_demand->peak.bar[0].mm,
                          original_success);
     }
-    if (group_ended && result.nbars >= BP_REPORT_MIN_BARS &&
-        !p_demand->raw_capture_active)
+    if ((group_ended && (result.nbars >= BP_REPORT_MIN_BARS)) &&
+        (!p_demand->raw_capture_active))
     {
         rb_attempt_begin(p_demand, p_count, result.start_mm, original_success);
     }
@@ -489,9 +491,9 @@ static inline void rb_sample (rb_decoder_t * p_demand, barcode_nav_t * p_count,
     }
     ++p_demand->peak_decodes;
     bool overlap =
-        p_demand->analog.accepted &&
-        fabs(result.start_mm - p_demand->analog.accepted_start) <= 12 &&
-        fabs(result.end_mm - p_demand->analog.accepted_end) <= 12;
+        ((p_demand->analog.accepted) &&
+         (fabs(result.start_mm - p_demand->analog.accepted_start) <= 12)) &&
+        (fabs(result.end_mm - p_demand->analog.accepted_end) <= 12);
     if (overlap)
     {
         p_demand->peak_flags |= 8u;

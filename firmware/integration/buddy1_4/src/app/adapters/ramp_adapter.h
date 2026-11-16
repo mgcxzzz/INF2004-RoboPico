@@ -1,14 +1,17 @@
 /**
  * @file ramp_adapter.h
  * @brief Ramp adapter.
- * @details Public feature contract. Requests cross coordinator ownership checks;
- * callers observe completion/status separately and must respect task context.
+ * @details Public feature contract. Requests cross coordinator ownership
+ * checks; callers observe completion/status separately and must respect task
+ * context.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
-/* v2.3 + Buddy4 ramp-assist v0.6 glue (v0.6: speed hold out via hold_min_speed/hold_i_max/hold_ki, replacing the v0.5 floor_pwm; v0.3: ACCEL/SPREAD skip flag; v0.4: wheel speeds in, stall push out via boost_add) (unchanged from v0.1 apart from the
- * detector-version flag bits). Included by the v2.3 main
- * (circuit_with_barcode/main.c) after buddy4_harness.h, like the other
- * harness headers, so it can read v2.3 state.
+/* v2.3 + Buddy4 ramp-assist v0.6 glue (v0.6: speed hold out via
+ * hold_min_speed/hold_i_max/hold_ki, replacing the v0.5 floor_pwm; v0.3:
+ * ACCEL/SPREAD skip flag; v0.4: wheel speeds in, stall push out via boost_add)
+ * (unchanged from v0.1 apart from the detector-version flag bits). Included by
+ * the v2.3 main (circuit_with_barcode/main.c) after buddy4_harness.h, like the
+ * other harness headers, so it can read v2.3 state.
  *
  * It sets the ramp fields of ContinuousDrive (the existing continuous drive
  * controller, profile 1/3 ordinary line following): boost_frac/boost_cap
@@ -96,7 +99,8 @@ static void ra_report (uint64_t now, uint8_t event)
         (void)wifi_send(WIFI_TOPIC_TLM, frame, sizeof(frame));
     }
     /* Separate layout: preserve all existing ramp/peak packets and expose the
-     * coordinator-approved target constraint, rather than relabelling demand. */
+     * coordinator-approved target constraint, rather than relabelling demand.
+     */
     uint8_t detail[24] = {0xF2, 21, ra_target_seq++};
     uint8_t * p = detail + 3;
     motion_ramp_assist_t approved = nav_get_ramp_assist();

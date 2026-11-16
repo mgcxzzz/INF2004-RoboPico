@@ -1,8 +1,9 @@
 /**
  * @file ramp_model.h
  * @brief Ramp model.
- * @details The IMU task owns sensor acquisition and calibration; readers use snapshots.
- * Ramp requests expire through the coordinator; lift safety may remove output.
+ * @details The IMU task owns sensor acquisition and calibration; readers use
+ * snapshots. Ramp requests expire through the coordinator; lift safety may
+ * remove output.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 #ifndef RTOS_RAMP_MODEL_H

@@ -1,8 +1,9 @@
 /**
  * @file barcode_scan.h
  * @brief Barcode scan.
- * @details Pure barcode/route logic is called by the ADC owner and emits requests.
- * Native records are not wire packets; preserve both decode directions.
+ * @details Pure barcode/route logic is called by the ADC owner and emits
+ * requests. Native records are not wire packets; preserve both decode
+ * directions.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 #ifndef BARCODE_SCAN_H
@@ -74,7 +75,7 @@ typedef struct
     uint8_t map_revision;
     uint8_t reserved;
 } barcode_event_t;
-_Static_assert(sizeof(barcode_event_t) == 32, "Barcode event ABI");
+_Static_assert(32 == sizeof(barcode_event_t), "Barcode event ABI");
 typedef struct
 {
     /* Index0=black bars,1=white gaps. D0 can expand black and shrink white,
@@ -104,7 +105,7 @@ static inline char barcode_character (uint16_t pattern)
             return alphabet[count];
         }
     }
-    return pattern == 0x094 ? '*' : '?';
+    return 0x094 == pattern ? '*' : '?';
 }
 static inline uint16_t barcode_reverse9 (uint16_t value_x)
 {
@@ -134,7 +135,7 @@ static inline barcode_group_t barcode_group (const double * p_wheel)
         {
             double value = sorted[count_value_value];
             unsigned other_index = count_value_value;
-            while (other_index && sorted[other_index - 1] > value)
+            while (other_index && (sorted[other_index - 1] > value))
             {
                 sorted[other_index] = sorted[other_index - 1];
                 --other_index;
@@ -142,9 +143,9 @@ static inline barcode_group_t barcode_group (const double * p_wheel)
             sorted[other_index] = value;
         }
         unsigned wide_count = colour ? 1 : 2, narrow_count = count - wide_count;
-        if (sorted[0] < 0.35 || sorted[count - 1] > 40 ||
-            sorted[narrow_count] < sorted[narrow_count - 1] * 1.55 ||
-            sorted[count - 1] > sorted[narrow_count] * 1.75)
+        if ((((sorted[0] < 0.35) || (sorted[count - 1] > 40)) ||
+             (sorted[narrow_count] < sorted[narrow_count - 1] * 1.55)) ||
+            (sorted[count - 1] > sorted[narrow_count] * 1.75))
         {
             return g_value;
         }
@@ -163,8 +164,8 @@ static inline barcode_group_t barcode_group (const double * p_wheel)
         }
         g_value.threshold[colour] =
             (sorted[narrow_count - 1] + sorted[narrow_count]) * 0.5;
-        if (g_value.narrow[colour] > 14 ||
-            g_value.wide[colour] < g_value.narrow[colour] * 1.8)
+        if ((g_value.narrow[colour] > 14) ||
+            (g_value.wide[colour] < g_value.narrow[colour] * 1.8))
         {
             return g_value;
         }
@@ -195,7 +196,7 @@ static inline bool barcode_classify (const double * p_wheel,
         unsigned colour = count % 2;
         bool wide = p_wheel[count] > p_reference->threshold[colour];
         *p_pattern = (uint16_t)((*p_pattern << 1) | wide);
-        if (p_wheel[count] < 0.35 || p_wheel[count] > 40)
+        if ((p_wheel[count] < 0.35) || (p_wheel[count] > 40))
         {
             *p_rejection |= B_REJECT_WIDTH;
         }
@@ -203,8 +204,8 @@ static inline bool barcode_classify (const double * p_wheel,
         {
             ++wide_count;
             min_wide[colour] = fmin(min_wide[colour], p_wheel[count]);
-            if (p_wheel[count] < p_reference->wide[colour] * .55 ||
-                p_wheel[count] > p_reference->wide[colour] * 1.8)
+            if ((p_wheel[count] < p_reference->wide[colour] * .55) ||
+                (p_wheel[count] > p_reference->wide[colour] * 1.8))
             {
                 *p_rejection |= B_REJECT_WIDTH;
             }
@@ -219,8 +220,8 @@ static inline bool barcode_classify (const double * p_wheel,
     }
     for (unsigned colour = 0; colour < 2; ++colour)
     {
-        if (max_narrow[colour] > 0 &&
-            min_wide[colour] < max_narrow[colour] * 1.5)
+        if ((max_narrow[colour] > 0) &&
+            (min_wide[colour] < max_narrow[colour] * 1.5))
         {
             *p_rejection |= B_REJECT_SEPARATION;
         }
@@ -296,7 +297,7 @@ static inline barcode_read_t barcode_reader_edge (barcode_reader_t * p_result,
     p_result->edge_mm = mm_value;
     p_result->edge_us = now;
     result.events = 1u << B_RUN;
-    if (width < 0.35 || (width > 40 && p_result->frame))
+    if ((width < 0.35) || ((width > 40) && (p_result->frame)))
     {
         if (p_result->frame)
         {
@@ -330,18 +331,18 @@ static inline barcode_read_t barcode_reader_edge (barcode_reader_t * p_result,
         }
         for (unsigned count_value = 9; count_value <= 19; count_value += 10)
         {
-            if (p_result->widths[count_value] <
-                    fmax(.35, p_result->reference.narrow[1] * .25) ||
-                p_result->widths[count_value] >
-                    p_result->reference.threshold[1])
+            if ((p_result->widths[count_value] <
+                 fmax(.35, p_result->reference.narrow[1] * .25)) ||
+                (p_result->widths[count_value] >
+                 p_result->reference.threshold[1]))
             {
                 good = false;
                 result.rejection |= B_REJECT_GAP;
             }
         }
         char code = barcode_character(result.pattern[1]);
-        if (result.pattern[0] != 0x094 || result.pattern[2] != 0x094 ||
-            code == '?' || code == '*')
+        if (((result.pattern[0] != 0x094) || (result.pattern[2] != 0x094)) ||
+            '?' == code || '*' == code)
         {
             good = false;
             result.rejection |= B_REJECT_PATTERN;
@@ -368,11 +369,11 @@ static inline barcode_read_t barcode_reader_edge (barcode_reader_t * p_result,
         memmove(p_result->history, p_result->history + 1, 8 * sizeof(double));
         p_result->history[8] = width;
     }
-    if (previous && p_result->history_count == 9)
+    if (previous && 9 == p_result->history_count)
     {
         barcode_group_t g_value = barcode_group(p_result->history);
-        if (g_value.valid && (g_value.pattern == 0x094 ||
-                              barcode_reverse9(g_value.pattern) == 0x094))
+        if ((g_value.valid) && (0x094 == g_value.pattern ||
+                                0x094 == barcode_reverse9(g_value.pattern)))
         {
             memcpy(p_result->widths, p_result->history,
                    sizeof(p_result->history));
@@ -399,16 +400,16 @@ static inline barcode_read_t barcode_reader_edge (barcode_reader_t * p_result,
 static inline bool barcode_reader_expire (barcode_reader_t * p_result,
                                           uint64_t now, double mm_value)
 {
-    if (p_result->frame &&
-        (now - p_result->frame_us >= 20000000 ||
-         mm_value - p_result->start_mm > p_result->max_frame_mm))
+    if ((p_result->frame) &&
+        ((now - p_result->frame_us >= 20000000) ||
+         (mm_value - p_result->start_mm > p_result->max_frame_mm)))
     {
         p_result->frame = false;
         p_result->count = p_result->history_count = 0;
         return true;
     }
-    if (!p_result->frame && !p_result->black &&
-        mm_value - p_result->edge_mm > 40)
+    if (((!p_result->frame) && (!p_result->black)) &&
+        (mm_value - p_result->edge_mm > 40))
     {
         p_result->history_count = 0;
     }

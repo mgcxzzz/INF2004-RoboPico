@@ -35,16 +35,17 @@ static inline int circuit_load_outer (circuit_load_t * p_state,
 {
     unsigned outer = p_demand->target[0] > p_demand->target[1] ? 0 : 1,
              inner = 1 - outer;
-    bool eligible = !p_demand->stop && !capture_active && phase == C_FOLLOW &&
-                    (p_demand->level[0] >= 400 || p_demand->level[1] >= 400) &&
-                    p_demand->target[outer] >= 30 &&
-                    p_demand->target[inner] <= (p_state->active ? 20 : 12);
+    bool eligible =
+        ((!p_demand->stop) && (!capture_active)) && C_FOLLOW == phase &&
+        ((p_demand->level[0] >= 400) || (p_demand->level[1] >= 400)) &&
+        (p_demand->target[outer] >= 30) &&
+        (p_demand->target[inner] <= (p_state->active ? 20 : 12));
     if (p_state->active)
     {
-        if (!eligible || outer != p_state->outer ||
-            p_index->now - p_state->since >= C_LOAD_US ||
-            p_index->path - p_state->path >= C_LOAD_MM ||
-            p_index->speed[outer] > p_demand->target[outer] + 5)
+        if (((((!eligible) || (outer != p_state->outer)) ||
+              (p_index->now - p_state->since >= C_LOAD_US)) ||
+             (p_index->path - p_state->path >= C_LOAD_MM)) ||
+            (p_index->speed[outer] > p_demand->target[outer] + 5))
         {
             p_state->active = p_state->timing = false;
             p_state->cooldown_until = p_index->now + C_LOAD_COOLDOWN_US;
@@ -52,13 +53,13 @@ static inline int circuit_load_outer (circuit_load_t * p_state,
         }
         return (int)outer;
     }
-    if (!eligible || p_index->now < p_state->cooldown_until ||
-        p_index->speed[outer] >= 0.70f * p_demand->target[outer])
+    if (((!eligible) || (p_index->now < p_state->cooldown_until)) ||
+        (p_index->speed[outer] >= 0.70f * p_demand->target[outer]))
     {
         p_state->timing = false;
         return -1;
     }
-    if (!p_state->timing || outer != p_state->outer)
+    if ((!p_state->timing) || (outer != p_state->outer))
     {
         p_state->timing = true;
         p_state->outer = outer;

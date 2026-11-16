@@ -161,7 +161,7 @@ static bool bus_setup (void)
     set_w(RESETS_RESET, RESETS_RESET_I2C1);
     clr_w(RESETS_RESET, RESETS_RESET_I2C1);
 
-    while ((in_w(RESETS_RESET_DONE) & RESETS_RESET_I2C1) == 0U)
+    while (0U == (in_w(RESETS_RESET_DONE) & RESETS_RESET_I2C1))
     {
         if ((uint32_t)(sys_time_us() - start_us) >= RI_RESET_READY_TIMEOUT_US)
         {
@@ -195,7 +195,8 @@ static bool bus_setup (void)
  * Write wlen bytes then (repeated start) read rlen bytes, STOP at the end.
  * rlen <= 16 (hardware FIFO).
  */
-#ifndef APP_RTOS_IMU /* RTOS uses the preemption-safe transport, same sensor/FIFO setup. */
+#ifndef APP_RTOS_IMU /* RTOS uses the preemption-safe transport, same          \
+                        sensor/FIFO setup. */
 static bool xfer (uint8_t addr, uint8_t const * p_w, uint32_t wlen,
                   uint8_t * p_r, uint32_t rlen)
 {
@@ -309,22 +310,23 @@ static bool mag_init (void)
 {
     uint8_t identifier[3] = {0U, 0U, 0U};
 
-    if (b4_i2c_read_reg(B4_MAG_ADDR, DLHC_IRA, identifier, 3U) &&
-        (identifier[0] == (uint8_t)'H') && (identifier[1] == (uint8_t)'4') &&
+    if ((((b4_i2c_read_reg(B4_MAG_ADDR, DLHC_IRA, identifier, 3U)) &&
+          (identifier[0] == (uint8_t)'H')) &&
+         (identifier[1] == (uint8_t)'4')) &&
         (identifier[2] == (uint8_t)'3'))
     {
         /* 75 Hz, +-1.3 gauss, continuous */
-        return (b4_i2c_write_reg(B4_MAG_ADDR, DLHC_CRA, 0x18U) &&
-                b4_i2c_write_reg(B4_MAG_ADDR, DLHC_CRB, 0x20U) &&
-                b4_i2c_write_reg(B4_MAG_ADDR, DLHC_MR, 0x00U));
+        return (((b4_i2c_write_reg(B4_MAG_ADDR, DLHC_CRA, 0x18U)) &&
+                 (b4_i2c_write_reg(B4_MAG_ADDR, DLHC_CRB, 0x20U))) &&
+                (b4_i2c_write_reg(B4_MAG_ADDR, DLHC_MR, 0x00U)));
     }
 
-    if (b4_i2c_read_reg(B4_MAG_ADDR, AGR_WHO_AM_I_M, identifier, 1U) &&
-        (identifier[0] == 0x40U))
+    if ((b4_i2c_read_reg(B4_MAG_ADDR, AGR_WHO_AM_I_M, identifier, 1U)) &&
+        (0x40U == identifier[0]))
     {
         /* 100 Hz continuous, block data update */
-        return (b4_i2c_write_reg(B4_MAG_ADDR, AGR_CFG_A, 0x0CU) &&
-                b4_i2c_write_reg(B4_MAG_ADDR, AGR_CFG_C, 0x10U));
+        return ((b4_i2c_write_reg(B4_MAG_ADDR, AGR_CFG_A, 0x0CU)) &&
+                (b4_i2c_write_reg(B4_MAG_ADDR, AGR_CFG_C, 0x10U)));
     }
 
     return false;
@@ -350,31 +352,35 @@ bool b4_drv_init (b4_chip_t * p_chip, bool * p_b_mag)
     }
 #endif
 
-    b_ok = b4_i2c_read_reg(B4_ACC_ADDR, ACC_WHO_AM_I, &identifier, 1U) &&
-           (identifier == ACC_ID);
+    b_ok = (b4_i2c_read_reg(B4_ACC_ADDR, ACC_WHO_AM_I, &identifier, 1U)) &&
+           (ACC_ID == identifier);
 
     if (b_ok)
     {
-        b_ok = b4_i2c_write_reg(B4_ACC_ADDR, ACC_CTRL_REG1, REG1_400HZ_XYZ) &&
-               b4_i2c_write_reg(B4_ACC_ADDR, ACC_CTRL_REG4, REG4_BDU_4G_HR) &&
-               b4_i2c_write_reg(B4_ACC_ADDR, ACC_CTRL_REG5, REG5_FIFO_EN) &&
-               b4_i2c_write_reg(B4_ACC_ADDR, ACC_FIFO_CTRL, FIFO_BYPASS) &&
-               b4_i2c_write_reg(B4_ACC_ADDR, ACC_FIFO_CTRL, FIFO_STREAM) &&
-               b4_i2c_read_reg(B4_ACC_ADDR, ACC_CTRL_REG1, &check, 1U) &&
-               (check == REG1_400HZ_XYZ);
+        b_ok =
+            ((((((b4_i2c_write_reg(B4_ACC_ADDR, ACC_CTRL_REG1,
+                                   REG1_400HZ_XYZ)) &&
+                 (b4_i2c_write_reg(B4_ACC_ADDR, ACC_CTRL_REG4,
+                                   REG4_BDU_4G_HR))) &&
+                (b4_i2c_write_reg(B4_ACC_ADDR, ACC_CTRL_REG5, REG5_FIFO_EN))) &&
+               (b4_i2c_write_reg(B4_ACC_ADDR, ACC_FIFO_CTRL, FIFO_BYPASS))) &&
+              (b4_i2c_write_reg(B4_ACC_ADDR, ACC_FIFO_CTRL, FIFO_STREAM))) &&
+             (b4_i2c_read_reg(B4_ACC_ADDR, ACC_CTRL_REG1, &check, 1U))) &&
+            (REG1_400HZ_XYZ == check);
     }
 
-    g_b_mag = b_ok && mag_init();
+    g_b_mag = b_ok && (mag_init());
 
     if (b_ok)
     {
         /* The magnetometer tells the two chips apart. */
         uint8_t m_value = 0U;
 
-        g_chip = (b4_i2c_read_reg(B4_MAG_ADDR, AGR_WHO_AM_I_M, &m_value, 1U) &&
-                  (m_value == 0x40U))
-                     ? B4_CHIP_AGR
-                     : B4_CHIP_DLHC;
+        g_chip =
+            ((b4_i2c_read_reg(B4_MAG_ADDR, AGR_WHO_AM_I_M, &m_value, 1U)) &&
+             (0x40U == m_value))
+                ? B4_CHIP_AGR
+                : B4_CHIP_DLHC;
     }
 
     *p_chip = g_chip;
@@ -410,7 +416,7 @@ bool b4_drv_read_fifo (b4_raw_t * p_s, uint8_t max, uint8_t * p_n,
         count = (uint8_t)B4_FIFO_DEPTH;
     }
 
-    if (count == 0U)
+    if (0U == count)
     {
         count = 1U; /* not empty: at least one     */
     }
@@ -461,7 +467,7 @@ bool b4_drv_read_mag (b4_raw_t * p_m)
         return false;
     }
 
-    if (g_chip == B4_CHIP_AGR)
+    if (B4_CHIP_AGR == g_chip)
     {
         if (!b4_i2c_read_reg(B4_MAG_ADDR, (uint8_t)(AGR_OUT_X_L | AUTO_INC),
                              second, 6U))

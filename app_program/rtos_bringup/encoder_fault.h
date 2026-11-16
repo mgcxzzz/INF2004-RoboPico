@@ -1,8 +1,9 @@
 /**
  * @file encoder_fault.h
  * @brief Encoder fault.
- * @details Core1 owns normal motor commits. Safety paths may only remove output;
- * command/status access uses the existing kernel locks and copied records.
+ * @details Core1 owns normal motor commits. Safety paths may only remove
+ * output; command/status access uses the existing kernel locks and copied
+ * records.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 #ifndef RTOS_ENCODER_FAULT_H
@@ -33,7 +34,8 @@ enum
 
 typedef struct
 {
-    /* Native snapshot metadata is bounded; counters retain their full u32 range. */
+    /* Native snapshot metadata is bounded; counters retain their full u32
+     * range. */
     unsigned valid : 1;
     unsigned kind : 2;
     unsigned wheel : 2;
@@ -55,7 +57,8 @@ br_encoder_fault_clear (bringup_encoder_fault_snapshot_t * p_snapshot)
     *p_snapshot = (bringup_encoder_fault_snapshot_t){0};
 }
 
-/* First-trip-wins until an accepted Start or eligible Reset clears the latch. */
+/* First-trip-wins until an accepted Start or eligible Reset clears the latch.
+ */
 static inline bool br_encoder_fault_capture_once (
     bringup_encoder_fault_snapshot_t * p_stored,
     const bringup_encoder_fault_snapshot_t * p_candidate)
@@ -122,7 +125,8 @@ br_encoder_fault_encode (const bringup_encoder_fault_snapshot_t * p_snapshot,
     out[4] = 0x21U; /* v0.2.1 */
     if (!p_snapshot->valid)
     {
-        return; /* Versioned invalid frame clears any older dashboard snapshot. */
+        return; /* Versioned invalid frame clears any older dashboard snapshot.
+                 */
     }
 
     bool clamped = false;

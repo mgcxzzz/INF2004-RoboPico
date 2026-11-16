@@ -1,8 +1,9 @@
 /**
  * @file network_bridge.c
  * @brief Network bridge.
- * @details Application tasks exchange copied, bounded command and telemetry records.
- * The kernel Wi-Fi service owns the transport; reconnect never restarts motion.
+ * @details Application tasks exchange copied, bounded command and telemetry
+ * records. The kernel Wi-Fi service owns the transport; reconnect never
+ * restarts motion.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 #include "../rtos_bringup/bringup.h"
@@ -197,18 +198,18 @@ static uint32_t get32 (const uint8_t * p_data)
 bool rn_tx_push (uint8_t topic, const uint8_t * p_data_value, uint8_t len,
                  uint32_t now)
 {
-    if (!rn_ready() || !p_data_value || len == 0 || len > RN_PACKET_MAX ||
-        topic > RN_HB)
+    if (((!rn_ready()) || (!p_data_value)) || 0 == len ||
+        (len > RN_PACKET_MAX) || (topic > RN_HB))
     {
         return false;
     }
-    if (topic == RN_TLM && ((p_data_value[0] >> 4) == 9 ||
-                            ((p_data_value[0] >> 4) == 11 && len >= 8 &&
-                             p_data_value[7] == WPK_EVENT_STATUS)))
+    if (RN_TLM == topic && (9 == (p_data_value[0] >> 4) ||
+                            (11 == (p_data_value[0] >> 4) && (len >= 8) &&
+                             WPK_EVENT_STATUS == p_data_value[7])))
     {
-        unsigned index = (p_data_value[0] >> 4) == 9 ? 0 : 1;
+        unsigned index = 9 == (p_data_value[0] >> 4) ? 0 : 1;
         UINT key = enter();
-        if (g_latest[index].ready && g_tx_coalesced != UINT32_MAX)
+        if ((g_latest[index].ready) && (g_tx_coalesced != UINT32_MAX))
         {
             ++g_tx_coalesced;
         }
@@ -224,8 +225,8 @@ bool rn_tx_push (uint8_t topic, const uint8_t * p_data_value, uint8_t len,
     message[4] = topic;
     message[5] = len;
     memcpy(message + 6, p_data_value, len);
-    if (tk_snd_mbf(topic == RN_ACK  ? g_ack
-                   : topic == RN_HB ? g_heartbeat_queue
+    if (tk_snd_mbf(RN_ACK == topic  ? g_ack
+                   : RN_HB == topic ? g_heartbeat_queue
                                     : g_tx_queue,
                    message, len + 6, TMO_POL) == E_OK)
     {
@@ -255,7 +256,7 @@ bool rn_tx_take_budget (uint8_t * p_topic_value, uint8_t data[RN_PACKET_MAX],
         {
             count = tk_rcv_mbf(g_heartbeat_queue, message, TMO_POL);
         }
-        if (count < 0 && telemetry)
+        if ((count < 0) && telemetry)
         {
             count = tk_rcv_mbf(g_tx_queue, message, TMO_POL);
         }
@@ -263,14 +264,15 @@ bool rn_tx_take_budget (uint8_t * p_topic_value, uint8_t data[RN_PACKET_MAX],
         {
             break;
         }
-        if (count < 7 || message[5] > RN_PACKET_MAX ||
-            count != message[5] + 6 ||
-            now - get32(message) > (message[4] == RN_TLM ? 250U : 2000U))
+        if ((((count < 7) || (message[5] > RN_PACKET_MAX)) ||
+             (count != message[5] + 6)) ||
+            now - get32(message) > (RN_TLM == message[4] ? 250U : 2000U))
         {
             count_drop(false);
-            if (count_value == 3)
+            if (3 == count_value)
             {
-                return false; /* Bound cleanup without bypassing remaining ACKs. */
+                return false; /* Bound cleanup without bypassing remaining ACKs.
+                               */
             }
             continue;
         }
@@ -288,8 +290,8 @@ bool rn_tx_take_budget (uint8_t * p_topic_value, uint8_t data[RN_PACKET_MAX],
             unsigned index = g_next_latest;
             g_next_latest ^= 1;
             latest_telemetry_t * p_slot = &g_latest[index];
-            bool valid = p_slot->ready && now - p_slot->ms <= 250U;
-            bool stale = p_slot->ready && !valid;
+            bool valid = (p_slot->ready) && (now - p_slot->ms <= 250U);
+            bool stale = (p_slot->ready) && (!valid);
             if (valid)
             {
                 *p_topic_value = RN_TLM;
@@ -313,21 +315,21 @@ bool rn_tx_take_budget (uint8_t * p_topic_value, uint8_t data[RN_PACKET_MAX],
 bool rn_rx_push (const uint8_t * p_data_value, uint8_t copied,
                  uint32_t original, uint32_t now)
 {
-    if (!rn_ready() || !p_data_value || copied > RN_RX_MAX)
+    if (((!rn_ready()) || (!p_data_value)) || (copied > RN_RX_MAX))
     {
         return false;
     }
     uint8_t message[RN_RX_BYTES] = {0};
     wifi_command_t command;
-    bool valid = original == copied &&
-                 wp_parse(p_data_value, original, &command) == WP_ACK_ACCEPTED;
+    bool valid = (original == copied) &&
+                 WP_ACK_ACCEPTED == wp_parse(p_data_value, original, &command);
     UINT stamp_key = enter();
-    if (valid && (command.code == WP_CMD_STOP || command.code == WP_CMD_ESTOP ||
-                  command.code == WP_CMD_PAUSE))
+    if (valid && (WP_CMD_STOP == command.code || WP_CMD_ESTOP == command.code ||
+                  WP_CMD_PAUSE == command.code))
     {
         ++g_barrier;
-        g_urgent |= command.code == WP_CMD_ESTOP  ? RN_URGENT_ESTOP
-                    : command.code == WP_CMD_STOP ? RN_URGENT_STOP
+        g_urgent |= WP_CMD_ESTOP == command.code  ? RN_URGENT_ESTOP
+                    : WP_CMD_STOP == command.code ? RN_URGENT_STOP
                                                   : RN_URGENT_PAUSE;
     }
     put32(message + 13, g_barrier);
@@ -336,9 +338,9 @@ bool rn_rx_push (const uint8_t * p_data_value, uint8_t copied,
     leave(stamp_key);
     put32(message, now);
     message[4] =
-        original <= RN_RX_MAX && original == copied ? (uint8_t)original : 9;
+        (original <= RN_RX_MAX) && (original == copied) ? (uint8_t)original : 9;
     memcpy(message + 5, p_data_value, copied);
-    if (tk_snd_mbf(g_rx_queue, message, sizeof(message), TMO_POL) == E_OK)
+    if (E_OK == tk_snd_mbf(g_rx_queue, message, sizeof(message), TMO_POL))
     {
         UINT key = enter();
         if (g_received != UINT32_MAX)
@@ -354,7 +356,7 @@ bool rn_rx_push (const uint8_t * p_data_value, uint8_t copied,
 void rn_command_result (uint8_t code, uint8_t result)
 {
     UINT key = enter();
-    if (result == WP_ACK_ACCEPTED)
+    if (WP_ACK_ACCEPTED == result)
     {
         if (g_accepted != 255)
         {
@@ -500,20 +502,20 @@ void rn_app_task (int32_t code, void * p_exinf_value)
         bool force_hb = false;
         uint8_t message[RN_RX_BYTES];
         for (unsigned count = 0;
-             count < 4 &&
-             tk_rcv_mbf(g_rx_queue, message, TMO_POL) == RN_RX_BYTES;
+             (count < 4) &&
+             RN_RX_BYTES == tk_rcv_mbf(g_rx_queue, message, TMO_POL);
              ++count)
         {
             wifi_command_t command;
 #ifdef APP_RTOS_LINE
             uint8_t parsed = wp_parse(message + 5, message[4], &command);
             if (!parsed &&
-                (command.code == WP_CMD_START || command.code == WP_CMD_PAUSE ||
-                 command.code == WP_CMD_RESUME || command.code == WP_CMD_RESET
+                (WP_CMD_START == command.code || WP_CMD_PAUSE == command.code ||
+                 WP_CMD_RESUME == command.code || WP_CMD_RESET == command.code
 #ifdef APP_RTOS_RELEASE
-                 || command.code == WP_CMD_GET_LOG ||
-                 (command.code == WP_CMD_CONFIG &&
-                  (command.arg & 0xffU) == WP_CONFIG_DRIVE_MODE_KEY)
+                 || WP_CMD_GET_LOG == command.code ||
+                 (WP_CMD_CONFIG == command.code &&
+                  WP_CONFIG_DRIVE_MODE_KEY == (command.arg & 0xffU))
 #endif
                      ))
             {
@@ -532,8 +534,8 @@ void rn_app_task (int32_t code, void * p_exinf_value)
                 rn_bench_command(message + 5, message[4], get32(message), now,
                                  &mapping, &command);
 #ifdef APP_RTOS_LINE
-            if (!parsed && command.code == WP_CMD_CONFIG &&
-                (command.arg >> 12) == 1U && now - get32(message) <= 500U)
+            if ((!parsed) && WP_CMD_CONFIG == command.code &&
+                1U == (command.arg >> 12) && (now - get32(message) <= 500U))
             {
                 rn_drive_set_telemetry((command.arg & 4095U) != 0);
                 plan.result = WP_ACK_ACCEPTED;
@@ -635,7 +637,7 @@ void rn_app_task (int32_t code, void * p_exinf_value)
             wifi_heartbeat_t heartbeat = {
                 .seq = sequence++,
                 .net = net.flags & RN_SUBSCRIBED ? 2
-                       : net.link == 3           ? 1
+                       : 3 == net.link           ? 1
                                                  : 0,
                 .state = state,
                 .last_cmd = g_last_command,
@@ -651,7 +653,7 @@ void rn_app_task (int32_t code, void * p_exinf_value)
                 .connects = net.connects > 255U ? 255U : (uint8_t)net.connects};
             leave(key);
             T_RMBF queue;
-            if (tk_ref_mbf(g_tx_queue, &queue) == E_OK)
+            if (E_OK == tk_ref_mbf(g_tx_queue, &queue))
             {
                 heartbeat.fill_pct = (uint8_t)((TX_CAPACITY - queue.frbufsz) *
                                                100U / TX_CAPACITY);

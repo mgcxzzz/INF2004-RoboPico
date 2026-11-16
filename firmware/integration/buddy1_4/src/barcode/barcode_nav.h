@@ -1,8 +1,9 @@
 /**
  * @file barcode_nav.h
  * @brief Barcode nav.
- * @details Pure barcode/route logic is called by the ADC owner and emits requests.
- * Native records are not wire packets; preserve both decode directions.
+ * @details Pure barcode/route logic is called by the ADC owner and emits
+ * requests. Native records are not wire packets; preserve both decode
+ * directions.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 #ifndef BARCODE_NAV_H
@@ -64,8 +65,8 @@ typedef struct
     bool allow_cross;
     bool external_reader;
     bool external_scanning;
-    bool
-        external_cross; /* Optional independent junction sensor; reference defaults false. */
+    bool external_cross; /* Optional independent junction sensor; reference
+                            defaults false. */
     char pending;
     char action;
     char last_code;
@@ -93,11 +94,11 @@ static inline void barcode_event (barcode_nav_t * p_count, unsigned type,
     p_event->action = (uint8_t)action;
     p_event->flags = (uint8_t)flags;
     p_event->map_revision =
-        (type == B_DECODE || type == B_ANALOG_SELECT)
+        (B_DECODE == type || B_ANALOG_SELECT == type)
             ? (uint8_t)(p_count->mapping >> 21)
-        : code && code == p_count->pending ? p_count->pending_revision
-        : code && code == p_count->action  ? p_count->executing_revision
-                                           : (uint8_t)(p_count->mapping >> 21);
+        : code && (code == p_count->pending) ? p_count->pending_revision
+        : code && (code == p_count->action)  ? p_count->executing_revision
+                                            : (uint8_t)(p_count->mapping >> 21);
     if (p_pattern)
     {
         memcpy(p_event->pattern, p_pattern, sizeof(p_event->pattern));
@@ -127,15 +128,15 @@ barcode_recovery_events (barcode_nav_t * p_count, uint64_t now, double position,
                          const analog_demand_t * p_demand, unsigned reason)
 {
 #ifdef CIRCUIT_SWEEP_SEARCH
-    if (!was_waiting && !was_search && p_sample->search.waiting)
+    if (((!was_waiting) && (!was_search)) && (p_sample->search.waiting))
     {
         barcode_event(p_count, B_RECOVERY_WAIT, now, position,
                       LS_CONFIRM_US / 1000, 0, '-', 0, NULL);
     }
-    if (p_sample->search.active &&
-        (!was_search || p_demand->decision != previous_decision) &&
-        p_demand->decision >= LS_DECISION_FIRST &&
-        p_demand->decision < LS_DECISION_FIRST + 5)
+    if ((((p_sample->search.active) &&
+          ((!was_search) || (p_demand->decision != previous_decision))) &&
+         (p_demand->decision >= LS_DECISION_FIRST)) &&
+        (p_demand->decision < LS_DECISION_FIRST + 5))
     {
         int speed = p_demand->target[0] > p_demand->target[1]
                         ? p_demand->target[0]
@@ -144,12 +145,12 @@ barcode_recovery_events (barcode_nav_t * p_count, uint64_t now, double position,
                       p_demand->target[1] > p_demand->target[0] ? 'L' : 'R',
                       p_demand->decision - LS_DECISION_FIRST + 1, NULL);
     }
-    if (!p_demand->stop && was_white && !p_sample->core.white)
+    if (((!p_demand->stop) && was_white) && (!p_sample->core.white))
     {
         barcode_event(p_count, B_RECOVERY_FOUND, now, position, 0, 0, '-',
                       was_search ? 1 : 0, NULL);
     }
-    if (p_demand->stop && was_search)
+    if ((p_demand->stop) && was_search)
     {
         barcode_event(p_count, B_RECOVERY_FAIL, now, position, reason, 0, '-',
                       0, NULL);
@@ -169,7 +170,7 @@ barcode_recovery_events (barcode_nav_t * p_count, uint64_t now, double position,
 }
 static inline char barcode_action (char code)
 {
-    return code == 'A' ? 'L' : code == 'F' ? 'R' : code == 'Z' ? 'U' : '-';
+    return 'A' == code ? 'L' : 'F' == code ? 'R' : 'Z' == code ? 'U' : '-';
 }
 static inline char barcode_decode_action (const barcode_nav_t * p_count,
                                           char code)
@@ -184,11 +185,11 @@ static inline char barcode_decode_action (const barcode_nav_t * p_count,
 static inline char barcode_nav_action (const barcode_nav_t * p_count, char code)
 {
 #ifdef BUDDY_RUNTIME_MAPPING
-    if (code && code == p_count->pending && p_count->pending_action)
+    if ((code && (code == p_count->pending)) && (p_count->pending_action))
     {
         return p_count->pending_action;
     }
-    if (code && code == p_count->action && p_count->executing_action)
+    if ((code && (code == p_count->action)) && (p_count->executing_action))
     {
         return p_count->executing_action;
     }
@@ -202,7 +203,7 @@ static inline bool barcode_set_pending (barcode_nav_t * p_count, char code)
 {
 #ifdef BUDDY_RUNTIME_MAPPING
     char action = wp_map_action(p_count->mapping, code);
-    if (action == '-')
+    if ('-' == action)
     {
         return false;
     }
@@ -229,15 +230,15 @@ static inline void barcode_queue_code (barcode_nav_t * p_count, char code)
 #endif
     p_count->last_code = code;
     ++p_count->decoded_total;
-    if (code == 'A')
+    if ('A' == code)
     {
         ++p_count->decoded_a;
     }
-    else if (code == 'F')
+    else if ('F' == code)
     {
         ++p_count->decoded_f;
     }
-    else if (code == 'Z')
+    else if ('Z' == code)
     {
         ++p_count->decoded_z;
     }
@@ -249,8 +250,8 @@ static inline void barcode_queue_code (barcode_nav_t * p_count, char code)
 static inline void barcode_cross_confirm (barcode_nav_t * p_count, uint64_t now,
                                           double mm_value, bool white)
 {
-    if (p_count->cross_candidate && white &&
-        mm_value - p_count->cross_trailing_mm >= B_CROSS_WHITE_MM)
+    if (((p_count->cross_candidate) && white) &&
+        (mm_value - p_count->cross_trailing_mm >= B_CROSS_WHITE_MM))
     {
         p_count->cross_candidate = false;
         p_count->cross_ready = true;
@@ -269,10 +270,11 @@ static inline void barcode_nav_edge (barcode_nav_t * p_count, uint64_t now,
         return;
     }
     bool was_frame = p_count->reader.frame;
-    if (black && !p_count->reader.black)
+    if (black && (!p_count->reader.black))
     {
         /* Confirm by encoder travel, even if this next edge arrives between
-           control ticks. A new bar inside4mm cancels, never consumes pending. */
+           control ticks. A new bar inside4mm cancels, never consumes pending.
+         */
         barcode_cross_confirm(p_count, now, mm_value, true);
         if (p_count->cross_candidate)
         {
@@ -315,10 +317,11 @@ static inline void barcode_nav_edge (barcode_nav_t * p_count, uint64_t now,
     /* A complete barcode is required before queuing a route command. Frame
        context protects its bars, even when they are wider than the cross.
        Cross uses a separate isolated black run after its trailing edge. */
-    if (result.completed_black && !was_frame &&
-        !(result.events & (1u << B_FRAME_START)) &&
-        p_count->reader.history_count <= 2 && result.width >= B_CROSS_MIN_MM &&
-        result.width <= B_CROSS_MAX_MM)
+    if ((((((result.completed_black) && (!was_frame)) &&
+           (!(result.events & (1u << B_FRAME_START)))) &&
+          (p_count->reader.history_count <= 2)) &&
+         (result.width >= B_CROSS_MIN_MM)) &&
+        (result.width <= B_CROSS_MAX_MM))
     {
         p_count->cross_width = result.width;
         p_count->cross_us = p_count->leading_us;
@@ -352,20 +355,20 @@ static inline void barcode_straight_gate (circuit_t * p_character,
                                           const circuit_input_t * p_index,
                                           const analog_demand_t * p_demand)
 {
-    bool visible = p_demand->level[0] >= 400 || p_demand->level[1] >= 400;
+    bool visible = (p_demand->level[0] >= 400) || (p_demand->level[1] >= 400);
 #ifdef CIRCUIT_SWEEP_SEARCH
-    visible = visible && !p_character->follower.core.white;
+    visible = visible && (!p_character->follower.core.white);
 #endif
     if (BARCODE_CONFIRM_GATE)
     {
         /* Step4: eligibility is rechecked at confirmation, not latched at
          * the first edge. Ordinary corrections need no yaw/speed dwell. */
         p_count->allow_cross =
-            visible && p_index->path >= p_character->clear_path;
+            visible && (p_index->path >= p_character->clear_path);
         return;
     }
     bool straight =
-        visible && p_index->speed[0] >= 10 && p_index->speed[1] >= 10;
+        (visible && (p_index->speed[0] >= 10)) && (p_index->speed[1] >= 10);
     if (!straight)
     {
         p_character->gate_timing = false;
@@ -390,9 +393,9 @@ static inline void barcode_straight_gate (circuit_t * p_character,
         }
     }
     p_count->allow_cross =
-        p_character->gate_timing &&
-        p_index->now - p_character->gate_since >= C_GATE_US &&
-        p_index->path >= p_character->clear_path;
+        ((p_character->gate_timing) &&
+         (p_index->now - p_character->gate_since >= C_GATE_US)) &&
+        (p_index->path >= p_character->clear_path);
 }
 enum
 {
@@ -407,7 +410,7 @@ static inline unsigned barcode_cross_rejection (
     const circuit_input_t * p_index, const analog_demand_t * p_demand)
 {
     unsigned flags =
-        !BARCODE_CONFIRM_GATE && !p_count->cross_gate ? B_GATE_APPROACH : 0;
+        (!BARCODE_CONFIRM_GATE) && (!p_count->cross_gate) ? B_GATE_APPROACH : 0;
     if (p_index->path < p_character->clear_path)
     {
         flags |= B_GATE_CLEARANCE;
@@ -417,13 +420,13 @@ static inline unsigned barcode_cross_rejection (
     {
         flags |= B_GATE_LINE_LOST;
     }
-    if (BARCODE_CONFIRM_GATE && p_character->follower.search.active)
+    if (BARCODE_CONFIRM_GATE && (p_character->follower.search.active))
     {
         flags |= B_GATE_SEARCH;
     }
 #endif
-    if (BARCODE_CONFIRM_GATE && p_demand->level[0] < 400 &&
-        p_demand->level[1] < 400)
+    if ((BARCODE_CONFIRM_GATE && (p_demand->level[0] < 400)) &&
+        (p_demand->level[1] < 400))
     {
         flags |= B_GATE_NOT_VISIBLE;
     }
@@ -461,8 +464,8 @@ barcode_circuit_step (circuit_t * p_character, barcode_nav_t * p_count,
             barcode_cross_confirm(p_count, p_index->now, mean,
                                   !p_index->side_black);
         }
-        if (!p_count->external_reader &&
-            barcode_reader_expire(&p_count->reader, p_index->now, mean))
+        if ((!p_count->external_reader) &&
+            (barcode_reader_expire(&p_count->reader, p_index->now, mean)))
         {
             ++p_count->rejected;
             barcode_event(p_count, B_BAD_FRAME, p_index->now, mean,
@@ -471,11 +474,12 @@ barcode_circuit_step (circuit_t * p_character, barcode_nav_t * p_count,
         }
         /* Slow scanning and the approach with a pending command; encoding
            remains distance-based even as measured speed changes. */
-        bool scan =
-            p_count->external_reader
-                ? (p_count->external_scanning || p_count->pending)
-                : (p_count->reader.frame || p_count->reader.history_count ||
-                   p_count->reader.black || p_count->pending);
+        bool scan = p_count->external_reader
+                        ? ((p_count->external_scanning) || (p_count->pending))
+                        : ((((p_count->reader.frame) ||
+                             (p_count->reader.history_count)) ||
+                            (p_count->reader.black)) ||
+                           (p_count->pending));
         demand =
             circuit_follow(p_character, p_cal, p_index, scan ? 1 : profile);
         if (demand.stop)
@@ -514,7 +518,7 @@ barcode_circuit_step (circuit_t * p_character, barcode_nav_t * p_count,
                 p_count->pending_action = 0;
                 p_count->pending_revision = 0;
 #ifdef BUDDY_RUNTIME_MAPPING
-                if (p_count->executing_action == 'S')
+                if ('S' == p_count->executing_action)
                 {
                     ++p_count->straight_crosses;
                     barcode_event(p_count, B_DISPATCH, p_index->now, mean,
@@ -568,7 +572,7 @@ barcode_circuit_step (circuit_t * p_character, barcode_nav_t * p_count,
             return demand;
         }
     }
-    bool right = barcode_nav_action(p_count, p_count->action) == 'R';
+    bool right = 'R' == barcode_nav_action(p_count, p_count->action);
     unsigned first = right ? 1 : 0, second = 1 - first;
     line_calibration_t virtual_cal = {
         {p_cal->white[first], p_cal->white[second]},
@@ -586,28 +590,28 @@ barcode_circuit_step (circuit_t * p_character, barcode_nav_t * p_count,
     unsigned before = p_character->turn.phase;
     uint64_t phase_start = p_character->turn.phase_us;
     p_character->cruise_timing = false;
-    if (before == J_ACQUIRE)
+    if (J_ACQUIRE == before)
     {
         demand = circuit_join(p_character, &virtual_cal, &local);
     }
     else
     {
         unsigned stage = p_count->uturn.stage;
-        demand = barcode_nav_action(p_count, p_count->action) == 'U'
+        demand = 'U' == barcode_nav_action(p_count, p_count->action)
                      ? barcode_uturn_step(&p_count->uturn, &p_character->turn,
                                           &virtual_cal, &local)
                      : junction_step(&p_character->turn, &virtual_cal, &local);
-        if (barcode_nav_action(p_count, p_count->action) == 'U' &&
-            stage != p_count->uturn.stage)
+        if ('U' == barcode_nav_action(p_count, p_count->action) &&
+            (stage != p_count->uturn.stage))
         {
             barcode_event(p_count, B_UTURN_STAGE, p_index->now, mean,
                           p_character->turn.turn_degrees, p_count->action, 'U',
                           p_count->uturn.stage, NULL);
         }
-        if ((before == J_TURN ||
-             (barcode_nav_action(p_count, p_count->action) == 'U' &&
-              before == J_TURN_SETTLE)) &&
-            p_character->turn.phase == J_ACQUIRE)
+        if ((J_TURN == before ||
+             ('U' == barcode_nav_action(p_count, p_count->action) &&
+              J_TURN_SETTLE == before)) &&
+            J_ACQUIRE == p_character->turn.phase)
         {
             p_character->join_timing = false;
             p_character->joining =
@@ -616,33 +620,33 @@ barcode_circuit_step (circuit_t * p_character, barcode_nav_t * p_count,
         }
     }
     p_character->phase = p_character->turn.phase;
-    if (before == J_CENTRE && p_character->phase == J_TURN)
+    if (J_CENTRE == before && J_TURN == p_character->phase)
     {
         p_character->centre_ms =
             (uint16_t)((p_index->now - phase_start) / 1000);
-        if (fabsf(p_index->speed[0]) > 65 || fabsf(p_index->speed[1]) > 65)
+        if ((fabsf(p_index->speed[0]) > 65) || (fabsf(p_index->speed[1]) > 65))
         {
             circuit_fail(p_character, C_APPROACH_FAST);
         }
     }
-    if ((before == J_TURN ||
-         (barcode_nav_action(p_count, p_count->action) == 'U' &&
-          before == J_TURN_SETTLE)) &&
-        p_character->phase == J_ACQUIRE)
+    if ((J_TURN == before ||
+         ('U' == barcode_nav_action(p_count, p_count->action) &&
+          J_TURN_SETTLE == before)) &&
+        J_ACQUIRE == p_character->phase)
     {
         p_character->turn_ms =
             (uint16_t)((p_index->now -
-                        (barcode_nav_action(p_count, p_count->action) == 'U'
+                        ('U' == barcode_nav_action(p_count, p_count->action)
                              ? p_count->uturn.since
                              : phase_start)) /
                        1000);
     }
-    if (before == J_ACQUIRE && p_character->phase == J_EXIT)
+    if (J_ACQUIRE == before && J_EXIT == p_character->phase)
     {
         p_character->align_ms = (uint16_t)((p_index->now - phase_start) / 1000);
         ++p_character->turns;
         p_character->completed = true;
-        if (barcode_nav_action(p_count, p_count->action) == 'U')
+        if ('U' == barcode_nav_action(p_count, p_count->action))
         {
             ++p_count->uturns;
         }
@@ -673,7 +677,7 @@ barcode_circuit_step (circuit_t * p_character, barcode_nav_t * p_count,
                              p_index->now, mean);
         return circuit_follow(p_character, p_cal, p_index, profile);
     }
-    if (p_character->phase == J_CENTRE)
+    if (J_CENTRE == p_character->phase)
     {
         for (unsigned wheel = 0; wheel < 2; ++wheel)
         {
@@ -683,8 +687,8 @@ barcode_circuit_step (circuit_t * p_character, barcode_nav_t * p_count,
             }
         }
     }
-    else if (barcode_nav_action(p_count, p_count->action) != 'U' &&
-             p_character->phase == J_TURN && demand.target[1] > 0)
+    else if ((barcode_nav_action(p_count, p_count->action) != 'U') &&
+             J_TURN == p_character->phase && (demand.target[1] > 0))
     {
         demand.target[1] =
             (int16_t)(demand.target[1] +
@@ -698,32 +702,32 @@ barcode_circuit_step (circuit_t * p_character, barcode_nav_t * p_count,
         uint16_t level = demand.level[0];
         demand.level[0] = demand.level[1];
         demand.level[1] = level;
-        if (demand.decision == SYM_LEFT)
+        if (SYM_LEFT == demand.decision)
         {
             demand.decision = SYM_RIGHT;
         }
-        else if (demand.decision == SYM_RIGHT)
+        else if (SYM_RIGHT == demand.decision)
         {
             demand.decision = SYM_LEFT;
         }
-        else if (demand.decision == SYM_RECOVER_LEFT)
+        else if (SYM_RECOVER_LEFT == demand.decision)
         {
             demand.decision = SYM_RECOVER_RIGHT;
         }
-        else if (demand.decision == SYM_RECOVER_RIGHT)
+        else if (SYM_RECOVER_RIGHT == demand.decision)
         {
             demand.decision = SYM_RECOVER_LEFT;
         }
-        else if (demand.decision == C_PROBE_LEFT)
+        else if (C_PROBE_LEFT == demand.decision)
         {
             demand.decision = C_PROBE_RIGHT;
         }
-        else if (demand.decision == C_PROBE_RIGHT)
+        else if (C_PROBE_RIGHT == demand.decision)
         {
             demand.decision = C_PROBE_LEFT;
         }
     }
-    if (demand.stop || p_character->turn.phase == J_FAULT)
+    if ((demand.stop) || J_FAULT == p_character->turn.phase)
     {
         circuit_fail(p_character, p_character->reason
                                       ? p_character->reason

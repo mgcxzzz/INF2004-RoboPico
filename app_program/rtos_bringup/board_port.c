@@ -1,8 +1,9 @@
 /**
  * @file board_port.c
  * @brief Board port.
- * @details Core1 owns normal motor commits. Safety paths may only remove output;
- * command/status access uses the existing kernel locks and copied records.
+ * @details Core1 owns normal motor commits. Safety paths may only remove
+ * output; command/status access uses the existing kernel locks and copied
+ * records.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 /* RP2040 port. Motor outputs have one task owner and a safety-only OFF path.
@@ -59,7 +60,7 @@ uint32_t board_kernel_ms (void)
 
 bool board_button_pressed (unsigned pin)
 {
-    return (in_w(GPIO_IN) & (1U << pin)) == 0U;
+    return 0U == (in_w(GPIO_IN) & (1U << pin));
 }
 
 static uint8_t read_ab (unsigned wheel)
@@ -87,7 +88,7 @@ void board_motor_init (void)
     }
     /* Release the block without resetting any kernel-owned PWM slice. */
     clr_w(RESETS_RESET, RESETS_RESET_PWM);
-    while ((in_w(RESETS_RESET_DONE) & RESETS_RESET_PWM) == 0U)
+    while (0U == (in_w(RESETS_RESET_DONE) & RESETS_RESET_PWM))
     {
     }
     for (unsigned slice = 4U; slice <= 5U; ++slice)
@@ -117,7 +118,7 @@ void board_motor_write (unsigned wheel, unsigned pwm)
     {
         pwm = 420U;
     }
-    BR_PWM(4U + wheel, 0x0cU) = wheel == 0U ? pwm : pwm << 16U;
+    BR_PWM(4U + wheel, 0x0cU) = 0U == wheel ? pwm : pwm << 16U;
 }
 
 static void board_gpio_isr (UINT vector)
@@ -135,7 +136,7 @@ static void board_gpio_isr (UINT vector)
     {
         bench_encoder_update(&g_encoders[1], read_ab(1U));
     }
-    if ((buttons & (4U << 16U)) != 0U || board_button_pressed(20U))
+    if (((buttons & (4U << 16U)) != 0U) || (board_button_pressed(20U)))
     {
         /* IRQ never calls the task-only motion API. Its latch is checked
          * inside every generation-checked commit before PWM is written. */
@@ -193,9 +194,9 @@ void board_encoder_drain (int32_t delta[2], uint32_t edges[2],
 
 bool board_clock_registers_ok (void)
 {
-    return (BR_REG(0x4005802cU) & 0x7ffU) == 0x60cU &&
-           BR_REG(0x40008038U) == 4U && BR_REG(0x40008034U) == 0x100U &&
-           BR_REG(0x40008044U) == 2U && BR_REG(0x40008040U) == 0x100U;
+    return 0x60cU == (BR_REG(0x4005802cU) & 0x7ffU) &&
+           4U == BR_REG(0x40008038U) && 0x100U == BR_REG(0x40008034U) &&
+           2U == BR_REG(0x40008044U) && 0x100U == BR_REG(0x40008040U);
 }
 
 void board_clock_report (void)

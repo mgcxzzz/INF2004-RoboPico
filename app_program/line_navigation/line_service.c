@@ -1,8 +1,9 @@
 /**
  * @file line_service.c
  * @brief Line service.
- * @details ADC/control ownership covers sensor acquisition, planning and calibration.
- * Other tasks consume protected copies; flash and stored exports require Stop.
+ * @details ADC/control ownership covers sensor acquisition, planning and
+ * calibration. Other tasks consume protected copies; flash and stored exports
+ * require Stop.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 #include "line_service.h"
@@ -34,8 +35,8 @@ static line_calibration_t g_calibration_value;
 static circuit_input_t g_input;
 static float g_filtered[2];
 static uint16_t g_adc[3];
-static uint32_t
-    g_cal_origin; /* 0 preset, 1 SDK record28, 2 own saved page, 3 RAM capture. */
+static uint32_t g_cal_origin; /* 0 preset, 1 SDK record28, 2 own saved page, 3
+                                 RAM capture. */
 static bool g_adc_ok;
 static bool g_filter_ready;
 static bool g_was_active;
@@ -152,7 +153,8 @@ static void leave (UINT key)
 }
 
 #ifdef APP_RTOS_IMU
-/* Count every due channel-1 read attempt, including failures. Lifetime totals wrap. */
+/* Count every due channel-1 read attempt, including failures. Lifetime totals
+ * wrap. */
 static void side_profile_record (uint32_t adc_us, uint32_t work_us,
                                  uint32_t poll_us)
 {
@@ -202,9 +204,9 @@ static void acquisition_failed (uint64_t now)
 static bool acquire_frame (bool include_side)
 {
     uint16_t next[3] = {g_adc[0], g_adc[1], g_adc[2]};
-    if (!board_line_adc_read(0, 32, true, &next[0]) ||
-        !board_line_adc_read(2, 32, true, &next[2]) ||
-        (include_side && !board_line_adc_read(1, 4, false, &next[1])))
+    if (((!board_line_adc_read(0, 32, true, &next[0])) ||
+         (!board_line_adc_read(2, 32, true, &next[2]))) ||
+        (include_side && (!board_line_adc_read(1, 4, false, &next[1]))))
     {
         acquisition_failed(board_time_us());
         return false;
@@ -239,7 +241,8 @@ ER rtos_line_init (void)
         acquisition_failed(board_time_us());
     }
     /* A peripheral fault gates line readiness, not motor/encoder init. It
-     * can recover while stopped; object-creation failure above is still fatal. */
+     * can recover while stopped; object-creation failure above is still fatal.
+     */
     return E_OK;
 }
 
@@ -248,7 +251,7 @@ bool rtos_line_command (unsigned command, uint32_t received_us)
     uint8_t msg[5] = {(uint8_t)command, (uint8_t)received_us,
                       (uint8_t)(received_us >> 8), (uint8_t)(received_us >> 16),
                       (uint8_t)(received_us >> 24)};
-    return tk_snd_mbf(g_commands, msg, 5, TMO_POL) == E_OK;
+    return E_OK == tk_snd_mbf(g_commands, msg, 5, TMO_POL);
 }
 
 void rtos_line_cancel (void)
@@ -264,8 +267,8 @@ bool rtos_line_start_valid (void)
     UINT key = enter();
     bool valid = g_start_serial == g_cancel_serial;
 #ifdef APP_RTOS_RELEASE
-    valid =
-        valid && !rl_export_busy(&g_wireless_export, (uint32_t)board_time_us());
+    valid = valid &&
+            (!rl_export_busy(&g_wireless_export, (uint32_t)board_time_us()));
 #endif
     leave(key);
     return valid;
@@ -273,7 +276,7 @@ bool rtos_line_start_valid (void)
 
 void rtos_line_side_poll (uint64_t now)
 {
-    if (!g_adc_ok || now < g_side_due)
+    if ((!g_adc_ok) || (now < g_side_due))
     {
         return;
     }
@@ -355,13 +358,13 @@ void rtos_line_side_poll (uint64_t now)
 
 bool rtos_line_ready (void)
 {
-    return g_adc_ok && calibration_valid(&g_calibration_value);
+    return g_adc_ok && (calibration_valid(&g_calibration_value));
 }
 
 bool rtos_line_pending (void)
 {
     UINT key = enter();
-    bool pending = (g_view.flags & 4U) && g_start_serial == g_cancel_serial;
+    bool pending = (g_view.flags & 4U) && (g_start_serial == g_cancel_serial);
     leave(key);
     return pending;
 }
@@ -371,11 +374,13 @@ bool rtos_line_mode_change_allowed (void)
     /* These dump/export flags and the countdown/start-offer copies are all
      * changed under this lock; the network core does not inspect line-owner
      * state directly. */
-    bool line_idle = !(g_view.flags & 4U) && !g_view.mode_start_offered &&
-                     !g_dumping && !g_dump_requested;
+    bool line_idle =
+        (((!(g_view.flags & 4U)) && (!g_view.mode_start_offered)) &&
+         (!g_dumping)) &&
+        (!g_dump_requested);
 #ifdef APP_RTOS_RELEASE
-    line_idle = line_idle &&
-                !rl_export_busy(&g_wireless_export, (uint32_t)board_time_us());
+    line_idle = line_idle && (!rl_export_busy(&g_wireless_export,
+                                              (uint32_t)board_time_us()));
 #endif
     leave(key);
     bringup_status_t supervisor;
@@ -385,9 +390,10 @@ bool rtos_line_mode_change_allowed (void)
 #ifdef APP_RTOS_NETWORK
     paused = rn_drive_paused();
 #endif
-    return line_idle && !(supervisor.flags & BR_ACTIVE) && !paused &&
-           !mode.session_active && mode.stopped &&
-           mode.motion_mode == MOTION_OFF;
+    return ((((line_idle && (!(supervisor.flags & BR_ACTIVE))) && (!paused)) &&
+             (!mode.session_active)) &&
+            (mode.stopped)) &&
+           MOTION_OFF == mode.motion_mode;
 }
 bool rtos_line_request_fresh (uint32_t received_us)
 {
@@ -401,7 +407,8 @@ bool rtos_line_request_start (uint32_t received_us)
 {
     UINT key = enter();
     bool allowed =
-        !g_dumping && !g_dump_requested && !g_countdown && !g_start_offered &&
+        (((!g_dumping) && (!g_dump_requested)) && (!g_countdown)) &&
+        (!g_start_offered) &&
 #ifdef APP_RTOS_RELEASE
         !rl_export_busy(&g_wireless_export, (uint32_t)board_time_us()) &&
 #endif
@@ -409,12 +416,12 @@ bool rtos_line_request_start (uint32_t received_us)
                               g_last_cancel_us, g_cancel_serial != 0);
     uint32_t serial = g_cancel_serial;
     leave(key);
-    if (!allowed || !rtos_line_ready())
+    if ((!allowed) || (!rtos_line_ready()))
     {
         return false;
     }
 #ifdef APP_RTOS_NETWORK
-    if (!rn_drive_online() || !bringup_can_start())
+    if ((!rn_drive_online()) || (!bringup_can_start()))
     {
         return false;
     }
@@ -456,32 +463,32 @@ void rtos_line_telemetry (wifi_motion_packet_t * p_out_value)
 #endif
 static void calibration_command (unsigned command)
 {
-    if (command != 'c' && !g_adc_ok)
+    if ((command != 'c') && (!g_adc_ok))
     {
         tm_printf((UB *)"CAL rejected: ADC not ready; existing calibration "
                         "retained.\n");
         return;
     }
-    if (command == 'c')
+    if ('c' == command)
     {
         g_calibration_value = successful_calibration();
         g_cal_origin = 0;
     }
-    else if (command == 'w')
+    else if ('w' == command)
     {
         g_calibration_value.white[0] = g_adc[0];
         g_calibration_value.white[1] = g_adc[2];
         g_calibration_value.mask |= 1;
         g_cal_origin = 3;
     }
-    else if (command == 'l' || command == 'r')
+    else if ('l' == command || 'r' == command)
     {
-        unsigned wheel = command == 'l' ? 0 : 1;
-        g_calibration_value.black[wheel] = g_adc[wheel == 0 ? 0 : 2];
+        unsigned wheel = 'l' == command ? 0 : 1;
+        g_calibration_value.black[wheel] = g_adc[0 == wheel ? 0 : 2];
         g_calibration_value.mask |= 2U << wheel;
         g_cal_origin = 3;
     }
-    else if (command == 'k')
+    else if ('k' == command)
     {
         if (!rtos_line_ready())
         {
@@ -531,8 +538,8 @@ bool rtos_line_prepare (const motion_feedback_t * p_flags_value, double path,
                 acquisition_failed(board_time_us());
             }
         }
-        if (!active && g_adc_health.state == RL_ADC_QUALIFYING &&
-            acquire_frame(true))
+        if ((!active) && RL_ADC_QUALIFYING == g_adc_health.state &&
+            (acquire_frame(true)))
         {
             g_adc_ok = rl_adc_good_frame(&g_adc_health);
             if (g_adc_ok)
@@ -554,7 +561,7 @@ bool rtos_line_prepare (const motion_feedback_t * p_flags_value, double path,
         .side_black = g_planner.black};
     for (unsigned wheel = 0; wheel < 2; ++wheel)
     {
-        uint16_t raw = g_adc[wheel == 0 ? 0 : 2];
+        uint16_t raw = g_adc[0 == wheel ? 0 : 2];
         if (!g_filter_ready)
         {
             g_filtered[wheel] = raw;
@@ -567,14 +574,14 @@ bool rtos_line_prepare (const motion_feedback_t * p_flags_value, double path,
             (uint16_t)g_filtered[wheel]; /* Same truncation as SDK main. */
     }
     g_filter_ready = true;
-    g_input.path =
-        path; /* Average absolute accumulated wheel travel, including U-turns. */
-    if (!active && g_was_active)
+    g_input.path = path; /* Average absolute accumulated wheel travel, including
+                            U-turns. */
+    if ((!active) && g_was_active)
     {
         g_countdown = 0;
     }
     g_was_active = active;
-    if (g_countdown && !rtos_line_start_valid())
+    if (g_countdown && (!rtos_line_start_valid()))
     {
         g_countdown = 0;
     }
@@ -586,7 +593,7 @@ bool rtos_line_prepare (const motion_feedback_t * p_flags_value, double path,
 #endif
     uint8_t msg[5];
     for (unsigned count = 0;
-         count < 8 && tk_rcv_mbf(g_commands, msg, TMO_POL) == 5; ++count)
+         (count < 8) && 5 == tk_rcv_mbf(g_commands, msg, TMO_POL); ++count)
     {
         uint32_t received = (uint32_t)msg[1] | ((uint32_t)msg[2] << 8) |
                             ((uint32_t)msg[3] << 16) | ((uint32_t)msg[4] << 24);
@@ -599,9 +606,9 @@ bool rtos_line_prepare (const motion_feedback_t * p_flags_value, double path,
             continue;
         }
         unsigned command = msg[0];
-        if (command == 'd'
+        if ('d' == command
 #ifdef APP_RTOS_BARCODE
-            || command == 'b'
+            || 'b' == command
 #endif
         )
         {
@@ -611,7 +618,7 @@ bool rtos_line_prepare (const motion_feedback_t * p_flags_value, double path,
             {
                 g_dump_requested = true;
 #ifdef APP_RTOS_BARCODE
-                g_barcode_dump = command == 'b';
+                g_barcode_dump = 'b' == command;
 #endif
             }
             leave(key);
@@ -625,12 +632,12 @@ bool rtos_line_prepare (const motion_feedback_t * p_flags_value, double path,
             tm_printf((UB *)"LINE command '%c' rejected while moving.\n",
                       command);
         }
-        else if (command == 'g')
+        else if ('g' == command)
         {
             UINT key = enter();
             bool exporting = g_dumping || g_dump_requested;
             leave(key);
-            if (!exporting && rtos_line_request_start(received))
+            if ((!exporting) && (rtos_line_request_start(received)))
             {
                 tm_printf((UB *)"LINE start requested; 2s countdown; buttons/s "
                                 "cancel.\n");
@@ -658,13 +665,16 @@ bool rtos_line_prepare (const motion_feedback_t * p_flags_value, double path,
     }
     bringup_status_t state;
     bringup_get_status(&state);
-    if (board_button_pressed(20) || board_button_pressed(21) ||
-        g_bringup_irq_stop || (state.flags & BR_LATCHED) ||
-        !br_usb_supervised(tm_usb_state()) || !rtos_line_start_valid())
+    if ((((((board_button_pressed(20)) || (board_button_pressed(21))) ||
+           g_bringup_irq_stop) ||
+          (state.flags & BR_LATCHED)) ||
+         (!br_usb_supervised(tm_usb_state()))) ||
+        (!rtos_line_start_valid()))
     {
         g_countdown = 0;
     }
-    bool start = g_countdown && p_flags_value->now_us >= g_countdown && !active;
+    bool start =
+        (g_countdown && (p_flags_value->now_us >= g_countdown)) && (!active);
     if (start)
     {
         g_countdown = 0;
@@ -789,14 +799,14 @@ void rtos_line_record (const bringup_status_t * p_state_value,
     uint8_t load_pwm[2] = {0};
     bool load_visible = (p_state_value->flags & BR_ACTIVE) != 0U;
 #ifdef APP_RTOS_NETWORK
-    load_visible = load_visible && !rn_drive_paused();
+    load_visible = load_visible && (!rn_drive_paused());
 #endif
     if (load_visible)
     {
         for (unsigned wheel = 0; wheel < 2; ++wheel)
         {
             float load = g_power.drive[wheel].load_pwm;
-            if (isfinite(load) && load > 0.0f)
+            if ((isfinite(load)) && (load > 0.0f))
             {
                 load_pwm[wheel] = (uint8_t)lroundf(
                     clampf(load, 0.0f, DRIVE_MODE_LOAD_MAX_PWM));
@@ -809,7 +819,7 @@ void rtos_line_record (const bringup_status_t * p_state_value,
     rl_pack_junction(&row, &g_planner);
     row.optical_target[0] = g_planner.optical.target[0];
     row.optical_target[1] = g_planner.optical.target[1];
-    const circuit_tracker_t * p_tracker = g_planner.circuit.phase == J_ACQUIRE
+    const circuit_tracker_t * p_tracker = J_ACQUIRE == g_planner.circuit.phase
                                               ? &g_planner.circuit.joining
                                               : &g_planner.circuit.follower;
     row.meta =
@@ -841,14 +851,14 @@ void rtos_line_record (const bringup_status_t * p_state_value,
                          : p_steering->bend_direction < 0 ? 2U
                                                           : 0U;
     float reduction = (1.0f - p_steering->bend_speed_scale) * 500.0f;
-    unsigned bend_percent = p_steering->active && isfinite(reduction)
+    unsigned bend_percent = (p_steering->active) && (isfinite(reduction))
                                 ? (unsigned)lroundf(clampf(reduction, 0, 100))
                                 : 0U;
     unsigned recovery_phase = 0, stage = 0;
     float yaw = 0;
 #if CIRCUIT_STATIONARY_SEARCH
     recovery_phase =
-        (p_state_value->flags & BR_ACTIVE) && p_tracker->core.white
+        (p_state_value->flags & BR_ACTIVE) && (p_tracker->core.white)
             ? (p_tracker->search.phase ? p_tracker->search.phase : 7U)
             : 0U;
     stage = p_tracker->search.stage;
@@ -959,7 +969,8 @@ void rtos_line_record (const bringup_status_t * p_state_value,
         .flags =
             (p_state_value->flags & BR_ACTIVE ? 1U : 0U) |
             (calibration_valid(&g_calibration_value) ? 2U : 0U) |
-            (p_state_value->flags & BR_ACTIVE && !rn_drive_paused() ? 4U : 0U) |
+            ((p_state_value->flags & BR_ACTIVE) && (!rn_drive_paused()) ? 4U
+                                                                        : 0U) |
             (p_state_value->flags & BR_ESTOP ? 8U : 0U) | 0x40U
 #ifdef APP_RTOS_BARCODE
             | 0x20U /* Step4 identification within the existing RTOS marker. */
@@ -1107,7 +1118,7 @@ void rtos_line_report (void)
             (UB *)"ADC_%s reason=%s code=%u channel=%u stage=%u sample=%u "
                   "cs=0x%x elapsed_us=%u timer_us=%u clk_ctrl=0x%x "
                   "clk_div=0x%x adc_div=0x%x reset_done=0x%x\n",
-            count_value == 0 ? "FIRST" : "LAST",
+            0 == count_value ? "FIRST" : "LAST",
             p_flags->reason < 6 ? names[p_flags->reason] : "unknown",
             p_flags->reason, p_flags->channel, p_flags->stage, p_flags->sample,
             p_flags->cs, p_flags->elapsed_us, p_flags->timer_us,
@@ -1119,7 +1130,7 @@ void rtos_line_report (void)
 void rtos_line_dump_if_requested (void)
 {
     UINT key = enter();
-    if (!g_dump_requested || g_recording)
+    if ((!g_dump_requested) || g_recording)
     {
         leave(key);
         return;
@@ -1162,7 +1173,7 @@ void rtos_line_dump_if_requested (void)
               "accepted_without_white,junction_accept_event\n");
     for (unsigned count_value = 0; count_value < count; ++count_value)
     {
-        while (tm_usb_pending() > 1024 && tm_usb_state() == 3)
+        while ((tm_usb_pending() > 1024) && 3 == tm_usb_state())
         {
             (void)tk_dly_tsk(2);
         }

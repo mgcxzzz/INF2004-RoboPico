@@ -1,8 +1,9 @@
 /**
  * @file hump_diagnostics.h
  * @brief Hump diagnostics.
- * @details The IMU task owns sensor acquisition and calibration; readers use snapshots.
- * Ramp requests expire through the coordinator; lift safety may remove output.
+ * @details The IMU task owns sensor acquisition and calibration; readers use
+ * snapshots. Ramp requests expire through the coordinator; lift safety may
+ * remove output.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 #ifndef RTOS_IMU_HUMP_DIAGNOSTICS_H

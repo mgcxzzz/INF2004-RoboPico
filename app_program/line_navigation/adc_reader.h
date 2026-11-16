@@ -1,8 +1,9 @@
 /**
  * @file adc_reader.h
  * @brief Adc reader.
- * @details ADC/control ownership covers sensor acquisition, planning and calibration.
- * Other tasks consume protected copies; flash and stored exports require Stop.
+ * @details ADC/control ownership covers sensor acquisition, planning and
+ * calibration. Other tasks consume protected copies; flash and stored exports
+ * require Stop.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 #ifndef RTOS_LINE_ADC_READER_H
@@ -91,9 +92,8 @@ static inline rl_adc_reason_t rl_adc_conversion (const rl_adc_port_t * p_data,
         uint64_t duration = p_data->now() - start;
         if (duration > RL_ADC_TIMEOUT_US)
         {
-            cs_value =
-                *p_data
-                     ->cs; /* May have completed while this task was preempted. */
+            cs_value = *p_data->cs; /* May have completed while this task was
+                                       preempted. */
             *p_elapsed =
                 duration > UINT32_MAX ? UINT32_MAX : (uint32_t)duration;
             if (!(cs_value & RL_ADC_READY))
@@ -136,8 +136,8 @@ static inline void rl_adc_failed (rl_adc_health_t * p_h_value, uint64_t now)
 static inline bool rl_adc_can_retry (const rl_adc_health_t * p_h_value,
                                      uint64_t now, bool active)
 {
-    return !active && p_h_value->state == RL_ADC_OFFLINE &&
-           now >= p_h_value->retry_us;
+    return (!active) && RL_ADC_OFFLINE == p_h_value->state &&
+           (now >= p_h_value->retry_us);
 }
 static inline bool rl_adc_good_frame (rl_adc_health_t * p_h_value)
 {
@@ -149,11 +149,11 @@ static inline bool rl_adc_good_frame (rl_adc_health_t * p_h_value)
     {
         ++p_h_value->good;
     }
-    if (p_h_value->good == RL_ADC_GOOD_FRAMES)
+    if (RL_ADC_GOOD_FRAMES == p_h_value->good)
     {
         p_h_value->state = RL_ADC_HEALTHY;
     }
-    return p_h_value->state == RL_ADC_HEALTHY;
+    return RL_ADC_HEALTHY == p_h_value->state;
 }
 #endif
 

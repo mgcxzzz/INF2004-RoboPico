@@ -1,9 +1,9 @@
 /**
  * @file compact_signed.h
  * @brief Explicit signed interpretation of compact unsigned storage.
- * @details Native field layout is never a wire format. Callers validate or clamp
- * mathematical values before packing; the conversion deliberately retains the
- * low width bits, including two's-complement negative encodings.
+ * @details Native field layout is never a wire format. Callers validate or
+ * clamp mathematical values before packing; the conversion deliberately retains
+ * the low width bits, including two's-complement negative encodings.
  */
 #ifndef ROBOPICO_COMPACT_SIGNED_H
 #define ROBOPICO_COMPACT_SIGNED_H
@@ -12,9 +12,11 @@
 
 /**
  * @brief Retain the low width bits of a signed value, without signed shifts.
- * @param value Mathematical signed value; out-of-domain values wrap modulo 2^width.
+ * @param value Mathematical signed value; out-of-domain values wrap modulo
+ * 2^width.
  * @param width Compact field width, 1 through 31; invalid widths return zero.
- * @return Canonical unsigned bit pattern, independent of compiler bit-field order.
+ * @return Canonical unsigned bit pattern, independent of compiler bit-field
+ * order.
  */
 static inline uint32_t compact_signed_pack (int32_t value, unsigned width)
 {
@@ -23,7 +25,8 @@ static inline uint32_t compact_signed_pack (int32_t value, unsigned width)
         return 0U;
     }
     /* C defines signed-to-unsigned conversion modulo 2^32. Masking then keeps
-     * exactly the caller's field width; no signed representation is inspected. */
+     * exactly the caller's field width; no signed representation is inspected.
+     */
     return ((uint32_t)value) & ((UINT32_C(1) << width) - 1U);
 }
 

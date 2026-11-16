@@ -94,22 +94,24 @@ continuous_steering_update_bend (continuous_steering_t * p_state, float error,
     int8_t request_direction = original_half > 0.0f   ? 1
                                : original_half < 0.0f ? -1
                                                       : 0;
-    bool aligned = error_direction != 0 && error_direction == request_direction;
-    bool enter_signal = aligned &&
-                        fabsf(error) >= CONTINUOUS_BEND_ENTER_ERROR &&
-                        curvature >= CONTINUOUS_BEND_ENTER_CURVATURE;
-    bool hold_signal = aligned && fabsf(error) >= CONTINUOUS_BEND_EXIT_ERROR &&
-                       curvature >= CONTINUOUS_BEND_EXIT_CURVATURE;
+    bool aligned =
+        (error_direction != 0) && (error_direction == request_direction);
+    bool enter_signal =
+        (aligned && (fabsf(error) >= CONTINUOUS_BEND_ENTER_ERROR)) &&
+        (curvature >= CONTINUOUS_BEND_ENTER_CURVATURE);
+    bool hold_signal =
+        (aligned && (fabsf(error) >= CONTINUOUS_BEND_EXIT_ERROR)) &&
+        (curvature >= CONTINUOUS_BEND_EXIT_CURVATURE);
 
     /* Handles callers that seed the legacy state directly in a test or
      * restore it from an older zero-initialized application snapshot. */
-    if (!(p_state->bend_speed_scale > 0.0f) ||
-        !isfinite(p_state->bend_speed_scale))
+    if ((!(p_state->bend_speed_scale > 0.0f)) ||
+        (!isfinite(p_state->bend_speed_scale)))
     {
         p_state->bend_speed_scale = 1.0f;
     }
-    if (!(p_state->bend_authority_scale > 0.0f) ||
-        !isfinite(p_state->bend_authority_scale))
+    if ((!(p_state->bend_authority_scale > 0.0f)) ||
+        (!isfinite(p_state->bend_authority_scale)))
     {
         p_state->bend_authority_scale = 1.0f;
     }
@@ -148,7 +150,7 @@ continuous_steering_update_bend (continuous_steering_t * p_state, float error,
 
     if (p_state->bend_candidate)
     {
-        if (hold_signal && error_direction == p_state->bend_direction)
+        if (hold_signal && (error_direction == p_state->bend_direction))
         {
             p_state->bend_exit_duration = 0.0f;
             p_state->bend_exiting = 0;
@@ -160,7 +162,7 @@ continuous_steering_update_bend (continuous_steering_t * p_state, float error,
 
             float yaw_ratio = p_state->bend_direction * measured_half /
                               fmaxf(fabsf(measured_mean), 10.0f);
-            bool correct_yaw = measured_mean >= 8.0f && yaw_ratio >= .08f;
+            bool correct_yaw = (measured_mean >= 8.0f) && (yaw_ratio >= .08f);
             if (correct_yaw)
             {
                 p_state->bend_yaw_duration =
@@ -170,8 +172,8 @@ continuous_steering_update_bend (continuous_steering_t * p_state, float error,
             {
                 p_state->bend_yaw_duration = 0.0f;
             }
-            if (p_state->bend_demand_duration >= CONTINUOUS_BEND_CONFIRM_S &&
-                p_state->bend_yaw_duration >= CONTINUOUS_BEND_YAW_S)
+            if ((p_state->bend_demand_duration >= CONTINUOUS_BEND_CONFIRM_S) &&
+                (p_state->bend_yaw_duration >= CONTINUOUS_BEND_YAW_S))
             {
                 p_state->bend_confirmed = 1;
             }
@@ -207,9 +209,10 @@ continuous_steering_update_bend (continuous_steering_t * p_state, float error,
 
     /* Pending sensor dwell retains its direction until qualification. Clear
      * it only after both the dwell and any exit blend have ended. */
-    if (!p_state->bend_candidate && p_state->bend_demand_duration <= 0.0f &&
-        p_state->bend_speed_scale >= 0.9999f &&
-        p_state->bend_authority_scale <= 1.0001f)
+    if ((((!p_state->bend_candidate) &&
+          (p_state->bend_demand_duration <= 0.0f)) &&
+         (p_state->bend_speed_scale >= 0.9999f)) &&
+        (p_state->bend_authority_scale <= 1.0001f))
     {
         p_state->bend_speed_scale = 1.0f;
         p_state->bend_authority_scale = 1.0f;
@@ -217,9 +220,9 @@ continuous_steering_update_bend (continuous_steering_t * p_state, float error,
         p_state->bend_direction = 0;
         p_state->bend_exit_duration = 0.0f;
     }
-    else if (!p_state->bend_candidate &&
-             (p_state->bend_speed_scale < 0.9999f ||
-              p_state->bend_authority_scale > 1.0001f))
+    else if ((!p_state->bend_candidate) &&
+             ((p_state->bend_speed_scale < 0.9999f) ||
+              (p_state->bend_authority_scale > 1.0001f)))
     {
         p_state->bend_exiting = 1;
     }
@@ -231,11 +234,11 @@ static inline analog_demand_t continuous_steering_step_with_cruise (
     circuit_t * p_character, const circuit_input_t * p_index, bool scanning,
     unsigned profile, float delta_time, unsigned cruise_speed_mm_s)
 {
-    bool ordinary = demand.decision == SYM_STRAIGHT ||
-                    demand.decision == SYM_LEFT ||
-                    demand.decision == SYM_RIGHT || demand.decision == C_FAST;
-    bool eligible = p_character->phase == C_FOLLOW && !p_character->busy &&
-                    !demand.stop && !p_character->follower.core.white &&
+    bool ordinary = SYM_STRAIGHT == demand.decision ||
+                    SYM_LEFT == demand.decision ||
+                    SYM_RIGHT == demand.decision || C_FAST == demand.decision;
+    bool eligible = C_FOLLOW == p_character->phase && (!p_character->busy) &&
+                    (!demand.stop) && (!p_character->follower.core.white) &&
                     ordinary;
     if (!eligible)
     {
@@ -260,10 +263,11 @@ static inline analog_demand_t continuous_steering_step_with_cruise (
     /* Runtime speed modes opt into higher ordinary cruise only. A zero or
      * near-zero inside wheel marks a correcting turn and keeps the reference
      * profile's targets unchanged. Barcode activity also retains45mm/s. */
-    bool scaled_cruise = profile == 1 && !scanning && cruise_speed_mm_s > 45U &&
-                         demand.target[0] > 10 && demand.target[1] > 10;
+    bool scaled_cruise = 1 == profile && (!scanning) &&
+                         (cruise_speed_mm_s > 45U) && (demand.target[0] > 10) &&
+                         (demand.target[1] > 10);
     float ceiling = scanning        ? 45.0f
-                    : profile == 3  ? 135.0f
+                    : 3 == profile  ? 135.0f
                     : scaled_cruise ? (float)cruise_speed_mm_s
                                     : 55.0f;
     desired_mean = clampf(desired_mean, 0.0f, ceiling);
@@ -308,12 +312,12 @@ static inline analog_demand_t continuous_steering_step_with_cruise (
      * sensor imbalance inside the core's straight dead zone has no half-turn
      * authority and must not earn full gain. */
     uint8_t side = original_half > 0.0f ? 1u : original_half < 0.0f ? 2u : 0u;
-    if (!entering && side != 0u && side == p_state->side)
+    if (((!entering) && (side != 0u)) && (side == p_state->side))
     {
         p_state->same_side_duration =
             fminf(0.35f, p_state->same_side_duration + delta_time);
     }
-    else if (side != p_state->side || side == 0u)
+    else if ((side != p_state->side) || 0u == side)
     {
         p_state->same_side_duration = 0.0f;
     }
@@ -334,7 +338,7 @@ static inline analog_demand_t continuous_steering_step_with_cruise (
                     (fabsf(p_state->previous_error) - abs_error) / delta_time)
             : 0.0f;
     float confidence_target = clampf(fall_rate / 4.0f, 0.0f, 1.0f);
-    if (original_half == 0.0f)
+    if (0.0f == original_half)
     {
         confidence_target = 1.0f;
     }
@@ -378,7 +382,7 @@ static inline analog_demand_t continuous_steering_step_with_cruise (
         demand.target[wheel] = p_state->emitted[wheel];
     }
     p_character->fast =
-        !scanning && (demand.target[0] > 55 || demand.target[1] > 55);
+        (!scanning) && ((demand.target[0] > 55) || (demand.target[1] > 55));
     demand.decision = scanning ? 24 : 25;
     return demand;
 }

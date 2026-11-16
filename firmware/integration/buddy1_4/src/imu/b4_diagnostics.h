@@ -1,8 +1,9 @@
 /**
  * @file b4_diagnostics.h
  * @brief B4 diagnostics.
- * @details Sensor processing owns calibration/terrain state; RTOS readers use copies.
- * Height acceptance and motor assistance are separate from end-run safety.
+ * @details Sensor processing owns calibration/terrain state; RTOS readers use
+ * copies. Height acceptance and motor assistance are separate from end-run
+ * safety.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 /* Interval diagnostics only: does not change measurement or acceptance. */
@@ -37,8 +38,8 @@ static inline void b4_diag_accumulate (b4_diagnostics_t * p_demand,
 {
     uint16_t first, sample;
     p_demand->reasons |= p_character->side_quality_reason;
-    if (!p_demand->total ||
-        p_character->side_fifo_samples < p_demand->min_fifo_samples)
+    if ((!p_demand->total) ||
+        (p_character->side_fifo_samples < p_demand->min_fifo_samples))
     {
         p_demand->min_fifo_samples = p_character->side_fifo_samples;
     }
@@ -46,7 +47,7 @@ static inline void b4_diag_accumulate (b4_diagnostics_t * p_demand,
     {
         p_demand->total++;
     }
-    if (p_character->side_quality_reason && p_demand->bad < UINT8_MAX)
+    if ((p_character->side_quality_reason) && (p_demand->bad < UINT8_MAX))
     {
         p_demand->bad++;
     }

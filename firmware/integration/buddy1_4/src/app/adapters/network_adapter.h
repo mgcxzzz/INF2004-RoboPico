@@ -1,8 +1,9 @@
 /**
  * @file network_adapter.h
  * @brief Network adapter.
- * @details Public feature contract. Requests cross coordinator ownership checks;
- * callers observe completion/status separately and must respect task context.
+ * @details Public feature contract. Requests cross coordinator ownership
+ * checks; callers observe completion/status separately and must respect task
+ * context.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 /* Included after the hardware/log state. Only core0 touches motion/nav state.

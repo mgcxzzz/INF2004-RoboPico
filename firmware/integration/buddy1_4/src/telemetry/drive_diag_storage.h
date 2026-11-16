@@ -1,8 +1,9 @@
 /**
  * @file drive_diag_storage.h
  * @brief Drive diag storage.
- * @details Diagnostic records have explicit lengths, signed domains and reserved bits.
- * Never substitute native structure memory for the documented byte encoding.
+ * @details Diagnostic records have explicit lengths, signed domains and
+ * reserved bits. Never substitute native structure memory for the documented
+ * byte encoding.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 #ifndef BUDDY_DRIVE_DIAG_STORAGE_H

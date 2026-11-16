@@ -1,8 +1,9 @@
 /**
  * @file barcode_analog.h
  * @brief Barcode analog.
- * @details Pure barcode/route logic is called by the ADC owner and emits requests.
- * Native records are not wire packets; preserve both decode directions.
+ * @details Pure barcode/route logic is called by the ADC owner and emits
+ * requests. Native records are not wire packets; preserve both decode
+ * directions.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 #ifndef BARCODE_ANALOG_H
@@ -65,13 +66,13 @@ typedef struct
  * These are sensitivity hypotheses, not a hardcoded barcode or calibration. */
 static inline unsigned barcode_analog_threshold (unsigned bank)
 {
-    return bank == 0    ? 128
+    return 0 == bank    ? 128
            : bank <= 32 ? 190 + 2 * bank
                         : (bank - 31) * AO_STEP;
 }
 static inline unsigned barcode_analog_hysteresis (unsigned bank)
 {
-    return bank >= 1 && bank <= 32 ? AO_FINE_HYSTERESIS : AO_HYSTERESIS;
+    return (bank >= 1) && (bank <= 32) ? AO_FINE_HYSTERESIS : AO_HYSTERESIS;
 }
 static inline unsigned barcode_analog_log_threshold (unsigned version,
                                                      unsigned bank)
@@ -106,13 +107,13 @@ static inline void barcode_analog_begin (barcode_analog_t * p_first,
 static inline bool barcode_analog_same_frame (const analog_bank_t * p_value,
                                               const analog_bank_t * p_wheel)
 {
-    return p_value->vote && p_value->vote == p_wheel->vote &&
-           p_value->reverse == p_wheel->reverse &&
-           fabs(p_value->vote_start - p_wheel->vote_start) <= 6 &&
-           fabs(p_value->vote_end - p_wheel->vote_end) <= 6 &&
-           (p_value->vote_us > p_wheel->vote_us
-                ? p_value->vote_us - p_wheel->vote_us
-                : p_wheel->vote_us - p_value->vote_us) <= 500000;
+    return (((((p_value->vote) && (p_value->vote == p_wheel->vote)) &&
+              (p_value->reverse == p_wheel->reverse)) &&
+             (fabs(p_value->vote_start - p_wheel->vote_start) <= 6)) &&
+            (fabs(p_value->vote_end - p_wheel->vote_end) <= 6)) &&
+           ((p_value->vote_us > p_wheel->vote_us
+                 ? p_value->vote_us - p_wheel->vote_us
+                 : p_wheel->vote_us - p_value->vote_us) <= 500000);
 }
 static inline bool barcode_analog_select (barcode_analog_t * p_first,
                                           barcode_nav_t * p_count, uint64_t now,
@@ -126,24 +127,26 @@ static inline bool barcode_analog_select (barcode_analog_t * p_first,
     {
         const analog_bank_t *p_value = &p_first->bank[second],
                             *p_wheel = &p_first->bank[second + 1];
-        if (!barcode_analog_same_frame(p_value, p_wheel) ||
-            now < p_value->vote_us || now - p_value->vote_us > 500000 ||
-            mm_value - p_value->vote_end > 10 || mm_value < p_value->vote_end)
+        if (((((!barcode_analog_same_frame(p_value, p_wheel)) ||
+               (now < p_value->vote_us)) ||
+              (now - p_value->vote_us > 500000)) ||
+             (mm_value - p_value->vote_end > 10)) ||
+            (mm_value < p_value->vote_end))
         {
             continue;
         }
-        if (p_first->accepted &&
-            fabs(p_value->vote_start - p_first->accepted_start) <= 12 &&
-            fabs(p_value->vote_end - p_first->accepted_end) <= 12)
+        if (((p_first->accepted) &&
+             (fabs(p_value->vote_start - p_first->accepted_start) <= 12)) &&
+            (fabs(p_value->vote_end - p_first->accepted_end) <= 12))
         {
             continue;
         }
-        if (winner >= 0 && code != p_value->vote)
+        if ((winner >= 0) && (code != p_value->vote))
         {
             conflict = true;
         }
-        else if (winner < 0 ||
-                 fabs(barcode_analog_threshold(second) - centre) < best)
+        else if ((winner < 0) ||
+                 (fabs(barcode_analog_threshold(second) - centre) < best))
         {
             winner = (int)second;
             code = p_value->vote;
@@ -156,7 +159,7 @@ static inline bool barcode_analog_select (barcode_analog_t * p_first,
     }
     if (conflict)
     {
-        if (!p_first->conflict || mm_value - p_first->conflict_end > 12)
+        if ((!p_first->conflict) || (mm_value - p_first->conflict_end > 12))
         {
             barcode_event(p_count, B_ANALOG_CONFLICT, now, mm_value, 0, '?', 0,
                           0, NULL);
@@ -167,7 +170,7 @@ static inline bool barcode_analog_select (barcode_analog_t * p_first,
         p_count->cross_candidate = p_count->cross_ready = false;
         return false;
     }
-    if (p_first->conflict && mm_value - p_first->conflict_end <= 12)
+    if ((p_first->conflict) && (mm_value - p_first->conflict_end <= 12))
     {
         return false;
     }
@@ -253,8 +256,8 @@ static inline void barcode_analog_sample (barcode_analog_t * p_first,
             memcpy(p_value->candidate_wheel, wheel,
                    sizeof(p_value->candidate_wheel));
         }
-        if (p_value->candidate != p_value->stable &&
-            now - p_value->candidate_us >= AO_DEBOUNCE_US)
+        if ((p_value->candidate != p_value->stable) &&
+            (now - p_value->candidate_us >= AO_DEBOUNCE_US))
         {
             p_value->stable = p_value->candidate;
             p_value->changed = true;
@@ -300,10 +303,10 @@ static inline void barcode_analog_sample (barcode_analog_t * p_first,
                 barcode_event(p_count, B_ANALOG_CANDIDATE,
                               p_value->candidate_us, edge_mm, sample,
                               result.code, 0, second + 1, result.pattern);
-                if (p_first->accepted &&
-                    fabs(result.start - p_first->accepted_start) <= 12 &&
-                    fabs(edge_mm - p_first->accepted_end) <= 12 &&
-                    result.code != p_count->last_code)
+                if ((((p_first->accepted) &&
+                      (fabs(result.start - p_first->accepted_start) <= 12)) &&
+                     (fabs(edge_mm - p_first->accepted_end) <= 12)) &&
+                    (result.code != p_count->last_code))
                 {
                     p_first->conflict = true;
                     p_first->conflict_end = mm_value;
@@ -315,16 +318,16 @@ static inline void barcode_analog_sample (barcode_analog_t * p_first,
                 }
             }
         }
-        if (barcode_reader_expire(&p_value->reader, now, mm_value) &&
-            second == p_first->selected)
+        if ((barcode_reader_expire(&p_value->reader, now, mm_value)) &&
+            (second == p_first->selected))
         {
             ++p_count->rejected;
             barcode_event(p_count, B_BAD_FRAME, now, mm_value,
                           mm_value - p_value->reader.start_mm, '?', 0,
                           B_REJECT_TIMEOUT, NULL);
         }
-        if (p_value->reader.frame || p_value->reader.history_count ||
-            (sample > p_first->baseline + 100u && p_value->stable))
+        if (((p_value->reader.frame) || (p_value->reader.history_count)) ||
+            ((sample > p_first->baseline + 100u) && (p_value->stable)))
         {
             p_first->scanning = true;
         }
@@ -335,7 +338,7 @@ static inline void barcode_analog_sample (barcode_analog_t * p_first,
     p_count->external_scanning = p_first->scanning;
     /* A cross is searched only after a verified command. The selecting edge
        is the final stop bar, and is never reused as the next junction. */
-    if (p_count->external_cross || selected || !p_count->pending)
+    if (((p_count->external_cross) || selected) || (!p_count->pending))
     {
         return;
     }
@@ -344,7 +347,7 @@ static inline void barcode_analog_sample (barcode_analog_t * p_first,
         p_count->cross_candidate = false;
         return;
     }
-    if (p_value_value->changed && !p_value_value->was_frame)
+    if ((p_value_value->changed) && (!p_value_value->was_frame))
     {
         double edge_mm = (p_value_value->candidate_wheel[0] +
                           p_value_value->candidate_wheel[1]) *
@@ -366,15 +369,15 @@ static inline void barcode_analog_sample (barcode_analog_t * p_first,
                    sizeof(p_count->leading_wheel));
             p_count->leading_gate = p_count->allow_cross;
         }
-        else if (p_count->leading_us >= p_count->start_us &&
-                 now >= p_count->leading_us &&
-                 now - p_count->leading_us < 20000000)
+        else if (((p_count->leading_us >= p_count->start_us) &&
+                  (now >= p_count->leading_us)) &&
+                 (now - p_count->leading_us < 20000000))
         {
             double leading =
                        (p_count->leading_wheel[0] + p_count->leading_wheel[1]) *
                        .5,
                    width = edge_mm - leading;
-            if (width >= B_CROSS_MIN_MM && width <= B_CROSS_MAX_MM)
+            if ((width >= B_CROSS_MIN_MM) && (width <= B_CROSS_MAX_MM))
             {
                 p_count->cross_width = width;
                 p_count->cross_us = p_count->leading_us;

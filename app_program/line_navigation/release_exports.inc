@@ -1,8 +1,9 @@
 /**
  * @file release_exports.inc
  * @brief Release exports.
- * @details ADC/control ownership covers sensor acquisition, planning and calibration.
- * Other tasks consume protected copies; flash and stored exports require Stop.
+ * @details ADC/control ownership covers sensor acquisition, planning and
+ * calibration. Other tasks consume protected copies; flash and stored exports
+ * require Stop.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 /* Included by the core1 line owner, after barcode_runtime.inc. No hardware
@@ -13,8 +14,8 @@ static uint32_t release_nav_sequence (unsigned * p_count)
 {
     motion_event_t last;
     *p_count = motion_log_count();
-    return *p_count && motion_log_read(*p_count - 1U, &last) ? last.sequence
-                                                             : 0U;
+    return (*p_count) && (motion_log_read(*p_count - 1U, &last)) ? last.sequence
+                                                                 : 0U;
 }
 static void release_line_bytes (const line_log_row_t * p_result,
                                 uint8_t out[56])
@@ -75,18 +76,18 @@ uint8_t rtos_line_log_reply (const wifi_command_t * p_cmd)
     {
         return WP_ACK_FORMAT;
     }
-    if ((state.flags & BR_ACTIVE) || rtos_line_pending() || g_dumping ||
+    if ((((state.flags & BR_ACTIVE) || (rtos_line_pending())) || g_dumping) ||
         g_dump_requested)
     {
         return WP_ACK_BUSY;
     }
     unsigned total = dataset < 2    ? g_row_count
-                     : dataset == 2 ? g_barcode.raw_count
+                     : 2 == dataset ? g_barcode.raw_count
                                     : 0;
-    uint32_t nav_seq = dataset == 3 ? release_nav_sequence(&total) : 0;
+    uint32_t nav_seq = 3 == dataset ? release_nav_sequence(&total) : 0;
     UINT key = enter();
-    bool valid = index == 0 || rl_export_same(&g_wireless_export, dataset,
-                                              total, g_run_id, nav_seq, now);
+    bool valid = 0 == index || (rl_export_same(&g_wireless_export, dataset,
+                                               total, g_run_id, nav_seq, now));
     if (valid)
     {
         rl_export_open(&g_wireless_export, dataset, total, g_run_id, nav_seq,
@@ -100,12 +101,12 @@ uint8_t rtos_line_log_reply (const wifi_command_t * p_cmd)
     uint8_t data[64] = {0}, packet[64], length = 0;
     unsigned bytes = 0, status = index < total ? WPK_LOG_STATUS_OK
                                                : WPK_LOG_STATUS_UNAVAILABLE;
-    if (!status && dataset < 2)
+    if ((!status) && (dataset < 2))
     {
         line_log_row_t result =
             g_rows[(g_row_head + RL_LOG_ROWS - g_row_count + index) %
                    RL_LOG_ROWS];
-        if (dataset == 1)
+        if (1 == dataset)
         {
             release_line_bytes(&result, data);
             bytes = 56;
@@ -150,7 +151,7 @@ uint8_t rtos_line_log_reply (const wifi_command_t * p_cmd)
             bytes = WPK_MOTION_BYTES;
         }
     }
-    else if (!status && dataset == 2)
+    else if ((!status) && 2 == dataset)
     {
         memcpy(data,
                g_barcode
@@ -171,10 +172,11 @@ uint8_t rtos_line_log_reply (const wifi_command_t * p_cmd)
         nav_event_encode(data, &event);
         bytes = NAV_EVENT_BYTES;
         unsigned current_total;
-        if (release_nav_sequence(&current_total) != nav_seq ||
-            current_total != total)
+        if ((release_nav_sequence(&current_total) != nav_seq) ||
+            (current_total != total))
         {
-            return WP_ACK_BUSY; /* Never combine shifted navigation-ring generations. */
+            return WP_ACK_BUSY; /* Never combine shifted navigation-ring
+                                   generations. */
         }
     }
     unsigned parts = status ? 1 : (bytes + 48U) / 49U;
@@ -186,15 +188,15 @@ uint8_t rtos_line_log_reply (const wifi_command_t * p_cmd)
         {
             count = 49U;
         }
-        if (!wpk_log_chunk(rn_next_sequence(WPK_SRC_LOG_CHUNK), dataset,
-                           p_cmd->id, index, total, part, parts, status,
-                           data + at_value, count, packet, &length) ||
-            !rn_tx_push(RN_TLM, packet, length, board_kernel_ms()))
+        if ((!wpk_log_chunk(rn_next_sequence(WPK_SRC_LOG_CHUNK), dataset,
+                            p_cmd->id, index, total, part, parts, status,
+                            data + at_value, count, packet, &length)) ||
+            (!rn_tx_push(RN_TLM, packet, length, board_kernel_ms())))
         {
             queued = false;
         }
     }
-    if (queued && (status || index + 1U >= total))
+    if (queued && (status || (index + 1U >= total)))
     {
         key = enter();
         g_wireless_export.active = 0;

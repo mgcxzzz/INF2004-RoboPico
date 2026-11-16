@@ -1,8 +1,9 @@
 /**
  * @file junction_sensor.h
  * @brief Junction sensor.
- * @details The ADC owner feeds both optical decoders and junction qualification.
- * Accepted navigation crosses the coordinator; this module never writes PWM.
+ * @details The ADC owner feeds both optical decoders and junction
+ * qualification. Accepted navigation crosses the coordinator; this module never
+ * writes PWM.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 #ifndef RTOS_BARCODE_JUNCTION_SENSOR_H
@@ -103,7 +104,8 @@ static inline void
 rb_junction_record_white_outcome (rb_junction_sensor_t * p_other_data,
                                   unsigned result)
 {
-    /* Keep the measured stripe and candidate bit frozen through white gating. */
+    /* Keep the measured stripe and candidate bit frozen through white gating.
+     */
     p_other_data->last_candidate = true;
     rb_junction_decision_changed(p_other_data, result);
 }
@@ -115,8 +117,9 @@ rb_junction_cross_confirm (rb_junction_sensor_t * p_other_data,
 {
     bool candidate = p_count->cross_candidate;
     barcode_cross_confirm(p_count, now, mm_value, white);
-    if (candidate && !p_count->cross_candidate && p_count->cross_ready &&
-        p_other_data->last_result == RB_JUNCTION_RESULT_CANDIDATE)
+    if (((candidate && (!p_count->cross_candidate)) &&
+         (p_count->cross_ready)) &&
+        RB_JUNCTION_RESULT_CANDIDATE == p_other_data->last_result)
     {
         rb_junction_record_white_outcome(p_other_data,
                                          RB_JUNCTION_RESULT_WHITE_CONFIRMED);
@@ -127,8 +130,8 @@ static inline void rb_junction_reset (rb_junction_sensor_t * p_other_data,
                                       barcode_nav_t * p_count, uint16_t adc,
                                       uint64_t now, double mm_value)
 {
-    if (p_count->cross_candidate &&
-        p_other_data->last_result == RB_JUNCTION_RESULT_CANDIDATE)
+    if ((p_count->cross_candidate) &&
+        RB_JUNCTION_RESULT_CANDIDATE == p_other_data->last_result)
     {
         rb_junction_record_white_outcome(p_other_data,
                                          RB_JUNCTION_RESULT_WHITE_CANCELLED);
@@ -136,7 +139,7 @@ static inline void rb_junction_reset (rb_junction_sensor_t * p_other_data,
     p_other_data->armed = p_other_data->have_leading =
         p_other_data->white_tracking = false;
     p_other_data->black = p_other_data->candidate =
-        p_other_data->valid && adc >= p_other_data->threshold;
+        (p_other_data->valid) && (adc >= p_other_data->threshold);
     p_other_data->candidate_us = now;
     p_other_data->candidate_wheel[0] = p_other_data->candidate_wheel[1] =
         mm_value;
@@ -171,8 +174,9 @@ static inline void rb_junction_learn (rb_junction_sensor_t * p_other_data,
     p_other_data->last_width_saturated = last_width_saturated;
     p_other_data->decision_valid = decision_valid;
     p_other_data->decision_armed = decision_armed;
-    if (isfinite(white) && isfinite(wide) && white >= 0 && wide <= 4095 &&
-        wide - white >= 4)
+    if (((((isfinite(white)) && (isfinite(wide))) && (white >= 0)) &&
+         (wide <= 4095)) &&
+        (wide - white >= 4))
     {
         p_other_data->threshold = (unsigned)lround((white + wide) * .5);
         unsigned h_value = (unsigned)lround((wide - white) * .05);
@@ -202,13 +206,13 @@ static inline void rb_junction_sample (rb_junction_sensor_t * p_other_data,
         memcpy(p_other_data->candidate_wheel, wheel,
                sizeof(p_other_data->candidate_wheel));
     }
-    bool changed = p_other_data->candidate != p_other_data->black &&
-                   now - p_other_data->candidate_us >= AO_DEBOUNCE_US;
+    bool changed = (p_other_data->candidate != p_other_data->black) &&
+                   (now - p_other_data->candidate_us >= AO_DEBOUNCE_US);
     if (changed)
     {
         p_other_data->black = p_other_data->candidate;
     }
-    if (p_count->busy || !p_count->pending)
+    if ((p_count->busy) || (!p_count->pending))
     {
         p_other_data->armed = p_other_data->have_leading =
             p_other_data->white_tracking = false;
@@ -218,7 +222,7 @@ static inline void rb_junction_sample (rb_junction_sensor_t * p_other_data,
     {
         /* Never reuse the label's stop bar, a partial bar at Resume, or a
          * classifier change as the leading edge of a junction. */
-        if (p_other_data->black || p_other_data->candidate)
+        if ((p_other_data->black) || (p_other_data->candidate))
         {
             p_other_data->white_tracking = false;
         }
@@ -253,7 +257,7 @@ static inline void rb_junction_sample (rb_junction_sensor_t * p_other_data,
                               p_other_data->candidate_us, edge,
                               edge - p_count->cross_trailing_mm,
                               p_count->pending, 0, 0, NULL);
-                if (p_other_data->last_result == RB_JUNCTION_RESULT_CANDIDATE)
+                if (RB_JUNCTION_RESULT_CANDIDATE == p_other_data->last_result)
                 {
                     rb_junction_record_white_outcome(
                         p_other_data, RB_JUNCTION_RESULT_WHITE_CANCELLED);
@@ -271,8 +275,8 @@ static inline void rb_junction_sample (rb_junction_sensor_t * p_other_data,
             double leading =
                 (p_count->leading_wheel[0] + p_count->leading_wheel[1]) * .5;
             double width = edge - leading;
-            if (isfinite(width) && width >= RTOS_JUNCTION_MIN_MM &&
-                width <= B_CROSS_MAX_MM)
+            if (((isfinite(width)) && (width >= RTOS_JUNCTION_MIN_MM)) &&
+                (width <= B_CROSS_MAX_MM))
             {
                 p_count->cross_width = width;
                 p_count->cross_us = p_count->leading_us;
@@ -290,15 +294,17 @@ static inline void rb_junction_sample (rb_junction_sensor_t * p_other_data,
             }
             else
             {
-                unsigned result = isnan(width) || width < RTOS_JUNCTION_MIN_MM
-                                      ? RB_JUNCTION_RESULT_TOO_NARROW
-                                      : RB_JUNCTION_RESULT_TOO_WIDE;
+                unsigned result =
+                    (isnan(width)) || (width < RTOS_JUNCTION_MIN_MM)
+                        ? RB_JUNCTION_RESULT_TOO_NARROW
+                        : RB_JUNCTION_RESULT_TOO_WIDE;
                 rb_junction_record_width(p_other_data, width, result, false);
             }
         }
     }
     rb_junction_cross_confirm(p_other_data, p_count, now, mm_value,
-                              !p_other_data->black && !p_other_data->candidate);
+                              (!p_other_data->black) &&
+                                  (!p_other_data->candidate));
 }
 #endif
 

@@ -2,7 +2,8 @@
  * @file wifi_config.example.h
  * @brief Wifi config.example.
  * @details Build-time configuration for the tested application.
- * Coding cleanup does not change calibration, timing, motor or sensor constants.
+ * Coding cleanup does not change calibration, timing, motor or sensor
+ * constants.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 #ifndef WIFI_CONFIG_EXAMPLE_H

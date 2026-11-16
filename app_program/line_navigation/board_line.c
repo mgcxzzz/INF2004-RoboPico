@@ -1,8 +1,9 @@
 /**
  * @file board_line.c
  * @brief Board line.
- * @details ADC/control ownership covers sensor acquisition, planning and calibration.
- * Other tasks consume protected copies; flash and stored exports require Stop.
+ * @details ADC/control ownership covers sensor acquisition, planning and
+ * calibration. Other tasks consume protected copies; flash and stored exports
+ * require Stop.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 #include "line_service.h"
@@ -51,20 +52,20 @@ static void adc_failure (rl_adc_reason_t reason, unsigned channel,
                               .channel = channel > 2 ? 7 : channel,
                               .stage = stage,
                               .sample = sample};
-    if (g_adc_diagnostics.first.reason == RL_ADC_NONE)
+    if (RL_ADC_NONE == g_adc_diagnostics.first.reason)
     {
         g_adc_diagnostics.first = flags;
     }
     g_adc_diagnostics.last = flags;
-    if (reason == RL_ADC_TIMEOUT)
+    if (RL_ADC_TIMEOUT == reason)
     {
         ++g_adc_diagnostics.timeouts;
     }
-    else if (reason == RL_ADC_CONVERSION_ERR)
+    else if (RL_ADC_CONVERSION_ERR == reason)
     {
         ++g_adc_diagnostics.errors;
     }
-    else if (reason == RL_ADC_ARGUMENT)
+    else if (RL_ADC_ARGUMENT == reason)
     {
         ++g_adc_diagnostics.bad_arguments;
     }
@@ -84,8 +85,9 @@ static uint16_t rom_halfword (uintptr_t address)
 void board_motor_levels (unsigned wheel, uint16_t first_value,
                          uint16_t second_value)
 {
-    if (wheel > 1 || (first_value && second_value) || first_value > M_PEAK ||
-        second_value > M_PEAK)
+    if ((((wheel > 1) || (first_value && second_value)) ||
+         (first_value > M_PEAK)) ||
+        (second_value > M_PEAK))
     {
         board_motor_off();
         return;
@@ -111,9 +113,9 @@ bool board_line_adc_init (void)
         1U; /* Reset only the ADC; no motor/kernel peripheral reset. */
     RL_REG(0x4000f000U) = 1U; /* RESETS atomic clear: ADC reset bit 0. */
     uint64_t start = board_time_us();
-    while ((RL_REG(0x4000c008U) & 1U) == 0U)
+    while (0U == (RL_REG(0x4000c008U) & 1U))
     {
-        if (board_time_us() - start > 1000 && !(RL_REG(0x4000c008U) & 1U))
+        if ((board_time_us() - start > 1000) && (!(RL_REG(0x4000c008U) & 1U)))
         {
             adc_failure(RL_ADC_RESET_TIMEOUT, 7, RL_ADC_INIT, 0,
                         RL_REG(0x4004c000U),
@@ -133,8 +135,8 @@ bool board_line_adc_init (void)
     start = board_time_us();
     while (!(RL_REG(0x4004c000U) & RL_ADC_READY))
     {
-        if (board_time_us() - start > 1000 &&
-            !(RL_REG(0x4004c000U) & RL_ADC_READY))
+        if ((board_time_us() - start > 1000) &&
+            (!(RL_REG(0x4004c000U) & RL_ADC_READY)))
         {
             adc_failure(RL_ADC_INIT_TIMEOUT, 7, RL_ADC_INIT, 0,
                         RL_REG(0x4004c000U),
@@ -167,7 +169,7 @@ static bool adc_once (unsigned channel, rl_adc_stage_t stage, unsigned index,
 bool board_line_adc_read (unsigned channel, unsigned count, bool spaced,
                           uint16_t * p_value_value)
 {
-    if (channel > 2 || !count || count > 32 || !p_value_value)
+    if ((((channel > 2) || (!count)) || (count > 32)) || (!p_value_value))
     {
         adc_failure(RL_ADC_ARGUMENT, channel, RL_ADC_ARGUMENT_STAGE, 0,
                     RL_REG(0x4004c000U), 0);
@@ -247,8 +249,10 @@ bool board_line_save (const uint8_t page[256])
 {
     bringup_status_t state;
     bringup_get_status(&state);
-    if ((state.flags & BR_ACTIVE) || board_button_pressed(20) ||
-        board_button_pressed(21) || g_bringup_irq_stop || g_flash_ack)
+    if (((((state.flags & BR_ACTIVE) || (board_button_pressed(20))) ||
+          (board_button_pressed(21))) ||
+         g_bringup_irq_stop) ||
+        g_flash_ack)
     {
         return false;
     }
@@ -260,8 +264,10 @@ bool board_line_save (const uint8_t page[256])
     g_flash_ram.erase = (FlashErase)p_lookup(p_table, 'R' | ('E' << 8));
     g_flash_ram.program = (FlashProgram)p_lookup(p_table, 'R' | ('P' << 8));
     g_flash_ram.flush = (FlashVoid)p_lookup(p_table, 'F' | ('C' << 8));
-    if (!g_flash_ram.connect || !g_flash_ram.exit_xip || !g_flash_ram.erase ||
-        !g_flash_ram.program || !g_flash_ram.flush)
+    if (((((!g_flash_ram.connect) || (!g_flash_ram.exit_xip)) ||
+          (!g_flash_ram.erase)) ||
+         (!g_flash_ram.program)) ||
+        (!g_flash_ram.flush))
     {
         return false;
     }
@@ -283,8 +289,8 @@ bool board_line_save (const uint8_t page[256])
     }
     rl_flash_write();
     /* Read-back is after XIP has been restored. */
-    return memcmp((const void *)(uintptr_t)(0x10000000U + RL_CAL_OFFSET), page,
-                  256) == 0;
+    return 0 == memcmp((const void *)(uintptr_t)(0x10000000U + RL_CAL_OFFSET),
+                       page, 256);
 }
 
 /* End of file. */

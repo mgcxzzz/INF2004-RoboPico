@@ -1,8 +1,9 @@
 /**
  * @file wifi_transport.c
  * @brief Wifi transport.
- * @details Network helpers validate and explicitly encode bounded application records.
- * Transport calls belong to the configured SDK or RTOS owner, not these codecs.
+ * @details Network helpers validate and explicitly encode bounded application
+ * records. Transport calls belong to the configured SDK or RTOS owner, not
+ * these codecs.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 #include "src/network/wifi_transport.h"
@@ -738,7 +739,8 @@ static void network_core (void)
         g_status.last_error = WIFI_ERROR_INIT;
         g_status.mqtt_stage = WIFI_STAGE_INIT_FAILED;
         unlock_queues(irq_state);
-        /* Keep USB status/flash lockout responsive, without a silent busy spin. */
+        /* Keep USB status/flash lockout responsive, without a silent busy spin.
+         */
         for (;;)
         {
             sleep_ms(1000u);

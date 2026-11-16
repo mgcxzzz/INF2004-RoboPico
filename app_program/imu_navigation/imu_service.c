@@ -1,8 +1,9 @@
 /**
  * @file imu_service.c
  * @brief Imu service.
- * @details The IMU task owns sensor acquisition and calibration; readers use snapshots.
- * Ramp requests expire through the coordinator; lift safety may remove output.
+ * @details The IMU task owns sensor acquisition and calibration; readers use
+ * snapshots. Ramp requests expire through the coordinator; lift safety may
+ * remove output.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 #ifdef APP_RTOS_IMU
@@ -66,11 +67,12 @@ static void leave (UINT key)
 
 #ifdef APP_RTOS_RELEASE
 /* The acquisition task is the only detector writer. Reset requests are copied;
- * it never enters the nav coordinator or touches motor registers under this lock. */
+ * it never enters the nav coordinator or touches motor registers under this
+ * lock. */
 static bool lift_fresh_snapshot (bool have, bool reset_pending,
                                  uint32_t sample_ms, uint32_t now_ms)
 {
-    return have && !reset_pending && now_ms - sample_ms <= 100U;
+    return (have && (!reset_pending)) && (now_ms - sample_ms <= 100U);
 }
 static bool lift_reset_ready_snapshot (const imu_lift_guard_t * p_lift,
                                        bool have, bool reset_pending,
@@ -83,11 +85,11 @@ static bool lift_reset_ready_snapshot (const imu_lift_guard_t * p_lift,
     bool fresh = lift_fresh_snapshot(have, reset_pending, sample_ms, now_ms);
     /* Preserve Reset recovery from a sensor/calibration fault. No qualified
      * lift may use this exception, and outputs stay blocked through reinit. */
-    if (!p_lift->latched && !fresh)
+    if ((!p_lift->latched) && (!fresh))
     {
         return true;
     }
-    return fresh && imu_lift_guard_reset_ready(p_lift);
+    return fresh && (imu_lift_guard_reset_ready(p_lift));
 }
 void ri_lift_guard_samples (const int16_t base[3], int32_t gravity,
                             const imu_lift_vec_t * p_samples, uint8_t count,
@@ -100,7 +102,7 @@ void ri_lift_guard_samples (const int16_t base[3], int32_t gravity,
     uint32_t previous_sample_ms = g_shared.lift_sample_ms;
     leave(key);
     uint32_t now_ms = (uint32_t)(board_time_us() / 1000U);
-    bool interrupted = have && now_ms - previous_sample_ms > 30U;
+    bool interrupted = have && (now_ms - previous_sample_ms > 30U);
     if (pending)
     {
         return;
@@ -116,7 +118,7 @@ void ri_lift_guard_samples (const int16_t base[3], int32_t gravity,
     if (!g_shared.lift_reset_pending)
     {
         g_shared.lift = value;
-        if (fresh && value.current_valid)
+        if (fresh && (value.current_valid))
         {
             g_shared.lift_sample_ms = now_ms;
             g_shared.lift_have = true;
@@ -131,8 +133,8 @@ bool ri_safety_blocked (void)
     bool have = g_shared.lift_have, pending = g_shared.lift_reset_pending;
     uint32_t sample_ms = g_shared.lift_sample_ms;
     uint32_t now_ms = (uint32_t)(board_time_us() / 1000U);
-    bool blocked =
-        lift.latched || !lift_fresh_snapshot(have, pending, sample_ms, now_ms);
+    bool blocked = (lift.latched) ||
+                   (!lift_fresh_snapshot(have, pending, sample_ms, now_ms));
     leave(key);
     return blocked;
 }
@@ -175,7 +177,8 @@ bool ri_safety_reset_latch (void)
     if (ready)
     {
         /* Do not race a core0 batch calculation: only its task clears detector
-         * state. Pending reset blocks outputs/Start immediately, through calibration. */
+         * state. Pending reset blocks outputs/Start immediately, through
+         * calibration. */
         g_shared.lift_reset_pending = true;
         /* bringup_clear_latch calls ri_reset_request once after clearing its
          * own latch. Keep that as the single queue write, avoiding a duplicate
@@ -187,12 +190,13 @@ bool ri_safety_reset_latch (void)
 void ri_safety_packet (uint8_t seq, uint16_t run, uint8_t out[30])
 {
     /* Sample age, trip and packet uptime must share the hardware timer epoch.
-     * Kernel uptime has a different origin; callers cannot supply this clock. */
+     * Kernel uptime has a different origin; callers cannot supply this clock.
+     */
     bringup_status_t control;
     bringup_get_status(&control);
     bool stopped = (control.flags & BR_IMU) != 0U;
-    unsigned stop_reason = control.reason == BR_REASON_IMU_LIFT       ? 1U
-                           : control.reason == BR_REASON_IMU_OVERTURN ? 2U
+    unsigned stop_reason = BR_REASON_IMU_LIFT == control.reason       ? 1U
+                           : BR_REASON_IMU_OVERTURN == control.reason ? 2U
                                                                       : 3U;
     UINT key = enter();
     imu_lift_guard_t g_value = g_shared.lift;
@@ -211,7 +215,7 @@ void ri_safety_packet (uint8_t seq, uint16_t run, uint8_t out[30])
                                        : stopped       ? stop_reason
                                        : fresh         ? 0U
                                                        : 3U,
-                             .latched = g_value.latched || stopped,
+                             .latched = (g_value.latched) || stopped,
                              .armed = g_value.armed,
                              .fresh = fresh,
                              .can_reset = reset_ready,
@@ -229,8 +233,9 @@ void ri_safety_peak_packet (uint8_t seq, uint8_t out[RI_LIFT_PEAK_PACKET_BYTES])
     bool have = g_shared.lift_have, pending = g_shared.lift_reset_pending;
     uint32_t sample_ms = g_shared.lift_sample_ms;
     uint32_t now_ms = (uint32_t)(board_time_us() / 1000U);
-    bool current_valid = g_value.current_valid &&
-                         lift_fresh_snapshot(have, pending, sample_ms, now_ms);
+    bool current_valid =
+        (g_value.current_valid) &&
+        (lift_fresh_snapshot(have, pending, sample_ms, now_ms));
     ri_lift_peak_packet_t data = {
         .report_ms = now_ms,
         .peak_sample_ms = g_value.min_cos_sample_ms,
@@ -265,7 +270,7 @@ void ri_reset_request (void)
 {
     UINT key = enter();
 #ifdef APP_RTOS_RELEASE
-    if (g_shared.lift.latched && !g_shared.lift_reset_pending)
+    if ((g_shared.lift.latched) && (!g_shared.lift_reset_pending))
     {
         leave(key);
         return; /* Only the authoritative safety reset can clear a trip. */
@@ -286,9 +291,9 @@ void ri_observe (const motion_feedback_t * p_flags_value,
                  const uint32_t invalid[2], uint32_t dt_us, bool running)
 {
     UINT key = enter();
-    bool clean = g_shared.have && dt_us && dt_us <= 50000 &&
-                 invalid[0] == g_shared.invalid[0] &&
-                 invalid[1] == g_shared.invalid[1];
+    bool clean = ((((g_shared.have) && dt_us) && (dt_us <= 50000)) &&
+                  (invalid[0] == g_shared.invalid[0])) &&
+                 (invalid[1] == g_shared.invalid[1]);
     g_shared.odo = (b4v23_odo_t){
         .have = true,
         .clean = clean,
@@ -321,19 +326,19 @@ static bool send_frame (const uint8_t * p_frame, uint32_t len)
     {
         UINT key = enter();
         g_shared.tlm = sample;
-        if (sample.state == IMU_ST_IDLE && sample.b_valid && !sample.fault)
+        if (IMU_ST_IDLE == sample.state && (sample.b_valid) && (!sample.fault))
         {
             g_shared.ready_epoch = g_shared.init_epoch;
         }
         leave(key);
     }
-    if (!rn_drive_telemetry_enabled() || !rn_drive_online())
+    if ((!rn_drive_telemetry_enabled()) || (!rn_drive_online()))
     {
         return false;
     }
     bool ok_value =
-        len <= RN_PACKET_MAX &&
-        rn_tx_push(RN_TLM, p_frame, (uint8_t)len, board_kernel_ms());
+        (len <= RN_PACKET_MAX) &&
+        (rn_tx_push(RN_TLM, p_frame, (uint8_t)len, board_kernel_ms()));
     if (!ok_value)
     {
         UINT key = enter();
@@ -395,13 +400,13 @@ void ri_task (INT code, void * p_exinf_value)
                                  : UINT32_MAX;
                 was_running = false;
             }
-            else if (running && (!was_running || run_serial != serial))
+            else if (running && ((!was_running) || (run_serial != serial)))
             {
                 mission = run_serial == serial ? B4V23_RESUME : B4V23_START;
                 run_serial = serial;
                 was_running = true;
             }
-            else if (!running && was_running)
+            else if ((!running) && was_running)
             {
                 mission = B4V23_STOP;
                 was_running = false;

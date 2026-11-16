@@ -33,7 +33,7 @@ static inline int32_t maneuver_wheel_step (maneuver_power_t * p_state,
         *p_data = (signed_wheel_t){0};
         return 0;
     }
-    if (!p_state->active || p_data->sign != sign)
+    if ((!p_state->active) || (p_data->sign != sign))
     {
         float ramp = p_data->sign == sign ? p_data->pi.ramp : 0;
         *p_data = (signed_wheel_t){
@@ -49,17 +49,17 @@ static inline int32_t maneuver_wheel_step (maneuver_power_t * p_state,
         p_data->peak_used = p_data->peak_active = true;
         p_data->peak_end_us = now + M_PEAK_US;
     }
-    if (now >= p_data->peak_end_us || along >= fminf(50, .8f * goal) ||
-        along < -8)
+    if (((now >= p_data->peak_end_us) || (along >= fminf(50, .8f * goal))) ||
+        (along < -8))
     {
         p_data->peak_active = false;
     }
     float error = p_data->pi.ramp - along;
-    if (error < 0 && p_data->pi.integral > 0)
+    if ((error < 0) && (p_data->pi.integral > 0))
     {
         p_data->pi.integral = 0;
     }
-    if (along > goal + 10 || error < -15)
+    if ((along > goal + 10) || (error < -15))
     {
         p_data->pi.integral = 0;
         return 0;
@@ -70,7 +70,8 @@ static inline int32_t maneuver_wheel_step (maneuver_power_t * p_state,
     float candidate =
         clampf(p_data->pi.integral + 6 * error * delta_time, -180, 180);
     float proposed = ff_value + 2.2f * error + candidate;
-    if (!((proposed > M_SUSTAIN && error > 0) || (proposed < 0 && error < 0)))
+    if (!(((proposed > M_SUSTAIN) && (error > 0)) ||
+          ((proposed < 0) && (error < 0))))
     {
         p_data->pi.integral = candidate;
     }
@@ -78,7 +79,7 @@ static inline int32_t maneuver_wheel_step (maneuver_power_t * p_state,
         (int32_t)(clampf(ff_value + 2.2f * error + p_data->pi.integral, 0,
                          M_SUSTAIN) +
                   .5f);
-    if (p_data->peak_active && out < M_PEAK)
+    if ((p_data->peak_active) && (out < M_PEAK))
     {
         out = M_PEAK;
     }
@@ -117,7 +118,7 @@ static inline dual_levels_t maneuver_levels (unsigned wheel, int32_t pwm,
     {
         return value;
     }
-    if (!allow_reverse && pwm < 0)
+    if ((!allow_reverse) && (pwm < 0))
     {
         return value;
     }
@@ -130,7 +131,7 @@ static inline dual_levels_t maneuver_levels (unsigned wheel, int32_t pwm,
         pwm = -M_PEAK;
     }
     uint16_t magnitude = (uint16_t)(pwm < 0 ? -pwm : pwm);
-    bool a_side = wheel == 0 ? pwm > 0 : pwm < 0;
+    bool a_side = 0 == wheel ? pwm > 0 : pwm < 0;
     if (a_side)
     {
         value.a = magnitude;

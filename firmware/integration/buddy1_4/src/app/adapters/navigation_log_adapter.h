@@ -1,8 +1,9 @@
 /**
  * @file navigation_log_adapter.h
  * @brief Navigation log adapter.
- * @details Public feature contract. Requests cross coordinator ownership checks;
- * callers observe completion/status separately and must respect task context.
+ * @details Public feature contract. Requests cross coordinator ownership
+ * checks; callers observe completion/status separately and must respect task
+ * context.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 /* Included in the standalone hardware main. z is independent of p/j. */
@@ -62,7 +63,8 @@ static void interface_save_nav_log (void)
         flash_range_program(INTERFACE_LOG_OFFSET + NAV_LOG_HEADER + offset,
                             page, sizeof(page));
     }
-    /* Header last: interrupted writes fail header/data CRC rather than look valid. */
+    /* Header last: interrupted writes fail header/data CRC rather than look
+     * valid. */
     flash_range_program(INTERFACE_LOG_OFFSET, header, sizeof(header));
     restore_interrupts(irq);
     wifi_transport_flash_end();

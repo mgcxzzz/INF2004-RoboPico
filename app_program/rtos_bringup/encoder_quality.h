@@ -1,8 +1,9 @@
 /**
  * @file encoder_quality.h
  * @brief Encoder quality.
- * @details Core1 owns normal motor commits. Safety paths may only remove output;
- * command/status access uses the existing kernel locks and copied records.
+ * @details Core1 owns normal motor commits. Safety paths may only remove
+ * output; command/status access uses the existing kernel locks and copied
+ * records.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 #ifndef RTOS_ENCODER_QUALITY_H
@@ -96,11 +97,11 @@ static inline unsigned br_encoder_quality (br_encoder_quality_t * p_other_data,
     }
     uint32_t bad = invalid - p_other_data->last_invalid,
              edge_delta = edges - p_other_data->last_edges;
-    if (p_other_data->recent_count &&
-        now - p_other_data->bad_at[(p_other_data->recent_head +
-                                    BR_ENC_BURST_COUNT - 1) %
-                                   BR_ENC_BURST_COUNT] >
-            BR_ENC_BURST_US)
+    if ((p_other_data->recent_count) &&
+        (now - p_other_data->bad_at[(p_other_data->recent_head +
+                                     BR_ENC_BURST_COUNT - 1) %
+                                    BR_ENC_BURST_COUNT] >
+         BR_ENC_BURST_US))
     {
         p_other_data->recent_count =
             0; /* Do not revive ancient errors at TIMER wrap. */
@@ -128,17 +129,17 @@ static inline unsigned br_encoder_quality (br_encoder_quality_t * p_other_data,
             ++p_other_data->recent_count;
         }
     }
-    if (p_other_data->recent_count == BR_ENC_BURST_COUNT &&
-        now - p_other_data->bad_at[p_other_data->recent_head] <=
-            BR_ENC_BURST_US)
+    if (BR_ENC_BURST_COUNT == p_other_data->recent_count &&
+        (now - p_other_data->bad_at[p_other_data->recent_head] <=
+         BR_ENC_BURST_US))
     {
         return BR_ENC_BURST;
     }
     /* Ten100ms bins cover the most recent900..1000ms. Sparse errors never
      * accumulate across an entire run or survive a long Pause. */
-    if (p_other_data->window_bad >= BR_ENC_DENSITY_COUNT &&
-        p_other_data->window_bad * BR_ENC_DENSITY_DENOMINATOR >=
-            p_other_data->window_changes)
+    if ((p_other_data->window_bad >= BR_ENC_DENSITY_COUNT) &&
+        (p_other_data->window_bad * BR_ENC_DENSITY_DENOMINATOR >=
+         p_other_data->window_changes))
     {
         return BR_ENC_DENSITY;
     }

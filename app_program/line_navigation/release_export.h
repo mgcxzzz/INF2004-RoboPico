@@ -1,8 +1,9 @@
 /**
  * @file release_export.h
  * @brief Release export.
- * @details ADC/control ownership covers sensor acquisition, planning and calibration.
- * Other tasks consume protected copies; flash and stored exports require Stop.
+ * @details ADC/control ownership covers sensor acquisition, planning and
+ * calibration. Other tasks consume protected copies; flash and stored exports
+ * require Stop.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 #ifndef RTOS_RELEASE_EXPORT_H
@@ -23,7 +24,7 @@ typedef struct
 static inline bool rl_export_busy (const rl_export_lease_t * p_state,
                                    uint32_t now)
 {
-    return p_state->active && (int32_t)(p_state->until_us - now) > 0;
+    return (p_state->active) && ((int32_t)(p_state->until_us - now) > 0);
 }
 static inline void rl_export_open (rl_export_lease_t * p_state,
                                    unsigned dataset, unsigned total,
@@ -42,9 +43,11 @@ static inline bool rl_export_same (const rl_export_lease_t * p_state,
                                    uint16_t run, uint32_t nav_sequence,
                                    uint32_t now)
 {
-    return rl_export_busy(p_state, now) && p_state->dataset == dataset &&
-           p_state->total == total && p_state->run == run &&
-           p_state->nav_sequence == nav_sequence;
+    return ((((rl_export_busy(p_state, now)) &&
+              (p_state->dataset == dataset)) &&
+             (p_state->total == total)) &&
+            (p_state->run == run)) &&
+           (p_state->nav_sequence == nav_sequence);
 }
 /* Explicit little endian encoding; never send compiler-layout structs. */
 static inline void rl_put16 (uint8_t * p_data, uint16_t value)

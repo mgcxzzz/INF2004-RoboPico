@@ -120,7 +120,7 @@ typedef struct
     uint32_t level_us;          /* and this long                     */
     bool b_zeroed;              /* ground reference set this stretch */
     bool b_ref_ok;              /* ground reference trusted (false
-                                     * after a shock until level again)  */
+                                 * after a shock until level again)  */
     bool b_tainted;             /* this hump began without it        */
     bool b_active;              /* a hump is being profiled          */
     bool b_descent;

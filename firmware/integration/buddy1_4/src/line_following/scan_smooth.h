@@ -37,16 +37,16 @@ scan_smooth_step (circuit_t * p_character, barcode_nav_t * p_count,
         barcode_circuit_step(p_character, p_count, p_cal, p_index, profile);
     DRIVE_DIAG_RAW(demand);
     delta_time = clampf(delta_time, 0, .05f);
-    bool activity = p_first->scanning || p_count->pending ||
-                    p_first->adc >= (unsigned)p_first->baseline + 16;
+    bool activity = ((p_first->scanning) || (p_count->pending)) ||
+                    (p_first->adc >= (unsigned)p_first->baseline + 16);
     if (activity)
     {
         p_state->activity_us = p_index->now;
     }
     bool scanning =
-        !p_character->busy && !demand.stop &&
-        (activity ||
-         (p_state->scanning && p_index->now - p_state->activity_us < 600000));
+        ((!p_character->busy) && (!demand.stop)) &&
+        (activity || ((p_state->scanning) &&
+                      (p_index->now - p_state->activity_us < 600000)));
     if (scanning != p_state->scanning)
     {
         double mm_value = (p_index->wheel[0] + p_index->wheel[1]) * .5;
@@ -61,18 +61,18 @@ scan_smooth_step (circuit_t * p_character, barcode_nav_t * p_count,
     p_state->scanning = scanning;
     /* The original optical tracker decides all loss/search/stop conditions.
      * No synthetic ADCs, extra centre calibration or record of approach yaw. */
-    bool following = p_character->phase == C_FOLLOW && !p_character->busy &&
-                     !demand.stop && !p_character->follower.core.white;
-    bool ordinary = demand.decision == SYM_STRAIGHT ||
-                    demand.decision == SYM_LEFT ||
-                    demand.decision == SYM_RIGHT || demand.decision == C_FAST;
+    bool following = C_FOLLOW == p_character->phase && (!p_character->busy) &&
+                     (!demand.stop) && (!p_character->follower.core.white);
+    bool ordinary = SYM_STRAIGHT == demand.decision ||
+                    SYM_LEFT == demand.decision ||
+                    SYM_RIGHT == demand.decision || C_FAST == demand.decision;
     unsigned strongest =
         demand.level[0] > demand.level[1] ? demand.level[0] : demand.level[1];
     unsigned weakest =
         demand.level[0] < demand.level[1] ? demand.level[0] : demand.level[1];
     unsigned magnitude = (unsigned)abs((int)demand.level[0] - demand.level[1]);
     *p_legacy = (smooth_follow_t){0};
-    if (!following || !ordinary || strongest < 200)
+    if (((!following) || (!ordinary)) || (strongest < 200))
     {
         p_state->active = false;
         DRIVE_DIAG_SOFT(demand, 0, scanning, p_state->active);
@@ -80,9 +80,9 @@ scan_smooth_step (circuit_t * p_character, barcode_nav_t * p_count,
     }
     /* Retain the V12 strong-bend bypass. Smoothing a clear one-sided departure
      * was a previous regression: it must never hold a crooked entry heading. */
-    bool urgent = magnitude >= 650 ||
-                  ((demand.target[0] <= 10 || demand.target[1] <= 10) &&
-                   strongest >= 400);
+    bool urgent = (magnitude >= 650) ||
+                  (((demand.target[0] <= 10) || (demand.target[1] <= 10)) &&
+                   (strongest >= 400));
     if (urgent)
     {
         p_state->mean = (demand.target[0] + demand.target[1]) * .5f;
@@ -96,21 +96,21 @@ scan_smooth_step (circuit_t * p_character, barcode_nav_t * p_count,
     }
     float desired_mean = (demand.target[0] + demand.target[1]) * .5f;
     float desired_half = (demand.target[1] - demand.target[0]) * .5f;
-    if (weakest >= 200 && magnitude < 350)
+    if ((weakest >= 200) && (magnitude < 350))
     {
         /* Soften only the small balance response, restoring full V12 demand
          * continuously by350. Unequal brightness still guides the robot. */
         desired_half *= .45f + .55f * magnitude / 350.0f;
     }
-    if (!scanning && profile == 1 && weakest >= 200 && magnitude < 350)
+    if ((!scanning) && 1 == profile && (weakest >= 200) && (magnitude < 350))
     {
         desired_mean += 15 * clampf((350 - (float)magnitude) / 200, 0, 1);
     }
-    if (profile == 2 && p_character->fast && !scanning)
+    if (2 == profile && (p_character->fast) && (!scanning))
     {
         desired_mean = RAMP2_SPEED;
     }
-    if (scanning && desired_mean > 45)
+    if (scanning && (desired_mean > 45))
     {
         desired_mean = 45;
     }
@@ -139,10 +139,10 @@ scan_smooth_step (circuit_t * p_character, barcode_nav_t * p_count,
         (desired_mean - p_state->mean) * delta_time / (mean_tau + delta_time);
     p_state->mean += clampf(mean_change, -240 * delta_time, 80 * delta_time);
     /* Faster cruising must not leak through a departure or scan transition. */
-    float ceiling = scanning                             ? 50
-                    : (magnitude > 350 || weakest < 200) ? 50
-                                                         : 60;
-    if (profile > 1 && !scanning && p_character->fast)
+    float ceiling = scanning                                 ? 50
+                    : ((magnitude > 350) || (weakest < 200)) ? 50
+                                                             : 60;
+    if (((profile > 1) && (!scanning)) && (p_character->fast))
     {
         ceiling = desired_mean;
     }
@@ -169,7 +169,7 @@ scan_smooth_step (circuit_t * p_character, barcode_nav_t * p_count,
         demand.target[wheel] = p_state->emitted[wheel];
     }
     p_character->fast =
-        !scanning && (demand.target[0] > 55 || demand.target[1] > 55);
+        (!scanning) && ((demand.target[0] > 55) || (demand.target[1] > 55));
     demand.decision = scanning ? 24 : 25;
     DRIVE_DIAG_SOFT(demand, 1, scanning, p_state->active);
     return demand;

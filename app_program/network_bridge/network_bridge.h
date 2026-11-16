@@ -1,8 +1,9 @@
 /**
  * @file network_bridge.h
  * @brief Network bridge.
- * @details Application tasks exchange copied, bounded command and telemetry records.
- * The kernel Wi-Fi service owns the transport; reconnect never restarts motion.
+ * @details Application tasks exchange copied, bounded command and telemetry
+ * records. The kernel Wi-Fi service owns the transport; reconnect never
+ * restarts motion.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 #ifndef RTOS_NETWORK_BRIDGE_H
@@ -29,7 +30,7 @@ enum
  * fresh motion request; QoS/DUP bits do not change this condition. */
 static inline bool rn_live_command (bool command_topic, uint8_t fixed_header)
 {
-    return command_topic && (fixed_header & 0xf1U) == 0x30U;
+    return command_topic && 0x30U == (fixed_header & 0xf1U);
 }
 enum
 {
@@ -71,7 +72,8 @@ typedef struct
     unsigned request_free : 5;
     unsigned nagle_off : 1;
 } rn_status_t;
-/* No lwIP, radio or kernel typedefs cross this header. All messages are copied. */
+/* No lwIP, radio or kernel typedefs cross this header. All messages are copied.
+ */
 int32_t rn_init (void);
 bool rn_ready (void);
 bool rn_tx_push (uint8_t topic, const uint8_t * p_data, uint8_t len,

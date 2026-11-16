@@ -1,8 +1,9 @@
 /**
  * @file i2c_transport.c
  * @brief I2c transport.
- * @details The IMU task owns sensor acquisition and calibration; readers use snapshots.
- * Ramp requests expire through the coordinator; lift safety may remove output.
+ * @details The IMU task owns sensor acquisition and calibration; readers use
+ * snapshots. Ramp requests expire through the coordinator; lift safety may
+ * remove output.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 #ifdef APP_RTOS_IMU
@@ -81,7 +82,7 @@ void ri_acquisition_record (uint32_t gap_us, bool ok_value_value, bool overrun)
 
 static uint32_t budget_limit_us (void)
 {
-    return g_budget_state.phase == RI_I2C_BUDGET ? RI_FIFO_BUDGET_US
+    return RI_I2C_BUDGET == g_budget_state.phase ? RI_FIFO_BUDGET_US
                                                  : RI_INIT_BUDGET_US;
 }
 
@@ -92,7 +93,7 @@ static void record_budget_expiry (uint32_t elapsed)
     if (!g_budget_state.expired)
     {
         g_budget_state.expired = true;
-        if (g_budget_state.phase == RI_I2C_BUDGET)
+        if (RI_I2C_BUDGET == g_budget_state.phase)
         {
             ++g_diagnostics.fifo_budget_overruns;
             g_diagnostics.last_phase = RI_I2C_BUDGET;
@@ -103,7 +104,7 @@ static void record_budget_expiry (uint32_t elapsed)
             g_diagnostics.last_phase = RI_I2C_INIT_BUDGET;
         }
     }
-    if (g_budget_state.phase == RI_I2C_BUDGET)
+    if (RI_I2C_BUDGET == g_budget_state.phase)
     {
         g_diagnostics.last_fifo_budget_overrun_us = overrun;
         if (overrun > g_diagnostics.max_fifo_budget_overrun_us)
@@ -152,8 +153,8 @@ void ri_acquisition_fifo_begin (void)
 bool ri_acquisition_fifo_end (uint8_t batch_n)
 {
     uint32_t elapsed = sys_time_us() - g_budget_start_us;
-    if (g_budget_state.active && g_budget_state.phase == RI_I2C_BUDGET &&
-        elapsed >= budget_limit_us())
+    if ((g_budget_state.active) && RI_I2C_BUDGET == g_budget_state.phase &&
+        (elapsed >= budget_limit_us()))
     {
         record_budget_expiry(elapsed);
     }
@@ -177,8 +178,8 @@ void ri_acquisition_init_begin (void)
 bool ri_acquisition_init_end (void)
 {
     uint32_t elapsed = sys_time_us() - g_budget_start_us;
-    if (g_budget_state.active && g_budget_state.phase == RI_I2C_INIT_BUDGET &&
-        elapsed >= budget_limit_us())
+    if ((g_budget_state.active) && RI_I2C_INIT_BUDGET == g_budget_state.phase &&
+        (elapsed >= budget_limit_us()))
     {
         record_budget_expiry(elapsed);
     }
@@ -227,11 +228,11 @@ static bool aborted (unsigned phase)
 }
 static bool ready (unsigned phase)
 {
-    if (phase == RI_I2C_TX)
+    if (RI_I2C_TX == phase)
     {
         return in_w(RI_TX_LEVEL) < 16U;
     }
-    if (phase == RI_I2C_RX)
+    if (RI_I2C_RX == phase)
     {
         return in_w(RI_RX_LEVEL) != 0U;
     }
@@ -257,7 +258,8 @@ static bool wait_ready (unsigned phase)
         }
         if (ready(phase))
         {
-            /* A just-completed status phase must not hide a crossed deadline. */
+            /* A just-completed status phase must not hide a crossed deadline.
+             */
             return !budget_check();
         }
         if (budget_check())
@@ -271,7 +273,7 @@ static bool wait_ready (unsigned phase)
                 (void)budget_check();
                 return false;
             }
-            if (ready(phase) && !budget_check())
+            if ((ready(phase)) && (!budget_check()))
             {
                 ++g_diagnostics.rescued;
                 return true;
@@ -281,11 +283,11 @@ static bool wait_ready (unsigned phase)
                 return false;
             }
             g_diagnostics.last_phase = phase;
-            if (phase == RI_I2C_TX)
+            if (RI_I2C_TX == phase)
             {
                 ++g_diagnostics.timeout_tx;
             }
-            else if (phase == RI_I2C_RX)
+            else if (RI_I2C_RX == phase)
             {
                 ++g_diagnostics.timeout_rx;
             }
@@ -302,7 +304,7 @@ static bool transfer (uint8_t address, const uint8_t * p_write,
 {
     /* All callers are the sole IMU owner. Hardware setup/reset remains in the
      * reference sensor driver. Its transfers fit the 16-byte RX FIFO. */
-    if (!wn_value || wn_value > 2U || rn_value > 16U)
+    if (((!wn_value) || (wn_value > 2U)) || (rn_value > 16U))
     {
         return false;
     }
@@ -318,25 +320,26 @@ static bool transfer (uint8_t address, const uint8_t * p_write,
     (void)in_w(RI_CLEAR);
     out_w(RI_ENABLE, 1U);
     bool ok_value = true;
-    for (uint32_t index = 0; index < wn_value && ok_value; ++index)
+    for (uint32_t index = 0; (index < wn_value) && ok_value; ++index)
     {
         ok_value = wait_ready(RI_I2C_TX);
-        if (ok_value && budget_check())
+        if (ok_value && (budget_check()))
         {
             ok_value = false;
         }
         if (ok_value)
         {
-            out_w(RI_DATA,
-                  p_write[index] |
-                      ((!rn_value && index + 1U == wn_value) ? RI_STOP : 0U));
+            out_w(
+                RI_DATA,
+                p_write[index] |
+                    (((!rn_value) && (index + 1U == wn_value)) ? RI_STOP : 0U));
         }
     }
-    for (uint32_t index_value = 0; index_value < rn_value && ok_value;
+    for (uint32_t index_value = 0; (index_value < rn_value) && ok_value;
          ++index_value)
     {
         ok_value = wait_ready(RI_I2C_TX);
-        if (ok_value && budget_check())
+        if (ok_value && (budget_check()))
         {
             ok_value = false;
         }
@@ -351,10 +354,10 @@ static bool transfer (uint8_t address, const uint8_t * p_write,
         ok_value = wait_ready(RI_I2C_STOP);
     }
     for (uint32_t index_value_value = 0;
-         index_value_value < rn_value && ok_value; ++index_value_value)
+         (index_value_value < rn_value) && ok_value; ++index_value_value)
     {
         ok_value = wait_ready(RI_I2C_RX);
-        if (ok_value && budget_check())
+        if (ok_value && (budget_check()))
         {
             ok_value = false;
         }
@@ -363,7 +366,7 @@ static bool transfer (uint8_t address, const uint8_t * p_write,
             p_read[index_value_value] = (uint8_t)in_w(RI_DATA);
         }
     }
-    if (ok_value && budget_check())
+    if (ok_value && (budget_check()))
     {
         ok_value = false;
     }

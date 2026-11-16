@@ -1,8 +1,9 @@
 /**
  * @file bringup_policy.h
  * @brief Bringup policy.
- * @details Core1 owns normal motor commits. Safety paths may only remove output;
- * command/status access uses the existing kernel locks and copied records.
+ * @details Core1 owns normal motor commits. Safety paths may only remove
+ * output; command/status access uses the existing kernel locks and copied
+ * records.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 #ifndef RTOS_BRINGUP_POLICY_H
@@ -73,7 +74,7 @@ static inline unsigned br_control_gap_action (uint16_t flags,
 
 static inline bool br_clock_elapsed_ok (uint32_t timer_us, uint32_t kernel_ms)
 {
-    if (kernel_ms < 900U || kernel_ms > 1200U)
+    if ((kernel_ms < 900U) || (kernel_ms > 1200U))
     {
         return false;
     }
@@ -91,16 +92,17 @@ static inline bool br_usb_supervised (unsigned usb)
     (void)usb;
     return true;
 #else
-    return usb == 3U;
+    return 3U == usb;
 #endif
 }
 
 static inline bool br_can_start (uint16_t flags, uint32_t now, uint32_t stopped,
                                  unsigned usb, bool buttons_released)
 {
-    return (flags & (BR_READY | BR_CLOCK_OK | BR_ACTIVE | BR_LATCHED)) ==
-               (BR_READY | BR_CLOCK_OK) &&
-           now - stopped >= BR_REST_US && br_usb_supervised(usb) &&
+    return ((((flags & (BR_READY | BR_CLOCK_OK | BR_ACTIVE | BR_LATCHED)) ==
+              (BR_READY | BR_CLOCK_OK)) &&
+             (now - stopped >= BR_REST_US)) &&
+            (br_usb_supervised(usb))) &&
            buttons_released;
 }
 
@@ -109,13 +111,13 @@ static inline bool br_can_start (uint16_t flags, uint32_t now, uint32_t stopped,
  * manufacturing a sticky lifted/overturned latch. */
 static inline bool br_safety_allows_motion (uint16_t flags, bool imu_blocked)
 {
-    return (flags & BR_LATCHED) == 0U && !imu_blocked;
+    return 0U == (flags & BR_LATCHED) && (!imu_blocked);
 }
 
 static inline bool br_can_clear_latch (uint16_t flags, bool buttons_released,
                                        bool imu_reset_allowed)
 {
-    return (flags & BR_ACTIVE) == 0U && (flags & BR_CLOCK_OK) != 0U &&
+    return 0U == (flags & BR_ACTIVE) && ((flags & BR_CLOCK_OK) != 0U) &&
            buttons_released && imu_reset_allowed;
 }
 
@@ -127,17 +129,19 @@ static inline bool br_command_fresh (uint32_t now, uint32_t received)
 static inline bool br_command_after_stop (uint32_t now, uint32_t received,
                                           uint32_t stopped, bool stop_seen)
 {
-    return br_command_fresh(now, received) &&
-           (!stop_seen || now - stopped > 500000U ||
-            (int32_t)(received - stopped) > 0);
+    return (br_command_fresh(now, received)) &&
+           (((!stop_seen) || (now - stopped > 500000U)) ||
+            ((int32_t)(received - stopped) > 0));
 }
 
 static inline bool br_outputs_allowed (uint16_t flags, bool irq_latched,
                                        unsigned usb, bool buttons_released)
 {
-    return (flags & (BR_ACTIVE | BR_CLOCK_OK | BR_LATCHED)) ==
-               (BR_ACTIVE | BR_CLOCK_OK) &&
-           !irq_latched && br_usb_supervised(usb) && buttons_released;
+    return ((((flags & (BR_ACTIVE | BR_CLOCK_OK | BR_LATCHED)) ==
+              (BR_ACTIVE | BR_CLOCK_OK)) &&
+             (!irq_latched)) &&
+            (br_usb_supervised(usb))) &&
+           buttons_released;
 }
 
 #endif

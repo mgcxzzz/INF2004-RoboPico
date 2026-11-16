@@ -1,8 +1,9 @@
 /**
  * @file wifi_packets.c
  * @brief Wifi packets.
- * @details Network helpers validate and explicitly encode bounded application records.
- * Transport calls belong to the configured SDK or RTOS owner, not these codecs.
+ * @details Network helpers validate and explicitly encode bounded application
+ * records. Transport calls belong to the configured SDK or RTOS owner, not
+ * these codecs.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 #include "src/network/wifi_packets.h"
@@ -33,21 +34,23 @@ static void put_u32 (uint8_t * p_data, uint32_t value_x)
 }
 static bool valid_action (uint8_t character)
 {
-    return character == (uint8_t)'S' || character == (uint8_t)'U' ||
-           character == (uint8_t)'L' || character == (uint8_t)'R' ||
-           character == (uint8_t)'-' || character == 0u;
+    return (((((character == (uint8_t)'S') || (character == (uint8_t)'U')) ||
+              (character == (uint8_t)'L')) ||
+             (character == (uint8_t)'R')) ||
+            (character == (uint8_t)'-')) ||
+           0u == character;
 }
 static bool valid_letter (uint8_t character)
 {
-    return character == 0u ||
-           (character >= (uint8_t)'A' && character <= (uint8_t)'Z');
+    return 0u == character ||
+           ((character >= (uint8_t)'A') && (character <= (uint8_t)'Z'));
 }
 
 bool wpk_heartbeat (const wifi_heartbeat_t * p_in_value_value,
                     uint8_t out[WPK_HEARTBEAT_BYTES])
 {
     uint32_t w0_value, w1_value, w2_value;
-    if (p_in_value_value == NULL || out == NULL)
+    if (NULL == p_in_value_value || NULL == out)
     {
         return false;
     }
@@ -87,13 +90,13 @@ bool wpk_heartbeat (const wifi_heartbeat_t * p_in_value_value,
 bool wpk_motion (const wifi_motion_packet_t * p_in_value_value,
                  uint8_t out[WPK_MOTION_BYTES])
 {
-    if (p_in_value_value == NULL || out == NULL ||
-        (p_in_value_value->calibrated_level_left > 1000u &&
-         p_in_value_value->calibrated_level_left != 0xffffu) ||
-        (p_in_value_value->calibrated_level_right > 1000u &&
-         p_in_value_value->calibrated_level_right != 0xffffu) ||
-        p_in_value_value->heading_cdeg < -18000 ||
-        p_in_value_value->heading_cdeg > 18000)
+    if (NULL == p_in_value_value || NULL == out ||
+        ((p_in_value_value->calibrated_level_left > 1000u) &&
+         (p_in_value_value->calibrated_level_left != 0xffffu)) ||
+        ((p_in_value_value->calibrated_level_right > 1000u) &&
+         (p_in_value_value->calibrated_level_right != 0xffffu)) ||
+        (p_in_value_value->heading_cdeg < -18000) ||
+        (p_in_value_value->heading_cdeg > 18000))
     {
         return false;
     }
@@ -127,16 +130,16 @@ bool wpk_motion (const wifi_motion_packet_t * p_in_value_value,
 bool wpk_line (const wifi_line_packet_t * p_in_value_value,
                uint8_t out[WPK_LINE_BYTES])
 {
-    if (p_in_value_value == NULL || out == NULL ||
-        p_in_value_value->event > WPK_EVENT_UNASSIGNED ||
-        !valid_letter(p_in_value_value->last_decoded_letter) ||
-        !valid_letter(p_in_value_value->pending_letter) ||
-        !valid_action(p_in_value_value->pending_action) ||
-        !valid_action(p_in_value_value->executing_action) ||
-        (p_in_value_value->calibrated_level_left > 1000u &&
-         p_in_value_value->calibrated_level_left != 0xffffu) ||
-        (p_in_value_value->calibrated_level_right > 1000u &&
-         p_in_value_value->calibrated_level_right != 0xffffu))
+    if (NULL == p_in_value_value || NULL == out ||
+        (p_in_value_value->event > WPK_EVENT_UNASSIGNED) ||
+        (!valid_letter(p_in_value_value->last_decoded_letter)) ||
+        (!valid_letter(p_in_value_value->pending_letter)) ||
+        (!valid_action(p_in_value_value->pending_action)) ||
+        (!valid_action(p_in_value_value->executing_action)) ||
+        ((p_in_value_value->calibrated_level_left > 1000u) &&
+         (p_in_value_value->calibrated_level_left != 0xffffu)) ||
+        ((p_in_value_value->calibrated_level_right > 1000u) &&
+         (p_in_value_value->calibrated_level_right != 0xffffu)))
     {
         return false;
     }
@@ -161,10 +164,10 @@ bool wpk_line (const wifi_line_packet_t * p_in_value_value,
 bool wpk_nav (const wifi_nav_packet_t * p_in_value_value,
               uint8_t out[WPK_NAV_BYTES])
 {
-    if (p_in_value_value == NULL || out == NULL ||
-        p_in_value_value->event > WPK_EVENT_UNASSIGNED ||
-        !valid_letter(p_in_value_value->letter) ||
-        !valid_action(p_in_value_value->action))
+    if (NULL == p_in_value_value || NULL == out ||
+        (p_in_value_value->event > WPK_EVENT_UNASSIGNED) ||
+        (!valid_letter(p_in_value_value->letter)) ||
+        (!valid_action(p_in_value_value->action)))
     {
         return false;
     }
@@ -190,13 +193,14 @@ bool wpk_log_chunk (uint8_t seq, uint8_t dataset, uint8_t request_id,
                     const uint8_t * p_data_value, uint8_t length,
                     uint8_t out[WIFI_PACKET_MAX], uint8_t * p_out_len_value)
 {
-    if (out == NULL || p_out_len_value == NULL ||
-        length > WPK_LOG_CHUNK_DATA_MAX || dataset > 3u || total_rows > 4096u ||
-        status > WPK_LOG_STATUS_UNAVAILABLE ||
-        (length != 0u && p_data_value == NULL) || (part_count == 0u) ||
-        part_index >= part_count || part_count > 2u || row_index > 0x0fffu ||
-        (status == WPK_LOG_STATUS_OK && row_index >= total_rows) ||
-        (status != WPK_LOG_STATUS_OK && length != 0u))
+    if (NULL == out || NULL == p_out_len_value ||
+        (length > WPK_LOG_CHUNK_DATA_MAX) || (dataset > 3u) ||
+        (total_rows > 4096u) || (status > WPK_LOG_STATUS_UNAVAILABLE) ||
+        ((length != 0u) && NULL == p_data_value) || (0u == part_count) ||
+        (part_index >= part_count) || (part_count > 2u) ||
+        (row_index > 0x0fffu) ||
+        (WPK_LOG_STATUS_OK == status && (row_index >= total_rows)) ||
+        ((status != WPK_LOG_STATUS_OK) && (length != 0u)))
     {
         return false;
     }
@@ -228,7 +232,7 @@ bool wpk_log_chunk (uint8_t seq, uint8_t dataset, uint8_t request_id,
 bool wpk_summary (const wifi_summary_packet_t * p_in_value_value,
                   uint8_t out[WPK_SUMMARY_BYTES])
 {
-    if (p_in_value_value == NULL || out == NULL)
+    if (NULL == p_in_value_value || NULL == out)
     {
         return false;
     }
@@ -249,9 +253,10 @@ bool wpk_summary (const wifi_summary_packet_t * p_in_value_value,
 bool wpk_diagnostics (const wifi_diagnostics_packet_t * p_in_value_value,
                       uint8_t out[WPK_DIAGNOSTICS_BYTES])
 {
-    if (p_in_value_value == NULL || out == NULL ||
-        p_in_value_value->threshold_adc > 4095u ||
-        p_in_value_value->bank > 62u || (p_in_value_value->flags & 0xf0u) != 0u)
+    if (NULL == p_in_value_value || NULL == out ||
+        (p_in_value_value->threshold_adc > 4095u) ||
+        (p_in_value_value->bank > 62u) ||
+        ((p_in_value_value->flags & 0xf0u) != 0u))
     {
         return false;
     }

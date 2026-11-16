@@ -14,7 +14,7 @@
  * coordinator policy. Convenience C arguments are not a second motor path. */
 static bool valid_owner (motion_owner_t o_value)
 {
-    return o_value >= MOTION_BUDDY1 && o_value <= MOTION_BUDDY5;
+    return (o_value >= MOTION_BUDDY1) && (o_value <= MOTION_BUDDY5);
 }
 static motion_result_t reject (motion_owner_t o_value, unsigned kind,
                                float value, unsigned speed,
@@ -29,7 +29,7 @@ static motion_result_t submit (const nav_request_t * p_request,
     uint8_t packet[NAV_PACKET_BYTES];
     nav_request_t result_value;
     unsigned count = nav_packet_encode(packet, p_request);
-    if (!count || !nav_packet_decode(&result_value, packet, count))
+    if ((!count) || (!nav_packet_decode(&result_value, packet, count)))
     {
         return reject((motion_owner_t)p_request->owner, p_request->kind,
                       p_request->value, p_request->speed, MOTION_INVALID);
@@ -48,7 +48,7 @@ static motion_result_t submit (const nav_request_t * p_request,
     case NAV_TURN:
         result = nav_coordinator_move(
             o_value, result_value.lease, result_value.value, result_value.speed,
-            result_value.kind == NAV_TURN,
+            NAV_TURN == result_value.kind,
             (motion_turn_style_t)result_value.style, p_token);
         break;
     case NAV_RESUME:
@@ -103,8 +103,8 @@ static motion_result_t submit (const nav_request_t * p_request,
     }
     /* Per-tick Buddy3 BUSY simply means it yielded to an avoidance lease;
      * do not flood the audit log with repeated control targets. */
-    if (result != MOTION_OK &&
-        !(result_value.kind == NAV_WHEELS && result == MOTION_BUSY))
+    if ((result != MOTION_OK) &&
+        !(NAV_WHEELS == result_value.kind && MOTION_BUSY == result))
     {
         nav_coordinator_reject(o_value, result_value.kind, result_value.value,
                                result_value.speed, result);
@@ -113,7 +113,7 @@ static motion_result_t submit (const nav_request_t * p_request,
 }
 motion_result_t motion_pause (motion_owner_t o_value, uint32_t * p_lease_value)
 {
-    if (!valid_owner(o_value) || !p_lease_value)
+    if ((!valid_owner(o_value)) || (!p_lease_value))
     {
         return reject(o_value, NAV_PAUSE, 0, 0, MOTION_INVALID);
     }
@@ -137,7 +137,7 @@ motion_result_t motion_drive_distance (motion_owner_t o_value, uint32_t lease,
     {
         *p_identifier = 0;
     }
-    if (!valid_owner(o_value) || !p_identifier || speed > 60)
+    if (((!valid_owner(o_value)) || (!p_identifier)) || (speed > 60))
     {
         return reject(o_value, NAV_DRIVE, mm_value_value, speed,
                       MOTION_INVALID);
@@ -158,8 +158,8 @@ motion_result_t motion_turn_relative (motion_owner_t o_value, uint32_t lease,
     {
         *p_identifier = 0;
     }
-    if (!valid_owner(o_value) || !p_identifier || speed > 90 ||
-        (style != MOTION_ROLLING && style != MOTION_IN_PLACE))
+    if ((((!valid_owner(o_value)) || (!p_identifier)) || (speed > 90)) ||
+        ((style != MOTION_ROLLING) && (style != MOTION_IN_PLACE)))
     {
         return reject(o_value, NAV_TURN, degrees, speed, MOTION_INVALID);
     }
@@ -211,7 +211,7 @@ bool motion_get_command (uint32_t identifier_value,
 motion_result_t motion_submit_barcode (motion_owner_t o_value, char character)
 {
 #ifdef BUDDY_RUNTIME_MAPPING
-    if (!valid_owner(o_value) || character < 'A' || character > 'Z')
+    if (((!valid_owner(o_value)) || (character < 'A')) || (character > 'Z'))
     {
         return reject(o_value, NAV_ROUTE, character, 0, MOTION_INVALID);
     }
@@ -246,7 +246,8 @@ motion_result_t motion_submit_navigation (motion_owner_t o_value, int16_t left,
 motion_result_t motion_report_terrain (motion_owner_t o_value,
                                        motion_terrain_t sample)
 {
-    if (!valid_owner(o_value) || (unsigned)sample > (unsigned)MOTION_DESCENDING)
+    if ((!valid_owner(o_value)) ||
+        ((unsigned)sample > (unsigned)MOTION_DESCENDING))
     {
         return reject(o_value, NAV_TERRAIN, sample, 0, MOTION_INVALID);
     }
@@ -257,7 +258,7 @@ motion_result_t motion_report_terrain (motion_owner_t o_value,
 motion_result_t motion_request_speed_assist (motion_owner_t o_value,
                                              unsigned data)
 {
-    if (!valid_owner(o_value) || data > 20)
+    if ((!valid_owner(o_value)) || (data > 20))
     {
         return reject(o_value, NAV_ASSIST, (float)data, 0, MOTION_INVALID);
     }
@@ -268,7 +269,7 @@ motion_result_t motion_request_speed_assist (motion_owner_t o_value,
 motion_result_t motion_report_fault (motion_owner_t o_value, unsigned mask,
                                      bool active)
 {
-    if (!valid_owner(o_value) || !mask || (mask & ~NAV_FAULT_MASK))
+    if (((!valid_owner(o_value)) || (!mask)) || (mask & ~NAV_FAULT_MASK))
     {
         return reject(o_value, NAV_FAULT_REPORT, (float)mask, 0,
                       MOTION_INVALID);
@@ -333,7 +334,7 @@ motion_result_t
 motion_request_ramp_assist (motion_owner_t o_value,
                             const motion_ramp_assist_t * p_first)
 {
-    if (!valid_owner(o_value) || !p_first)
+    if ((!valid_owner(o_value)) || (!p_first))
     {
         return reject(o_value, NAV_RAMP_ASSIST, 0, 0, MOTION_INVALID);
     }
@@ -351,7 +352,7 @@ void motion_assist_context (bool eligible)
 }
 motion_result_t motion_accept_barcode (motion_owner_t o_value, char code)
 {
-    if (!valid_owner(o_value) || code < 'A' || code > 'Z')
+    if (((!valid_owner(o_value)) || (code < 'A')) || (code > 'Z'))
     {
         return reject(o_value, NAV_VERIFIED_BARCODE, code, 0, MOTION_INVALID);
     }

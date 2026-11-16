@@ -70,7 +70,7 @@ typedef struct
 } circuit_t;
 static inline int circuit_cruise (unsigned profile)
 {
-    return profile >= 1 && profile <= 3 ? (int)profile * 45 : 0;
+    return (profile >= 1) && (profile <= 3) ? (int)profile * 45 : 0;
 }
 static inline analog_demand_t circuit_follow (circuit_t * p_character,
                                               const line_calibration_t * p_cal,
@@ -82,12 +82,14 @@ static inline analog_demand_t circuit_follow (circuit_t * p_character,
         p_index->now, (uint32_t)(p_index->path - p_character->follow_path),
         p_index->wheel, p_index->speed);
     /* V2: only a stable centred observation earns faster straight travel.
-       All correcting and blind-recovery targets are the exact profile1 values. */
+       All correcting and blind-recovery targets are the exact profile1 values.
+     */
     p_character->fast = false;
     int error = (int)demand.level[0] - demand.level[1];
-    bool centred = !demand.stop && demand.level[0] >= 400 &&
-                   demand.level[1] >= 400 && abs(error) <= 80;
-    if (profile == 1 || !centred)
+    bool centred = (((!demand.stop) && (demand.level[0] >= 400)) &&
+                    (demand.level[1] >= 400)) &&
+                   (abs(error) <= 80);
+    if (1 == profile || (!centred))
     {
         p_character->cruise_timing = false;
     }
@@ -111,7 +113,8 @@ static inline analog_demand_t circuit_follow (circuit_t * p_character,
 /* The turn already confirmed a new branch at75..110deg, after leaving the old
    line. Use the ordinary curve follower immediately: a short outgoing straight
    must not require both sensors to stay balanced before taking its next bend.
-   A visible branch must persist150ms before counting the junction as complete. */
+   A visible branch must persist150ms before counting the junction as complete.
+ */
 static inline analog_demand_t circuit_join (circuit_t * p_character,
                                             const line_calibration_t * p_cal,
                                             const junction_input_t * p_index)
@@ -144,7 +147,7 @@ static inline analog_demand_t circuit_join (circuit_t * p_character,
                                   ? p_character->joining.loss_reason
                                   : J_LINE_LOST);
     }
-    bool visible = demand.level[0] >= 400 || demand.level[1] >= 400;
+    bool visible = (demand.level[0] >= 400) || (demand.level[1] >= 400);
     if (!visible)
     {
         p_character->join_timing = false;
@@ -156,13 +159,13 @@ static inline analog_demand_t circuit_join (circuit_t * p_character,
             p_character->join_timing = true;
             p_character->join_since = p_index->now;
         }
-        if (p_other_index->phase == J_ACQUIRE &&
-            p_index->now - p_character->join_since >= C_JOIN_US)
+        if (J_ACQUIRE == p_other_index->phase &&
+            (p_index->now - p_character->join_since >= C_JOIN_US))
         {
             j_enter(p_other_index, J_EXIT, p_index->now);
         }
     }
-    if (p_other_index->phase == J_FAULT)
+    if (J_FAULT == p_other_index->phase)
     {
         demand.stop = true;
         demand.target[0] = demand.target[1] = 0;
@@ -215,9 +218,9 @@ static inline analog_demand_t circuit_step (circuit_t * p_character,
                                           : J_LINE_LOST);
             return demand;
         }
-        bool visible = demand.level[0] >= 400 || demand.level[1] >= 400;
+        bool visible = (demand.level[0] >= 400) || (demand.level[1] >= 400);
         bool straight =
-            visible && p_index->speed[0] >= 10 && p_index->speed[1] >= 10;
+            (visible && (p_index->speed[0] >= 10)) && (p_index->speed[1] >= 10);
         if (!straight)
         {
             p_character->gate_timing = false;
@@ -250,14 +253,14 @@ static inline analog_demand_t circuit_step (circuit_t * p_character,
             }
             p_character->candidate = false;
         }
-        if (p_index->side_black && !p_character->side_last)
+        if ((p_index->side_black) && (!p_character->side_last))
         {
             p_character->candidate =
-                p_character->white_timing &&
-                p_index->now - p_character->white_since >= C_WHITE_US &&
-                p_character->gate_timing &&
-                p_index->now - p_character->gate_since >= C_GATE_US &&
-                p_index->path >= p_character->clear_path;
+                ((((p_character->white_timing) &&
+                   (p_index->now - p_character->white_since >= C_WHITE_US)) &&
+                  (p_character->gate_timing)) &&
+                 (p_index->now - p_character->gate_since >= C_GATE_US)) &&
+                (p_index->path >= p_character->clear_path);
             p_character->white_timing = false;
             p_character->edge_us = p_index->now;
             p_character->edge_path = p_index->path;
@@ -275,8 +278,8 @@ static inline analog_demand_t circuit_step (circuit_t * p_character,
             demand.target[0] = demand.target[1] =
                 (int16_t)(30 +
                           (profile - 1) * 5); /* slow on first qualified edge */
-            if (p_index->side_black &&
-                p_index->now - p_character->edge_us >= 20000)
+            if ((p_index->side_black) &&
+                (p_index->now - p_character->edge_us >= 20000))
             {
                 junction_input_t local = {.now = p_index->now,
                                           .side_black = true};
@@ -318,14 +321,14 @@ static inline analog_demand_t circuit_step (circuit_t * p_character,
     unsigned before = p_character->turn.phase;
     uint64_t phase_start = p_character->turn.phase_us;
     p_character->cruise_timing = false;
-    if (before == J_ACQUIRE)
+    if (J_ACQUIRE == before)
     {
         demand = circuit_join(p_character, p_cal, &local);
     }
     else
     {
         demand = junction_step(&p_character->turn, p_cal, &local);
-        if (before == J_TURN && p_character->turn.phase == J_ACQUIRE)
+        if (J_TURN == before && J_ACQUIRE == p_character->turn.phase)
         {
             p_character->join_timing = false;
             p_character->joining =
@@ -334,20 +337,20 @@ static inline analog_demand_t circuit_step (circuit_t * p_character,
         }
     }
     p_character->phase = p_character->turn.phase;
-    if (before == J_CENTRE && p_character->phase == J_TURN)
+    if (J_CENTRE == before && J_TURN == p_character->phase)
     {
         p_character->centre_ms =
             (uint16_t)((p_index->now - phase_start) / 1000);
-        if (fabsf(p_index->speed[0]) > 65 || fabsf(p_index->speed[1]) > 65)
+        if ((fabsf(p_index->speed[0]) > 65) || (fabsf(p_index->speed[1]) > 65))
         {
             circuit_fail(p_character, C_APPROACH_FAST);
         }
     }
-    if (before == J_TURN && p_character->phase == J_ACQUIRE)
+    if (J_TURN == before && J_ACQUIRE == p_character->phase)
     {
         p_character->turn_ms = (uint16_t)((p_index->now - phase_start) / 1000);
     }
-    if (before == J_ACQUIRE && p_character->phase == J_EXIT)
+    if (J_ACQUIRE == before && J_EXIT == p_character->phase)
     {
         p_character->align_ms = (uint16_t)((p_index->now - phase_start) / 1000);
         ++p_character->turns;
@@ -365,7 +368,7 @@ static inline analog_demand_t circuit_step (circuit_t * p_character,
             p_character, p_cal, p_index,
             profile); /* resume, never the old ten-second finish */
     }
-    else if (p_character->phase == J_CENTRE)
+    else if (J_CENTRE == p_character->phase)
     {
         for (unsigned wheel = 0; wheel < 2; ++wheel)
         {
@@ -375,7 +378,7 @@ static inline analog_demand_t circuit_step (circuit_t * p_character,
             }
         }
     }
-    else if (p_character->phase == J_TURN)
+    else if (J_TURN == p_character->phase)
     {
         if (demand.target[1] > 0)
         {
@@ -384,7 +387,7 @@ static inline analog_demand_t circuit_step (circuit_t * p_character,
                           (profile - 1) * (demand.target[1] >= 45 ? 10 : 5));
         }
     }
-    if (demand.stop || p_character->turn.phase == J_FAULT)
+    if ((demand.stop) || J_FAULT == p_character->turn.phase)
     {
         circuit_fail(p_character, p_character->reason
                                       ? p_character->reason

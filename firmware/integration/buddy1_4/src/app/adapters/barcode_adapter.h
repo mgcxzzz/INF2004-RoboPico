@@ -1,8 +1,9 @@
 /**
  * @file barcode_adapter.h
  * @brief Barcode adapter.
- * @details Public feature contract. Requests cross coordinator ownership checks;
- * callers observe completion/status separately and must respect task context.
+ * @details Public feature contract. Requests cross coordinator ownership
+ * checks; callers observe completion/status separately and must respect task
+ * context.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 /* Barcode peak decoder v0.1 glue, COMBINED build (v2.3 + Buddy4 v0.2 + ramp
@@ -33,7 +34,8 @@
  * Telemetry: source 15, 27-byte frame, payload 24, subtype 0xB1 (layout in
  * barcode_peak.h). Combined-build additions, both inside the peak frame's own
  * fields (no shared diagnostic bits are touched):
- *  - flags bit7 = 1: combined build (bit7 is never set by the standalone build);
+ *  - flags bit7 = 1: combined build (bit7 is never set by the standalone
+ * build);
  *  - reason 10 (BP_R_RUN_START) with bars 0: one announce frame at every Start,
  *    so the build is identifiable before any barcode is seen.
  * The ramp-assist source-15 frame (payload 28) is unchanged. */
@@ -132,7 +134,8 @@ static void barcode_peak_sample (uint16_t adc, uint64_t now,
                 flags |= 32u;
                 ++bp_conflicts;
 #if BARCODE_PEAK_ACTIVE
-                /* Two decoders disagree on one label: never keep either movement silently. */
+                /* Two decoders disagree on one label: never keep either
+                 * movement silently. */
                 if (nav.pending == nav.last_code)
                 {
                     nav.pending = 0;
@@ -154,9 +157,9 @@ static void barcode_peak_sample (uint16_t adc, uint64_t now,
             side_analog.accepted_start = r.start_mm;
             side_analog.accepted_end = r.end_mm;
             analog_bank_t * v = &side_analog.bank[side_analog.selected];
-            barcode_reader_reset(
-                &v->reader, v->stable, now,
-                mm); /* a half-read noise frame must not block the junction search */
+            barcode_reader_reset(&v->reader, v->stable, now,
+                                 mm); /* a half-read noise frame must not block
+                                         the junction search */
             barcode_event(&nav, B_DECODE, now, mm, r.end_mm - r.start_mm,
                           r.code, barcode_decode_action(&nav, r.code),
                           0x40u | (r.reverse ? 1u : 0u), r.pattern);

@@ -48,8 +48,9 @@ static unsigned payload_bits (unsigned kind)
 unsigned nav_packet_encode (uint8_t out[NAV_PACKET_BYTES],
                             const nav_request_t * p_result)
 {
-    if (!p_result || p_result->kind > 12 || p_result->owner < 1 ||
-        p_result->owner > 5 || !isfinite(p_result->value))
+    if (((((!p_result) || (p_result->kind > 12)) || (p_result->owner < 1)) ||
+         (p_result->owner > 5)) ||
+        (!isfinite(p_result->value)))
     {
         return 0;
     }
@@ -57,16 +58,17 @@ unsigned nav_packet_encode (uint8_t out[NAV_PACKET_BYTES],
     unsigned at_value = 0;
     put(out, &at_value, p_result->kind, 4);
     put(out, &at_value, p_result->owner, 3);
-    if (p_result->kind == NAV_DRIVE || p_result->kind == NAV_TURN ||
-        p_result->kind == NAV_RESUME)
+    if (NAV_DRIVE == p_result->kind || NAV_TURN == p_result->kind ||
+        NAV_RESUME == p_result->kind)
     {
         put(out, &at_value, p_result->lease, 32);
     }
     switch (p_result->kind)
     {
     case NAV_DRIVE:
-        if (fabsf(p_result->value) < 1 || fabsf(p_result->value) > 1000 ||
-            (p_result->speed && (p_result->speed < 20 || p_result->speed > 60)))
+        if (((fabsf(p_result->value) < 1) || (fabsf(p_result->value) > 1000)) ||
+            ((p_result->speed) &&
+             ((p_result->speed < 20) || (p_result->speed > 60))))
         {
             return 0;
         }
@@ -75,8 +77,9 @@ unsigned nav_packet_encode (uint8_t out[NAV_PACKET_BYTES],
         put(out, &at_value, p_result->speed, 6);
         break;
     case NAV_TURN:
-        if (fabsf(p_result->value) < 1 || fabsf(p_result->value) > 180 ||
-            (p_result->speed && (p_result->speed < 20 || p_result->speed > 90)))
+        if (((fabsf(p_result->value) < 1) || (fabsf(p_result->value) > 180)) ||
+            ((p_result->speed) &&
+             ((p_result->speed < 20) || (p_result->speed > 90))))
         {
             return 0;
         }
@@ -90,8 +93,8 @@ unsigned nav_packet_encode (uint8_t out[NAV_PACKET_BYTES],
         break;
     case NAV_ROUTE:
 #ifdef BUDDY_RUNTIME_MAPPING
-        if (p_result->value < 0 || p_result->value > 25 ||
-            floorf(p_result->value) != p_result->value)
+        if (((p_result->value < 0) || (p_result->value > 25)) ||
+            (floorf(p_result->value) != p_result->value))
         {
             return 0;
         }
@@ -107,16 +110,17 @@ unsigned nav_packet_encode (uint8_t out[NAV_PACKET_BYTES],
         break;
 #endif
     case NAV_TERRAIN:
-        if (p_result->value < 0 || p_result->value > 3 ||
-            floorf(p_result->value) != p_result->value)
+        if (((p_result->value < 0) || (p_result->value > 3)) ||
+            (floorf(p_result->value) != p_result->value))
         {
             return 0;
         }
         put(out, &at_value, (unsigned)p_result->value, 2);
         break;
     case NAV_WHEELS:
-        if (p_result->wheels[0] < -180 || p_result->wheels[0] > 180 ||
-            p_result->wheels[1] < -180 || p_result->wheels[1] > 180)
+        if ((((p_result->wheels[0] < -180) || (p_result->wheels[0] > 180)) ||
+             (p_result->wheels[1] < -180)) ||
+            (p_result->wheels[1] > 180))
         {
             return 0;
         }
@@ -124,18 +128,19 @@ unsigned nav_packet_encode (uint8_t out[NAV_PACKET_BYTES],
         put(out, &at_value, (unsigned)(p_result->wheels[1] + 180), 9);
         break;
     case NAV_VERIFIED_BARCODE:
-        if (p_result->value < 0 || p_result->value > 25 ||
-            floorf(p_result->value) != p_result->value)
+        if (((p_result->value < 0) || (p_result->value > 25)) ||
+            (floorf(p_result->value) != p_result->value))
         {
             return 0;
         }
         put(out, &at_value, (unsigned)p_result->value, 5);
         break;
     case NAV_RAMP_ASSIST:
-        if (p_result->assist.boost_milli > 200 ||
-            p_result->assist.push_pwm_x100 > 6000 ||
-            p_result->assist.hold_milli > 1000 || !p_result->assist.ttl_ms ||
-            p_result->assist.ttl_ms > 200)
+        if (((((p_result->assist.boost_milli > 200) ||
+               (p_result->assist.push_pwm_x100 > 6000)) ||
+              (p_result->assist.hold_milli > 1000)) ||
+             (!p_result->assist.ttl_ms)) ||
+            (p_result->assist.ttl_ms > 200))
         {
             return 0;
         }
@@ -145,8 +150,8 @@ unsigned nav_packet_encode (uint8_t out[NAV_PACKET_BYTES],
         put(out, &at_value, p_result->assist.ttl_ms, 8);
         break;
     case NAV_ASSIST:
-        if (p_result->value < 0 || p_result->value > 20 ||
-            floorf(p_result->value) != p_result->value)
+        if (((p_result->value < 0) || (p_result->value > 20)) ||
+            (floorf(p_result->value) != p_result->value))
         {
             return 0;
         }
@@ -171,7 +176,7 @@ unsigned nav_packet_encode (uint8_t out[NAV_PACKET_BYTES],
 bool nav_packet_decode (nav_request_t * p_result, const uint8_t * p_data,
                         unsigned bytes)
 {
-    if (!p_result || !p_data || !bytes || bytes > NAV_PACKET_BYTES)
+    if ((((!p_result) || (!p_data)) || (!bytes)) || (bytes > NAV_PACKET_BYTES))
     {
         return false;
     }
@@ -179,7 +184,8 @@ bool nav_packet_decode (nav_request_t * p_result, const uint8_t * p_data,
     unsigned at_value = 0;
     p_result->kind = (unsigned)get(p_data, &at_value, 4);
     p_result->owner = (unsigned)get(p_data, &at_value, 3);
-    if (p_result->kind > 12 || p_result->owner < 1 || p_result->owner > 5)
+    if (((p_result->kind > 12) || (p_result->owner < 1)) ||
+        (p_result->owner > 5))
     {
         return false;
     }
@@ -195,8 +201,8 @@ bool nav_packet_decode (nav_request_t * p_result, const uint8_t * p_data,
             return false;
         }
     }
-    if (p_result->kind == NAV_DRIVE || p_result->kind == NAV_TURN ||
-        p_result->kind == NAV_RESUME)
+    if (NAV_DRIVE == p_result->kind || NAV_TURN == p_result->kind ||
+        NAV_RESUME == p_result->kind)
     {
         p_result->lease = (uint32_t)get(p_data, &at_value, 32);
     }
@@ -253,7 +259,7 @@ bool nav_packet_decode (nav_request_t * p_result, const uint8_t * p_data,
     }
     uint8_t canonical[NAV_PACKET_BYTES];
     unsigned count = nav_packet_encode(canonical, p_result);
-    return count == bytes && !memcmp(p_data, canonical, count);
+    return (count == bytes) && (!memcmp(p_data, canonical, count));
 }
 static int32_t quant (float value, float scale, int32_t low, int32_t high,
                       bool * p_overflow)
@@ -326,7 +332,7 @@ bool nav_event_decode (motion_event_t * p_event_value,
                        const uint8_t in_value_value[NAV_EVENT_BYTES],
                        bool * p_overflow_value)
 {
-    if (!p_event_value || !in_value_value)
+    if ((!p_event_value) || (!in_value_value))
     {
         return false;
     }
@@ -367,15 +373,16 @@ bool nav_event_decode (motion_event_t * p_event_value,
             return false;
         }
     }
-    return p_event_value->requester <= 5 && p_event_value->owner <= 5 &&
-           p_event_value->type <= MOTION_EVENT_SESSION_END &&
-           p_event_value->kind <= 11 &&
-           p_event_value->state <= MOTION_CMD_FAILED &&
-           p_event_value->result <= MOTION_NEED_RECOVERY &&
-           p_event_value->target_mm_s[0] >= -180 &&
-           p_event_value->target_mm_s[0] <= 180 &&
-           p_event_value->target_mm_s[1] >= -180 &&
-           p_event_value->target_mm_s[1] <= 180;
+    return (((((((((p_event_value->requester <= 5) &&
+                   (p_event_value->owner <= 5)) &&
+                  (p_event_value->type <= MOTION_EVENT_SESSION_END)) &&
+                 (p_event_value->kind <= 11)) &&
+                (p_event_value->state <= MOTION_CMD_FAILED)) &&
+               (p_event_value->result <= MOTION_NEED_RECOVERY)) &&
+              (p_event_value->target_mm_s[0] >= -180)) &&
+             (p_event_value->target_mm_s[0] <= 180)) &&
+            (p_event_value->target_mm_s[1] >= -180)) &&
+           (p_event_value->target_mm_s[1] <= 180);
 }
 
 /* End of file. */

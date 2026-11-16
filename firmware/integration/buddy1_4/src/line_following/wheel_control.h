@@ -10,9 +10,10 @@
 #include "src/motion/dual_logic.h"
 
 /* V5 provisional forward-only speed PI. Tune locally: historical dual-wheel
- * firmware keeps its original gains. Feedforward and acceleration are unchanged.
- * More integral authority addresses persistent loaded error without raising PWM.
- * Units: output permille, speed mm/s, dt seconds. No derivative or reverse drive. */
+ * firmware keeps its original gains. Feedforward and acceleration are
+ * unchanged. More integral authority addresses persistent loaded error without
+ * raising PWM. Units: output permille, speed mm/s, dt seconds. No derivative or
+ * reverse drive. */
 #define LINE_SPEED_KP 1.0f
 #define LINE_SPEED_KI 3.0f
 #define LINE_SPEED_I_LIMIT 140.0f
@@ -35,7 +36,8 @@ static inline int32_t line_speed_step (wheel_pi_t * p_data, unsigned wheel,
     float u_value = ff_value + LINE_SPEED_KP * error + candidate;
     /* Freeze only integration that drives further into saturation. Error in
        the opposite direction must be able to unwind a previously high I. */
-    if (!((u_value > PWM_LIMIT && error > 0) || (u_value < 0 && error < 0)))
+    if (!(((u_value > PWM_LIMIT) && (error > 0)) ||
+          ((u_value < 0) && (error < 0))))
     {
         p_data->integral = candidate;
     }

@@ -26,9 +26,9 @@ enum
     J_TURN_PEAK_PWM = 400,
     J_TURN_PEAK_US = 150000
 };
-_Static_assert(J_TURN_FEEDFORWARD <= J_TURN_PWM_LIMIT &&
-                   J_TURN_PWM_LIMIT <= J_TURN_PEAK_PWM &&
-                   J_TURN_PEAK_PWM <= 999,
+_Static_assert(((J_TURN_FEEDFORWARD <= J_TURN_PWM_LIMIT) &&
+                (J_TURN_PWM_LIMIT <= J_TURN_PEAK_PWM)) &&
+                   (J_TURN_PEAK_PWM <= 999),
                "Invalid turn effort limits");
 /* V4: turn-only31% feedforward /35% sustained limit plus one40% start pulse.
  * Peak ends at150ms or measured along-speed>=25mm/s. It never retriggers in
@@ -75,7 +75,7 @@ static inline int32_t junction_wheel_step (signed_wheel_t * p_data,
             p_data->peak_active = true;
             p_data->peak_end_us = now + J_TURN_PEAK_US;
         }
-        if (now >= p_data->peak_end_us || along >= 25 || along < -8)
+        if (((now >= p_data->peak_end_us) || (along >= 25)) || (along < -8))
         {
             p_data->peak_active = false;
         }
@@ -93,7 +93,7 @@ static inline int32_t junction_wheel_step (signed_wheel_t * p_data,
         clampf(p_data->pi.integral + LINE_SPEED_KI * error * delta_time,
                -LINE_SPEED_I_LIMIT, LINE_SPEED_I_LIMIT);
     float u_value = ff_value + LINE_SPEED_KP * error + candidate;
-    if (!((u_value > limit && error > 0) || (u_value < 0 && error < 0)))
+    if (!(((u_value > limit) && (error > 0)) || ((u_value < 0) && (error < 0))))
     {
         p_data->pi.integral = candidate;
     }
@@ -102,15 +102,16 @@ static inline int32_t junction_wheel_step (signed_wheel_t * p_data,
                          0, (float)limit) +
                   0.5f);
     /* The shared breakaway helper clamps to25%. Do not let it silently clip
-       the new turn PI; still use its unchanged bounded pulse for lower output. */
+       the new turn PI; still use its unchanged bounded pulse for lower output.
+     */
     int32_t boosted =
         line_breakaway(&p_data->kick, now, (int16_t)magnitude, p_data->pi.ramp,
                        along, out > PWM_LIMIT ? PWM_LIMIT : out);
-    if (!turning || boosted > out)
+    if ((!turning) || (boosted > out))
     {
         out = boosted;
     }
-    if (turning && p_data->peak_active && out < J_TURN_PEAK_PWM)
+    if ((turning && (p_data->peak_active)) && (out < J_TURN_PEAK_PWM))
     {
         out = J_TURN_PEAK_PWM;
     }
@@ -155,7 +156,7 @@ static inline dual_levels_t junction_levels (unsigned wheel, int32_t pwm,
         pwm = -J_TURN_PEAK_PWM;
     }
     uint16_t magnitude = (uint16_t)(pwm < 0 ? -pwm : pwm);
-    bool a_side = wheel == 0 ? pwm > 0 : pwm < 0;
+    bool a_side = 0 == wheel ? pwm > 0 : pwm < 0;
     if (a_side)
     {
         value.a = magnitude;

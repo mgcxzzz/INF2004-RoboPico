@@ -55,8 +55,8 @@ static inline unsigned drive_mode_speed (unsigned mode)
  * supervision. */
 static inline float drive_mode_load_pwm_target (float commanded, float measured)
 {
-    if (!(commanded >= 25.0f) || !(measured >= 3.0f) ||
-        measured >= commanded * 0.80f)
+    if (((!(commanded >= 25.0f)) || (!(measured >= 3.0f))) ||
+        (measured >= commanded * 0.80f))
     {
         return 0.0f;
     }

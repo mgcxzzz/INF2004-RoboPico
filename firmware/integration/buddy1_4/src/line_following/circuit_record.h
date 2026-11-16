@@ -23,7 +23,7 @@ static inline uint8_t circuit_trace_phase (unsigned phase,
                                            const circuit_tracker_t * p_sample,
                                            uint64_t now)
 {
-    if (phase != C_FOLLOW && phase != J_ACQUIRE)
+    if ((phase != C_FOLLOW) && (phase != J_ACQUIRE))
     {
         return (uint8_t)phase;
     }
@@ -87,23 +87,22 @@ typedef struct
     circuit_trace_t rows[C_ROWS];
     circuit_summary_t summaries[C_SUMMARIES];
 } circuit_saved_t;
-_Static_assert(sizeof(circuit_trace_t) == 48 && sizeof(circuit_summary_t) == 32,
+_Static_assert(48 == sizeof(circuit_trace_t) && 32 == sizeof(circuit_summary_t),
                "Circuit trace ABI changed");
 _Static_assert(sizeof(circuit_saved_t) <= C_STORE_BYTES,
                "Circuit saved log exceeds64KiB");
 static inline bool circuit_record_valid (const circuit_saved_t * p_state)
 {
-    return p_state->magic == C_MAGIC && p_state->version >= 1 &&
-           p_state->version <= 6 && p_state->count <= C_ROWS &&
-           p_state->summary_count <= C_SUMMARIES && p_state->profile >= 1 &&
-           p_state->profile <= 3 && p_state->recorded_profile >= 1 &&
-           p_state->recorded_profile <= 3 &&
-           calibration_valid(&p_state->calibration) &&
-           side_valid(&p_state->side) &&
-           p_state->crc ==
-               log_crc((const uint8_t *)p_state +
-                           offsetof(circuit_saved_t, count),
-                       sizeof(*p_state) - offsetof(circuit_saved_t, count));
+    return C_MAGIC == p_state->magic && (p_state->version >= 1) &&
+           (p_state->version <= 6) && (p_state->count <= C_ROWS) &&
+           (p_state->summary_count <= C_SUMMARIES) && (p_state->profile >= 1) &&
+           (p_state->profile <= 3) && (p_state->recorded_profile >= 1) &&
+           (p_state->recorded_profile <= 3) &&
+           (calibration_valid(&p_state->calibration)) &&
+           (side_valid(&p_state->side)) &&
+           (p_state->crc ==
+            log_crc((const uint8_t *)p_state + offsetof(circuit_saved_t, count),
+                    sizeof(*p_state) - offsetof(circuit_saved_t, count)));
 }
 typedef struct
 {
@@ -126,23 +125,25 @@ typedef struct
     junction_t junction;
     uint8_t rows[3600];
 } circuit_legacy_t;
-_Static_assert(sizeof(circuit_legacy_t) == 3792 &&
-                   offsetof(circuit_legacy_t, rows) == 192,
+_Static_assert(3792 == sizeof(circuit_legacy_t) &&
+                   192 == offsetof(circuit_legacy_t, rows),
                "V10 import ABI changed");
 static inline bool circuit_import (const circuit_legacy_t * p_state,
                                    line_calibration_t * p_cal,
                                    side_calibration_t * p_side)
 {
-    if (p_state->magic != 0x314e434au || p_state->version != 1 ||
-        p_state->firmware > 10 || p_state->count > 100 || p_state->mode < 1 ||
-        p_state->mode > 3 || p_state->selected_mode < 1 ||
-        p_state->selected_mode > 3 ||
-        !calibration_valid(&p_state->calibration) ||
-        !side_valid(&p_state->side) ||
-        p_state->crc !=
-            log_crc((const uint8_t *)p_state +
-                        offsetof(circuit_legacy_t, count),
-                    sizeof(*p_state) - offsetof(circuit_legacy_t, count)))
+    if (((((((((((p_state->magic != 0x314e434au) || (p_state->version != 1)) ||
+                (p_state->firmware > 10)) ||
+               (p_state->count > 100)) ||
+              (p_state->mode < 1)) ||
+             (p_state->mode > 3)) ||
+            (p_state->selected_mode < 1)) ||
+           (p_state->selected_mode > 3)) ||
+          (!calibration_valid(&p_state->calibration))) ||
+         (!side_valid(&p_state->side))) ||
+        (p_state->crc !=
+         log_crc((const uint8_t *)p_state + offsetof(circuit_legacy_t, count),
+                 sizeof(*p_state) - offsetof(circuit_legacy_t, count))))
     {
         return false;
     }

@@ -1,8 +1,9 @@
 /**
  * @file pico_registers.h
  * @brief Pico registers.
- * @details Sensor processing owns calibration/terrain state; RTOS readers use copies.
- * Height acceptance and motor assistance are separate from end-run safety.
+ * @details Sensor processing owns calibration/terrain state; RTOS readers use
+ * copies. Height acceptance and motor assistance are separate from end-run
+ * safety.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 /* Buddy4-on-v2.3: the only definitions the validated RTOS driver

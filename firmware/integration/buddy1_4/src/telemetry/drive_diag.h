@@ -1,8 +1,9 @@
 /**
  * @file drive_diag.h
  * @brief Drive diag.
- * @details Diagnostic records have explicit lengths, signed domains and reserved bits.
- * Never substitute native structure memory for the documented byte encoding.
+ * @details Diagnostic records have explicit lengths, signed domains and
+ * reserved bits. Never substitute native structure memory for the documented
+ * byte encoding.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 #ifndef BUDDY_DRIVE_DIAG_H
@@ -21,17 +22,19 @@
     X(RAW_L, 12, 0)                                                            \
     X(RAW_R, 12, 0)                                                            \
     X(ADC_L, 12, 0)                                                            \
-    X(ADC_R, 12, 0) X(LEVEL_L, 10, 0) X(LEVEL_R, 10, 0) X(OPT_L, 9, 1)         \
-        X(OPT_R, 9, 1) X(SOFT_L, 9, 1) X(SOFT_R, 9, 1) X(TARGET_L, 9, 1)       \
-            X(TARGET_R, 9, 1) X(SPEED_L, 12, 1) X(SPEED_R, 12, 1) X(           \
-                REF_BEFORE_L, 9, 0) X(REF_BEFORE_R, 9, 0) X(REF_L, 9, 0)       \
-                X(REF_R, 9, 0) X(I_BEFORE_L, 11, 1) X(I_BEFORE_R, 11, 1) X(    \
-                    I_L, 11, 1) X(I_R, 11, 1) X(FF_L, 10, 0) X(FF_R, 10, 0)    \
+    X(ADC_R, 12, 0)                                                            \
+    X(LEVEL_L, 10, 0)                                                          \
+    X(LEVEL_R, 10, 0)                                                          \
+    X(OPT_L, 9, 1) X(OPT_R, 9, 1) X(SOFT_L, 9, 1) X(SOFT_R, 9, 1) X(           \
+        TARGET_L, 9, 1) X(TARGET_R, 9, 1) X(SPEED_L, 12, 1) X(SPEED_R, 12, 1)  \
+        X(REF_BEFORE_L, 9, 0) X(REF_BEFORE_R, 9, 0) X(REF_L, 9, 0)             \
+            X(REF_R, 9, 0) X(I_BEFORE_L, 11, 1) X(I_BEFORE_R, 11, 1)           \
+                X(I_L, 11, 1) X(I_R, 11, 1) X(FF_L, 10, 0) X(FF_R, 10, 0)      \
                     X(REQUEST_L, 11, 1) X(REQUEST_R, 11, 1) X(PWM_L, 11, 1) X( \
-                        PWM_R, 11, 1) X(TICKS_L, 12, 1)                        \
-                        X(TICKS_R, 12, 1) X(PHASE, 4, 0) X(OPT_DECISION, 5, 0) \
-                            X(DECISION, 5, 0) X(PROFILE, 2, 0) X(ASSIST, 3, 0) \
-                                X(FEEDBACK, 2, 0) X(DRIVER, 2, 0)              \
+                        PWM_R, 11, 1) X(TICKS_L, 12, 1) X(TICKS_R, 12, 1)      \
+                        X(PHASE, 4, 0) X(OPT_DECISION, 5, 0) X(DECISION, 5, 0) \
+                            X(PROFILE, 2, 0) X(ASSIST, 3, 0) X(FEEDBACK, 2, 0) \
+                                X(DRIVER, 2, 0)                                \
                                     X(EXTERNAL, 1, 0) X(FLAGS, 19, 0)          \
                                         X(MEAN_BEFORE, 9, 0)                   \
                                             X(HALF_BEFORE, 9, 1) X(MEAN, 9, 0) \
@@ -254,8 +257,9 @@ static inline int diag_push (drive_diag_t * d, const diag_values_t * v)
         {
             trigger |= 4;
         }
-        /* Smooth output may never cross the old jump trigger: capture a repeatable
-   * ordinary-driving window around3s rather than only the end of a long run. */
+        /* Smooth output may never cross the old jump trigger: capture a
+         * repeatable ordinary-driving window around3s rather than only the end
+         * of a long run. */
         if (v->v[D_DRIVER] == 3 && v->v[D_US] >= 3000000)
         {
             trigger |= 4;

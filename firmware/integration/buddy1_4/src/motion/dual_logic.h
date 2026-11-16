@@ -74,16 +74,16 @@ static inline void guard_tick (volatile dual_guard_t * p_g_value, uint64_t now,
     {
         guard_stop(p_g_value, now, WHY_RELEASE);
     }
-    else if (p_g_value->active && now >= p_g_value->deadline_us)
+    else if ((p_g_value->active) && (now >= p_g_value->deadline_us))
     {
         guard_stop(p_g_value, now, WHY_LIMIT);
     }
-    else if (p_g_value->active &&
-             now - p_g_value->last_control_us >= CONTROL_LATE_US)
+    else if ((p_g_value->active) &&
+             (now - p_g_value->last_control_us >= CONTROL_LATE_US))
     {
         guard_stop(p_g_value, now, WHY_LATE);
     }
-    if (!held && !stop)
+    if ((!held) && (!stop))
     {
         p_g_value->consumed = false;
     }
@@ -91,8 +91,8 @@ static inline void guard_tick (volatile dual_guard_t * p_g_value, uint64_t now,
 static inline bool guard_start (volatile dual_guard_t * p_g_value, uint64_t now,
                                 bool held, bool stop)
 {
-    if (p_g_value->active || p_g_value->consumed || !held || stop ||
-        now < p_g_value->next_us)
+    if (((((p_g_value->active) || (p_g_value->consumed)) || (!held)) || stop) ||
+        (now < p_g_value->next_us))
     {
         return false;
     }
@@ -106,12 +106,12 @@ static inline bool guard_start (volatile dual_guard_t * p_g_value, uint64_t now,
 
 static inline float mm_per_tick (unsigned wheel)
 {
-    return CIRCUMFERENCE_MM / (wheel == 0 ? LEFT_CPR : RIGHT_CPR);
+    return CIRCUMFERENCE_MM / (0 == wheel ? LEFT_CPR : RIGHT_CPR);
 }
 /* Raw encoder sign: left forward negative, right forward positive. */
 static inline float raw_to_mm (unsigned wheel, int64_t ticks)
 {
-    return (float)ticks * mm_per_tick(wheel) * (wheel == 0 ? -1.0f : 1.0f);
+    return (float)ticks * mm_per_tick(wheel) * (0 == wheel ? -1.0f : 1.0f);
 }
 static inline float heading_deg (float left_mm, float right_mm)
 {
@@ -141,7 +141,7 @@ static inline dual_levels_t dual_levels (unsigned wheel,
     }
     uint16_t level =
         (uint16_t)(signed_permille < 0 ? -signed_permille : signed_permille);
-    bool a_side = (wheel == 0) ? signed_permille > 0 : signed_permille < 0;
+    bool a_side = (0 == wheel) ? signed_permille > 0 : signed_permille < 0;
     if (a_side)
     {
         value.a = level;
@@ -169,9 +169,9 @@ static inline float feedforward (unsigned wheel, int direction, float speed)
     {
         return 0;
     }
-    float v15 = wheel == 0 ? (direction > 0 ? 101.0f : 96.0f)
+    float v15 = 0 == wheel ? (direction > 0 ? 101.0f : 96.0f)
                            : (direction > 0 ? 93.0f : 96.0f);
-    float v25 = wheel == 0 ? (direction > 0 ? 185.0f : 181.0f)
+    float v25 = 0 == wheel ? (direction > 0 ? 185.0f : 181.0f)
                            : (direction > 0 ? 177.0f : 176.0f);
     return clampf(150.0f + (speed - v15) * 100.0f / (v25 - v15), 0, PWM_LIMIT);
 }
@@ -192,7 +192,8 @@ static inline int32_t pi_step (wheel_pi_t * p_data, unsigned wheel,
     float proposed_i =
         clampf(p_data->integral + 0.8f * error * delta_time, -80, 80);
     float proposed = ff_value + 0.6f * error + proposed_i;
-    if (!((proposed > PWM_LIMIT && error > 0) || (proposed < 0 && error < 0)))
+    if (!(((proposed > PWM_LIMIT) && (error > 0)) ||
+          ((proposed < 0) && (error < 0))))
     {
         p_data->integral = proposed_i;
     }
@@ -214,32 +215,32 @@ static inline bool command_make (char key, float timed_speed,
                                  dual_command_t * p_character)
 {
     *p_character = (dual_command_t){.key = key};
-    if (key == 'f' || key == 'b')
+    if ('f' == key || 'b' == key)
     {
-        p_character->sign[0] = p_character->sign[1] = key == 'f' ? 1 : -1;
+        p_character->sign[0] = p_character->sign[1] = 'f' == key ? 1 : -1;
         p_character->speed[0] = p_character->speed[1] =
             clampf(timed_speed, 60, 100);
     }
-    else if (key == 'l' || key == 'r')
+    else if ('l' == key || 'r' == key)
     {
-        p_character->sign[0] = key == 'r' ? 1 : -1;
+        p_character->sign[0] = 'r' == key ? 1 : -1;
         p_character->sign[1] = -p_character->sign[0];
         p_character->speed[0] = p_character->speed[1] = 40;
     }
-    else if (key == 'd' || key == 'g' || key == 'q' || key == 'e')
+    else if ('d' == key || 'g' == key || 'q' == key || 'e' == key)
     {
         p_character->bounded = true;
-        if (key == 'd' || key == 'g')
+        if ('d' == key || 'g' == key)
         {
             p_character->sign[0] = p_character->sign[1] = 1;
             p_character->target_mm[0] = p_character->target_mm[1] =
-                key == 'g' ? 300 : 100;
+                'g' == key ? 300 : 100;
             p_character->speed[0] = p_character->speed[1] =
-                key == 'g' ? 100 : 60;
+                'g' == key ? 100 : 60;
         }
         else
         {
-            p_character->sign[0] = key == 'e' ? 1 : -1;
+            p_character->sign[0] = 'e' == key ? 1 : -1;
             p_character->sign[1] = -p_character->sign[0];
             p_character->target_mm[0] = p_character->target_mm[1] =
                 TRACK_MM * 3.14159265358979323846f / 8.0f;
@@ -271,16 +272,19 @@ static inline float position_demand (const dual_command_t * p_character,
 }
 
 /* Bench-only terminal approach: 15% was physically tested on both wheels.
-   Keep enough torque through the final 12 mm rather than tapering into stiction.
-   Cut at the existing 2 mm threshold, then measure coasting/overshoot physically. */
+   Keep enough torque through the final 12 mm rather than tapering into
+   stiction. Cut at the existing 2 mm threshold, then measure coasting/overshoot
+   physically. */
 static inline int32_t finish_output (const dual_command_t * p_character,
                                      unsigned wheel, float pos, int32_t u_value)
 {
     float remaining =
         p_character->target_mm[wheel] - pos * p_character->sign[wheel];
-    if (p_character->bounded && p_character->sign[0] == p_character->sign[1] &&
-        remaining > 2 && remaining <= 12 &&
-        u_value * p_character->sign[wheel] < 150)
+    if (((((p_character->bounded) &&
+           (p_character->sign[0] == p_character->sign[1])) &&
+          (remaining > 2)) &&
+         (remaining <= 12)) &&
+        (u_value * p_character->sign[wheel] < 150))
     {
         return p_character->sign[wheel] * 150;
     }
@@ -304,7 +308,7 @@ static inline int32_t turn_assist_step (turn_assist_t * p_sample,
                                         int32_t u_value, uint32_t elapsed,
                                         bool done)
 {
-    if (done || p_character->sign[0] == p_character->sign[1])
+    if (done || (p_character->sign[0] == p_character->sign[1]))
     {
         *p_sample = (turn_assist_t){0};
         return done ? 0 : u_value;
@@ -313,19 +317,21 @@ static inline int32_t turn_assist_step (turn_assist_t * p_sample,
     if (p_sample->pulse_us)
     {
         p_sample->pulse_us = subtract_us(p_sample->pulse_us, elapsed);
-        if (along >= 20 || !p_sample->pulse_us)
+        if ((along >= 20) || (!p_sample->pulse_us))
         {
             p_sample->pulse_us = 0;
             p_sample->cooldown_us = 100000;
         }
     }
-    if (!p_sample->pulse_us && !p_sample->cooldown_us && ramp >= 20 &&
-        along >= -8 && along < 8)
+    if (((((!p_sample->pulse_us) && (!p_sample->cooldown_us)) &&
+          (ramp >= 20)) &&
+         (along >= -8)) &&
+        (along < 8))
     {
         p_sample->pulse_us = 100000;
     }
     int32_t magnitude = u_value * p_character->sign[wheel];
-    if (p_sample->pulse_us && magnitude < 200)
+    if ((p_sample->pulse_us) && (magnitude < 200))
     {
         magnitude = 200;
     }
@@ -341,7 +347,7 @@ static inline int32_t turn_assist_step (turn_assist_t * p_sample,
 }
 static inline uint32_t command_limit_us (char key)
 {
-    return key == 'g' ? 6000000u : MAX_RUN_US;
+    return 'g' == key ? 6000000u : MAX_RUN_US;
 }
 typedef struct
 {
@@ -369,19 +375,19 @@ static inline bool profile_step (profile_select_t * p_state, bool usb,
     }
     if (!p_state->ready)
     {
-        if (!hold && !stop)
+        if ((!hold) && (!stop))
         {
             p_state->ready = true;
             p_state->last_stop = false;
         }
         return false;
     }
-    if (stop && !p_state->last_stop)
+    if (stop && (!p_state->last_stop))
     {
         p_state->index = (p_state->index + 1) % 4;
     }
     p_state->last_stop = stop;
-    if (hold && !stop)
+    if (hold && (!stop))
     {
         p_state->selecting = false;
         return true;
@@ -407,7 +413,7 @@ typedef struct
 static inline bool offline_step (offline_arm_t * p_o_value, uint64_t now,
                                  bool usb, bool button, bool stop)
 {
-    if (stop || (usb && p_o_value->state != OFF_UNPLUG))
+    if (stop || (usb && (p_o_value->state != OFF_UNPLUG)))
     {
         p_o_value->state = OFF_NONE;
         return false;
@@ -455,7 +461,8 @@ static inline bool offline_step (offline_arm_t * p_o_value, uint64_t now,
     }
     return false;
 }
-/* Deliberate one-shot standalone arm: two-button hold, full release, separate tap. */
+/* Deliberate one-shot standalone arm: two-button hold, full release, separate
+ * tap. */
 typedef struct
 {
     uint64_t since;
@@ -488,7 +495,7 @@ static inline bool boot_arm_step (boot_arm_t * p_second, uint64_t now, bool usb,
     }
     else if (p_second->ready)
     {
-        if (!hold && !stop)
+        if ((!hold) && (!stop))
         {
             p_second->used = true;
             p_second->ready = false;

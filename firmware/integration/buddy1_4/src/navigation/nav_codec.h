@@ -48,8 +48,9 @@ unsigned nav_packet_encode (uint8_t out[NAV_PACKET_BYTES],
                             const nav_request_t * p_request);
 bool nav_packet_decode (nav_request_t * p_request, const uint8_t * p_packet,
                         unsigned bytes);
-/* Log quantisation only: goal0.1unit, progress0.1mm signed24, yaw0.1deg signed16.
- * Overflow is explicit; control/command result float calculations are untouched. */
+/* Log quantisation only: goal0.1unit, progress0.1mm signed24, yaw0.1deg
+ * signed16. Overflow is explicit; control/command result float calculations are
+ * untouched. */
 void nav_event_encode (uint8_t out[NAV_EVENT_BYTES],
                        const motion_event_t * p_event);
 bool nav_event_decode (motion_event_t * p_event,

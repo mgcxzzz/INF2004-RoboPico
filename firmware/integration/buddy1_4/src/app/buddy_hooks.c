@@ -1,8 +1,9 @@
 /**
  * @file buddy_hooks.c
  * @brief Buddy hooks.
- * @details Public feature contract. Requests cross coordinator ownership checks;
- * callers observe completion/status separately and must respect task context.
+ * @details Public feature contract. Requests cross coordinator ownership
+ * checks; callers observe completion/status separately and must respect task
+ * context.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 #include "include/interfaces/buddy_hooks.h"

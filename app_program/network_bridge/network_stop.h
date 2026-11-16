@@ -1,8 +1,9 @@
 /**
  * @file network_stop.h
  * @brief Network stop.
- * @details Application tasks exchange copied, bounded command and telemetry records.
- * The kernel Wi-Fi service owns the transport; reconnect never restarts motion.
+ * @details Application tasks exchange copied, bounded command and telemetry
+ * records. The kernel Wi-Fi service owns the transport; reconnect never
+ * restarts motion.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 #ifndef RTOS_NETWORK_STOP_H
@@ -17,8 +18,8 @@
 /* Source 15 subtype 0xC6: fixed 32-byte v0.2.1 frame (F2, len29, seq, C6,
  * version21, reserved byte5). Six full-width source fields remain u32 in native
  * RAM; age and status masks are bounded only when copied to the wire. Metadata
- * u16 @30: flags bits0..2, signed link bits3..5, failure bits6..12, valid bit13,
- * reserved bits14..15. */
+ * u16 @30: flags bits0..2, signed link bits3..5, failure bits6..12, valid
+ * bit13, reserved bits14..15. */
 typedef struct
 {
     unsigned valid : 1;
@@ -53,15 +54,15 @@ rn_network_stop_failure_mask (const rn_status_t * p_status, uint32_t now_ms,
     {
         mask |= RN_STOP_FAIL_LINK_DOWN;
     }
-    if ((p_status->flags & RN_CONNECTED) == 0U)
+    if (0U == (p_status->flags & RN_CONNECTED))
     {
         mask |= RN_STOP_FAIL_NOT_CONNECTED;
     }
-    if ((p_status->flags & RN_SUBSCRIBED) == 0U)
+    if (0U == (p_status->flags & RN_SUBSCRIBED))
     {
         mask |= RN_STOP_FAIL_NOT_SUBSCRIBED;
     }
-    if (p_status->polls == 0U || now_ms - p_status->last_poll_ms > 250U)
+    if (0U == p_status->polls || (now_ms - p_status->last_poll_ms > 250U))
     {
         mask |= RN_STOP_FAIL_POLL_STALE;
     }
@@ -91,7 +92,7 @@ rn_network_stop_candidate (const rn_status_t * p_status, uint32_t now_ms,
         .failmask = rn_network_stop_failure_mask(p_status, now_ms, app_last_ms,
                                                  connected_since_ms),
         .stop_ms = now_ms,
-        .poll_age_ms = p_status->polls == 0U ? UINT32_MAX
+        .poll_age_ms = 0U == p_status->polls ? UINT32_MAX
                                              : now_ms - p_status->last_poll_ms,
         .app_age_ms = now_ms - app_last_ms,
         .ack_age_ms = now_ms - p_status->last_complete_ms,

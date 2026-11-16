@@ -91,8 +91,8 @@ bool b4_side_geometry (int16_t const baseline[3], int16_t const sample[3],
     int32_t proj_q15;
     uint32_t index;
 
-    if ((baseline == NULL) || (sample == NULL) || (p_height_mm == NULL) ||
-        (p_roll_dd == NULL) || (g_mg <= 0))
+    if ((NULL == baseline) || (NULL == sample) || (NULL == p_height_mm) ||
+        (NULL == p_roll_dd) || (g_mg <= 0))
     {
         return false;
     }
@@ -105,7 +105,7 @@ bool b4_side_geometry (int16_t const baseline[3], int16_t const sample[3],
 
     mag = b4_isqrt(mag2);
     bmag = b4_isqrt(bmag2);
-    if ((mag == 0U) || (bmag == 0U) ||
+    if ((0U == mag) || (0U == bmag) ||
         ((iabs((int32_t)mag - g_mg) * 100) >
          (g_mg * (int32_t)B4_SIDE_NORM_TOL_PCT)))
     {
@@ -126,7 +126,7 @@ bool b4_side_geometry (int16_t const baseline[3], int16_t const sample[3],
     mag2 = (uint32_t)(flags[0] * flags[0]) + (uint32_t)(flags[1] * flags[1]) +
            (uint32_t)(flags[2] * flags[2]);
     mag = b4_isqrt(mag2);
-    if (mag == 0U)
+    if (0U == mag)
     {
         return false;
     }
@@ -149,7 +149,7 @@ bool b4_side_geometry (int16_t const baseline[3], int16_t const sample[3],
            (uint32_t)(result[1] * result[1]) +
            (uint32_t)(result[2] * result[2]);
     mag = b4_isqrt(mag2);
-    if (mag == 0U)
+    if (0U == mag)
     {
         return false;
     }
@@ -256,8 +256,8 @@ static int32_t clamp (int32_t value, int32_t low, int32_t high)
 
 static bool sampling (imu_state_t state)
 {
-    return ((state == IMU_ST_IDLE) || (state == IMU_ST_TRACKING) ||
-            (state == IMU_ST_HUMP) || (state == IMU_ST_IMPACT));
+    return ((IMU_ST_IDLE == state) || (IMU_ST_TRACKING == state) ||
+            (IMU_ST_HUMP == state) || (IMU_ST_IMPACT == state));
 }
 
 static void emit (b4_ctx_t const * p_ctx, b4_out_t * p_out, imu_evt_type_t type,
@@ -291,7 +291,7 @@ static void emit (b4_ctx_t const * p_ctx, b4_out_t * p_out, imu_evt_type_t type,
 static void enter_fault (b4_ctx_t * p_ctx, uint8_t code, uint32_t t_us,
                          b4_out_t * p_out)
 {
-    if (p_ctx->state == IMU_ST_FAULT)
+    if (IMU_ST_FAULT == p_ctx->state)
     {
         return;
     }
@@ -370,7 +370,7 @@ static void side_diag_note_hold (b4_ctx_t * p_ctx, b4_side_hold_reason_t reason,
 {
     uint32_t const previous = p_ctx->side_diag_last_hold_reason;
 
-    if (p_ctx->side_skip_run_us == 0U)
+    if (0U == p_ctx->side_skip_run_us)
     {
         if (b_qualifying)
         {
@@ -391,15 +391,15 @@ static void side_diag_note_hold (b4_ctx_t * p_ctx, b4_side_hold_reason_t reason,
 static b4_side_clear_reason_t side_diag_reject_reason (b4_ctx_t const * p_ctx,
                                                        imu_reject_t why)
 {
-    if (why == IMU_REJ_STOPPED)
+    if (IMU_REJ_STOPPED == why)
     {
         return B4_SIDE_CLEAR_STOP_RESET;
     }
-    if (why == IMU_REJ_SHOCK)
+    if (IMU_REJ_SHOCK == why)
     {
         return B4_SIDE_CLEAR_SHOCK;
     }
-    if (why == IMU_REJ_TIMEOUT)
+    if (IMU_REJ_TIMEOUT == why)
     {
         return B4_SIDE_CLEAR_TIMEOUT;
     }
@@ -441,7 +441,7 @@ static void side_reject (b4_ctx_t * p_ctx, imu_reject_t why, uint32_t t_us,
     side_clear(p_ctx);
     p_ctx->side_level_ready = false;
     p_ctx->side_level_us = 0U;
-    if (p_ctx->state == IMU_ST_HUMP)
+    if (IMU_ST_HUMP == p_ctx->state)
     {
         p_ctx->state = p_ctx->b_mission ? IMU_ST_TRACKING : IMU_ST_IDLE;
     }
@@ -506,7 +506,7 @@ static void side_terrain (b4_ctx_t * p_ctx, b4_in_t const * p_in,
     bool b_odo_recovery_safe = true;
 #endif
 
-    if (!p_ctx->b_mission || (p_ctx->state == IMU_ST_IMPACT))
+    if ((!p_ctx->b_mission) || (IMU_ST_IMPACT == p_ctx->state))
     {
         if (p_ctx->side_candidate)
         {
@@ -516,7 +516,7 @@ static void side_terrain (b4_ctx_t * p_ctx, b4_in_t const * p_in,
     }
 
 #ifdef APP_RTOS_IMU
-    if (p_ctx->side_candidate &&
+    if ((p_ctx->side_candidate) &&
         ((uint32_t)(p_in->t_us - p_ctx->side_start_us) >=
          (B4_SIDE_TIMEOUT_MS * 1000U)))
     {
@@ -536,12 +536,12 @@ static void side_terrain (b4_ctx_t * p_ctx, b4_in_t const * p_in,
         {
             p_ctx->side_quality_reason |= B4_Q_TURN;
         }
-        b_odo_gap_eligible = b_quality && !p_in->b_overrun &&
-                             (p_in->gap_us <= B4_LATE_US) &&
-                             (p_ctx->state != IMU_ST_IMPACT) &&
-                             ((p_ctx->side_quality_reason &
-                               (B4_Q_GRAVITY | B4_Q_TIMING | B4_Q_IMPACT |
-                                B4_Q_TURN | B4_Q_REVERSE)) == 0U);
+        b_odo_gap_eligible = (((b_quality && (!p_in->b_overrun)) &&
+                               (p_in->gap_us <= B4_LATE_US)) &&
+                              (p_ctx->state != IMU_ST_IMPACT)) &&
+                             (0U == (p_ctx->side_quality_reason &
+                                     (B4_Q_GRAVITY | B4_Q_TIMING | B4_Q_IMPACT |
+                                      B4_Q_TURN | B4_Q_REVERSE)));
     }
     else if (p_ctx->side_odo_gap_run_us != 0U)
     {
@@ -580,7 +580,7 @@ static void side_terrain (b4_ctx_t * p_ctx, b4_in_t const * p_in,
         p_ctx->side_odo_gap_run_us = 0U;
         if (b_odo_recovery_safe)
         {
-            if (p_ctx->side_odo_rate_guard_active == 0U)
+            if (0U == p_ctx->side_odo_rate_guard_active)
             {
                 p_ctx->side_odo_rate_anchor_head = p_in->heading_dd;
                 p_ctx->side_odo_rate_anchor_us = p_in->t_us;
@@ -599,8 +599,8 @@ static void side_terrain (b4_ctx_t * p_ctx, b4_in_t const * p_in,
     }
 #endif
 
-    b_odo_safe =
-        p_in->b_motion && !p_in->b_overrun && (p_in->gap_us <= B4_LATE_US);
+    b_odo_safe = ((p_in->b_motion) && (!p_in->b_overrun)) &&
+                 (p_in->gap_us <= B4_LATE_US);
     if (p_in->b_motion)
     {
 #ifdef APP_RTOS_IMU
@@ -655,7 +655,7 @@ static void side_terrain (b4_ctx_t * p_ctx, b4_in_t const * p_in,
     {
         p_ctx->side_odo_rate_guard_active = 0U;
     }
-    else if ((p_ctx->side_odo_rate_guard_active != 0U) && p_in->b_motion)
+    else if ((p_ctx->side_odo_rate_guard_active != 0U) && (p_in->b_motion))
     {
         uint32_t const elapsed_us =
             (uint32_t)(p_in->t_us - p_ctx->side_odo_rate_anchor_us);
@@ -686,7 +686,7 @@ static void side_terrain (b4_ctx_t * p_ctx, b4_in_t const * p_in,
          * odo sample heading is only a placeholder, so keep the last anchor. */
     }
 #endif
-    b_motion_safe = b_odo_safe && (dd_value >= 0) && b_turn_safe;
+    b_motion_safe = (b_odo_safe && (dd_value >= 0)) && b_turn_safe;
 #ifdef APP_RTOS_IMU
     if (!b_odo_recovery_safe)
     {
@@ -711,19 +711,19 @@ static void side_terrain (b4_ctx_t * p_ctx, b4_in_t const * p_in,
      * budget; never turn an excluded measurement into an accepted peak.
      * Actual turns, reverse, unavailable data, timing and impacts are fatal. */
     b_skip =
-        (B4_SIDE_SKIP_RUN_MS > 0U) && !b_quality &&
-        (p_ctx->state != IMU_ST_IMPACT) &&
-        ((p_ctx->side_quality_reason & (B4_Q_SPREAD | B4_Q_ACCEL)) != 0U) &&
-        ((p_ctx->side_quality_reason &
-          (B4_Q_GRAVITY | B4_Q_TIMING | B4_Q_UNAVAILABLE | B4_Q_IMPACT |
-           B4_Q_TURN | B4_Q_REVERSE)) == 0U);
+        ((((B4_SIDE_SKIP_RUN_MS > 0U) && (!b_quality)) &&
+          (p_ctx->state != IMU_ST_IMPACT)) &&
+         ((p_ctx->side_quality_reason & (B4_Q_SPREAD | B4_Q_ACCEL)) != 0U)) &&
+        (0U == (p_ctx->side_quality_reason &
+                (B4_Q_GRAVITY | B4_Q_TIMING | B4_Q_UNAVAILABLE | B4_Q_IMPACT |
+                 B4_Q_TURN | B4_Q_REVERSE)));
 
 #ifdef APP_RTOS_IMU
     if (b_odo_gap_eligible)
     {
         bool const b_had_level_progress = p_ctx->side_level_us != 0U;
         bool const b_qualifying =
-            p_ctx->side_candidate || p_ctx->side_level_ready;
+            (p_ctx->side_candidate) || (p_ctx->side_level_ready);
         uint32_t const prior_skip_us = p_ctx->side_skip_run_us;
         uint32_t run_ms;
 
@@ -743,13 +743,13 @@ static void side_terrain (b4_ctx_t * p_ctx, b4_in_t const * p_in,
             /* An unqualified partial level interval is not continuous across
              * missing odometry and cannot contribute toward the 200 ms arm. */
             p_ctx->side_level_us = 0U;
-            if (b_had_level_progress && (prior_skip_us == 0U))
+            if (b_had_level_progress && (0U == prior_skip_us))
             {
                 side_diag_disarm(p_ctx, B4_SIDE_CLEAR_OTHER_QUALITY);
             }
         }
 
-        if (p_ctx->side_candidate &&
+        if ((p_ctx->side_candidate) &&
             ((uint32_t)(p_in->t_us - p_ctx->side_start_us) >=
              (B4_SIDE_TIMEOUT_MS * 1000U)))
         {
@@ -759,11 +759,11 @@ static void side_terrain (b4_ctx_t * p_ctx, b4_in_t const * p_in,
         }
 
         if ((p_ctx->side_skip_run_us > (B4_SIDE_SKIP_RUN_MS * 1000U)) &&
-            !p_ctx->side_odo_gap_disarmed)
+            (!p_ctx->side_odo_gap_disarmed))
         {
             b4_side_clear_reason_t reason = B4_SIDE_CLEAR_ODO_GAP_LONG;
 
-            if (p_ctx->side_diag_last_hold_reason == B4_SIDE_HOLD_MIXED)
+            if (B4_SIDE_HOLD_MIXED == p_ctx->side_diag_last_hold_reason)
             {
                 reason = B4_SIDE_CLEAR_MIXED_SKIP_RUN;
             }
@@ -791,18 +791,18 @@ static void side_terrain (b4_ctx_t * p_ctx, b4_in_t const * p_in,
 
     if (p_ctx->side_candidate)
     {
-        bool b_unsafe = (!b_quality && !b_skip) || !b_odo_safe ||
-                        (p_ctx->side_have_odo && (dd_value < 0)) ||
-                        !b_turn_safe;
+        bool b_unsafe = ((((!b_quality) && (!b_skip)) || (!b_odo_safe)) ||
+                         ((p_ctx->side_have_odo) && (dd_value < 0))) ||
+                        (!b_turn_safe);
 #ifdef APP_RTOS_IMU
         if (!b_odo_recovery_safe)
         {
             b_unsafe = true;
         }
 #endif
-        if (p_ctx->b_rates &&
-            ((p_ctx->speed_mm_s < 0) ||
-             ((iabs(p_ctx->accel_mm_s2) > B4_ACCEL_MM_S2) && !b_skip) ||
+        if ((p_ctx->b_rates) &&
+            (((p_ctx->speed_mm_s < 0) ||
+              ((iabs(p_ctx->accel_mm_s2) > B4_ACCEL_MM_S2) && (!b_skip))) ||
              (iabs(p_ctx->turn_dd_s) > B4_TURN_DD_S)))
         {
             b_unsafe = true;
@@ -817,7 +817,8 @@ static void side_terrain (b4_ctx_t * p_ctx, b4_in_t const * p_in,
         if (b_skip)
         {
             /* Height unknown: no peak/rise/return update. Only reference SDK
-             * retains clean-odometry distance credit; RTOS excludes this tick. */
+             * retains clean-odometry distance credit; RTOS excludes this tick.
+             */
 #ifdef APP_RTOS_IMU
             side_diag_note_hold(p_ctx, B4_SIDE_HOLD_QUALITY_SKIP, true);
 #endif
@@ -833,7 +834,7 @@ static void side_terrain (b4_ctx_t * p_ctx, b4_in_t const * p_in,
             {
                 side_reject(p_ctx, IMU_REJ_RANGE, p_in->t_us, p_out);
 #ifdef APP_RTOS_IMU
-                if (p_ctx->side_diag_last_hold_reason == B4_SIDE_HOLD_MIXED)
+                if (B4_SIDE_HOLD_MIXED == p_ctx->side_diag_last_hold_reason)
                 {
                     p_ctx->side_diag_last_clear_reason =
                         B4_SIDE_CLEAR_MIXED_SKIP_RUN;
@@ -882,7 +883,7 @@ static void side_terrain (b4_ctx_t * p_ctx, b4_in_t const * p_in,
             else
             {
 #ifdef APP_RTOS_IMU
-                if (p_ctx->side_candidate && !p_ctx->side_rising)
+                if ((p_ctx->side_candidate) && (!p_ctx->side_rising))
                 {
                     p_ctx->side_diag_early_clear_count++;
                     side_diag_disarm(p_ctx, B4_SIDE_CLEAR_HEIGHT_BEFORE_RISE);
@@ -908,7 +909,7 @@ static void side_terrain (b4_ctx_t * p_ctx, b4_in_t const * p_in,
             p_ctx->side_return_us = 0U;
         }
 
-        if (p_ctx->side_candidate &&
+        if ((p_ctx->side_candidate) &&
             ((uint32_t)(p_in->t_us - p_ctx->side_start_us) >=
              (B4_SIDE_TIMEOUT_MS * 1000U)))
         {
@@ -922,7 +923,7 @@ static void side_terrain (b4_ctx_t * p_ctx, b4_in_t const * p_in,
         /* v0.8: hold arming state; a long skip run disarms. */
 #ifdef APP_RTOS_IMU
         bool const b_had_level =
-            p_ctx->side_level_ready || (p_ctx->side_level_us != 0U);
+            (p_ctx->side_level_ready) || (p_ctx->side_level_us != 0U);
         side_diag_note_hold(p_ctx, B4_SIDE_HOLD_QUALITY_SKIP, b_had_level);
 #endif
         p_ctx->side_skip_run_us += p_in->gap_us;
@@ -930,7 +931,7 @@ static void side_terrain (b4_ctx_t * p_ctx, b4_in_t const * p_in,
         {
 #ifdef APP_RTOS_IMU
             bool const b_was_ready =
-                p_ctx->side_level_ready || (p_ctx->side_level_us != 0U);
+                (p_ctx->side_level_ready) || (p_ctx->side_level_us != 0U);
 #endif
             p_ctx->side_level_ready = false;
             p_ctx->side_level_us = 0U;
@@ -938,7 +939,7 @@ static void side_terrain (b4_ctx_t * p_ctx, b4_in_t const * p_in,
             if (b_was_ready)
             {
                 b4_side_clear_reason_t reason = B4_SIDE_CLEAR_OTHER_QUALITY;
-                if (p_ctx->side_diag_last_hold_reason == B4_SIDE_HOLD_MIXED)
+                if (B4_SIDE_HOLD_MIXED == p_ctx->side_diag_last_hold_reason)
                 {
                     reason = B4_SIDE_CLEAR_MIXED_SKIP_RUN;
                 }
@@ -950,10 +951,10 @@ static void side_terrain (b4_ctx_t * p_ctx, b4_in_t const * p_in,
     }
     p_ctx->side_skip_run_us = 0U;
 
-    if (!b_quality || !b_motion_safe)
+    if ((!b_quality) || (!b_motion_safe))
     {
 #ifdef APP_RTOS_IMU
-        if (p_ctx->side_level_ready || (p_ctx->side_level_us != 0U))
+        if ((p_ctx->side_level_ready) || (p_ctx->side_level_us != 0U))
         {
             b4_side_clear_reason_t reason = B4_SIDE_CLEAR_OTHER_QUALITY;
             if ((p_ctx->side_quality_reason & B4_Q_TURN) != 0U)
@@ -990,7 +991,7 @@ static void side_terrain (b4_ctx_t * p_ctx, b4_in_t const * p_in,
         }
     }
 
-    if (p_ctx->side_level_ready && b_quality && b_motion_safe &&
+    if ((((p_ctx->side_level_ready) && b_quality) && b_motion_safe) &&
         (p_ctx->side_height_mm >= B4_SIDE_START_MM))
     {
         side_clear(p_ctx);
@@ -1072,7 +1073,7 @@ void b4_init_done (b4_ctx_t * p_ctx, bool b_ok, uint32_t t_us, b4_out_t * p_out)
     if (p_ctx->fault != IMU_FAULT_NONE)
     {
         p_out->b_clear_fault = true; /* reset accepted and the sensor
-                                         * answers again              */
+                                      * answers again              */
         p_ctx->fault = IMU_FAULT_NONE;
     }
 
@@ -1112,7 +1113,7 @@ void b4_mission (b4_ctx_t * p_ctx, b4_mission_t event, uint32_t t_us,
     case B4_MISSION_RESUME:
         p_ctx->b_mission = true;
 
-        if (p_ctx->state == IMU_ST_IDLE)
+        if (IMU_ST_IDLE == p_ctx->state)
         {
             enter_tracking(p_ctx);
         }
@@ -1128,7 +1129,7 @@ void b4_mission (b4_ctx_t * p_ctx, b4_mission_t event, uint32_t t_us,
             side_reject(p_ctx, IMU_REJ_STOPPED, t_us, p_out);
         }
 #ifdef APP_RTOS_IMU
-        else if (p_ctx->side_level_ready || (p_ctx->side_level_us != 0U))
+        else if ((p_ctx->side_level_ready) || (p_ctx->side_level_us != 0U))
         {
             side_diag_disarm(p_ctx, B4_SIDE_CLEAR_STOP_RESET);
         }
@@ -1153,15 +1154,15 @@ void b4_mission (b4_ctx_t * p_ctx, b4_mission_t event, uint32_t t_us,
         }
 #endif
 
-        if ((p_ctx->state == IMU_ST_TRACKING) || (p_ctx->state == IMU_ST_HUMP))
+        if ((IMU_ST_TRACKING == p_ctx->state) || (IMU_ST_HUMP == p_ctx->state))
         {
             p_ctx->state = IMU_ST_IDLE;
         }
 
-        if (event == B4_MISSION_DONE)
+        if (B4_MISSION_DONE == event)
         {
             /* Completed: the final results include the highest
-                 * hump peak (Week 6 Section 5). */
+             * hump peak (Week 6 Section 5). */
             emit(p_ctx, p_out, IMU_EVT_RUN_SUMMARY, 0U,
                  (int32_t)p_ctx->max_height_mm, t_us);
         }
@@ -1178,7 +1179,7 @@ void b4_mission (b4_ctx_t * p_ctx, b4_mission_t event, uint32_t t_us,
             side_reject(p_ctx, IMU_REJ_STOPPED, t_us, p_out);
         }
 #ifdef APP_RTOS_IMU
-        else if (p_ctx->side_level_ready || (p_ctx->side_level_us != 0U))
+        else if ((p_ctx->side_level_ready) || (p_ctx->side_level_us != 0U))
         {
             side_diag_disarm(p_ctx, B4_SIDE_CLEAR_STOP_RESET);
         }
@@ -1196,10 +1197,10 @@ void b4_mission (b4_ctx_t * p_ctx, b4_mission_t event, uint32_t t_us,
         p_ctx->side_level_us = 0U;
 #endif
 
-        if (p_ctx->state == IMU_ST_FAULT)
+        if (IMU_ST_FAULT == p_ctx->state)
         {
             /* Authorised reset [fault cleared]: Initialising, so
-                 * the baseline is measured again, never reused. */
+             * the baseline is measured again, never reused. */
             p_ctx->state = IMU_ST_INIT;
             p_out->b_init = true;
         }
@@ -1368,7 +1369,7 @@ static int32_t update_pitch (b4_ctx_t * p_ctx)
     p_ctx->pitch_dd = b4_asin_dd(sin_q15);
 
     /* Tilt with hysteresis: climbing / descending / level. */
-    if (p_ctx->tilt == 0)
+    if (0 == p_ctx->tilt)
     {
         if (p_ctx->pitch_dd > B4_TILT_ON_DD)
         {
@@ -1615,7 +1616,7 @@ static void classify (b4_ctx_t * p_ctx, b4_in_t const * p_in, bool b_quiet,
 {
     imu_motion_t cand;
 
-    if (p_ctx->state == IMU_ST_IMPACT)
+    if (IMU_ST_IMPACT == p_ctx->state)
     {
         cand = IMU_MOTION_IMPACT;
     }
@@ -1660,7 +1661,7 @@ static void classify (b4_ctx_t * p_ctx, b4_in_t const * p_in, bool b_quiet,
         return;
     }
 
-    if ((cand == IMU_MOTION_IMPACT) || (p_ctx->motion == IMU_MOTION_IMPACT))
+    if ((IMU_MOTION_IMPACT == cand) || (IMU_MOTION_IMPACT == p_ctx->motion))
     {
         p_ctx->cand_us = B4_CLASS_HOLD_MS * 1000U; /* at once */
     }
@@ -1706,7 +1707,7 @@ static void calibrate (b4_ctx_t * p_ctx, int16_t const mean[3],
 
     update_motion(p_ctx, p_in);
 
-    if (p_ctx->b_rates && (iabs(p_ctx->speed_mm_s) >= B4_STILL_MM_S))
+    if ((p_ctx->b_rates) && (iabs(p_ctx->speed_mm_s) >= B4_STILL_MM_S))
     {
         b_restart = true; /* [stationary] guard          */
 #ifdef APP_RTOS_IMU
@@ -1770,8 +1771,8 @@ static void calibrate (b4_ctx_t * p_ctx, int16_t const mean[3],
 
         p_ctx->g_mg = (int32_t)b4_isqrt(sq_value);
 
-        if ((p_ctx->g_mg < B4_CAL_G_MIN_MG) ||
-            (p_ctx->g_mg > B4_CAL_G_MAX_MG) ||
+        if (((p_ctx->g_mg < B4_CAL_G_MIN_MG) ||
+             (p_ctx->g_mg > B4_CAL_G_MAX_MG)) ||
             ((second[AX_UP] * 100) < (B4_CAL_UP_MIN_PCT * p_ctx->g_mg)))
         {
             /* |g| wrong, or gravity is not on the UP axis (mounting
@@ -1828,12 +1829,12 @@ void b4_tick (b4_ctx_t * p_ctx, b4_in_t const * p_in, b4_out_t * p_out)
     {
         p_ctx->side_quality_reason |= B4_Q_UNAVAILABLE;
     }
-    if (p_in->b_overrun || p_in->gap_us > B4_LATE_US)
+    if ((p_in->b_overrun) || (p_in->gap_us > B4_LATE_US))
     {
         p_ctx->side_quality_reason |= B4_Q_TIMING;
     }
 
-    if ((p_ctx->state == IMU_ST_INIT) || (p_ctx->state == IMU_ST_FAULT))
+    if ((IMU_ST_INIT == p_ctx->state) || (IMU_ST_FAULT == p_ctx->state))
     {
         p_ctx->side_quality_reason |= B4_Q_UNAVAILABLE;
         p_ctx->b_side_valid = false;
@@ -1866,7 +1867,7 @@ void b4_tick (b4_ctx_t * p_ctx, b4_in_t const * p_in, b4_out_t * p_out)
             side_reject(p_ctx, IMU_REJ_NO_ODOMETRY, p_in->t_us, p_out);
         }
 #ifdef APP_RTOS_IMU
-        else if (p_ctx->side_level_ready || (p_ctx->side_level_us != 0U))
+        else if ((p_ctx->side_level_ready) || (p_ctx->side_level_us != 0U))
         {
             side_diag_disarm(p_ctx, B4_SIDE_CLEAR_OTHER_QUALITY);
             p_ctx->side_level_ready = false;
@@ -1894,7 +1895,7 @@ void b4_tick (b4_ctx_t * p_ctx, b4_in_t const * p_in, b4_out_t * p_out)
 
     p_ctx->i2c_run = 0U;
 
-    if (p_in->n == 0U)
+    if (0U == p_in->n)
     {
         p_ctx->side_quality_reason |= B4_Q_UNAVAILABLE;
         p_ctx->b_side_valid = false;
@@ -1904,7 +1905,7 @@ void b4_tick (b4_ctx_t * p_ctx, b4_in_t const * p_in, b4_out_t * p_out)
             side_reject(p_ctx, IMU_REJ_NO_ODOMETRY, p_in->t_us, p_out);
         }
 #ifdef APP_RTOS_IMU
-        else if (p_ctx->side_level_ready || (p_ctx->side_level_us != 0U))
+        else if ((p_ctx->side_level_ready) || (p_ctx->side_level_us != 0U))
         {
             side_diag_disarm(p_ctx, B4_SIDE_CLEAR_OTHER_QUALITY);
             p_ctx->side_level_ready = false;
@@ -1943,8 +1944,8 @@ void b4_tick (b4_ctx_t * p_ctx, b4_in_t const * p_in, b4_out_t * p_out)
         mean[index] = (int16_t)(sum[index] / (int32_t)p_in->n);
     }
 
-    if ((mean[AX_FWD] == p_ctx->last_mean.fwd_mg) &&
-        (mean[AX_LAT] == p_ctx->last_mean.lat_mg) &&
+    if (((mean[AX_FWD] == p_ctx->last_mean.fwd_mg) &&
+         (mean[AX_LAT] == p_ctx->last_mean.lat_mg)) &&
         (mean[AX_UP] == p_ctx->last_mean.up_mg))
     {
         p_ctx->stuck_run++;
@@ -1964,7 +1965,7 @@ void b4_tick (b4_ctx_t * p_ctx, b4_in_t const * p_in, b4_out_t * p_out)
     p_ctx->last_mean.lat_mg = mean[AX_LAT];
     p_ctx->last_mean.up_mg = mean[AX_UP];
 
-    if (p_ctx->state == IMU_ST_CALIBRATING)
+    if (IMU_ST_CALIBRATING == p_ctx->state)
     {
         p_ctx->side_quality_reason |= B4_Q_UNAVAILABLE;
         p_ctx->b_side_valid = false;
@@ -2077,9 +2078,10 @@ void b4_tick (b4_ctx_t * p_ctx, b4_in_t const * p_in, b4_out_t * p_out)
                 guard_mad = p_ctx->side_axis_mad_mg[0];
             }
 #endif
-            bool b_quality = b_samples &&
-                             (guard_mad <= (uint32_t)B4_SIDE_MAD_MG) &&
-                             !p_in->b_overrun && (p_in->gap_us <= B4_LATE_US);
+            bool b_quality =
+                ((b_samples && (guard_mad <= (uint32_t)B4_SIDE_MAD_MG)) &&
+                 (!p_in->b_overrun)) &&
+                (p_in->gap_us <= B4_LATE_US);
             int16_t h_mm = 0;
             int16_t roll_dd = 0;
 
@@ -2117,7 +2119,8 @@ void b4_tick (b4_ctx_t * p_ctx, b4_in_t const * p_in, b4_out_t * p_out)
 #ifdef APP_RTOS_RELEASE
         /* Release safety uses the separate lift/upset guard. A brief
          * high-dynamic sample is still excluded from terrain measurement,
-         * but it must not become a collision event or an IMU state transition. */
+         * but it must not become a collision event or an IMU state transition.
+         */
         if (max_d2 > (uint32_t)(B4_SHOCK_MG * B4_SHOCK_MG))
         {
 #if B4_SIDE_RAMP_MODE
@@ -2126,7 +2129,7 @@ void b4_tick (b4_ctx_t * p_ctx, b4_in_t const * p_in, b4_out_t * p_out)
                 side_reject(p_ctx, IMU_REJ_SHOCK, p_in->t_us, p_out);
             }
 #ifdef APP_RTOS_IMU
-            else if (p_ctx->side_level_ready || (p_ctx->side_level_us != 0U))
+            else if ((p_ctx->side_level_ready) || (p_ctx->side_level_us != 0U))
             {
                 side_diag_disarm(p_ctx, B4_SIDE_CLEAR_SHOCK);
                 p_ctx->side_level_ready = false;
@@ -2162,7 +2165,7 @@ void b4_tick (b4_ctx_t * p_ctx, b4_in_t const * p_in, b4_out_t * p_out)
                 side_reject(p_ctx, IMU_REJ_SHOCK, p_in->t_us, p_out);
             }
 #ifdef APP_RTOS_IMU
-            else if (p_ctx->side_level_ready || (p_ctx->side_level_us != 0U))
+            else if ((p_ctx->side_level_ready) || (p_ctx->side_level_us != 0U))
             {
                 side_diag_disarm(p_ctx, B4_SIDE_CLEAR_SHOCK);
                 p_ctx->side_level_ready = false;
@@ -2196,7 +2199,7 @@ void b4_tick (b4_ctx_t * p_ctx, b4_in_t const * p_in, b4_out_t * p_out)
             p_ctx->cand = IMU_MOTION_IMPACT;
             emit(p_ctx, p_out, IMU_EVT_IMPACT, 0U, 0, p_in->t_us);
         }
-        else if (p_ctx->state == IMU_ST_IMPACT)
+        else if (IMU_ST_IMPACT == p_ctx->state)
         {
             if (max_d2 < (uint32_t)(B4_SHOCK_CLEAR_MG * B4_SHOCK_CLEAR_MG))
             {
@@ -2229,7 +2232,7 @@ void b4_tick (b4_ctx_t * p_ctx, b4_in_t const * p_in, b4_out_t * p_out)
         p_ctx->side_rates_valid = p_ctx->b_rates;
 
 #if B4_SIDE_RAMP_MODE
-        if (p_ctx->state == IMU_ST_IMPACT)
+        if (IMU_ST_IMPACT == p_ctx->state)
         {
             p_ctx->side_quality_reason |= B4_Q_IMPACT;
             p_ctx->b_side_valid = false;
@@ -2251,9 +2254,9 @@ void b4_tick (b4_ctx_t * p_ctx, b4_in_t const * p_in, b4_out_t * p_out)
                 p_ctx->side_quality_reason |= B4_Q_TURN;
             }
         }
-        if (p_ctx->b_side_valid && p_ctx->b_rates &&
-            ((p_ctx->speed_mm_s < 0) ||
-             (iabs(p_ctx->accel_mm_s2) > B4_ACCEL_MM_S2) ||
+        if (((p_ctx->b_side_valid) && (p_ctx->b_rates)) &&
+            (((p_ctx->speed_mm_s < 0) ||
+              (iabs(p_ctx->accel_mm_s2) > B4_ACCEL_MM_S2)) ||
              (iabs(p_ctx->turn_dd_s) > B4_TURN_DD_S)))
         {
             p_ctx->b_side_valid = false;
@@ -2266,7 +2269,8 @@ void b4_tick (b4_ctx_t * p_ctx, b4_in_t const * p_in, b4_out_t * p_out)
             int32_t sin_q15 = update_pitch(p_ctx);
 #if B4_SIDE_RAMP_MODE
             side_terrain(p_ctx, p_in,
-                         p_ctx->b_side_valid && (p_ctx->state != IMU_ST_IMPACT),
+                         (p_ctx->b_side_valid) &&
+                             (p_ctx->state != IMU_ST_IMPACT),
                          p_out);
 #else
             int32_t adv = fill_bins(&p_ctx->hump, sin_q15);

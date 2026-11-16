@@ -47,7 +47,8 @@ typedef struct
     float boost_cap;
     float boost_pwm;
     /* ramp-assist v0.4 stall push: absolute PWM added on top (>= 0), zero
-     * after any reset. Same output clamp/slew/anti-windup as everything else. */
+     * after any reset. Same output clamp/slew/anti-windup as everything else.
+     */
     float boost_add;
     /* ramp-assist v0.6 speed hold (replaces the v0.5 PWM floor). All zero after
      * any reset; zero = the unchanged controller.
@@ -81,11 +82,11 @@ static inline float continuous_clampf (float value_x, float low, float high)
  * deliberately does not impose a minimum effort at low speeds. */
 static inline float continuous_feedforward (unsigned wheel, float speed)
 {
-    if (wheel > 1 || speed <= 0.0f)
+    if ((wheel > 1) || (speed <= 0.0f))
     {
         return 0.0f;
     }
-    return speed * (wheel == 0 ? (150.0f / 45.0f) : (180.0f / 45.0f));
+    return speed * (0 == wheel ? (150.0f / 45.0f) : (180.0f / 45.0f));
 }
 
 static inline void continuous_drive_reset (continuous_drive_t * p_state,
@@ -149,8 +150,8 @@ static inline void continuous_drive_load_step (continuous_drive_t * p_state,
                 p_state->load_timing = true;
                 p_state->load_since_us = now;
             }
-            else if (now >= p_state->load_since_us &&
-                     now - p_state->load_since_us >= DRIVE_MODE_LOAD_DWELL_US)
+            else if ((now >= p_state->load_since_us) &&
+                     (now - p_state->load_since_us >= DRIVE_MODE_LOAD_DWELL_US))
             {
                 p_state->load_timing = false;
                 p_state->load_active = true;
@@ -175,18 +176,18 @@ static inline int32_t continuous_drive_step_policy (
     int16_t wanted, float measured, float delta_time, uint64_t now,
     int32_t previous_output, bool load_eligible)
 {
-    if (!p_state || !p_data)
+    if ((!p_state) || (!p_data))
     {
         return 0;
     }
     const bool hold = p_state->hold_min_speed > 0.0f; /* ramp-assist v0.6 */
-    if (wanted < 0 || (wanted == 0 && !hold))
+    if ((wanted < 0) || (0 == wanted && (!hold)))
     {
         continuous_drive_reset(p_state, p_data);
         return 0;
     }
-    if (wheel > 1 || !isfinite(measured) || !isfinite(delta_time) ||
-        delta_time < 0.0f)
+    if ((((wheel > 1) || (!isfinite(measured))) || (!isfinite(delta_time))) ||
+        (delta_time < 0.0f))
     {
         continuous_drive_reset(p_state, p_data);
         return 0;
@@ -201,7 +202,7 @@ static inline int32_t continuous_drive_step_policy (
     float prior = continuous_clampf((float)previous_output, 0.0f,
                                     (float)CONTINUOUS_PWM_MAX);
     float target = (float)wanted;
-    if (hold && target < p_state->hold_min_speed)
+    if (hold && (target < p_state->hold_min_speed))
     {
         target = p_state->hold_min_speed; /* v0.6 */
     }
@@ -233,7 +234,8 @@ static inline int32_t continuous_drive_step_policy (
     }
 
     /* A zero requested wheel stays zero even if Buddy4's independent hold
-     * mode is active. That hold policy is applied below; load reserve is not. */
+     * mode is active. That hold policy is applied below; load reserve is not.
+     */
     if (wanted > 0)
     {
         continuous_drive_load_step(p_state, p_state->reference, measured,
@@ -257,16 +259,16 @@ static inline int32_t continuous_drive_step_policy (
 
     /* One bounded assistance window per positive-command segment. A stalled
      * wheel cannot re-arm it; target changes alone do not clear this latch. */
-    if (!p_state->start_used && p_state->reference >= 20.0f &&
-        fabsf(measured) < 3.0f)
+    if (((!p_state->start_used) && (p_state->reference >= 20.0f)) &&
+        (fabsf(measured) < 3.0f))
     {
         if (!p_state->still_timing)
         {
             p_state->still_timing = true;
             p_state->still_since_us = now;
         }
-        else if (now >= p_state->still_since_us &&
-                 now - p_state->still_since_us >= CONTINUOUS_START_DWELL_US)
+        else if ((now >= p_state->still_since_us) &&
+                 (now - p_state->still_since_us >= CONTINUOUS_START_DWELL_US))
         {
             p_state->start_used = true;
             p_state->start_active = true;
@@ -284,8 +286,8 @@ static inline int32_t continuous_drive_step_policy (
         uint64_t age = now >= p_state->start_since_us
                            ? now - p_state->start_since_us
                            : CONTINUOUS_START_ACTIVE_US;
-        if (age >= CONTINUOUS_START_ACTIVE_US || target < 20.0f ||
-            measured >= fminf(20.0f, 0.8f * p_state->reference))
+        if (((age >= CONTINUOUS_START_ACTIVE_US) || (target < 20.0f)) ||
+            (measured >= fminf(20.0f, 0.8f * p_state->reference)))
         {
             p_state->start_active = false;
         }
@@ -312,7 +314,7 @@ static inline int32_t continuous_drive_step_policy (
      * actuator envelope and gives the startup aid a smooth release. */
     float unconstrained = base + p_state->integral;
     bool constrained =
-        p_state->start_active || fabsf(output - unconstrained) > 0.5f;
+        (p_state->start_active) || (fabsf(output - unconstrained) > 0.5f);
     if (constrained)
     {
         p_state->integral = continuous_clampf(output - base, -i_max, i_max);
@@ -323,8 +325,8 @@ static inline int32_t continuous_drive_step_policy (
             p_state->integral + 3.0f * ki_value * error * delta_time, -i_max,
             i_max);
         float raw = base + candidate;
-        if (!((raw > CONTINUOUS_PWM_MAX && error > 0.0f) ||
-              (raw < 0.0f && error < 0.0f)))
+        if (!(((raw > CONTINUOUS_PWM_MAX) && (error > 0.0f)) ||
+              ((raw < 0.0f) && (error < 0.0f))))
         {
             p_state->integral = candidate;
         }

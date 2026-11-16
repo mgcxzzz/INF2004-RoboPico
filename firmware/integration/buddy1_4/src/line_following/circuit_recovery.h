@@ -73,13 +73,14 @@ static inline unsigned circuit_memory (const circuit_tracker_t * p_sample,
                                        uint64_t now)
 {
     const symmetric_tracker_t * p_state = &p_sample->core;
-    if (p_sample->centre_valid &&
-        now - p_sample->centre_us <= C_CENTRE_MEMORY_US &&
-        (!p_state->direction || p_sample->centre_us >= p_state->direction_us))
+    if (((p_sample->centre_valid) &&
+         (now - p_sample->centre_us <= C_CENTRE_MEMORY_US)) &&
+        ((!p_state->direction) ||
+         (p_sample->centre_us >= p_state->direction_us)))
     {
         return 3;
     }
-    return p_state->direction && now - p_state->direction_us <= C_MEMORY_US
+    return (p_state->direction) && (now - p_state->direction_us <= C_MEMORY_US)
                ? (p_state->direction > 0 ? 1 : 2)
                : 0;
 }
@@ -89,9 +90,9 @@ static inline void circuit_direction (circuit_tracker_t * p_sample, int error,
     symmetric_tracker_t * p_state = &p_sample->core;
     int magnitude = error < 0 ? -error : error;
     int8_t direction = error > 0 ? 1 : -1;
-    bool strong = magnitude >= 200 && strongest >= 400;
-    bool weak = magnitude >= 150 && strongest >= 200;
-    if (strong && (!p_state->direction || direction == p_state->direction))
+    bool strong = (magnitude >= 200) && (strongest >= 400);
+    bool weak = (magnitude >= 150) && (strongest >= 200);
+    if (strong && ((!p_state->direction) || (direction == p_state->direction)))
     {
         p_state->direction = direction;
         p_state->direction_us = now;
@@ -103,7 +104,7 @@ static inline void circuit_direction (circuit_tracker_t * p_sample, int error,
     {
         p_sample->weak_timing = false;
         p_sample->pending = 0;
-        if (!p_sample->reverse_timing || p_sample->reverse != direction)
+        if ((!p_sample->reverse_timing) || (p_sample->reverse != direction))
         {
             p_sample->reverse_timing = true;
             p_sample->reverse = direction;
@@ -123,15 +124,16 @@ static inline void circuit_direction (circuit_tracker_t * p_sample, int error,
        probe without committing the direction or restarting the loss budget. */
     if (weak)
     {
-        if (!p_sample->weak_timing || p_sample->pending != direction)
+        if ((!p_sample->weak_timing) || (p_sample->pending != direction))
         {
             p_sample->weak_timing = true;
             p_sample->pending = direction;
             p_sample->weak_since = now;
         }
-        unsigned dwell = p_state->direction && direction != p_state->direction
-                             ? C_WEAK_REVERSE_US
-                             : C_WEAK_US;
+        unsigned dwell =
+            (p_state->direction) && (direction != p_state->direction)
+                ? C_WEAK_REVERSE_US
+                : C_WEAK_US;
         if (now - p_sample->weak_since >= dwell)
         {
             p_state->direction = direction;
@@ -168,8 +170,10 @@ circuit_line_demand_motion (circuit_tracker_t * p_sample,
     p_sample->loss_reason = 0;
     symmetric_tracker_t * p_state = &p_sample->core;
 #if defined(CIRCUIT_STATIONARY_SEARCH) || defined(LINE_STATIONARY_SEARCH)
-    if (!wheel || !speed || !isfinite(wheel[0]) || !isfinite(wheel[1]) ||
-        !isfinite(speed[0]) || !isfinite(speed[1]))
+    if ((((((!wheel) || (!speed)) || (!isfinite(wheel[0]))) ||
+          (!isfinite(wheel[1]))) ||
+         (!isfinite(speed[0]))) ||
+        (!isfinite(speed[1])))
     {
         p_sample->loss_reason = LS_INPUT;
         demand.stop = true;
@@ -189,22 +193,23 @@ circuit_line_demand_motion (circuit_tracker_t * p_sample,
         magnitude = error < 0 ? -error : error;
     unsigned strongest =
         demand.level[0] > demand.level[1] ? demand.level[0] : demand.level[1];
-    bool low = demand.level[0] < 150 && demand.level[1] < 150;
-    bool faint = strongest >= 200 && magnitude >= 150;
+    bool low = (demand.level[0] < 150) && (demand.level[1] < 150);
+    bool faint = (strongest >= 200) && (magnitude >= 150);
     int8_t observed = error > 0 ? 1 : -1;
     if (!faint)
     {
         p_sample->probe_timing = false;
     }
-    else if (!p_sample->probe_timing || p_sample->probe_direction != observed)
+    else if ((!p_sample->probe_timing) ||
+             (p_sample->probe_direction != observed))
     {
         p_sample->probe_timing = true;
         p_sample->probe_direction = observed;
         p_sample->probe_since = now;
     }
     circuit_direction(p_sample, error, strongest, now);
-    bool centred =
-        demand.level[0] >= 400 && demand.level[1] >= 400 && magnitude <= 80;
+    bool centred = ((demand.level[0] >= 400) && (demand.level[1] >= 400)) &&
+                   (magnitude <= 80);
     if (!centred)
     {
         p_sample->centre_timing = false;
@@ -222,14 +227,14 @@ circuit_line_demand_motion (circuit_tracker_t * p_sample,
             p_sample->centre_us = now;
         }
     }
-    if (low && !p_state->white)
+    if (low && (!p_state->white))
     {
         unsigned memory = circuit_memory(p_sample, now);
         p_state->white = true;
         p_state->white_since = now;
         p_state->white_mm = mm_value;
-        p_state->recovery = memory == 1 ? 1 : memory == 2 ? -1 : 0;
-        p_sample->straight_recovery = memory == 3;
+        p_state->recovery = 1 == memory ? 1 : 2 == memory ? -1 : 0;
+        p_sample->straight_recovery = 3 == memory;
         p_sample->reacquire_timing = p_sample->medium_timing =
             p_sample->strong_timing = false;
     }
@@ -238,7 +243,7 @@ circuit_line_demand_motion (circuit_tracker_t * p_sample,
         /* An isolated >=150 observation no longer ends/restarts a loss. The
            same episode and search direction persist until a credible line
            is sustained, including across weak or opposite-side flashes. */
-        if (strongest < 300 && !faint)
+        if ((strongest < 300) && (!faint))
         {
             p_sample->reacquire_timing = p_sample->medium_timing =
                 p_sample->strong_timing = false;
@@ -272,13 +277,13 @@ circuit_line_demand_motion (circuit_tracker_t * p_sample,
                otherwise sustained >=300 observation. */
 #if defined(CIRCUIT_STATIONARY_SEARCH) || defined(LINE_STATIONARY_SEARCH)
             bool reacquired =
-                (p_sample->strong_timing &&
-                 now - p_sample->strong_since >= C_REACQUIRE_STRONG_US) ||
-                (p_sample->medium_timing &&
-                 now - p_sample->medium_since >= C_REACQUIRE_WEAK_US) ||
-                (p_sample->probe_timing &&
-                 now - p_sample->probe_since >= C_REACQUIRE_FAINT_US);
-            if (reacquired && p_sample->search.active)
+                (((p_sample->strong_timing) &&
+                  (now - p_sample->strong_since >= C_REACQUIRE_STRONG_US)) ||
+                 ((p_sample->medium_timing) &&
+                  (now - p_sample->medium_since >= C_REACQUIRE_WEAK_US))) ||
+                ((p_sample->probe_timing) &&
+                 (now - p_sample->probe_since >= C_REACQUIRE_FAINT_US));
+            if (reacquired && (p_sample->search.active))
             {
 
                 line_search_demand_t found = line_search_stationary_step(
@@ -355,12 +360,13 @@ circuit_line_demand_motion (circuit_tracker_t * p_sample,
                 return demand;
             }
             /* The original brief-gap bridge remains; sustained loss waits at
-               zero until the two-second confirmation opens the bounded sweep. */
+               zero until the two-second confirmation opens the bounded sweep.
+             */
             if (elapsed >= LS_BRIDGE_US)
             {
                 return demand;
             }
-            if (!p_state->recovery && !p_sample->straight_recovery)
+            if ((!p_state->recovery) && (!p_sample->straight_recovery))
             {
                 return demand;
             }
@@ -432,7 +438,8 @@ circuit_line_demand_motion (circuit_tracker_t * p_sample,
 #endif
             /* Unlike V5, do not blindly ignore a real weak return on the
                other sensor. Probe using reflectance balance at reduced speed,
-               keeping the original loss deadline until confirmation succeeds. */
+               keeping the original loss deadline until confirmation succeeds.
+             */
 #if !defined(CIRCUIT_STATIONARY_SEARCH) && !defined(LINE_STATIONARY_SEARCH)
             if (faint && p_sample->probe_timing &&
                 now - p_sample->probe_since >= C_PROBE_US)
@@ -453,11 +460,11 @@ circuit_line_demand_motion (circuit_tracker_t * p_sample,
             demand.target[1] = p_state->recovery > 0 ? 45 : 0;
             /* Brief worn gaps retain the last reliable curve's curvature at
                reduced speed before beginning the usual bounded pivot search. */
-            if (elapsed < C_BRIDGE_US &&
-                ((p_state->recovery > 0 &&
-                  p_sample->bridge[0] < p_sample->bridge[1]) ||
-                 (p_state->recovery < 0 &&
-                  p_sample->bridge[0] > p_sample->bridge[1])))
+            if ((elapsed < C_BRIDGE_US) &&
+                (((p_state->recovery > 0) &&
+                  (p_sample->bridge[0] < p_sample->bridge[1])) ||
+                 ((p_state->recovery < 0) &&
+                  (p_sample->bridge[0] > p_sample->bridge[1]))))
             {
                 demand.target[0] = p_sample->bridge[0];
                 demand.target[1] = p_sample->bridge[1];
@@ -466,7 +473,7 @@ circuit_line_demand_motion (circuit_tracker_t * p_sample,
         }
     }
     symmetric_targets(error, demand.target);
-    if (strongest >= 200 && strongest < 400 && magnitude >= 150)
+    if (((strongest >= 200) && (strongest < 400)) && (magnitude >= 150))
     {
         circuit_faint_targets(error, demand.level, demand.target);
     }
@@ -478,8 +485,8 @@ circuit_line_demand_motion (circuit_tracker_t * p_sample,
     {
         demand.decision = SYM_RIGHT;
     }
-    if (strongest >= 400 && ((error > 80 && p_state->direction > 0) ||
-                             (error < -80 && p_state->direction < 0)))
+    if ((strongest >= 400) && (((error > 80) && (p_state->direction > 0)) ||
+                               ((error < -80) && (p_state->direction < 0))))
     {
         int maximum = demand.target[0] > demand.target[1] ? demand.target[0]
                                                           : demand.target[1];

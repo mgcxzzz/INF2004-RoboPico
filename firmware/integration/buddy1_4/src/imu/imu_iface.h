@@ -103,8 +103,8 @@ typedef enum
 
 /* Field limits (minimum bits, each sized to its range). */
 #define IMU_HEIGHT_MAX_MM                                                      \
-    (255)                      /* 8 bits, 1 mm: humps the car can
-                                         * climb are far below this      */
+    (255)                      /* 8 bits, 1 mm: humps the car can              \
+                                * climb are far below this      */
 #define IMU_PITCH_MAX_DD (900) /* 11 bits signed, +-90.0 deg   */
 
 /* ------------------------------------------------------------------------
@@ -123,9 +123,9 @@ typedef struct
     uint32_t b_odo : 1;     /* Buddy 2 estimate fresh               */
     uint32_t reserved : 1;
     uint16_t t_ms; /* sys_time_us() / 1000, wrapping: the
-                                 * shared 1 us clock is the team's
-                                 * timestamp base (integration test
-                                 * IMU + Motion Control, +-100 ms)      */
+                    * shared 1 us clock is the team's
+                    * timestamp base (integration test
+                    * IMU + Motion Control, +-100 ms)      */
 } imu_event_t;
 
 /* ------------------------------------------------------------------------

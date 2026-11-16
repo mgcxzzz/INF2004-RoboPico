@@ -10,10 +10,11 @@
 #include "src/motion/boosted_wheel.h"
 static inline unsigned circuit_forward_cap (unsigned profile)
 {
-    return profile == 3 ? 420 : profile == 2 ? 360 : 300;
+    return 3 == profile ? 420 : 2 == profile ? 360 : 300;
 }
 /* Carry normal turn feedforward through a loaded capture correction, but do
-   not grant a fresh48% start pulse. Only the selected OUTER wheel calls this. */
+   not grant a fresh48% start pulse. Only the selected OUTER wheel calls this.
+ */
 static inline void circuit_capture_prepare (signed_wheel_t * p_data)
 {
     if (p_data->sign != 1)
@@ -46,16 +47,16 @@ static inline int32_t circuit_wheel_step (signed_wheel_t * p_data,
         return boosted_junction_step(p_data, wheel, wanted, speed, delta_time,
                                      now, true);
     }
-    if (profile == 1)
+    if (1 == profile)
     {
         /* Shared historical controller remains unchanged. In this circuit,
            a falling correction target needs400 rather than100mm/s^2 ramp
            deceleration. Remove retained positive I while actually overspeed. */
-        if (wanted > 0 && p_data->sign == 1 && p_data->pi.ramp > wanted)
+        if ((wanted > 0) && 1 == p_data->sign && (p_data->pi.ramp > wanted))
         {
             p_data->pi.ramp =
                 fmaxf((float)wanted, p_data->pi.ramp - 300.0f * delta_time);
-            if (speed > wanted + 5 && p_data->pi.integral > 0)
+            if ((speed > wanted + 5) && (p_data->pi.integral > 0))
             {
                 p_data->pi.integral = 0;
             }
@@ -64,7 +65,7 @@ static inline int32_t circuit_wheel_step (signed_wheel_t * p_data,
                                             delta_time, now, false);
         /* A low-speed inner wheel must coast instead of continuing to push
            through a correction while still faster than its new target. */
-        if (wanted > 0 && wanted <= 15 && speed > wanted + 5)
+        if (((wanted > 0) && (wanted <= 15)) && (speed > wanted + 5))
         {
             p_data->pi.integral = 0;
             return 0;
@@ -92,12 +93,13 @@ static inline int32_t circuit_wheel_step (signed_wheel_t * p_data,
                               100.0f * delta_time);
     float error = p_data->pi.ramp - speed,
           ff_value = feedforward(wheel, 1, p_data->pi.ramp);
-    float limit = profile == 3 ? 350 : 300;
+    float limit = 3 == profile ? 350 : 300;
     float candidate =
         clampf(p_data->pi.integral + LINE_SPEED_KI * error * delta_time,
                -LINE_SPEED_I_LIMIT, LINE_SPEED_I_LIMIT);
     float proposed = ff_value + LINE_SPEED_KP * error + candidate;
-    if (!((proposed > limit && error > 0) || (proposed < 0 && error < 0)))
+    if (!(((proposed > limit) && (error > 0)) ||
+          ((proposed < 0) && (error < 0))))
     {
         p_data->pi.integral = candidate;
     }
@@ -130,7 +132,7 @@ static inline dual_levels_t circuit_levels (unsigned wheel, int32_t pwm,
     {
         pwm = 0; /* circuit is forward-only, including rolling turns */
     }
-    if (wheel == 0)
+    if (0 == wheel)
     {
         value.a = (uint16_t)pwm;
     }

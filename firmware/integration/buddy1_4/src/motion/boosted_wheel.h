@@ -48,7 +48,7 @@ static inline dual_levels_t boosted_junction_levels (unsigned wheel,
         pwm = -limit;
     }
     uint16_t magnitude = (uint16_t)(pwm < 0 ? -pwm : pwm);
-    bool a_side = wheel == 0 ? pwm > 0 : pwm < 0;
+    bool a_side = 0 == wheel ? pwm > 0 : pwm < 0;
     if (a_side)
     {
         value.a = magnitude;

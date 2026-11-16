@@ -2,7 +2,8 @@
  * @file calibration_presets.h
  * @brief Calibration presets.
  * @details Build-time configuration for the tested application.
- * Coding cleanup does not change calibration, timing, motor or sensor constants.
+ * Coding cleanup does not change calibration, timing, motor or sensor
+ * constants.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 #ifndef SUCCESSFUL_CONTINUOUS_V2_CALIBRATION_H
@@ -24,7 +25,7 @@ static inline line_calibration_t successful_calibration (void)
 static inline bool successful_calibration_boot (line_calibration_t * p_current,
                                                 unsigned version, bool valid)
 {
-    if (valid && version == CALIBRATION_RECORD_VERSION)
+    if (valid && CALIBRATION_RECORD_VERSION == version)
     {
         return false;
     }

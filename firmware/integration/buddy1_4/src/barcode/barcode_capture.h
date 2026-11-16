@@ -1,8 +1,9 @@
 /**
  * @file barcode_capture.h
  * @brief Barcode capture.
- * @details Pure barcode/route logic is called by the ADC owner and emits requests.
- * Native records are not wire packets; preserve both decode directions.
+ * @details Pure barcode/route logic is called by the ADC owner and emits
+ * requests. Native records are not wire packets; preserve both decode
+ * directions.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 #ifndef BARCODE_CAPTURE_H

@@ -1,8 +1,9 @@
 /**
  * @file wifi_packets.h
  * @brief Wifi packets.
- * @details Network helpers validate and explicitly encode bounded application records.
- * Transport calls belong to the configured SDK or RTOS owner, not these codecs.
+ * @details Network helpers validate and explicitly encode bounded application
+ * records. Transport calls belong to the configured SDK or RTOS owner, not
+ * these codecs.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 #ifndef WIFI_PACKETS_H
@@ -88,8 +89,8 @@ typedef struct
  * i16 in 0.1 mm/s @14/@16; target L/R i16 mm/s @18/@20; PWM L/R i16
  * @22/@24; ADC L/R/barcode u16 @26/@28/@30; calibrated line levels L/R
  * u16 0..1000 or 0xffff unavailable @32/@34; barcode calibration is
- * explicitly unavailable (0xffff) @36; line bitmask@38; distance_mm u32@39; heading centidegrees
- * i16 wrapped to +/-18000 @43. */
+ * explicitly unavailable (0xffff) @36; line bitmask@38; distance_mm u32@39;
+ * heading centidegrees i16 wrapped to +/-18000 @43. */
 typedef struct
 {
     uint8_t seq;
@@ -117,9 +118,9 @@ typedef struct
 } wifi_motion_packet_t;
 
 /* Source 10, payload offsets: uptime_ms@0,event@4, ADC left/right/barcode
- * u16 @5/@7/@9, calibrated line levels L/R u16 0..1000 or 0xffff unavailable @11/@13, last decoded
- * letter@15, pending letter/action/revision@16..18, executing
- * action/revision@19..20. */
+ * u16 @5/@7/@9, calibrated line levels L/R u16 0..1000 or 0xffff unavailable
+ * @11/@13, last decoded letter@15, pending letter/action/revision@16..18,
+ * executing action/revision@19..20. */
 typedef struct
 {
     uint8_t seq;
@@ -201,7 +202,8 @@ typedef struct
 } wifi_diagnostics_packet_t;
 
 /* All packers return false for a null pointer or an invalid semantic field.
- * Integers are encoded little-endian; each frame starts with v2 common header. */
+ * Integers are encoded little-endian; each frame starts with v2 common header.
+ */
 bool wpk_heartbeat (const wifi_heartbeat_t * p_in_value,
                     uint8_t out[WPK_HEARTBEAT_BYTES]);
 bool wpk_motion (const wifi_motion_packet_t * p_in_value,

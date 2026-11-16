@@ -1,8 +1,9 @@
 /**
  * @file imu_service.h
  * @brief Imu service.
- * @details Sensor processing owns calibration/terrain state; RTOS readers use copies.
- * Height acceptance and motor assistance are separate from end-run safety.
+ * @details Sensor processing owns calibration/terrain state; RTOS readers use
+ * copies. Height acceptance and motor assistance are separate from end-run
+ * safety.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 /* Buddy4 IMU/ramp add-on for the v2.3 SDK firmware: narrow interface used by

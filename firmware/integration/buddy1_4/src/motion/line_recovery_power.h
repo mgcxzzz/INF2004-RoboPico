@@ -35,7 +35,7 @@ static inline int32_t line_recovery_wheel_step (line_recovery_wheel_t * p_data,
                                                 uint64_t now,
                                                 int32_t actual_previous)
 {
-    if (wheel > 1 || !isfinite(speed) || !isfinite(delta_time))
+    if (((wheel > 1) || (!isfinite(speed))) || (!isfinite(delta_time)))
     {
         *p_data = (line_recovery_wheel_t){0};
         return 0;
@@ -68,7 +68,7 @@ static inline dual_levels_t line_recovery_levels (unsigned wheel, int32_t pwm)
     }
     pwm = line_recovery_output_cap(pwm);
     uint16_t magnitude = (uint16_t)(pwm < 0 ? -pwm : pwm);
-    bool a_side = wheel == 0 ? pwm > 0 : pwm < 0;
+    bool a_side = 0 == wheel ? pwm > 0 : pwm < 0;
     if (a_side)
     {
         value.a = magnitude;

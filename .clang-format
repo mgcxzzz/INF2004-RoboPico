@@ -18,5 +18,5 @@ AllowShortLoopsOnASingleLine: false
 AllowShortBlocksOnASingleLine: Never
 AllowShortCaseLabelsOnASingleLine: false
 BreakStringLiterals: true
-ReflowComments: false
+ReflowComments: true
 LineEnding: LF

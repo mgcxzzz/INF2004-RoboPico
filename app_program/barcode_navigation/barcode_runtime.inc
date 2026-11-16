@@ -1,8 +1,9 @@
 /**
  * @file barcode_runtime.inc
  * @brief Barcode runtime.
- * @details The ADC owner feeds both optical decoders and junction qualification.
- * Accepted navigation crosses the coordinator; this module never writes PWM.
+ * @details The ADC owner feeds both optical decoders and junction
+ * qualification. Accepted navigation crosses the coordinator; this module never
+ * writes PWM.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 /* Included only by line_service.c. Core1 ADC/line owner reads live decoder
@@ -40,20 +41,21 @@ static void barcode_event_packet (const barcode_event_t * p_event,
                                   unsigned event, uint32_t now)
 {
     motion_status_t state = motion_get_status();
-    wifi_nav_packet_t data = {
-        .seq = rn_next_sequence(WPK_SRC_NAV),
-        .uptime_ms = now,
-        .event = event,
-        .letter =
-            p_event->code >= 'A' && p_event->code <= 'Z' ? p_event->code : 0,
-        .action = p_event->action,
-        .map_revision = p_event->map_revision,
-        .generation = state.generation,
-        .fault_bitmap = state.fault,
-        .owner = state.owner,
-        .mode = state.mode,
-        .command_state = state.command_state,
-        .detail = p_event->flags};
+    wifi_nav_packet_t data = {.seq = rn_next_sequence(WPK_SRC_NAV),
+                              .uptime_ms = now,
+                              .event = event,
+                              .letter = (p_event->code >= 'A') &&
+                                                (p_event->code <= 'Z')
+                                            ? p_event->code
+                                            : 0,
+                              .action = p_event->action,
+                              .map_revision = p_event->map_revision,
+                              .generation = state.generation,
+                              .fault_bitmap = state.fault,
+                              .owner = state.owner,
+                              .mode = state.mode,
+                              .command_state = state.command_state,
+                              .detail = p_event->flags};
     uint8_t bytes[WPK_NAV_BYTES];
     if (wpk_nav(&data, bytes))
     {
@@ -64,9 +66,9 @@ static void barcode_publish (uint64_t sample_time)
 {
     (void)sample_time;
     barcode_nav_t * p_count = &g_planner.nav;
-    uint32_t now =
-        board_kernel_ms(); /* Queue freshness uses KERNEL time, not TIMER epoch. */
-    if (!rn_drive_telemetry_enabled() || !rn_drive_online())
+    uint32_t now = board_kernel_ms(); /* Queue freshness uses KERNEL time, not
+                                         TIMER epoch. */
+    if ((!rn_drive_telemetry_enabled()) || (!rn_drive_online()))
     {
         g_barcode.event_seen = p_count->event_sequence;
         g_barcode_peak_sent = g_barcode.peak_serial;
@@ -78,7 +80,7 @@ static void barcode_publish (uint64_t sample_time)
         available = p_count->event_count;
         g_barcode.event_seen = p_count->event_sequence - available;
     }
-    for (unsigned item_index = 0; item_index < 8 && available;
+    for (unsigned item_index = 0; (item_index < 8) && available;
          ++item_index, --available)
     {
         const barcode_event_t * p_event =
@@ -86,16 +88,16 @@ static void barcode_publish (uint64_t sample_time)
                              B_EVENTS];
         ++g_barcode.event_seen;
         unsigned event =
-            p_event->type == B_DECODE           ? WPK_EVENT_DECODED
-            : p_event->type == B_CROSS          ? WPK_EVENT_JUNCTION_CONFIRMED
-            : p_event->type == B_DISPATCH       ? WPK_EVENT_DISPATCH
-            : p_event->type == B_COMPLETE       ? WPK_EVENT_COMPLETED
-            : p_event->type == B_RECOVERY_WAIT  ? WPK_EVENT_RECOVERY_WAIT
-            : p_event->type == B_RECOVERY_SWEEP ? WPK_EVENT_RECOVERY_SWEEP
-            : p_event->type == B_RECOVERY_FOUND ? WPK_EVENT_RECOVERY_FOUND
-            : (p_event->type == B_BAD_FRAME ||
-               p_event->type == B_ANALOG_CONFLICT ||
-               p_event->type == B_RECOVERY_FAIL)
+            B_DECODE == p_event->type           ? WPK_EVENT_DECODED
+            : B_CROSS == p_event->type          ? WPK_EVENT_JUNCTION_CONFIRMED
+            : B_DISPATCH == p_event->type       ? WPK_EVENT_DISPATCH
+            : B_COMPLETE == p_event->type       ? WPK_EVENT_COMPLETED
+            : B_RECOVERY_WAIT == p_event->type  ? WPK_EVENT_RECOVERY_WAIT
+            : B_RECOVERY_SWEEP == p_event->type ? WPK_EVENT_RECOVERY_SWEEP
+            : B_RECOVERY_FOUND == p_event->type ? WPK_EVENT_RECOVERY_FOUND
+            : (B_BAD_FRAME == p_event->type ||
+               B_ANALOG_CONFLICT == p_event->type ||
+               B_RECOVERY_FAIL == p_event->type)
                 ? WPK_EVENT_FAULT
                 : 0;
         if (!event)
@@ -103,10 +105,10 @@ static void barcode_publish (uint64_t sample_time)
             continue;
         }
         barcode_event_packet(p_event, event, now);
-        if (p_event->type == B_DECODE)
+        if (B_DECODE == p_event->type)
         {
             barcode_event_packet(p_event,
-                                 p_event->action == '-' ? WPK_EVENT_UNASSIGNED
+                                 '-' == p_event->action ? WPK_EVENT_UNASSIGNED
                                                         : WPK_EVENT_QUEUED,
                                  now);
             barcode_line_packet(WPK_EVENT_DECODED, now);
@@ -132,7 +134,7 @@ static void barcode_publish (uint64_t sample_time)
 }
 static void barcode_export_wait (void)
 {
-    while (tm_usb_pending() > 1024 && tm_usb_state() == 3)
+    while ((tm_usb_pending() > 1024) && 3 == tm_usb_state())
     {
         (void)tk_dly_tsk(2);
     }
@@ -149,7 +151,7 @@ static void barcode_export (void)
               g_run_calibration.black[0], g_run_calibration.black[1],
               g_run_cal_origin);
     for (unsigned item_index = p_count->event_count;
-         item_index > 0 && tm_usb_state() == 3; --item_index)
+         (item_index > 0) && 3 == tm_usb_state(); --item_index)
     {
         barcode_export_wait();
         const barcode_event_t * p_event =
@@ -163,7 +165,7 @@ static void barcode_export (void)
                   p_event->pattern[2]);
     }
     for (unsigned item_index_value = 0;
-         item_index_value < g_barcode.raw_count && tm_usb_state() == 3;
+         (item_index_value < g_barcode.raw_count) && 3 == tm_usb_state();
          ++item_index_value)
     {
         barcode_export_wait();

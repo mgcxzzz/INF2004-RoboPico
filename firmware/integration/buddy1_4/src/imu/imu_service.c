@@ -1,15 +1,17 @@
 /**
  * @file imu_service.c
  * @brief Imu service.
- * @details Sensor processing owns calibration/terrain state; RTOS readers use copies.
- * Height acceptance and motor assistance are separate from end-run safety.
+ * @details Sensor processing owns calibration/terrain state; RTOS readers use
+ * copies. Height acceptance and motor assistance are separate from end-run
+ * safety.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 /* Buddy4 IMU/ramp service on the v2.3 SDK firmware.
  *
  * Port of app_program/subsystem4/task_imu.c (RTOS) with only the kernel and
  * Safety/NAV couplings replaced:
- *   - 20 ms cyclic task          -> b4v23_due()/b4v23_tick() from v2.3's superloop
+ *   - 20 ms cyclic task          -> b4v23_due()/b4v23_tick() from v2.3's
+ * superloop
  *   - nav-state message queue    -> one mission edge per tick from the harness
  *   - b2_odometry snapshot       -> b4v23_odo_t from v2.3's own encoder drain
  *   - safety_report_fault/sys_fault (shock, IMU fault) -> not present in v2.3;
@@ -184,7 +186,7 @@ static void publish_motion_snapshot (void)
 #endif
     if (g_odo.have)
     {
-        if (g_odo.clean && g_odo.age_ms <= B4_MOTION_FRESH_MS)
+        if ((g_odo.clean) && (g_odo.age_ms <= B4_MOTION_FRESH_MS))
         {
             sample.flags |= B2_TLM_ODO_VALID;
         }
@@ -317,7 +319,7 @@ void b4v23_init (b4v23_send_fn p_send_value, bool console)
 
 bool b4v23_due (uint64_t now_us)
 {
-    return g_started && now_us >= g_next_us;
+    return g_started && (now_us >= g_next_us);
 }
 uint32_t b4v23_last_tick_us (void)
 {
@@ -346,12 +348,12 @@ void b4v23_tick (uint64_t now_us, b4v23_mission_t mission,
 #ifdef APP_RTOS_RELEASE
     bool lift_fresh_batch = false;
 #endif
-    g_next_us =
-        (g_next_us == 0U || now_us - g_next_us > (uint64_t)B4_PERIOD_MS * 1000U)
-            ? now_us +
-                  (uint64_t)B4_PERIOD_MS * 1000U /* (re)start the schedule */
-            : g_next_us +
-                  (uint64_t)B4_PERIOD_MS * 1000U; /* fixed rate, no drift  */
+    g_next_us = (0U == g_next_us ||
+                 (now_us - g_next_us > (uint64_t)B4_PERIOD_MS * 1000U))
+                    ? now_us + (uint64_t)B4_PERIOD_MS *
+                                   1000U /* (re)start the schedule */
+                    : g_next_us + (uint64_t)B4_PERIOD_MS *
+                                      1000U; /* fixed rate, no drift  */
     if (p_odo_value)
     {
         g_odo = *p_odo_value;
@@ -361,9 +363,9 @@ void b4v23_tick (uint64_t now_us, b4v23_mission_t mission,
         b4_mission(&g_ctx, map_mission(mission), now, &imu_out);
     }
 #ifdef APP_RTOS_RELEASE
-    bool lift_calibrated = (g_ctx.state != IMU_ST_INIT) &&
-                           (g_ctx.state != IMU_ST_CALIBRATING) &&
-                           (g_ctx.state != IMU_ST_FAULT);
+    bool lift_calibrated =
+        ((g_ctx.state != IMU_ST_INIT) && (g_ctx.state != IMU_ST_CALIBRATING)) &&
+        (g_ctx.state != IMU_ST_FAULT);
 #endif
     g_in.t_us = now;
     g_in.gap_us = now - g_last_us;
@@ -392,10 +394,10 @@ void b4v23_tick (uint64_t now_us, b4v23_mission_t mission,
             to_car(&g_raw[index], &g_in.s[index]);
         }
         /* b4_odometry_adapter.c semantics, from v2.3's encoders. */
-        g_in.b_motion = g_odo.have && g_odo.clean &&
-                        (g_odo.age_ms <= B4_MOTION_FRESH_MS) &&
-                        __builtin_isfinite(g_odo.centre_mm) &&
-                        __builtin_isfinite(g_odo.heading_dd);
+        g_in.b_motion = ((((g_odo.have) && (g_odo.clean)) &&
+                          (g_odo.age_ms <= B4_MOTION_FRESH_MS)) &&
+                         (__builtin_isfinite(g_odo.centre_mm))) &&
+                        (__builtin_isfinite(g_odo.heading_dd));
         if (g_in.b_motion)
         {
             int32_t mm_value =
@@ -406,7 +408,7 @@ void b4v23_tick (uint64_t now_us, b4v23_mission_t mission,
             g_in.distance_mm = (int16_t)(uint16_t)mm_value;
             g_in.heading_dd = (int16_t)(uint16_t)dd_value;
             g_in.b_fine_motion =
-                (fine >= (double)INT32_MIN && fine <= (double)INT32_MAX);
+                ((fine >= (double)INT32_MIN) && (fine <= (double)INT32_MAX));
             g_in.distance_um = g_in.b_fine_motion ? (int32_t)fine : 0;
         }
         else
@@ -417,11 +419,11 @@ void b4v23_tick (uint64_t now_us, b4v23_mission_t mission,
             g_in.distance_um = 0;
         }
 #ifdef APP_RTOS_IMU
-        bool calibrating = g_ctx.state == IMU_ST_CALIBRATING;
+        bool calibrating = IMU_ST_CALIBRATING == g_ctx.state;
         if (calibrating)
         {
             g_calibration.failed_reads += !g_in.b_read_ok;
-            g_calibration.empty_reads += g_in.b_read_ok && !g_in.n;
+            g_calibration.empty_reads += (g_in.b_read_ok) && (!g_in.n);
             g_calibration.late_gaps += g_in.gap_us > B4_LATE_US;
             g_calibration.fifo_overruns += g_in.b_overrun;
         }
@@ -430,8 +432,10 @@ void b4v23_tick (uint64_t now_us, b4v23_mission_t mission,
         /* Keep the guard independent of estimator validity. It sees every
          * fresh FIFO batch after car-axis conversion, including idle and
          * samples that the hump geometry/MAD filters will reject. */
-        lift_fresh_batch = lift_calibrated && g_in.b_read_ok && (g_in.n > 0U) &&
-                           !g_in.b_overrun && (g_in.gap_us <= B4_LATE_US);
+        lift_fresh_batch =
+            (((lift_calibrated && (g_in.b_read_ok)) && (g_in.n > 0U)) &&
+             (!g_in.b_overrun)) &&
+            (g_in.gap_us <= B4_LATE_US);
 #endif
         b4_tick(&g_ctx, &g_in, &imu_out);
 #ifdef APP_RTOS_IMU
@@ -455,8 +459,8 @@ void b4v23_tick (uint64_t now_us, b4v23_mission_t mission,
         processed = g_in.b_read_ok;
     }
 #ifdef APP_RTOS_RELEASE
-    lift_fresh_batch = lift_fresh_batch && (g_ctx.state != IMU_ST_INIT) &&
-                       (g_ctx.state != IMU_ST_CALIBRATING) &&
+    lift_fresh_batch = ((lift_fresh_batch && (g_ctx.state != IMU_ST_INIT)) &&
+                        (g_ctx.state != IMU_ST_CALIBRATING)) &&
                        (g_ctx.state != IMU_ST_FAULT);
     ri_lift_guard_samples(g_ctx.base, g_ctx.g_mg, g_in.s, g_in.n, B4_SAMPLE_US,
                           lift_fresh_batch);
@@ -465,12 +469,12 @@ void b4v23_tick (uint64_t now_us, b4v23_mission_t mission,
     g_tilt.seq++;
     g_tilt.t_us = now_us;
     g_tilt.valid =
-        processed && g_ctx.b_side_valid &&
-        ((g_ctx.state == IMU_ST_TRACKING) || (g_ctx.state == IMU_ST_HUMP));
+        (processed && (g_ctx.b_side_valid)) &&
+        ((IMU_ST_TRACKING == g_ctx.state) || (IMU_ST_HUMP == g_ctx.state));
     g_tilt.height_mm = g_tilt.valid ? g_ctx.side_height_mm : 0;
     g_tilt.tracking =
-        processed && ((g_ctx.state == IMU_ST_TRACKING) ||
-                      (g_ctx.state == IMU_ST_HUMP)); /* ramp-assist v0.3 */
+        processed && ((IMU_ST_TRACKING == g_ctx.state) ||
+                      (IMU_ST_HUMP == g_ctx.state)); /* ramp-assist v0.3 */
     g_tilt.quality_reasons =
         processed ? g_ctx.side_quality_reason : 0U; /* ramp-assist v0.3 */
     handle(&imu_out, now);

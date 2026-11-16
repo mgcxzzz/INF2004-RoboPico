@@ -1,8 +1,9 @@
 /**
  * @file diagnostics_adapter.h
  * @brief Diagnostics adapter.
- * @details Public feature contract. Requests cross coordinator ownership checks;
- * callers observe completion/status separately and must respect task context.
+ * @details Public feature contract. Requests cross coordinator ownership
+ * checks; callers observe completion/status separately and must respect task
+ * context.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 /* Included only after the baseline hardware globals and helpers. */

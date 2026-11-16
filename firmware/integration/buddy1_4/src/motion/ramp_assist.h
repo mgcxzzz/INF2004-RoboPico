@@ -119,22 +119,23 @@
 #define RA_DESCENT_TICKS                                                       \
     5 /* ... for 100 ms (5 consecutive valid samples)       */
 #define RA_DETECTOR_VERSION 6
-#define RA_TIMEOUT_US 2500000u /* cumulative assisted time per episode        */
+#define RA_TIMEOUT_US 2500000u /* cumulative assisted time per episode */
 #define RA_INVALID_US 40000u   /* invalid tilt longer than this ends assist   */
 #define RA_SKIP_HOLD_US                                                        \
     150000u /* v0.3: max hold through ACCEL/SPREAD-only exclusion */
 #define RA_Q_SPREAD                                                            \
-    1u /* = B4_Q_SPREAD (buddy4/subsystem4/imu_proc.h; checked by the host test) */
+    1u /* = B4_Q_SPREAD (buddy4/subsystem4/imu_proc.h; checked by the host     \
+          test) */
 #define RA_Q_ACCEL 4u      /* = B4_Q_ACCEL */
 #define RA_STALE_US 60000u /* no Buddy4 sample for this long ends assist  */
 #define RA_ALPHA_MILLI 200 /* +20 % of the existing feedforward           */
 #define RA_SLEW_MILLI_PER_S                                                    \
     1000                   /* 0 -> 200 milli in 200 ms (and back)         */
 #define RA_PWM_CAP 40      /* per-wheel absolute cap on added PWM         */
-#define RA_STALL_MM_S 5.0f /* v0.4: both wheels slower than this ...          */
+#define RA_STALL_MM_S 5.0f /* v0.4: both wheels slower than this ... */
 #define RA_STALL_US                                                            \
     200000u               /* ... for this long while assisting = stalled     */
-#define RA_PUSH_PWM 60.0f /* v0.4: absolute stall push per wheel             */
+#define RA_PUSH_PWM 60.0f /* v0.4: absolute stall push per wheel */
 #define RA_PUSH_SLEW                                                           \
     200.0f /* PWM/s: 0 -> 60 in 0.3 s and back                 */
 #define RA_PUSH_RELEASE_MM_S                                                   \
@@ -174,30 +175,26 @@ enum
     RA_EVT_ACTIVATE = 1,
     RA_EVT_END = 2,
     RA_EVT_PUSH = 3 /* v0.4 stall push started */,
-    RA_EVT_HOLD_END =
-        4 /* v0.6 speed hold ended (v0.5: tilt floor ended); it starts at activation */
+    RA_EVT_HOLD_END = 4 /* v0.6 speed hold ended (v0.5: tilt floor ended); it
+                           starts at activation */
 };
 
 typedef struct
 {
     uint64_t now_us;
-    float dt; /* seconds since the previous call (control period) */
-    bool
-        run_active; /* v2.3 guard active (cleared by Stop, ESTOP, faults, run end) */
-    bool
-        auto_mode; /* coordinator session active in MOTION_AUTO (not paused)       */
-    bool
-        following; /* existing continuous drive selected and not in line recovery  */
-    uint32_t
-        tilt_seq; /* increments on every Buddy4 20 ms period                      */
+    float dt;        /* seconds since the previous call (control period) */
+    bool run_active; /* v2.3 guard active (cleared by Stop, ESTOP, faults, run
+                        end) */
+    bool auto_mode; /* coordinator session active in MOTION_AUTO (not paused) */
+    bool following; /* existing continuous drive selected and not in line
+                       recovery  */
+    uint32_t tilt_seq; /* increments on every Buddy4 20 ms period */
     uint64_t tilt_us;
     bool tilt_valid;
-    int16_t
-        tilt_mm; /* right-minus-left, only meaningful when valid                  */
-    bool
-        tilt_skip; /* v0.3: not valid ONLY because of Buddy4 ACCEL/SPREAD exclusion  */
-    float speed_mm_s
-        [2]; /* v0.4: measured wheel speeds (v2.3 velocity[])                 */
+    int16_t tilt_mm;     /* right-minus-left, only meaningful when valid     */
+    bool tilt_skip;      /* v0.3: not valid ONLY because of Buddy4 ACCEL/SPREAD
+                            exclusion  */
+    float speed_mm_s[2]; /* v0.4: measured wheel speeds (v2.3 velocity[]) */
 } ramp_assist_input_t;
 
 typedef struct
@@ -291,12 +288,13 @@ static inline int16_t ra_median_push (int16_t * p_m_value, uint8_t * p_count,
                                    ? first
                                    : (second > character ? character : second));
 }
-/* v0.3: a non-valid Buddy4 sample that is ONLY an acceleration/spread exclusion while Buddy4 is
- * tracking (no turn, reverse, impact, timing, gravity or unavailable reason). */
+/* v0.3: a non-valid Buddy4 sample that is ONLY an acceleration/spread exclusion
+ * while Buddy4 is tracking (no turn, reverse, impact, timing, gravity or
+ * unavailable reason). */
 static inline bool ra_tilt_skip (bool tracking, bool valid, uint8_t reasons)
 {
-    return tracking && !valid && reasons != 0u &&
-           (reasons & (uint8_t) ~(RA_Q_SPREAD | RA_Q_ACCEL)) == 0u;
+    return ((tracking && (!valid)) && (reasons != 0u)) &&
+           0u == (reasons & (uint8_t) ~(RA_Q_SPREAD | RA_Q_ACCEL));
 }
 static inline uint8_t ra_inc8 (uint8_t value)
 {
@@ -329,7 +327,7 @@ static inline void ra_hold_off (ramp_assist_t * p_first, uint64_t now)
     }
     p_first->hold_on = false;
     p_first->hold_used_us += now - p_first->hold_since_us;
-    if (p_first->pending_event == 0xff)
+    if (0xff == p_first->pending_event)
     {
         p_first->pending_event = RA_EVT_HOLD_END;
     }
@@ -367,10 +365,10 @@ static inline float ramp_assist_step (ramp_assist_t * p_first,
         return 0.0f;
     }
     /* new Buddy4 sample? */
-    if (p_in_value->tilt_seq != p_first->last_seq || !p_first->have_sample)
+    if ((p_in_value->tilt_seq != p_first->last_seq) || (!p_first->have_sample))
     {
-        bool fresh =
-            !p_first->have_sample || p_in_value->tilt_seq != p_first->last_seq;
+        bool fresh = (!p_first->have_sample) ||
+                     (p_in_value->tilt_seq != p_first->last_seq);
         p_first->have_sample = true;
         p_first->last_seq = p_in_value->tilt_seq;
         if (fresh)
@@ -411,7 +409,8 @@ static inline float ramp_assist_step (ramp_assist_t * p_first,
                 }
                 const int16_t hf_value = ra_median_push(
                     p_first->med, &p_first->med_n, mag); /* v0.2 filtered |h| */
-                /* level band (filtered): ends activations after 100 ms, episodes after 200 ms */
+                /* level band (filtered): ends activations after 100 ms,
+                 * episodes after 200 ms */
                 if (hf_value <= RA_EXIT_MM)
                 {
                     p_first->level_ticks = ra_inc8(p_first->level_ticks);
@@ -419,9 +418,9 @@ static inline float ramp_assist_step (ramp_assist_t * p_first,
                     {
                         p_first->level_since_us = p_in_value->tilt_us;
                     }
-                    if (p_in_value->tilt_us - p_first->level_since_us >=
-                            RA_LEVEL_REARM_US &&
-                        !p_first->assisting)
+                    if ((p_in_value->tilt_us - p_first->level_since_us >=
+                         RA_LEVEL_REARM_US) &&
+                        (!p_first->assisting))
                     {
                         ra_end_episode(p_first, now);
                     }
@@ -444,9 +443,9 @@ static inline float ramp_assist_step (ramp_assist_t * p_first,
                     else
                     {
                         bool falling =
-                            p_first->peak_mm >= RA_DESCENT_MIN_PEAK &&
-                            (int32_t)hf_value * RA_DESCENT_DEN <=
-                                (int32_t)p_first->peak_mm * RA_DESCENT_NUM;
+                            (p_first->peak_mm >= RA_DESCENT_MIN_PEAK) &&
+                            ((int32_t)hf_value * RA_DESCENT_DEN <=
+                             (int32_t)p_first->peak_mm * RA_DESCENT_NUM);
                         p_first->drop_ticks =
                             falling ? ra_inc8(p_first->drop_ticks) : 0;
                         if (p_first->drop_ticks >= RA_DESCENT_TICKS)
@@ -455,12 +454,12 @@ static inline float ramp_assist_step (ramp_assist_t * p_first,
                         }
                     }
                 }
-                else if (!p_first->latched && p_in_value->auto_mode &&
-                         p_in_value->following &&
-                         p_first->episode_us < RA_TIMEOUT_US)
+                else if ((((!p_first->latched) && (p_in_value->auto_mode)) &&
+                          (p_in_value->following)) &&
+                         (p_first->episode_us < RA_TIMEOUT_US))
                 {
-                    if (mag >= RA_ENTER_MM &&
-                        (p_first->over_ticks == 0 || sg_value == p_first->sign))
+                    if ((mag >= RA_ENTER_MM) && (0 == p_first->over_ticks ||
+                                                 (sg_value == p_first->sign)))
                     {
                         p_first->sign = sg_value;
                         p_first->over_ticks = ra_inc8(p_first->over_ticks);
@@ -477,8 +476,8 @@ static inline float ramp_assist_step (ramp_assist_t * p_first,
                         p_first->drop_ticks = p_first->level_ticks = 0;
                         p_first->activations = ra_inc8(p_first->activations);
                         p_first->pending_event = RA_EVT_ACTIVATE;
-                        if (!p_first->hold_on &&
-                            p_first->hold_used_us < RA_HOLD_MAX_US)
+                        if ((!p_first->hold_on) &&
+                            (p_first->hold_used_us < RA_HOLD_MAX_US))
                         { /* v0.6 */
                             p_first->hold_on = true;
                             p_first->hold_since_us = now;
@@ -491,7 +490,7 @@ static inline float ramp_assist_step (ramp_assist_t * p_first,
                     p_first->over_ticks = 0;
                 }
             }
-            if (!p_in_value->tilt_valid && !p_first->hold_inv_since_us)
+            if ((!p_in_value->tilt_valid) && (!p_first->hold_inv_since_us))
             {
                 p_first->hold_inv_since_us =
                     p_in_value->tilt_us ? p_in_value->tilt_us : 1; /* v0.6 */
@@ -500,10 +499,11 @@ static inline float ramp_assist_step (ramp_assist_t * p_first,
             {
                 /* handled above */
             }
-            else if (p_in_value->tilt_skip && p_first->assisting &&
-                     !p_first->invalid_since_us)
+            else if (((p_in_value->tilt_skip) && (p_first->assisting)) &&
+                     (!p_first->invalid_since_us))
             {
-                /* v0.3: acceleration/spread exclusion only: hold, freeze the detector */
+                /* v0.3: acceleration/spread exclusion only: hold, freeze the
+                 * detector */
                 p_first->int_invalid = ra_inc8(p_first->int_invalid);
                 p_first->int_run = 0;
                 if (!p_first->skip_since_us)
@@ -545,13 +545,13 @@ static inline float ramp_assist_step (ramp_assist_t * p_first,
         {
             ra_end(p_first, RA_END_STALE, now, false);
         }
-        else if (p_first->invalid_since_us &&
-                 now - p_first->invalid_since_us >= RA_INVALID_US)
+        else if ((p_first->invalid_since_us) &&
+                 (now - p_first->invalid_since_us >= RA_INVALID_US))
         {
             ra_end(p_first, RA_END_INVALID, now, false);
         }
-        else if (p_first->skip_since_us &&
-                 now - p_first->skip_since_us >= RA_SKIP_HOLD_US)
+        else if ((p_first->skip_since_us) &&
+                 (now - p_first->skip_since_us >= RA_SKIP_HOLD_US))
         {
             ra_end(p_first, RA_END_INVALID, now, false);
         }
@@ -575,20 +575,21 @@ static inline float ramp_assist_step (ramp_assist_t * p_first,
     }
     if (p_first->hold_on)
     { /* v0.6 hold end conditions */
-        bool end = p_first->hold_used_us + (now - p_first->hold_since_us) >=
-                       RA_HOLD_MAX_US ||
-                   now - p_first->last_sample_us > RA_HOLD_STALE_US ||
-                   (p_first->hold_inv_since_us &&
-                    now - p_first->hold_inv_since_us >= RA_HOLD_INVALID_US) ||
-                   (p_first->level_since_us &&
-                    p_first->last_sample_us - p_first->level_since_us >=
-                        RA_LEVEL_REARM_US);
+        bool end =
+            (((p_first->hold_used_us + (now - p_first->hold_since_us) >=
+               RA_HOLD_MAX_US) ||
+              (now - p_first->last_sample_us > RA_HOLD_STALE_US)) ||
+             ((p_first->hold_inv_since_us) &&
+              (now - p_first->hold_inv_since_us >= RA_HOLD_INVALID_US))) ||
+            ((p_first->level_since_us) &&
+             (p_first->last_sample_us - p_first->level_since_us >=
+              RA_LEVEL_REARM_US));
         if (end)
         {
             ra_hold_off(p_first, now);
         }
     }
-    if (!p_in_value->auto_mode || !p_in_value->following)
+    if ((!p_in_value->auto_mode) || (!p_in_value->following))
     {
         p_first->alpha_milli = 0.0f;
         p_first->over_ticks = 0;
@@ -626,7 +627,7 @@ static inline float ramp_assist_step (ramp_assist_t * p_first,
         float v0_value = fabsf(p_in_value->speed_mm_s[0]),
               v1_value = fabsf(p_in_value->speed_mm_s[1]),
               vmax = v0_value > v1_value ? v0_value : v1_value;
-        if (p_first->assisting && vmax < RA_STALL_MM_S)
+        if ((p_first->assisting) && (vmax < RA_STALL_MM_S))
         {
             if (!p_first->stall_since_us)
             {
@@ -638,15 +639,15 @@ static inline float ramp_assist_step (ramp_assist_t * p_first,
             p_first->stall_since_us = 0;
         }
         bool budget = p_first->push_used_us < RA_PUSH_MAX_US;
-        bool want =
-            p_first->assisting && budget &&
-            (p_first->pushing ? vmax < RA_PUSH_RELEASE_MM_S
-                              : (p_first->stall_since_us &&
-                                 now - p_first->stall_since_us >= RA_STALL_US));
-        if (want && !p_first->pushing)
+        bool want = ((p_first->assisting) && budget) &&
+                    (p_first->pushing
+                         ? vmax < RA_PUSH_RELEASE_MM_S
+                         : ((p_first->stall_since_us) &&
+                            (now - p_first->stall_since_us >= RA_STALL_US)));
+        if (want && (!p_first->pushing))
         {
             p_first->pushes = ra_inc8(p_first->pushes);
-            if (p_first->pending_event == 0xff)
+            if (0xff == p_first->pending_event)
             {
                 p_first->pending_event = RA_EVT_PUSH;
             }
@@ -684,17 +685,20 @@ static inline float ramp_assist_step (ramp_assist_t * p_first,
 }
 
 /* Source-15 telemetry payload (little endian, 28 bytes; frame 31 bytes):
- *  0 u32 uptime_ms         4 u8 event (RA_EVT_*; 3 = stall push started, 4 = speed hold ended (v0.5: tilt floor ended))    5 u8 flags (bit0 active build,
+ *  0 u32 uptime_ms         4 u8 event (RA_EVT_*; 3 = stall push started, 4 =
+ * speed hold ended (v0.5: tilt floor ended))    5 u8 flags (bit0 active build,
  *  bit1 assisting, bit2 latched, bit3 last sample valid, bits4-6 detector
- *  version: 0 = v0.1, 2-6 = v0.2-v0.6; bit7 powered-estimator v0.2) 6 u8 last end reason
- *  7 u8 activations        8 u16 alpha_milli         10 i16 added PWM left
- * 12 i16 added PWM right (shadow build: what WOULD be added; v0.4 includes the stall push)
- * 14 i8 current height mm (-128 = invalid)          15 i8 activation peak |mm| (v0.2: median-filtered)
- * 16 i8 interval max mm (-128 none)  17 i8 interval min mm (127 none)
- * 18 u8 valid samples  19 u8 invalid samples  20 u8 longest run >= enter (samples)
- * 21 u8 max |I| left   22 u8 max |I| right (continuous controller, 0..100; v0.6: 0..255, held limit 300 reported as 255)
- * 23 u8 control ticks with either |I| at its active limit - 1 (controller authority limit)
- * 24 u16 active_ms (current or last activation)  26 i16 peak added PWM (activation)
+ *  version: 0 = v0.1, 2-6 = v0.2-v0.6; bit7 powered-estimator v0.2) 6 u8 last
+ * end reason 7 u8 activations        8 u16 alpha_milli         10 i16 added PWM
+ * left 12 i16 added PWM right (shadow build: what WOULD be added; v0.4 includes
+ * the stall push) 14 i8 current height mm (-128 = invalid)          15 i8
+ * activation peak |mm| (v0.2: median-filtered) 16 i8 interval max mm (-128
+ * none)  17 i8 interval min mm (127 none) 18 u8 valid samples  19 u8 invalid
+ * samples  20 u8 longest run >= enter (samples) 21 u8 max |I| left   22 u8 max
+ * |I| right (continuous controller, 0..100; v0.6: 0..255, held limit 300
+ * reported as 255) 23 u8 control ticks with either |I| at its active limit - 1
+ * (controller authority limit) 24 u16 active_ms (current or last activation) 26
+ * i16 peak added PWM (activation)
  */
 #define RA_TLM_SOURCE 15u
 #define RA_TLM_PAYLOAD_BYTES 28u

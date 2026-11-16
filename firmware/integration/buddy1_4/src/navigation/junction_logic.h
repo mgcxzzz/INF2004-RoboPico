@@ -58,8 +58,8 @@ typedef struct
 } side_calibration_t;
 static inline bool side_valid (const side_calibration_t * p_state)
 {
-    return p_state->mask == 3 && p_state->white <= 1 && p_state->black <= 1 &&
-           p_state->white != p_state->black;
+    return 3 == p_state->mask && (p_state->white <= 1) &&
+           (p_state->black <= 1) && (p_state->white != p_state->black);
 }
 typedef struct
 {
@@ -121,7 +121,7 @@ static inline void j_begin_mode (junction_t * p_other_index, unsigned mode,
                                  const junction_input_t * p_index)
 {
     j_begin(p_other_index, mode != 1, p_index);
-    p_other_index->rolling = mode == 3;
+    p_other_index->rolling = 3 == mode;
 }
 static inline float j_turn_start_offset (const junction_t * p_other_index)
 {
@@ -135,7 +135,8 @@ static inline void j_fail (junction_t * p_other_index, unsigned why)
 static inline bool j_still (junction_t * p_other_index,
                             const junction_input_t * p_index)
 {
-    bool still = fabsf(p_index->speed[0]) < 5 && fabsf(p_index->speed[1]) < 5;
+    bool still =
+        (fabsf(p_index->speed[0]) < 5) && (fabsf(p_index->speed[1]) < 5);
     if (!still)
     {
         p_other_index->still_timing = false;
@@ -146,8 +147,8 @@ static inline bool j_still (junction_t * p_other_index,
         p_other_index->still_timing = true;
         p_other_index->still_us = p_index->now;
     }
-    return p_index->now - p_other_index->phase_us >= 300000 &&
-           p_index->now - p_other_index->still_us >= 200000;
+    return (p_index->now - p_other_index->phase_us >= 300000) &&
+           (p_index->now - p_other_index->still_us >= 200000);
 }
 static inline void j_start_turn (junction_t * p_other_index,
                                  const junction_input_t * p_index)
@@ -168,8 +169,9 @@ static inline float j_rotation (const junction_t * p_other_index,
            TRACK_MM * (180.0f / 3.14159265358979323846f);
 }
 /* Mode3 only: first sight of the outgoing stripe starts forward alignment.
- * exit_origin holds absolute path at acquisition entry, then mean wheel position
- * at J_EXIT entry. Reuse existing storage so saved V1..V5 record ABI is intact. */
+ * exit_origin holds absolute path at acquisition entry, then mean wheel
+ * position at J_EXIT entry. Reuse existing storage so saved V1..V5 record ABI
+ * is intact. */
 static inline analog_demand_t j_acquire (junction_t * p_other_index,
                                          const line_calibration_t * p_character,
                                          const junction_input_t * p_index)
@@ -178,8 +180,9 @@ static inline analog_demand_t j_acquire (junction_t * p_other_index,
         &p_other_index->follower, p_character, p_index->adc[0], p_index->adc[1],
         p_index->now, (uint32_t)p_index->path);
     p_other_index->turn_degrees = j_rotation(p_other_index, p_index);
-    if (p_other_index->turn_degrees < 60 || p_other_index->turn_degrees > 115 ||
-        p_index->path - p_other_index->exit_origin >= J_ALIGN_MM)
+    if (((p_other_index->turn_degrees < 60) ||
+         (p_other_index->turn_degrees > 115)) ||
+        (p_index->path - p_other_index->exit_origin >= J_ALIGN_MM))
     {
         j_fail(p_other_index, J_BRANCH_MISSING);
     }
@@ -191,7 +194,7 @@ static inline analog_demand_t j_acquire (junction_t * p_other_index,
     {
         j_fail(p_other_index, J_LINE_LOST);
     }
-    bool white = demand.level[0] < 150 && demand.level[1] < 150;
+    bool white = (demand.level[0] < 150) && (demand.level[1] < 150);
     if (white)
     {
         if (!p_other_index->off_timing)
@@ -226,8 +229,8 @@ static inline analog_demand_t j_acquire (junction_t * p_other_index,
     demand.decision = error > 80    ? SYM_LEFT
                       : error < -80 ? SYM_RIGHT
                                     : SYM_STRAIGHT;
-    bool aligned =
-        demand.level[0] >= 400 && demand.level[1] >= 400 && magnitude <= 350;
+    bool aligned = ((demand.level[0] >= 400) && (demand.level[1] >= 400)) &&
+                   (magnitude <= 350);
     if (aligned)
     {
         if (!p_other_index->line_timing)
@@ -235,8 +238,8 @@ static inline analog_demand_t j_acquire (junction_t * p_other_index,
             p_other_index->line_timing = true;
             p_other_index->line_us = p_index->now;
         }
-        if (p_other_index->phase == J_ACQUIRE &&
-            p_index->now - p_other_index->line_us >= 80000)
+        if (J_ACQUIRE == p_other_index->phase &&
+            (p_index->now - p_other_index->line_us >= 80000))
         {
             p_other_index->exit_origin = j_mean(p_index);
             j_enter(p_other_index, J_EXIT, p_index->now);
@@ -246,17 +249,18 @@ static inline analog_demand_t j_acquire (junction_t * p_other_index,
     {
         p_other_index->line_timing = false;
     }
-    if (p_other_index->phase == J_FAULT)
+    if (J_FAULT == p_other_index->phase)
     {
         demand.stop = true;
         demand.target[0] = demand.target[1] = 0;
     }
     return demand;
 }
-/* Cross detection is ONLY valid on a straight, with NO barcode/other side marks.
- * The side sensing point is approximately 92mm ahead of the wheel axle.
+/* Cross detection is ONLY valid on a straight, with NO barcode/other side
+ * marks. The side sensing point is approximately 92mm ahead of the wheel axle.
  * Record both cross-arm edges; their midpoint plus92mm is the axle target.
- * This is a provisional geometric value, not calibrated stopping compensation. */
+ * This is a provisional geometric value, not calibrated stopping compensation.
+ */
 static inline analog_demand_t
 junction_step (junction_t * p_other_index,
                const line_calibration_t * p_character,
@@ -295,13 +299,13 @@ junction_step (junction_t * p_other_index,
             j_fail(p_other_index, J_LINE_LOST);
             break;
         }
-        if (!p_index->side_black &&
-            p_index->now - p_other_index->edge_us >= 100000)
+        if ((!p_index->side_black) &&
+            (p_index->now - p_other_index->edge_us >= 100000))
         {
             p_other_index->side_armed = true;
         }
-        if (p_index->side_black &&
-            p_index->now - p_other_index->edge_us >= 20000)
+        if ((p_index->side_black) &&
+            (p_index->now - p_other_index->edge_us >= 20000))
         {
             if (!p_other_index->side_armed)
             {
@@ -317,8 +321,8 @@ junction_step (junction_t * p_other_index,
             demand.target[0] = demand.target[1] = 30;
             demand.stop = false;
         }
-        else if (p_index->now - p_other_index->phase_us >= 12000000 ||
-                 mean >= 450)
+        else if ((p_index->now - p_other_index->phase_us >= 12000000) ||
+                 (mean >= 450))
         {
             j_fail(p_other_index, J_NO_CROSS);
         }
@@ -332,13 +336,13 @@ junction_step (junction_t * p_other_index,
             j_fail(p_other_index, J_CENTRE_DRIFT);
             break;
         }
-        if (!p_other_index->striped && !p_index->side_black &&
-            p_index->now - p_other_index->edge_us >= 20000)
+        if (((!p_other_index->striped) && (!p_index->side_black)) &&
+            (p_index->now - p_other_index->edge_us >= 20000))
         {
             p_other_index->trailing_mm = p_other_index->edge_mm;
             float width =
                 p_other_index->trailing_mm - p_other_index->leading_mm;
-            if (width < 6 || width > 40)
+            if ((width < 6) || (width > 40))
             {
                 j_fail(p_other_index, J_BAD_STRIPE);
                 break;
@@ -349,20 +353,21 @@ junction_step (junction_t * p_other_index,
                     0.5f +
                 92.0f - j_turn_start_offset(p_other_index);
         }
-        if ((!p_other_index->striped &&
-             mean - p_other_index->leading_mm > 50) ||
-            p_index->now - p_other_index->phase_us >= 6000000)
+        if (((!p_other_index->striped) &&
+             (mean - p_other_index->leading_mm > 50)) ||
+            (p_index->now - p_other_index->phase_us >= 6000000))
         {
             j_fail(p_other_index, J_BAD_STRIPE);
             break;
         }
         float remaining = p_other_index->centre_mm - mean;
-        if (p_other_index->striped && remaining <= 1.0f)
+        if ((p_other_index->striped) && (remaining <= 1.0f))
         {
             if (p_other_index->rolling)
             {
                 /* No reversal: keep the right wheel rolling through the corner
-                   instead of stopping both wheels and overcoming stiction again. */
+                   instead of stopping both wheels and overcoming stiction
+                   again. */
                 j_start_turn(p_other_index, p_index);
                 demand.target[0] = 0;
                 demand.target[1] = 45;
@@ -404,7 +409,7 @@ junction_step (junction_t * p_other_index,
         {
             /* Inner wheel is unpowered, not actively locked. Encoder drift is
                bounded; optical branch confirmation must still succeed. */
-            if (fabsf(left) > 12 || right < -5)
+            if ((fabsf(left) > 12) || (right < -5))
             {
                 j_fail(p_other_index, J_CENTRE_DRIFT);
                 break;
@@ -415,14 +420,14 @@ junction_step (junction_t * p_other_index,
                 break;
             }
         }
-        else if (left < -5 || right < -5 || fabsf(left - right) > 20)
+        else if (((left < -5) || (right < -5)) || (fabsf(left - right) > 20))
         {
             j_fail(p_other_index, J_CENTRE_DRIFT);
             break;
         }
-        bool white = demand.level[0] < 200 && demand.level[1] < 200;
+        bool white = (demand.level[0] < 200) && (demand.level[1] < 200);
         if ((white || JUNCTION_ANGLE_GATE_ONLY) &&
-            p_other_index->turn_degrees > 10)
+            (p_other_index->turn_degrees > 10))
         {
             if (!p_other_index->off_timing)
             {
@@ -438,13 +443,15 @@ junction_step (junction_t * p_other_index,
         {
             p_other_index->off_timing = false;
         }
-        bool branch = p_other_index->rolling
-                          ? (demand.level[0] >= 400 || demand.level[1] >= 400)
-                          : (demand.level[0] >= 650 && demand.level[1] >= 650);
-        bool found =
-            p_other_index->off_line && p_other_index->turn_degrees >= 75 &&
-            (!p_other_index->rolling || p_other_index->turn_degrees < 110) &&
-            branch;
+        bool branch =
+            p_other_index->rolling
+                ? ((demand.level[0] >= 400) || (demand.level[1] >= 400))
+                : ((demand.level[0] >= 650) && (demand.level[1] >= 650));
+        bool found = (((p_other_index->off_line) &&
+                       (p_other_index->turn_degrees >= 75)) &&
+                      ((!p_other_index->rolling) ||
+                       (p_other_index->turn_degrees < 110))) &&
+                     branch;
         if (found)
         {
             if (!p_other_index->line_timing)
@@ -474,8 +481,8 @@ junction_step (junction_t * p_other_index,
         {
             p_other_index->line_timing = false;
         }
-        if (p_other_index->turn_degrees >= 110 || left >= 120 ||
-            right >= (p_other_index->rolling ? 240 : 120))
+        if (((p_other_index->turn_degrees >= 110) || (left >= 120)) ||
+            (right >= (p_other_index->rolling ? 240 : 120)))
         {
             j_fail(p_other_index, J_BRANCH_MISSING);
             break;
@@ -506,7 +513,7 @@ junction_step (junction_t * p_other_index,
     case J_TURN_SETTLE:
         if (j_still(p_other_index, p_index))
         {
-            if (demand.level[0] < 400 || demand.level[1] < 400)
+            if ((demand.level[0] < 400) || (demand.level[1] < 400))
             {
                 j_fail(p_other_index, J_BRANCH_MISSING);
                 break;
@@ -522,7 +529,8 @@ junction_step (junction_t * p_other_index,
         break;
     case J_EXIT:
         /* The ten seconds begin only after outgoing-line alignment succeeds.
-           Distance is not a completion condition; whole-run/loss guards remain. */
+           Distance is not a completion condition; whole-run/loss guards remain.
+         */
         if (p_index->now - p_other_index->phase_us >= J_EXIT_US)
         {
             p_other_index->phase = J_DONE;
@@ -540,7 +548,7 @@ junction_step (junction_t * p_other_index,
     default:
         break;
     }
-    if (p_other_index->phase == J_DONE || p_other_index->phase == J_FAULT)
+    if (J_DONE == p_other_index->phase || J_FAULT == p_other_index->phase)
     {
         demand.stop = true;
         demand.target[0] = demand.target[1] = 0;

@@ -88,7 +88,8 @@ unsigned motion_log_count (void);
 unsigned motion_log_overwritten (void);
 bool motion_log_read (unsigned index, motion_event_t * p_event);
 /* Execute the one hardware owner's commit only if no stop/takeover/new request
- * invalidated its calculation. Callback runs locked and must NOT call the API. */
+ * invalidated its calculation. Callback runs locked and must NOT call the API.
+ */
 bool motion_commit (uint32_t generation, void (*p_apply)(void *),
                     void * p_user);
 #endif

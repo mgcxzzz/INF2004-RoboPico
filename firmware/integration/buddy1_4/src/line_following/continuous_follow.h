@@ -20,7 +20,7 @@ static inline analog_demand_t continuous_follow_step_with_cruise (
     continuous_steering_t * p_sample, float delta_time,
     unsigned cruise_speed_mm_s)
 {
-    if (profile == 2)
+    if (2 == profile)
     {
         continuous_steering_reset(p_sample);
         return scan_smooth_step(p_character, p_count, p_cal, p_index, profile,
@@ -29,16 +29,16 @@ static inline analog_demand_t continuous_follow_step_with_cruise (
     analog_demand_t demand =
         barcode_circuit_step(p_character, p_count, p_cal, p_index, profile);
     DRIVE_DIAG_RAW(demand);
-    bool activity = p_first->scanning || p_count->pending ||
-                    p_first->adc >= (unsigned)p_first->baseline + 16;
+    bool activity = ((p_first->scanning) || (p_count->pending)) ||
+                    (p_first->adc >= (unsigned)p_first->baseline + 16);
     if (activity)
     {
         p_state->activity_us = p_index->now;
     }
     bool scanning =
-        !p_character->busy && !demand.stop &&
-        (activity ||
-         (p_state->scanning && p_index->now - p_state->activity_us < 600000));
+        ((!p_character->busy) && (!demand.stop)) &&
+        (activity || ((p_state->scanning) &&
+                      (p_index->now - p_state->activity_us < 600000)));
     if (scanning != p_state->scanning)
     {
         double mm_value = (p_index->wheel[0] + p_index->wheel[1]) * .5;
@@ -85,24 +85,24 @@ static inline bool continuous_drive_selected (unsigned profile, unsigned phase,
                                               const analog_demand_t * p_demand)
 {
     /* `white` is retained for call-site compatibility. During the existing
-  * 150 ms bridge and 2 s search confirmation, a short both-white gap may
-  * still produce an ordinary forward recovery/probe demand. The final
-  * decision and explicit targets distinguish those from an active search. */
+     * 150 ms bridge and 2 s search confirmation, a short both-white gap may
+     * still produce an ordinary forward recovery/probe demand. The final
+     * decision and explicit targets distinguish those from an active search. */
     (void)white;
     if (!p_demand)
     {
         return false;
     }
     bool forward_decision =
-        p_demand->decision == SYM_STRAIGHT || p_demand->decision == SYM_LEFT ||
-        p_demand->decision == SYM_RIGHT ||
-        p_demand->decision == SYM_RECOVER_LEFT ||
-        p_demand->decision == SYM_RECOVER_RIGHT ||
-        p_demand->decision == C_PROBE_LEFT ||
-        p_demand->decision == C_PROBE_RIGHT || p_demand->decision == 24 ||
-        p_demand->decision == 25;
-    return (profile == 1 || profile == 3) && phase == C_FOLLOW && !busy &&
-           !external && !ramp && !maneuver && !p_demand->stop &&
+        SYM_STRAIGHT == p_demand->decision || SYM_LEFT == p_demand->decision ||
+        SYM_RIGHT == p_demand->decision ||
+        SYM_RECOVER_LEFT == p_demand->decision ||
+        SYM_RECOVER_RIGHT == p_demand->decision ||
+        C_PROBE_LEFT == p_demand->decision ||
+        C_PROBE_RIGHT == p_demand->decision || 24 == p_demand->decision ||
+        25 == p_demand->decision;
+    return (1 == profile || 3 == profile) && C_FOLLOW == phase && (!busy) &&
+           (!external) && (!ramp) && (!maneuver) && (!p_demand->stop) &&
            forward_decision;
 }
 static inline int32_t continuous_output_cap (int32_t pwm)
@@ -117,7 +117,7 @@ static inline dual_levels_t continuous_output_levels (unsigned wheel,
     {
         return value;
     }
-    if (wheel == 0)
+    if (0 == wheel)
     {
         value.a = (uint16_t)continuous_output_cap(pwm);
     }
@@ -128,7 +128,8 @@ static inline dual_levels_t continuous_output_levels (unsigned wheel,
     return value;
 }
 /* Drop private mode latches when leaving ordinary drive. Seed the existing
- * legacy PI in its native units; its special manoeuvre rules still take over. */
+ * legacy PI in its native units; its special manoeuvre rules still take over.
+ */
 static inline void continuous_leave (continuous_drive_t * p_state,
                                      signed_wheel_t * p_data, unsigned wheel,
                                      int16_t wanted, float speed,
@@ -138,7 +139,7 @@ static inline void continuous_leave (continuous_drive_t * p_state,
     {
         return;
     }
-    if (wanted > 0 && p_data->sign == 1)
+    if ((wanted > 0) && 1 == p_data->sign)
     {
         float ff_value = feedforward(wheel, 1, p_data->pi.ramp);
         p_data->pi.integral =

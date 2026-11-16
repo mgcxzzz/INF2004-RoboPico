@@ -1,8 +1,9 @@
 /**
  * @file connected_control.c
  * @brief Connected control.
- * @details Application tasks exchange copied, bounded command and telemetry records.
- * The kernel Wi-Fi service owns the transport; reconnect never restarts motion.
+ * @details Application tasks exchange copied, bounded command and telemetry
+ * records. The kernel Wi-Fi service owns the transport; reconnect never
+ * restarts motion.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 /* Application-side bridge: copied requests only. No lwIP/CYW43 calls here. */
@@ -133,7 +134,7 @@ int32_t rn_drive_init (void)
 }
 bool rn_drive_enqueue (const uint8_t message[RN_RX_BYTES])
 {
-    return tk_snd_mbf(g_requests, message, RN_RX_BYTES, TMO_POL) == E_OK;
+    return E_OK == tk_snd_mbf(g_requests, message, RN_RX_BYTES, TMO_POL);
 }
 bool rn_drive_online_record (bool record_failure)
 {
@@ -142,11 +143,12 @@ bool rn_drive_online_record (bool record_failure)
     uint32_t app_last = rn_app_last_ms();
     uint32_t current_connected_since =
         __atomic_load_n(&g_connected_since, __ATOMIC_ACQUIRE);
-    bool usable = rn_link_usable(&state, now) && now - app_last <= 250U;
+    bool usable = (rn_link_usable(&state, now)) && (now - app_last <= 250U);
 #ifdef APP_RTOS_RELEASE
-    usable = usable && rn_delivery_fresh(&state, now, current_connected_since);
+    usable =
+        usable && (rn_delivery_fresh(&state, now, current_connected_since));
 #endif
-    if (!usable && record_failure)
+    if ((!usable) && record_failure)
     {
         rn_network_stop_snapshot_t candidate = rn_network_stop_candidate(
             &state, now, app_last, current_connected_since);
@@ -217,7 +219,7 @@ void rn_drive_process (void * p_raw)
     }
     uint8_t message[RN_RX_BYTES];
     for (unsigned count = 0;
-         count < 2 && tk_rcv_mbf(g_requests, message, TMO_POL) == RN_RX_BYTES;
+         (count < 2) && RN_RX_BYTES == tk_rcv_mbf(g_requests, message, TMO_POL);
          ++count)
     {
         wifi_command_t cmd;
@@ -226,14 +228,15 @@ void rn_drive_process (void * p_raw)
         rn_status_t net = rn_status();
         bringup_status_t state;
         bringup_get_status(&state);
-        if (!result &&
-            !rn_request_current(now, u32(message), u32(message + 13),
-                                rn_barrier(), u32(message + 17), net.connects))
+        if ((!result) && (!rn_request_current(now, u32(message),
+                                              u32(message + 13), rn_barrier(),
+                                              u32(message + 17), net.connects)))
         {
             result = WP_ACK_BUSY;
         }
-        if (!result && cmd.code != WP_CMD_PAUSE && cmd.code != WP_CMD_CONFIG &&
-            !rtos_line_request_fresh(u32(message + 21)))
+        if ((((!result) && (cmd.code != WP_CMD_PAUSE)) &&
+             (cmd.code != WP_CMD_CONFIG)) &&
+            (!rtos_line_request_fresh(u32(message + 21))))
         {
             result = WP_ACK_BUSY;
         }
@@ -245,10 +248,11 @@ void rn_drive_process (void * p_raw)
                 /* Retained or queued Start delivered during resubscription is
                  * never an instruction to restart. Require a fresh user click
                  * after a full second of this connection. */
-                if (!rn_drive_online() || now - g_connected_since < 1000U ||
-                    u32(message) - g_connected_since < 1000U ||
-                    !bringup_can_start() ||
-                    !rtos_line_request_start(u32(message + 21)))
+                if (((((!rn_drive_online()) ||
+                       (now - g_connected_since < 1000U)) ||
+                      (u32(message) - g_connected_since < 1000U)) ||
+                     (!bringup_can_start())) ||
+                    (!rtos_line_request_start(u32(message + 21))))
                 {
                     result = WP_ACK_BUSY;
                 }
@@ -257,32 +261,36 @@ void rn_drive_process (void * p_raw)
                 result = pause_line();
                 break;
             case WP_CMD_RESUME:
-                if (!rn_drive_online() || !rn_drive_paused() ||
-                    !(state.flags & BR_ACTIVE) ||
-                    !br_safety_allows_motion(state.flags,
-                                             imu_safety_blocked()) ||
-                    g_bringup_irq_stop || !br_usb_supervised(tm_usb_state()) ||
-                    board_button_pressed(20) || board_button_pressed(21) ||
-                    !rtos_line_ready() ||
-                    motion_resume_line(MOTION_BUDDY1, g_lease, false) !=
-                        MOTION_OK)
+                if ((((((((((!rn_drive_online()) || (!rn_drive_paused())) ||
+                           (!(state.flags & BR_ACTIVE))) ||
+                          (!br_safety_allows_motion(state.flags,
+                                                    imu_safety_blocked()))) ||
+                         g_bringup_irq_stop) ||
+                        (!br_usb_supervised(tm_usb_state()))) ||
+                       (board_button_pressed(20))) ||
+                      (board_button_pressed(21))) ||
+                     (!rtos_line_ready())) ||
+                    (motion_resume_line(MOTION_BUDDY1, g_lease, false) !=
+                     MOTION_OK))
                 {
                     result = WP_ACK_BUSY;
                 }
                 else
                 {
                     /* Ordinary line reacquisition from current position. No old
-                     * search deadline or 10ms steering integral survives a pause.
-                     * Coordinator rejects interrupted junctions (NEED_RECOVERY). */
+                     * search deadline or 10ms steering integral survives a
+                     * pause. Coordinator rejects interrupted junctions
+                     * (NEED_RECOVERY). */
                     rtos_line_resume();
                     rn_drive_cancel();
                     rtos_line_feedback(p_feedback_value, NULL);
                     (void)motion_update(
-                        p_feedback_value); /* Finish coordinator handback before new targets. */
+                        p_feedback_value); /* Finish coordinator handback before
+                                              new targets. */
                 }
                 break;
             case WP_CMD_CONFIG:
-                if ((cmd.arg & 0xffU) == 2U)
+                if (2U == (cmd.arg & 0xffU))
                 {
                     result = rn_drive_request_speed_mode(cmd.arg >> 8);
                 }
@@ -324,7 +332,7 @@ void rn_drive_process (void * p_raw)
 void rn_drive_telemetry (uint32_t now)
 {
     static uint32_t last_motion, last_nav;
-    if (!rn_drive_telemetry_enabled() || !rn_drive_online())
+    if ((!rn_drive_telemetry_enabled()) || (!rn_drive_online()))
     {
         return;
     }

@@ -1,8 +1,9 @@
 /**
  * @file b2_pack.c
  * @brief B2 pack.
- * @details Diagnostic records have explicit lengths, signed domains and reserved bits.
- * Never substitute native structure memory for the documented byte encoding.
+ * @details Diagnostic records have explicit lengths, signed domains and
+ * reserved bits. Never substitute native structure memory for the documented
+ * byte encoding.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 /* Source-2 sensing snapshot: pure packing, no network or hardware calls. */
@@ -69,14 +70,14 @@ bool b2_tlm_unpack (uint8_t const * p_frame_value, uint32_t len,
                                B2_TLM_NUMERIC_PAYLOAD_BYTES, &p_out_value->seq);
     robust = tlm_check_header(p_frame_value, len, TLM_SRC_MOTION,
                               B2_TLM_ROBUST_PAYLOAD_BYTES, &p_out_value->seq);
-    if (!legacy && !reasons && !numeric && !robust &&
-        !tlm_check_header(p_frame_value, len, TLM_SRC_MOTION,
-                          B2_TLM_PAYLOAD_BYTES, &p_out_value->seq))
+    if (((((!legacy) && (!reasons)) && (!numeric)) && (!robust)) &&
+        (!tlm_check_header(p_frame_value, len, TLM_SRC_MOTION,
+                           B2_TLM_PAYLOAD_BYTES, &p_out_value->seq)))
     {
         return false;
     }
     p_data = &p_frame_value[TLM_HDR_BYTES];
-    if ((p_data[0] & 240U) != 0U || p_data[1] != 0U)
+    if (((p_data[0] & 240U) != 0U) || (p_data[1] != 0U))
     {
         return false;
     }
@@ -101,7 +102,7 @@ bool b2_tlm_unpack (uint8_t const * p_frame_value, uint32_t len,
         p_out_value->max_axis_mad_mg[2] = 0U;
     if (!legacy)
     {
-        if ((p_data[21] & 240U) != 0U || p_data[22] > p_data[23])
+        if (((p_data[21] & 240U) != 0U) || (p_data[22] > p_data[23]))
         {
             return false;
         }
@@ -111,8 +112,8 @@ bool b2_tlm_unpack (uint8_t const * p_frame_value, uint32_t len,
         p_out_value->quality_total_samples = p_data[23];
         if (!reasons)
         {
-            if ((p_data[31] != 0U && (numeric || robust)) ||
-                p_data[30] > p_data[23])
+            if (((p_data[31] != 0U) && (numeric || robust)) ||
+                (p_data[30] > p_data[23]))
             {
                 return false;
             }
@@ -122,7 +123,7 @@ bool b2_tlm_unpack (uint8_t const * p_frame_value, uint32_t len,
             p_out_value->rate_samples = p_data[30];
             if (!numeric)
             {
-                if ((robust && p_data[35] != 0U) || p_data[34] > 32U)
+                if ((robust && (p_data[35] != 0U)) || (p_data[34] > 32U))
                 {
                     return false;
                 }
@@ -139,7 +140,8 @@ bool b2_tlm_unpack (uint8_t const * p_frame_value, uint32_t len,
                     {
                         top = p_data[36];
                     }
-                    /* Same ticks, so the largest axis byte must encode max MAD. */
+                    /* Same ticks, so the largest axis byte must encode max MAD.
+                     */
                     if (top != axis_mad_byte(p_out_value->max_mad_mg))
                     {
                         return false;

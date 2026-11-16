@@ -31,7 +31,8 @@ static inline void circuit_capture_begin (circuit_capture_t * p_state,
 }
 /* Return outer wheel0/1, or-1 for ordinary effort. No target changes.
    Assistance is possible only just after optical confirmation of a branch,
-   with a visible line and a near-pivot demand. It never assists blind recovery. */
+   with a visible line and a near-pivot demand. It never assists blind recovery.
+ */
 static inline int circuit_capture_outer (circuit_capture_t * p_state,
                                          const circuit_input_t * p_index,
                                          unsigned phase,
@@ -41,16 +42,18 @@ static inline int circuit_capture_outer (circuit_capture_t * p_state,
     {
         return -1;
     }
-    if (p_demand->stop || (phase != J_ACQUIRE && phase != C_FOLLOW) ||
-        p_index->now - p_state->since >= C_CAPTURE_US ||
-        p_index->path - p_state->path >= C_CAPTURE_MM)
+    if ((((p_demand->stop) || ((phase != J_ACQUIRE) && (phase != C_FOLLOW))) ||
+         (p_index->now - p_state->since >= C_CAPTURE_US)) ||
+        (p_index->path - p_state->path >= C_CAPTURE_MM))
     {
         p_state->window = false;
         p_state->outer = -1;
         return -1;
     }
-    bool rolling = p_demand->target[0] >= 15 && p_demand->target[1] >= 15 &&
-                   p_index->speed[0] >= 10 && p_index->speed[1] >= 10;
+    bool rolling =
+        (((p_demand->target[0] >= 15) && (p_demand->target[1] >= 15)) &&
+         (p_index->speed[0] >= 10)) &&
+        (p_index->speed[1] >= 10);
     if (!rolling)
     {
         p_state->rolling_timing = false;
@@ -74,9 +77,9 @@ static inline int circuit_capture_outer (circuit_capture_t * p_state,
     unsigned limit = p_state->outer == (int)outer
                          ? 20
                          : 12; /* effort hysteresis, not steering thresholds */
-    bool visible = p_demand->level[0] >= 400 || p_demand->level[1] >= 400;
-    if (visible && p_demand->target[outer] >= 30 &&
-        p_demand->target[inner] <= (int)limit)
+    bool visible = (p_demand->level[0] >= 400) || (p_demand->level[1] >= 400);
+    if ((visible && (p_demand->target[outer] >= 30)) &&
+        (p_demand->target[inner] <= (int)limit))
     {
         p_state->outer = (int8_t)outer;
         return (int)outer;

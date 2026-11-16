@@ -1,8 +1,9 @@
 /**
  * @file barcode_record.h
  * @brief Barcode record.
- * @details Pure barcode/route logic is called by the ADC owner and emits requests.
- * Native records are not wire packets; preserve both decode directions.
+ * @details Pure barcode/route logic is called by the ADC owner and emits
+ * requests. Native records are not wire packets; preserve both decode
+ * directions.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 #ifndef BARCODE_RECORD_H
@@ -75,11 +76,11 @@ typedef struct
     uint32_t
         uturns; /* V11 extension; V1..V10 prefix remains byte-compatible. */
 #ifdef BUDDY_WIFI_LOGGING
-    uint32_t
-        decoded_total; /* Record26 counts all verified letters, assigned or not. */
+    uint32_t decoded_total; /* Record26 counts all verified letters, assigned or
+                               not. */
 #endif
 } barcode_saved_t;
-_Static_assert(sizeof(BarcodeTrace) == 56 && sizeof(barcode_summary_t) == 40,
+_Static_assert(56 == sizeof(BarcodeTrace) && 40 == sizeof(barcode_summary_t),
                "Barcode trace ABI changed");
 #ifdef BUDDY_WIFI_LOGGING
 _Static_assert(sizeof(barcode_saved_t) <= 32768,
@@ -97,22 +98,26 @@ static inline size_t barcode_record_crc_size (unsigned version)
                                  : offsetof(barcode_saved_t, decoded_z);
     return bytes - offsetof(barcode_saved_t, count);
 }
-/* Old rows used1000 slots; only the common front-calibration prefix is imported.
- * Caller supplies the complete64KiB flash bank, never a shorter RAM struct. */
+/* Old rows used1000 slots; only the common front-calibration prefix is
+ * imported. Caller supplies the complete64KiB flash bank, never a shorter RAM
+ * struct. */
 static inline bool barcode_import_v25 (const uint8_t * p_bank,
                                        line_calibration_t * p_cal,
                                        uint8_t * p_profile)
 {
     const barcode_saved_t * p_state = (const barcode_saved_t *)p_bank;
-    if (p_state->magic != B_MAGIC || p_state->version < 1 ||
-        p_state->version > 25 || p_state->count > 1000 ||
-        p_state->summary_count > C_SUMMARIES ||
-        p_state->event_count > B_EVENTS || p_state->profile < 1 ||
-        p_state->profile > 3 || !calibration_valid(&p_state->calibration) ||
-        !side_valid(&p_state->side) ||
-        p_state->crc != log_crc(p_bank + offsetof(barcode_saved_t, count),
-                                (p_state->version >= 11 ? 64848u : 64840u) -
-                                    offsetof(barcode_saved_t, count)))
+    if (((((((((((p_state->magic != B_MAGIC) || (p_state->version < 1)) ||
+                (p_state->version > 25)) ||
+               (p_state->count > 1000)) ||
+              (p_state->summary_count > C_SUMMARIES)) ||
+             (p_state->event_count > B_EVENTS)) ||
+            (p_state->profile < 1)) ||
+           (p_state->profile > 3)) ||
+          (!calibration_valid(&p_state->calibration))) ||
+         (!side_valid(&p_state->side))) ||
+        (p_state->crc != log_crc(p_bank + offsetof(barcode_saved_t, count),
+                                 (p_state->version >= 11 ? 64848u : 64840u) -
+                                     offsetof(barcode_saved_t, count))))
     {
         return false;
     }
@@ -122,9 +127,9 @@ static inline bool barcode_import_v25 (const uint8_t * p_bank,
 }
 static inline bool barcode_record_valid (const barcode_saved_t * p_state)
 {
-    return p_state->magic == B_MAGIC &&
+    return B_MAGIC == p_state->magic &&
 #ifdef BUDDY_WIFI_LOGGING
-           (p_state->version >= 26 && p_state->version <= 28)
+           ((p_state->version >= 26) && (p_state->version <= 28))
 #else
            p_state->version >= 1 && p_state->version <= 25
 #endif

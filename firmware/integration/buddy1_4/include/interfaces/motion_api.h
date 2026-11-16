@@ -1,8 +1,9 @@
 /**
  * @file motion_api.h
  * @brief Motion api.
- * @details Public feature contract. Requests cross coordinator ownership checks;
- * callers observe completion/status separately and must respect task context.
+ * @details Public feature contract. Requests cross coordinator ownership
+ * checks; callers observe completion/status separately and must respect task
+ * context.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 #ifndef BUDDY_SHARED_MOTION_API_H
@@ -14,11 +15,12 @@
 extern "C"
 {
 #endif
-    /* One shared instance in one firmware. Requests are non-blocking and callable
- * from normal task/poll context through the supplied port lock. The bundled
- * standalone harness uses cooperative core0 hooks; multicore/RTOS integration
- * additionally needs a flash-save lockout port and scheduling validation.
- * Do not call from an interrupt, or write motor GPIO/PWM from a buddy module. */
+    /* One shared instance in one firmware. Requests are non-blocking and
+     * callable from normal task/poll context through the supplied port lock.
+     * The bundled standalone harness uses cooperative core0 hooks;
+     * multicore/RTOS integration additionally needs a flash-save lockout port
+     * and scheduling validation. Do not call from an interrupt, or write motor
+     * GPIO/PWM from a buddy module. */
     typedef enum
     {
         MOTION_BUDDY1 = 1,
@@ -138,56 +140,65 @@ extern "C"
         float rotation_deg;
     } motion_command_status_t;
 
-    /* Takes control and removes drive immediately; wait for PAUSED/stopped before
- * a move. Buddy5 may pre-empt another buddy; equal/lesser owners cannot steal
- * an existing lease. Returned lease must accompany every movement/resume. */
+    /* Takes control and removes drive immediately; wait for PAUSED/stopped
+     * before a move. Buddy5 may pre-empt another buddy; equal/lesser owners
+     * cannot steal an existing lease. Returned lease must accompany every
+     * movement/resume. */
     motion_result_t motion_pause (motion_owner_t owner, uint32_t * p_lease);
     /* Any buddy can request a soft stop. It cancels the active move and never
- * resumes navigation automatically. Existing ownership is retained. */
+     * resumes navigation automatically. Existing ownership is retained. */
     motion_result_t motion_stop (motion_owner_t requester);
-    /* Signed mm: +forward, -reverse. Allowed magnitude1..1000mm, speed20..60mm/s.
- * speed0 selects45mm/s. Accepted!=completed; query returned command ID. */
+    /* Signed mm: +forward, -reverse. Allowed magnitude1..1000mm,
+     * speed20..60mm/s. speed0 selects45mm/s. Accepted!=completed; query
+     * returned command ID. */
     motion_result_t motion_drive_distance (motion_owner_t owner, uint32_t lease,
                                            float mm_value, unsigned speed_mm_s,
                                            uint32_t * p_command_id);
-    /* Angle +LEFT/-RIGHT,1..180deg. Speed20..90 or0=45mm/s. Rolling rotates about
- * one rear wheel and shifts the axle; IN_PLACE counter-rotates both wheels.
- * These generic avoidance manoeuvres are new and require physical testing. */
+    /* Angle +LEFT/-RIGHT,1..180deg. Speed20..90 or0=45mm/s. Rolling rotates
+     * about one rear wheel and shifts the axle; IN_PLACE counter-rotates both
+     * wheels. These generic avoidance manoeuvres are new and require physical
+     * testing. */
     motion_result_t motion_turn_relative (motion_owner_t owner, uint32_t lease,
                                           float degrees,
                                           unsigned wheel_speed_mm_s,
                                           motion_turn_style_t style,
                                           uint32_t * p_command_id);
-    /* Return only after obstacle clearance and positioning back over the stripe.
- * Requires stopped +>=400normalised on either front sensor for150ms. An
- * interrupted junction requires explicit abandon_navigation=true: it clears
- * stale turn goals; an already-decoded pending route is preserved otherwise. */
+    /* Return only after obstacle clearance and positioning back over the
+     * stripe. Requires stopped +>=400normalised on either front sensor
+     * for150ms. An interrupted junction requires explicit
+     * abandon_navigation=true: it clears stale turn goals; an already-decoded
+     * pending route is preserved otherwise. */
     motion_result_t motion_resume_line (motion_owner_t owner, uint32_t lease,
                                         bool abandon_navigation);
     motion_status_t motion_get_status (void);
-    /* Runtime line cruise mode is RAM-only and may change only while the complete
- * supervisor/motion session is stopped. */
+    /* Runtime line cruise mode is RAM-only and may change only while the
+     * complete supervisor/motion session is stopped. */
     motion_result_t motion_request_speed_mode (motion_owner_t owner,
                                                unsigned mode);
     motion_speed_mode_status_t motion_get_speed_mode_status (void);
     bool motion_get_command (uint32_t identifier,
                              motion_command_status_t * p_status);
-    /* For Buddy3's VERIFIED complete barcode result, not arbitrary sensor edges.
- * A-Z accepted in AUTO in the Wi-Fi integration; its adapter resolves the active runtime map. Unassigned letters do not queue movement. Busy during avoidance; partial optical frames are
- * discarded while external control owns the robot.
- * Does not count an API-injected route as an on-board decoded barcode. */
+    /* For Buddy3's VERIFIED complete barcode result, not arbitrary sensor
+     * edges. A-Z accepted in AUTO in the Wi-Fi integration; its adapter
+     * resolves the active runtime map. Unassigned letters do not queue
+     * movement. Busy during avoidance; partial optical frames are discarded
+     * while external control owns the robot. Does not count an API-injected
+     * route as an on-board decoded barcode. */
     motion_result_t motion_submit_barcode (motion_owner_t owner, char code);
     /* Buddy3 provider input. Coordinator forwards these only in AUTO; it cannot
- * overwrite an avoidance lease. Called each control tick by the V12.2 adapter. */
+     * overwrite an avoidance lease. Called each control tick by the V12.2
+     * adapter. */
     motion_result_t motion_submit_navigation (motion_owner_t owner,
                                               int16_t left_mm_s,
                                               int16_t right_mm_s);
-    /* Terrain reporting itself is telemetry; bounded motor assistance is separate. */
+    /* Terrain reporting itself is telemetry; bounded motor assistance is
+     * separate. */
     motion_result_t motion_report_terrain (motion_owner_t owner,
                                            motion_terrain_t terrain);
-    /* Bounded Buddy4 modifier, not an ownership takeover. Canonical request fields:
- * boost_milli 0..200, push_pwm_x100 0..6000, hold_milli 0..1000, ttl_ms 1..200.
- * Zero levels clear the request. Motion owns the fixed ramp control profile. */
+    /* Bounded Buddy4 modifier, not an ownership takeover. Canonical request
+     * fields: boost_milli 0..200, push_pwm_x100 0..6000, hold_milli 0..1000,
+     * ttl_ms 1..200. Zero levels clear the request. Motion owns the fixed ramp
+     * control profile. */
     typedef struct
     {
         uint16_t boost_milli;
@@ -199,7 +210,8 @@ extern "C"
     motion_request_ramp_assist (motion_owner_t owner,
                                 const motion_ramp_assist_t * p_request);
     motion_ramp_assist_t motion_get_ramp_assist (void);
-    /* Physical decoder approval only; Buddy3 owns its decode counters and queue. */
+    /* Physical decoder approval only; Buddy3 owns its decode counters and
+     * queue. */
     motion_result_t motion_accept_barcode (motion_owner_t owner, char code);
     motion_result_t motion_request_speed_assist (motion_owner_t owner,
                                                  unsigned percent);

@@ -23,22 +23,26 @@ static inline void smooth_follow_apply (smooth_follow_t * p_state,
                                         float delta_time,
                                         analog_demand_t * p_demand)
 {
-    bool following = p_character->phase == C_FOLLOW;
+    bool following = C_FOLLOW == p_character->phase;
     const circuit_tracker_t * p_sample = &p_character->follower;
     int error = (int)p_demand->level[0] - p_demand->level[1],
         magnitude = abs(error);
     unsigned strongest = p_demand->level[0] > p_demand->level[1]
                              ? p_demand->level[0]
                              : p_demand->level[1];
-    /* A clear departure or strong near-pivot demand must retain its original bend
-     * authority immediately. The same is true of every blind search/stop. */
-    bool near_pivot = p_demand->target[0] <= 10 || p_demand->target[1] <= 10;
+    /* A clear departure or strong near-pivot demand must retain its original
+     * bend authority immediately. The same is true of every blind search/stop.
+     */
+    bool near_pivot =
+        (p_demand->target[0] <= 10) || (p_demand->target[1] <= 10);
     bool eligible =
-        following && !p_character->busy && !p_demand->stop &&
-        !p_sample->core.white && strongest >= 200 && magnitude < 700 &&
-        !(near_pivot && strongest >= 400) &&
-        (p_demand->decision == SYM_STRAIGHT || p_demand->decision == SYM_LEFT ||
-         p_demand->decision == SYM_RIGHT || p_demand->decision == C_FAST);
+        ((((((following && (!p_character->busy)) && (!p_demand->stop)) &&
+            (!p_sample->core.white)) &&
+           (strongest >= 200)) &&
+          (magnitude < 700)) &&
+         (!(near_pivot && (strongest >= 400)))) &&
+        (SYM_STRAIGHT == p_demand->decision || SYM_LEFT == p_demand->decision ||
+         SYM_RIGHT == p_demand->decision || C_FAST == p_demand->decision);
     if (!eligible)
     {
         *p_state = (smooth_follow_t){0};
@@ -47,8 +51,8 @@ static inline void smooth_follow_apply (smooth_follow_t * p_state,
     float desired[2] = {(float)p_demand->target[0], (float)p_demand->target[1]};
     /* Reduce only small, well-visible balance corrections, blending back to
      * the original gain by350/1000 error. Stronger bends keep the old gain. */
-    if (p_demand->level[0] >= 300 && p_demand->level[1] >= 300 &&
-        magnitude < 350)
+    if (((p_demand->level[0] >= 300) && (p_demand->level[1] >= 300)) &&
+        (magnitude < 350))
     {
         float mean = (desired[0] + desired[1]) * .5f;
         float half = (desired[1] - desired[0]) * .5f *
@@ -66,8 +70,9 @@ static inline void smooth_follow_apply (smooth_follow_t * p_state,
     {
         /* Leaving90/135 cruising must not carry a high-speed target into a
          * correction. Preserve the old correction ceiling immediately. */
-        if ((p_state->target[0] > 55 || p_state->target[1] > 55) &&
-            desired[0] <= 50 && desired[1] <= 50)
+        if ((((p_state->target[0] > 55) || (p_state->target[1] > 55)) &&
+             (desired[0] <= 50)) &&
+            (desired[1] <= 50))
         {
             for (unsigned wheel = 0; wheel < 2; ++wheel)
             {
@@ -105,7 +110,7 @@ barcode_drive_step (circuit_t * p_character, barcode_nav_t * p_count,
 {
     analog_demand_t demand =
         barcode_circuit_step(p_character, p_count, p_cal, p_index, profile);
-    if (profile == 2 && p_character->fast && !demand.stop)
+    if (2 == profile && (p_character->fast) && (!demand.stop))
     {
         demand.target[0] = demand.target[1] = RAMP2_SPEED;
     }

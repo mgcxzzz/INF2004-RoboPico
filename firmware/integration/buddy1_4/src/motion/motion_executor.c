@@ -65,7 +65,7 @@ motion_executor_step (motion_executor_t * p_event_value,
     {
         p_event_value->fault = EXEC_TIMEOUT;
     }
-    if (!p_event_value->turning && fabsf(p_event_value->rotation_deg) > 12)
+    if ((!p_event_value->turning) && (fabsf(p_event_value->rotation_deg) > 12))
     {
         p_event_value->fault = EXEC_HEADING;
     }
@@ -82,15 +82,15 @@ motion_executor_step (motion_executor_t * p_event_value,
         return MOTION_CMD_FAILED;
     }
     float remaining = fabsf(p_event_value->goal) - along;
-    if (!p_event_value->settling && remaining <= 1)
+    if ((!p_event_value->settling) && (remaining <= 1))
     {
         p_event_value->settling = true;
         p_event_value->settle_since = p_flags_value->now_us;
     }
     if (p_event_value->settling)
     {
-        bool still = fabsf(p_flags_value->speed_mm_s[0]) < 5 &&
-                     fabsf(p_flags_value->speed_mm_s[1]) < 5;
+        bool still = (fabsf(p_flags_value->speed_mm_s[0]) < 5) &&
+                     (fabsf(p_flags_value->speed_mm_s[1]) < 5);
         if (!still)
         {
             p_event_value->still_timing = false;
@@ -100,8 +100,8 @@ motion_executor_step (motion_executor_t * p_event_value,
             p_event_value->still_timing = true;
             p_event_value->still_since = p_flags_value->now_us;
         }
-        if (p_event_value->still_timing &&
-            p_flags_value->now_us - p_event_value->still_since >= 120000)
+        if ((p_event_value->still_timing) &&
+            (p_flags_value->now_us - p_event_value->still_since >= 120000))
         {
             p_event_value->active = false;
             return MOTION_CMD_DONE;
@@ -117,11 +117,11 @@ motion_executor_step (motion_executor_t * p_event_value,
     float speed = p_event_value->speed;
     if (p_event_value->turning)
     {
-        if (remaining < 12 && speed > 30)
+        if ((remaining < 12) && (speed > 30))
         {
             speed = 30;
         }
-        if (p_event_value->style == MOTION_IN_PLACE)
+        if (MOTION_IN_PLACE == p_event_value->style)
         {
             p_event_value->target[0] = (int16_t)(-sign * speed);
             p_event_value->target[1] = (int16_t)(sign * speed);
@@ -133,7 +133,7 @@ motion_executor_step (motion_executor_t * p_event_value,
     }
     else
     {
-        if (remaining < 10 && speed > 25)
+        if ((remaining < 10) && (speed > 25))
         {
             speed = 25;
         }

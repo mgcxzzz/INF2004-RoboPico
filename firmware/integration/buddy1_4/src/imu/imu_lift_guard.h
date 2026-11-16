@@ -1,8 +1,9 @@
 /**
  * @file imu_lift_guard.h
  * @brief Imu lift guard.
- * @details Sensor processing owns calibration/terrain state; RTOS readers use copies.
- * Height acceptance and motor assistance are separate from end-run safety.
+ * @details Sensor processing owns calibration/terrain state; RTOS readers use
+ * copies. Height acceptance and motor assistance are separate from end-run
+ * safety.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 /* Release-only accelerometer lift/upset guard. Pure integer logic. */
@@ -118,7 +119,7 @@ static inline void imu_lift_guard_init (imu_lift_guard_t * p_guard)
 
 static inline void imu_lift_guard_no_fresh_batch (imu_lift_guard_t * p_guard)
 {
-    if (p_guard == NULL)
+    if (NULL == p_guard)
     {
         return;
     }
@@ -132,12 +133,14 @@ static inline void imu_lift_guard_no_fresh_batch (imu_lift_guard_t * p_guard)
 
 static inline bool imu_lift_guard_reset_ready (const imu_lift_guard_t * p_guard)
 {
-    return (p_guard != NULL) && p_guard->armed && p_guard->current_valid &&
+    return (((p_guard != NULL) && (p_guard->armed)) &&
+            (p_guard->current_valid)) &&
            (p_guard->upright_samples >= IMU_LIFT_UPRIGHT_SAMPLES);
 }
 
 /* Called only after the caller has accepted an authoritative reset request.
- * Upright freshness is checked again here; the lifetime event count survives. */
+ * Upright freshness is checked again here; the lifetime event count survives.
+ */
 static inline bool imu_lift_guard_clear_latch (imu_lift_guard_t * p_guard)
 {
     if (!imu_lift_guard_reset_ready(p_guard))
@@ -190,12 +193,12 @@ imu_lift_guard_batch (imu_lift_guard_t * p_guard, const int16_t baseline_mg[3],
                       uint8_t count, uint32_t sample_period_us, uint32_t now_ms,
                       bool fresh_batch)
 {
-    if (p_guard == NULL)
+    if (NULL == p_guard)
     {
         return;
     }
-    if (!fresh_batch || baseline_mg == NULL || p_samples == NULL ||
-        (count == 0U) || (count > B4_FIFO_DEPTH) ||
+    if ((!fresh_batch) || NULL == baseline_mg || NULL == p_samples ||
+        (0U == count) || (count > B4_FIFO_DEPTH) ||
         (sample_period_us != B4_SAMPLE_US) || (gravity_mg < B4_CAL_G_MIN_MG) ||
         (gravity_mg > B4_CAL_G_MAX_MG))
     {
@@ -227,8 +230,8 @@ imu_lift_guard_batch (imu_lift_guard_t * p_guard, const int16_t baseline_mg[3],
             ((dot * 32768) <= ((int64_t)gravity_mg * norm * 23171));
         /* Cos(20 deg) ~= 0.94; reset requires a stable, level platform. */
         bool const upright =
-            norm_in_band &&
-            ((dot * 100) >= ((int64_t)gravity_mg * norm * 94)) &&
+            (norm_in_band &&
+             ((dot * 100) >= ((int64_t)gravity_mg * norm * 94))) &&
             (projection <= (int64_t)gravity_mg + IMU_LIFT_UPRIGHT_EXTRA_MG);
         bool const upward_accel =
             projection >= (int64_t)gravity_mg + IMU_LIFT_ACCEL_EXTRA_MG;
@@ -259,9 +262,10 @@ imu_lift_guard_batch (imu_lift_guard_t * p_guard, const int16_t baseline_mg[3],
             p_guard->peak_window_start_ms = sample_ms;
         }
         /* Keep the orientation high-water only for gravity-like magnitudes.
-         * Dynamic/out-of-band samples report a norm rejection, not a valid peak. */
+         * Dynamic/out-of-band samples report a norm rejection, not a valid
+         * peak. */
         if (norm_in_band &&
-            (!p_guard->min_cos_set || cosine_q15 < p_guard->min_cos_q15))
+            ((!p_guard->min_cos_set) || (cosine_q15 < p_guard->min_cos_q15)))
         {
             p_guard->min_cos_set = true;
             p_guard->min_cos_q15 = (int16_t)cosine_q15;
@@ -269,13 +273,13 @@ imu_lift_guard_batch (imu_lift_guard_t * p_guard, const int16_t baseline_mg[3],
                 (uint16_t)((norm > UINT16_MAX) ? UINT16_MAX : norm);
             p_guard->min_cos_sample_ms = sample_ms;
         }
-        if (!p_guard->peak_up_set ||
-            imu_lift_projection(p_guard) > p_guard->peak_up_projection_mg)
+        if ((!p_guard->peak_up_set) ||
+            (imu_lift_projection(p_guard) > p_guard->peak_up_projection_mg))
         {
             p_guard->peak_up_set = true;
             p_guard->peak_up_projection_mg = imu_lift_projection(p_guard);
         }
-        p_guard->peak_saturated = p_guard->peak_saturated || saturated;
+        p_guard->peak_saturated = (p_guard->peak_saturated) || saturated;
 
         if (upright)
         {
@@ -291,7 +295,8 @@ imu_lift_guard_batch (imu_lift_guard_t * p_guard, const int16_t baseline_mg[3],
 
         if (p_guard->latched)
         {
-            continue; /* retain first event; continue measuring reset readiness */
+            continue; /* retain first event; continue measuring reset readiness
+                       */
         }
 
         if (upward_accel)
@@ -352,7 +357,8 @@ imu_lift_guard_batch (imu_lift_guard_t * p_guard, const int16_t baseline_mg[3],
             {
                 p_guard->event_count++;
             }
-            /* Timestamp the sample that completed dwell; FIFO is oldest-first. */
+            /* Timestamp the sample that completed dwell; FIFO is oldest-first.
+             */
             p_guard->event_time_ms = now_ms - age_ms;
         }
     }

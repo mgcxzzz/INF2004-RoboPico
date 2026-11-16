@@ -157,9 +157,9 @@ static inline bool tlm_check_header (uint8_t const * p_frame,
                                      uint32_t frame_len, uint32_t source,
                                      uint32_t payload_bytes, uint8_t * p_seq)
 {
-    if ((frame_len != (TLM_HDR_BYTES + payload_bytes)) ||
-        ((p_frame[0] & 0xFU) != TLM_VERSION) ||
-        (((uint32_t)p_frame[0] >> 4) != source) ||
+    if ((((frame_len != (TLM_HDR_BYTES + payload_bytes)) ||
+          ((p_frame[0] & 0xFU) != TLM_VERSION)) ||
+         (((uint32_t)p_frame[0] >> 4) != source)) ||
         ((uint32_t)p_frame[1] != payload_bytes))
     {
         return false;
@@ -460,8 +460,8 @@ bool b1_tlm_unpack (uint8_t const * p_frame, uint32_t len, b1_tlm_t * p_out);
 
 /* Configuration parameters (B1_CMD_CONFIG, argument bits 12..15). */
 #define B1_CFG_TELEMETRY                                                       \
-    (1U) /* value 0 = pause other buddies'
-                                         * frames, 1 = forward them       */
+    (1U) /* value 0 = pause other buddies'                                     \
+          * frames, 1 = forward them       */
 
 /* Barcode mapping, configured before the demo through is28/cmd.
  * BARCODE_MAP: [version | 9<<4, command id, map low, map mid, map high].
@@ -531,7 +531,8 @@ typedef struct
     uint16_t invalid_left;
     uint16_t invalid_right;
     /* Extension: exclusions ORed since previous source2 publication, current
-     * ramp state (level/candidate/rising/returning bits0..3), interval counts. */
+     * ramp state (level/candidate/rising/returning bits0..3), interval counts.
+     */
     uint8_t quality_reasons;
     uint8_t ramp_state;
     uint8_t quality_bad_samples;

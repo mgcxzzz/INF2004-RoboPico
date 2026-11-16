@@ -1,8 +1,9 @@
 /**
  * @file navigation_adapter.h
  * @brief Navigation adapter.
- * @details Public feature contract. Requests cross coordinator ownership checks;
- * callers observe completion/status separately and must respect task context.
+ * @details Public feature contract. Requests cross coordinator ownership
+ * checks; callers observe completion/status separately and must respect task
+ * context.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 #include "src/line_following/cruise_handover.h"
@@ -37,7 +38,8 @@ static void barcode_partial_reset (void);
 static void interface_resume_navigation (const circuit_input_t * i)
 {
     /* Preserve completed navigation counters and a fully decoded pending route.
-     * Partial barcode frames and interrupted manoeuvre goals are not reusable. */
+     * Partial barcode frames and interrupted manoeuvre goals are not reusable.
+     */
     circuit.busy = nav.busy = false;
     circuit.phase = C_FOLLOW;
     circuit.completed = false;

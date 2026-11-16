@@ -11,7 +11,8 @@
 #include "src/line_following/circuit_logic.h"
 /* Narrow H1 change: ordinary, visible, already-forward running only. Existing
  * speed targets, gains, caps, wheel-specific slowdown/coast and STOP remain.
- * The10mm/s overspeed allowance selects this transfer; it is not a speed boost. */
+ * The10mm/s overspeed allowance selects this transfer; it is not a speed boost.
+ */
 static inline bool cruise_handover_eligible (unsigned profile, unsigned phase,
                                              unsigned decision,
                                              const int16_t target[2],

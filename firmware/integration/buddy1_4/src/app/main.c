@@ -1,8 +1,9 @@
 /**
  * @file main.c
  * @brief Main.
- * @details Public feature contract. Requests cross coordinator ownership checks;
- * callers observe completion/status separately and must respect task context.
+ * @details Public feature contract. Requests cross coordinator ownership
+ * checks; callers observe completion/status separately and must respect task
+ * context.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 #include "src/telemetry/drive_diag.h"
@@ -33,7 +34,8 @@ static bool diag_observing;
                 (kind) | ((scan) ? DF_SCAN : 0) | ((active) ? DF_ACTIVE : 0);  \
         }                                                                      \
     } while (0)
-/* Circuit + automatic A0/GP27 Code39 threshold search; runtime-mapped A-Z junction actions. */
+/* Circuit + automatic A0/GP27 Code39 threshold search; runtime-mapped A-Z
+ * junction actions. */
 #include <stdio.h>
 #include <stdlib.h>
 #include <inttypes.h>

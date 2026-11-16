@@ -1,8 +1,9 @@
 /**
  * @file drive_mode_telemetry.h
  * @brief Drive mode telemetry.
- * @details Application tasks exchange copied, bounded command and telemetry records.
- * The kernel Wi-Fi service owns the transport; reconnect never restarts motion.
+ * @details Application tasks exchange copied, bounded command and telemetry
+ * records. The kernel Wi-Fi service owns the transport; reconnect never
+ * restarts motion.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 #ifndef RTOS_DRIVE_MODE_TELEMETRY_H
@@ -38,9 +39,10 @@ static inline bool
 rn_drive_mode_encode (const rn_drive_mode_telemetry_t * p_in_value, uint8_t seq,
                       uint8_t out[17])
 {
-    if (!p_in_value || !out || p_in_value->mode > 2U ||
-        p_in_value->last_result > 5U || p_in_value->load_left > 100U ||
-        p_in_value->load_right > 100U)
+    if ((((((!p_in_value) || (!out)) || (p_in_value->mode > 2U)) ||
+          (p_in_value->last_result > 5U)) ||
+         (p_in_value->load_left > 100U)) ||
+        (p_in_value->load_right > 100U))
     {
         return false;
     }

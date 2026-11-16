@@ -1,8 +1,9 @@
 /**
  * @file app_main.c
  * @brief App main.
- * @details Core1 owns normal motor commits. Safety paths may only remove output;
- * command/status access uses the existing kernel locks and copied records.
+ * @details Core1 owns normal motor commits. Safety paths may only remove
+ * output; command/status access uses the existing kernel locks and copied
+ * records.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 #include "bringup.h"
@@ -258,12 +259,12 @@ void bringup_status_task (INT code, void * p_exinf_value)
         {
 #ifdef APP_RTOS_RELEASE
             /* No absent-host log flood while running from a powerbank. */
-            if (tm_usb_state() == 3U)
+            if (3U == tm_usb_state())
 #endif
                 bringup_report_impl(true);
-            if ((reports++ % 5U) == 0U
+            if (0U == (reports++ % 5U)
 #ifdef APP_RTOS_RELEASE
-                && tm_usb_state() == 3U
+                && 3U == tm_usb_state()
 #endif
             )
                 board_clock_report();
@@ -296,45 +297,45 @@ EXPORT INT usermain (void)
     ri_init();
 #endif
 #ifdef APP_RTOS_NETWORK
-    if (result == E_OK)
+    if (E_OK == result)
     {
         result = rn_init();
     }
-    if (result == E_OK)
+    if (E_OK == result)
     {
         result = start((FP)rn_app_task, 16, TP_PRC1, "network-bridge");
     }
 #endif
 #ifdef APP_RTOS_LINE
-    if (result == E_OK)
+    if (E_OK == result)
     {
         result = start((FP)rtos_line_flash_task, 5, TP_PRC1, "flash-park");
     }
 #endif
-    if (result == E_OK)
+    if (E_OK == result)
     {
         result = start((FP)bringup_control_task, 14, TP_PRC2, "motion");
     }
 #ifdef APP_RTOS_IMU
-    if (result == E_OK)
+    if (E_OK == result)
     {
         result = start((FP)ri_task, RI_TASK_PRIORITY, RI_TASK_PROCESSOR,
                        "imu-terrain");
     }
 #endif
-    if (result == E_OK)
+    if (E_OK == result)
     {
         result = start((FP)bringup_safety_task, 6, TP_PRC2, "safety");
     }
-    if (result == E_OK)
+    if (E_OK == result)
     {
         result = start((FP)bringup_nav_task, 10, TP_PRC2, "nav-bench");
     }
-    if (result == E_OK)
+    if (E_OK == result)
     {
         result = start((FP)bringup_console_task, 12, TP_PRC1, "usb-command");
     }
-    if (result == E_OK)
+    if (E_OK == result)
     {
         result = start((FP)bringup_status_task, 18, TP_PRC1, "diagnostics");
     }

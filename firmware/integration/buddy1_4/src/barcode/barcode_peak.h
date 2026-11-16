@@ -1,8 +1,9 @@
 /**
  * @file barcode_peak.h
  * @brief Barcode peak.
- * @details Pure barcode/route logic is called by the ADC owner and emits requests.
- * Native records are not wire packets; preserve both decode directions.
+ * @details Pure barcode/route logic is called by the ADC owner and emits
+ * requests. Native records are not wire packets; preserve both decode
+ * directions.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 /* Barcode peak decoder v0.1 (pure C, host-testable; no SDK).
@@ -38,12 +39,15 @@
 #define BP_SMOOTH_MIN 5  /* ... and at least this many samples */
 #define BP_DELTA 4.0     /* ADC: minimum prominence / extremum hysteresis */
 #define BP_DELTA_FRAC                                                          \
-    0.05 /* ... or 5 % of the peak rise (tall flat wide-bar tops never split) */
+    0.05 /* ... or 5 % of the peak rise (tall flat wide-bar tops never split)  \
+          */
 #define BP_MIN_RISE 20.0 /* ADC above white baseline for a bar peak */
 #define BP_MIN_SEP_MM                                                          \
-    3.0 /* closer peaks are one bar (keep the higher); true bars are >= 2 units (~6 mm) apart */
+    3.0 /* closer peaks are one bar (keep the higher); true bars are >= 2      \
+           units (~6 mm) apart */
 #define BP_QUIET_MM                                                            \
-    24.0 /* no bar for this travel ends a group (max in-frame spacing ~18 mm; 21 if a weak bar is missed) */
+    24.0 /* no bar for this travel ends a group (max in-frame spacing ~18 mm;  \
+            21 if a weak bar is missed) */
 #define BP_EARLY_QUIET_MM                                                      \
     12.0 /* with >= 15 bars, try once after this much quiet (low latency) */
 #define BP_MAX_BARS 24
@@ -53,7 +57,8 @@
 #define BP_WIDE_FRAC                                                           \
     0.50 /* bar rise > 50 % of tallest = wide; between = reject */
 #define BP_NARROW_CONSIST                                                      \
-    0.35 /* every narrow bar must rise >= 45 % of the frame's median narrow rise */
+    0.35 /* every narrow bar must rise >= 45 % of the frame's median narrow    \
+            rise */
 #define BP_WIDE_MIN_RISE                                                       \
     300.0 /* tallest bar must rise this much (wide bars exist) */
 #define BP_UNIT_MIN_MM 2.0 /* accepted narrow width range */
@@ -156,7 +161,7 @@ static inline char bp_character (uint16_t pattern)
             return alphabet[count];
         }
     }
-    return pattern == 0x094 ? '*' : '?';
+    return 0x094 == pattern ? '*' : '?';
 }
 
 static inline double bp_base (const barcode_peak_t * p_data)
@@ -195,7 +200,7 @@ static inline uint8_t bp_window (const bp_bar_t * p_bar, unsigned off,
     for (unsigned index_value = 0; index_value < 15; ++index_value)
     {
         double flags = p_second[index_value].rise / maxrise;
-        if (flags > BP_NARROW_FRAC && flags < BP_WIDE_FRAC)
+        if ((flags > BP_NARROW_FRAC) && (flags < BP_WIDE_FRAC))
         {
             return BP_R_WIDTH_CLASS;
         }
@@ -232,8 +237,8 @@ static inline uint8_t bp_window (const bp_bar_t * p_bar, unsigned off,
         if (!wide[2 * index_value_value])
         {
             unsigned other_index = nn_value++;
-            while (other_index > 0 &&
-                   nr_value[other_index - 1] > p_second[index_value_value].rise)
+            while ((other_index > 0) && (nr_value[other_index - 1] >
+                                         p_second[index_value_value].rise))
             {
                 nr_value[other_index] = nr_value[other_index - 1];
                 --other_index;
@@ -247,7 +252,7 @@ static inline uint8_t bp_window (const bp_bar_t * p_bar, unsigned off,
     }
     double u_value = (p_second[14].mm - p_second[0].mm) /
                      46.0; /* *X*: 47 units, minus half of the two end bars */
-    if (u_value < BP_UNIT_MIN_MM || u_value > BP_UNIT_MAX_MM)
+    if ((u_value < BP_UNIT_MIN_MM) || (u_value > BP_UNIT_MAX_MM))
     {
         return BP_R_UNIT;
     }
@@ -261,8 +266,9 @@ static inline uint8_t bp_window (const bp_bar_t * p_bar, unsigned off,
                           ((wide[2 * index_value_value_value] ? 3 : 1) +
                            (wide[2 * index_value_value_value + 2] ? 3 : 1)) *
                               0.5;
-        if (sp_value < 0.2 || fabs(sp_value - BP_SPACE_CUT) < BP_SPACE_AMBIG ||
-            sp_value > 5.0)
+        if (((sp_value < 0.2) ||
+             (fabs(sp_value - BP_SPACE_CUT) < BP_SPACE_AMBIG)) ||
+            (sp_value > 5.0))
         {
             return BP_R_SPACE;
         }
@@ -279,7 +285,7 @@ static inline uint8_t bp_window (const bp_bar_t * p_bar, unsigned off,
             max_ns = sp_value;
         }
     }
-    if (wide[9] || wide[19])
+    if ((wide[9]) || (wide[19]))
     {
         return BP_R_GAP;
     }
@@ -303,8 +309,9 @@ static inline uint8_t bp_window (const bp_bar_t * p_bar, unsigned off,
     bool ok_value[2];
     for (unsigned dir = 0; dir < 2; ++dir)
     {
-        ok_value[dir] = character[dir][0] == '*' && character[dir][2] == '*' &&
-                        character[dir][1] != '*' && character[dir][1] != '?';
+        ok_value[dir] = '*' == character[dir][0] && '*' == character[dir][2] &&
+                        (character[dir][1] != '*') &&
+                        (character[dir][1] != '?');
     }
     if (ok_value[0] == ok_value[1])
     {
@@ -327,8 +334,8 @@ static inline uint8_t bp_window (const bp_bar_t * p_bar, unsigned off,
     return BP_OK;
 }
 
-/* Try every 15-bar window of bars[0..n). Collects into *best; returns number of valid windows
- * (sets *conflict if two windows disagree on the code). */
+/* Try every 15-bar window of bars[0..n). Collects into *best; returns number of
+ * valid windows (sets *conflict if two windows disagree on the code). */
 static inline unsigned bp_windows (const bp_bar_t * p_bars, unsigned count,
                                    bp_result_t * p_best,
                                    const bp_result_t * p_proto,
@@ -339,9 +346,9 @@ static inline unsigned bp_windows (const bp_bar_t * p_bars, unsigned count,
     {
         bp_result_t sample = *p_proto;
         uint8_t why = bp_window(p_bars, off, &sample);
-        if (why == BP_OK)
+        if (BP_OK == why)
         {
-            if (found && sample.code != p_best->code)
+            if (found && (sample.code != p_best->code))
             {
                 *p_conflict = true;
             }
@@ -351,16 +358,17 @@ static inline unsigned bp_windows (const bp_bar_t * p_bars, unsigned count,
             }
             ++found;
         }
-        else if (off == 0 && p_first_reason)
+        else if (0 == off && p_first_reason)
         {
             *p_first_reason = why;
         }
     }
     return found;
 }
-/* Decode the current group. Exactly one code must result. If no window of the raw group decodes
- * and it has 16..18 bars, retry without 1, then 2, of the weakest-prominence narrow bars (noise
- * bumps); every successful removal must agree on the same code. */
+/* Decode the current group. Exactly one code must result. If no window of the
+ * raw group decodes and it has 16..18 bars, retry without 1, then 2, of the
+ * weakest-prominence narrow bars (noise bumps); every successful removal must
+ * agree on the same code. */
 static inline void bp_decode (const barcode_peak_t * p_data,
                               bp_result_t * p_result)
 {
@@ -384,7 +392,8 @@ static inline void bp_decode (const barcode_peak_t * p_data,
     bp_result_t best = *p_result;
     unsigned found = bp_windows(p_data->bar, p_data->nbars, &best, p_result,
                                 &first_reason, &conflict);
-    if (!found && p_data->nbars > 15 && p_data->nbars <= BP_REPAIR_MAX_BARS)
+    if (((!found) && (p_data->nbars > 15)) &&
+        (p_data->nbars <= BP_REPAIR_MAX_BARS))
     {
         double maxrise = 0;
         for (unsigned index = 0; index < p_data->nbars; ++index)
@@ -406,7 +415,7 @@ static inline void bp_decode (const barcode_peak_t * p_data,
             unsigned other_index = nc_value < BP_REPAIR_CANDIDATES
                                        ? nc_value++
                                        : BP_REPAIR_CANDIDATES;
-            if (other_index == BP_REPAIR_CANDIDATES)
+            if (BP_REPAIR_CANDIDATES == other_index)
             {
                 if (p_data->bar[index_value].prom >=
                     p_data->bar[cand[other_index - 1]].prom)
@@ -415,8 +424,9 @@ static inline void bp_decode (const barcode_peak_t * p_data,
                 }
                 other_index = other_index - 1;
             }
-            while (other_index > 0 && p_data->bar[cand[other_index - 1]].prom >
-                                          p_data->bar[index_value].prom)
+            while ((other_index > 0) &&
+                   (p_data->bar[cand[other_index - 1]].prom >
+                    p_data->bar[index_value].prom))
             {
                 cand[other_index] = cand[other_index - 1];
                 --other_index;
@@ -424,22 +434,22 @@ static inline void bp_decode (const barcode_peak_t * p_data,
             cand[other_index] = index_value;
         }
         for (unsigned drop = 1;
-             drop <= 2 && !found && p_data->nbars - drop >= 15; ++drop)
+             ((drop <= 2) && (!found)) && (p_data->nbars - drop >= 15); ++drop)
         {
             for (unsigned first = 0; first < nc_value; ++first)
             {
-                for (unsigned second = drop == 2 ? first + 1 : nc_value;
-                     second < nc_value || (drop == 1 && second == nc_value);
+                for (unsigned second = 2 == drop ? first + 1 : nc_value;
+                     (second < nc_value) || (1 == drop && (second == nc_value));
                      ++second)
                 {
                     static bp_bar_t tmp[BP_MAX_BARS];
-                    unsigned m_value =
-                        0; /* static: keeps ~0.8 KB off the core-0 stack (single caller) */
+                    unsigned m_value = 0; /* static: keeps ~0.8 KB off the
+                                             core-0 stack (single caller) */
                     for (unsigned index_value_value = 0;
                          index_value_value < p_data->nbars; ++index_value_value)
                     {
-                        if (index_value_value != cand[first] &&
-                            !(drop == 2 && index_value_value == cand[second]))
+                        if ((index_value_value != cand[first]) &&
+                            !(2 == drop && (index_value_value == cand[second])))
                         {
                             tmp[m_value++] = p_data->bar[index_value_value];
                         }
@@ -449,7 +459,7 @@ static inline void bp_decode (const barcode_peak_t * p_data,
                                                 NULL, &conflict);
                     if (flags)
                     {
-                        if (found && sample.code != best.code)
+                        if (found && (sample.code != best.code))
                         {
                             conflict = true;
                         }
@@ -460,7 +470,7 @@ static inline void bp_decode (const barcode_peak_t * p_data,
                         }
                         found += flags;
                     }
-                    if (drop == 1)
+                    if (1 == drop)
                     {
                         break;
                     }
@@ -485,8 +495,8 @@ static inline void bp_decode (const barcode_peak_t * p_data,
 static inline void bp_add_bar (barcode_peak_t * p_data, double mm_value,
                                double peak, double rise, double prom)
 {
-    if (p_data->nbars &&
-        mm_value - p_data->bar[p_data->nbars - 1].mm < BP_MIN_SEP_MM)
+    if ((p_data->nbars) &&
+        (mm_value - p_data->bar[p_data->nbars - 1].mm < BP_MIN_SEP_MM))
     {
         bp_bar_t * p_l_value = &p_data->bar[p_data->nbars - 1];
         if (peak > p_l_value->peak)
@@ -511,7 +521,7 @@ static inline void bp_add_bar (barcode_peak_t * p_data, double mm_value,
 }
 static inline void bp_close_right (barcode_peak_t * p_data, double valley)
 {
-    if (!p_data->last_open || !p_data->nbars)
+    if ((!p_data->last_open) || (!p_data->nbars))
     {
         return;
     }
@@ -528,7 +538,7 @@ static inline void bp_close_right (barcode_peak_t * p_data, double valley)
 static inline bool bp_sample (barcode_peak_t * p_data, uint16_t adc,
                               double mm_value, bp_result_t * p_out)
 {
-    if (p_data->have_mm && mm_value < p_data->last_mm)
+    if ((p_data->have_mm) && (mm_value < p_data->last_mm))
     {
         mm_value = p_data->last_mm; /* never step backwards */
     }
@@ -546,8 +556,8 @@ static inline bool bp_sample (barcode_peak_t * p_data, uint16_t adc,
     for (unsigned item_index = 0; item_index < p_data->rcount; ++item_index)
     {
         unsigned index = (p_data->rhead + BP_RING - 1 - item_index) % BP_RING;
-        if (count >= BP_SMOOTH_MIN &&
-            p_data->rmm[index] < mm_value - BP_SMOOTH_MM)
+        if ((count >= BP_SMOOTH_MIN) &&
+            (p_data->rmm[index] < mm_value - BP_SMOOTH_MM))
         {
             break;
         }
@@ -622,14 +632,15 @@ static inline bool bp_sample (barcode_peak_t * p_data, uint16_t adc,
         }
     }
     bool pending =
-        p_data->rising &&
-        p_data->ext >= base + BP_MIN_RISE; /* a bar peak is still forming */
-    if (p_data->nbars && !pending)
+        (p_data->rising) &&
+        (p_data->ext >= base + BP_MIN_RISE); /* a bar peak is still forming */
+    if ((p_data->nbars) && (!pending))
     {
         double quiet = mm_value - p_data->bar[p_data->nbars - 1].mm;
-        bool end = quiet > BP_QUIET_MM, early = !end && !p_data->early_tried &&
-                                                p_data->nbars >= 15 &&
-                                                quiet > BP_EARLY_QUIET_MM;
+        bool end = quiet > BP_QUIET_MM,
+             early = (((!end) && (!p_data->early_tried)) &&
+                      (p_data->nbars >= 15)) &&
+                     (quiet > BP_EARLY_QUIET_MM);
         if (end || early)
         {
             if (!p_data->rising)
@@ -661,10 +672,10 @@ static inline bool bp_sample (barcode_peak_t * p_data, uint16_t adc,
  *     bit5 original accepted a DIFFERENT code here, bit6 bar overflow
  *  6 u8 code ('?' none)   7 u8 reason (BP_*)   8 u8 bars in group
  *  9 u8 window offset (bits0-3) | weak bars removed by repair (bits4-5)
- * 10 u16 white baseline ADC  12 u16 lowest narrow-bar peak ADC  14 u16 highest wide-bar peak ADC
- * 16 u8 lowest narrow-bar rise ADC (255 max)  17 u8 max narrow space x20 (units)
- * 18 u8 min wide space x20 (units)  19 u8 narrow unit mm x50
- * 20 u16 frame span mm x10   22 u16 groups reported since run start */
+ * 10 u16 white baseline ADC  12 u16 lowest narrow-bar peak ADC  14 u16 highest
+ * wide-bar peak ADC 16 u8 lowest narrow-bar rise ADC (255 max)  17 u8 max
+ * narrow space x20 (units) 18 u8 min wide space x20 (units)  19 u8 narrow unit
+ * mm x50 20 u16 frame span mm x10   22 u16 groups reported since run start */
 #define BP_TLM_PAYLOAD 24
 #define BP_TLM_FRAME (3 + BP_TLM_PAYLOAD)
 static inline uint8_t bp_u8 (double value)

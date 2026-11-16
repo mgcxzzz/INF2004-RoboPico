@@ -1,8 +1,9 @@
 /**
  * @file ramp_bridge.c
  * @brief Ramp bridge.
- * @details The IMU task owns sensor acquisition and calibration; readers use snapshots.
- * Ramp requests expire through the coordinator; lift safety may remove output.
+ * @details The IMU task owns sensor acquisition and calibration; readers use
+ * snapshots. Ramp requests expire through the coordinator; lift safety may
+ * remove output.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 #ifdef APP_RTOS_IMU
@@ -57,7 +58,7 @@ static void publish (uint64_t now, uint8_t event,
     g_report = sample;
     g_report_approved = *p_approved;
     (void)ISpinUnlock(&g_report_lock, key);
-    if (rn_drive_telemetry_enabled() && rn_drive_online())
+    if ((rn_drive_telemetry_enabled()) && (rn_drive_online()))
     {
         uint8_t frame[RA_TLM_FRAME_BYTES];
         ra_tlm_pack(&sample, rn_next_sequence(15), frame);
@@ -106,7 +107,8 @@ motion_ramp_assist_t ri_ramp_step (float delta_time_value, bool following,
     /* Core0 may publish during the control task's earlier ADC/planning work.
      * A loop-start timestamp can precede this copied sample and underflow the
      * unsigned age checks. Both values use the full64-bit hardware timer; read
-     * current time only after the protected copy, before updating any timers. */
+     * current time only after the protected copy, before updating any timers.
+     */
     const uint64_t now = board_time_us();
     if (!g_seen)
     {
@@ -131,16 +133,17 @@ motion_ramp_assist_t ri_ramp_step (float delta_time_value, bool following,
             sat |= m_value >= limit - 1;
         }
     }
-    if (sat && g_saturated < 255)
+    if (sat && (g_saturated < 255))
     {
         ++g_saturated;
     }
     motion_status_t status = motion_get_status();
     bool was = g_state.assisting;
-    motion_ramp_assist_t requested = ri_ramp_request(
-        &g_state, &tilt, now, delta_time_value, true,
-        status.session_active && status.mode == MOTION_AUTO, following, speed);
-    if (!was && g_state.assisting)
+    motion_ramp_assist_t requested =
+        ri_ramp_request(&g_state, &tilt, now, delta_time_value, true,
+                        (status.session_active) && MOTION_AUTO == status.mode,
+                        following, speed);
+    if ((!was) && (g_state.assisting))
     {
         g_peak_pwm = 0;
     }
@@ -161,9 +164,9 @@ motion_ramp_assist_t ri_ramp_step (float delta_time_value, bool following,
             g_peak_pwm = g_added[wheel_value];
         }
     }
-    if (g_state.pending_event != 0xff || now - g_last_report >= 500000)
+    if ((g_state.pending_event != 0xff) || (now - g_last_report >= 500000))
     {
-        uint8_t event = g_state.pending_event == 0xff ? RA_EVT_PERIODIC
+        uint8_t event = 0xff == g_state.pending_event ? RA_EVT_PERIODIC
                                                       : g_state.pending_event;
         g_state.pending_event = 0xff;
         publish(now, event, &approved, target);
@@ -183,7 +186,7 @@ void ri_ramp_halt (uint64_t now)
     motion_ramp_assist_t empty = {0};
     const int16_t target[2] = {0};
     uint8_t event =
-        g_state.pending_event == 0xff ? RA_EVT_PERIODIC : g_state.pending_event;
+        0xff == g_state.pending_event ? RA_EVT_PERIODIC : g_state.pending_event;
     g_state.pending_event = 0xff;
     publish(now, event, &empty, target);
     g_seen = false;

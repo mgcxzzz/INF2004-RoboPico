@@ -1,8 +1,9 @@
 /**
  * @file nav_api.h
  * @brief Nav api.
- * @details Public feature contract. Requests cross coordinator ownership checks;
- * callers observe completion/status separately and must respect task context.
+ * @details Public feature contract. Requests cross coordinator ownership
+ * checks; callers observe completion/status separately and must respect task
+ * context.
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 #ifndef BUDDY_NAV_API_H

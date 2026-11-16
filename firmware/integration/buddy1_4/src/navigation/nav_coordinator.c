@@ -72,7 +72,7 @@ static uint64_t now (void)
 }
 static bool owner_valid (motion_owner_t owner)
 {
-    return owner >= MOTION_BUDDY1 && owner <= MOTION_BUDDY5;
+    return (owner >= MOTION_BUDDY1) && (owner <= MOTION_BUDDY5);
 }
 static void emit (motion_event_t event)
 {
@@ -111,26 +111,26 @@ static void event (unsigned type)
                             .kind = g_value.executor.turning ? 3 : 2,
                             .progress_mm = g_value.status.progress_mm,
                             .rotation_deg = g_value.status.rotation_deg};
-    if (type == MOTION_EVENT_PAUSE || type == MOTION_EVENT_STOPPED)
+    if (MOTION_EVENT_PAUSE == type || MOTION_EVENT_STOPPED == type)
     {
         event.kind = 0;
         event.goal = 0;
         event.speed = 0;
     }
-    if (type == MOTION_EVENT_RESUME)
+    if (MOTION_EVENT_RESUME == type)
     {
         event.kind = 4;
         event.goal = 0;
         event.speed = 0;
     }
-    if (type == MOTION_EVENT_ROUTE)
+    if (MOTION_EVENT_ROUTE == type)
     {
         event.kind = 5;
         event.requester = MOTION_BUDDY3;
         event.goal = g_value.route;
         event.speed = 0;
     }
-    if (type == MOTION_EVENT_TERRAIN)
+    if (MOTION_EVENT_TERRAIN == type)
     {
         event.kind = 6;
         event.requester = MOTION_BUDDY4;
@@ -142,7 +142,7 @@ static void event (unsigned type)
 void nav_coordinator_reject (motion_owner_t owner, unsigned kind, float goal,
                              unsigned speed, motion_result_t result)
 {
-    if (result == MOTION_OK)
+    if (MOTION_OK == result)
     {
         return;
     }
@@ -162,8 +162,8 @@ void nav_coordinator_reject (motion_owner_t owner, unsigned kind, float goal,
 }
 static bool assist_active (void)
 {
-    return g_value.assist.boost_milli || g_value.assist.push_pwm_x100 ||
-           g_value.assist.hold_milli;
+    return ((g_value.assist.boost_milli) || (g_value.assist.push_pwm_x100)) ||
+           (g_value.assist.hold_milli);
 }
 static void assist_event (unsigned reason)
 {
@@ -213,7 +213,7 @@ static void remember (motion_command_state_t state)
 }
 static void cancel (void)
 {
-    if (g_value.status.command_state == MOTION_CMD_RUNNING)
+    if (MOTION_CMD_RUNNING == g_value.status.command_state)
     {
         remember(MOTION_CMD_CANCELLED);
         event(MOTION_EVENT_CANCEL);
@@ -287,7 +287,7 @@ void nav_coordinator_end (uint8_t reason)
 motion_result_t nav_coordinator_pause (motion_owner_t owner,
                                        uint32_t * p_lease_value)
 {
-    if (!owner_valid(owner) || !p_lease_value)
+    if ((!owner_valid(owner)) || (!p_lease_value))
     {
         return MOTION_INVALID;
     }
@@ -297,14 +297,15 @@ motion_result_t nav_coordinator_pause (motion_owner_t owner,
     {
         result = MOTION_INACTIVE;
     }
-    else if (g_value.status.mode != MOTION_AUTO &&
-             g_value.status.owner != owner && owner != MOTION_BUDDY5)
+    else if (((g_value.status.mode != MOTION_AUTO) &&
+              (g_value.status.owner != owner)) &&
+             (owner != MOTION_BUDDY5))
     {
         result = MOTION_BUSY;
     }
-    else if (g_value.status.owner == owner &&
-             (g_value.status.mode == MOTION_PAUSED ||
-              g_value.status.mode == MOTION_STOPPING))
+    else if ((g_value.status.owner == owner) &&
+             (MOTION_PAUSED == g_value.status.mode ||
+              MOTION_STOPPING == g_value.status.mode))
     {
         *p_lease_value = g_value.status.lease;
     }
@@ -340,7 +341,7 @@ motion_result_t nav_coordinator_stop (motion_owner_t owner)
         unlock(key);
         return MOTION_INACTIVE;
     }
-    if (g_value.status.mode == MOTION_AUTO)
+    if (MOTION_AUTO == g_value.status.mode)
     {
         g_value.status.owner = owner;
         ++g_value.status.lease;
@@ -371,8 +372,8 @@ static motion_result_t access (motion_owner_t owner, uint32_t lease)
     {
         return MOTION_INACTIVE;
     }
-    if (owner != g_value.status.owner || lease != g_value.status.lease ||
-        !lease)
+    if (((owner != g_value.status.owner) || (lease != g_value.status.lease)) ||
+        (!lease))
     {
         return MOTION_NOT_OWNER;
     }
@@ -387,25 +388,27 @@ motion_result_t nav_coordinator_move (motion_owner_t owner, uint32_t lease,
     {
         *p_identifier_value = 0;
     }
-    if (!owner_valid(owner) || !p_identifier_value || !isfinite(goal) ||
-        fabsf(goal) < 1 || fabsf(goal) > (turn ? 180 : 1000) ||
-        (speed && (speed < 20 || speed > (turn ? 90u : 60u))) ||
-        (turn && style != MOTION_ROLLING && style != MOTION_IN_PLACE))
+    if (((((((!owner_valid(owner)) || (!p_identifier_value)) ||
+            (!isfinite(goal))) ||
+           (fabsf(goal) < 1)) ||
+          (fabsf(goal) > (turn ? 180 : 1000))) ||
+         (speed && ((speed < 20) || (speed > (turn ? 90u : 60u))))) ||
+        ((turn && (style != MOTION_ROLLING)) && (style != MOTION_IN_PLACE)))
     {
         return MOTION_INVALID;
     }
     uintptr_t key = lock();
     motion_result_t result = access(owner, lease);
-    if (result == MOTION_OK &&
-        (g_value.status.mode != MOTION_PAUSED || !g_value.status.stopped))
+    if (MOTION_OK == result &&
+        ((g_value.status.mode != MOTION_PAUSED) || (!g_value.status.stopped)))
     {
         result = MOTION_NOT_STOPPED;
     }
-    if (result == MOTION_OK && now() - g_value.feedback.now_us > 100000)
+    if (MOTION_OK == result && (now() - g_value.feedback.now_us > 100000))
     {
         result = MOTION_NOT_STOPPED;
     }
-    if (result == MOTION_OK)
+    if (MOTION_OK == result)
     {
         if (!speed)
         {
@@ -436,23 +439,23 @@ motion_result_t nav_coordinator_resume (motion_owner_t owner, uint32_t lease,
 {
     uintptr_t key = lock();
     motion_result_t result = access(owner, lease);
-    if (result == MOTION_OK &&
-        (g_value.status.mode != MOTION_PAUSED || !g_value.status.stopped))
+    if (MOTION_OK == result &&
+        ((g_value.status.mode != MOTION_PAUSED) || (!g_value.status.stopped)))
     {
         result = MOTION_NOT_STOPPED;
     }
-    if (result == MOTION_OK && g_value.status.navigation_interrupted &&
-        !abandon)
+    if (MOTION_OK == result && (g_value.status.navigation_interrupted) &&
+        (!abandon))
     {
         result = MOTION_NEED_RECOVERY;
     }
-    if (result == MOTION_OK &&
-        (!g_value.line_timing || now() - g_value.line_since < 150000 ||
-         now() - g_value.feedback.now_us > 100000))
+    if (MOTION_OK == result &&
+        (((!g_value.line_timing) || (now() - g_value.line_since < 150000)) ||
+         (now() - g_value.feedback.now_us > 100000)))
     {
         result = MOTION_NEED_LINE;
     }
-    if (result == MOTION_OK)
+    if (MOTION_OK == result)
     {
         g_value.resume = true;
         g_value.abandon = abandon;
@@ -476,8 +479,9 @@ motion_result_t nav_coordinator_resume (motion_owner_t owner, uint32_t lease,
 motion_result_t nav_coordinator_navigation (motion_owner_t owner, int16_t left,
                                             int16_t right)
 {
-    if (owner != MOTION_BUDDY3 || left < -180 || right < -180 || left > 180 ||
-        right > 180)
+    if (((((owner != MOTION_BUDDY3) || (left < -180)) || (right < -180)) ||
+         (left > 180)) ||
+        (right > 180))
     {
         return MOTION_INVALID;
     }
@@ -485,13 +489,13 @@ motion_result_t nav_coordinator_navigation (motion_owner_t owner, int16_t left,
     motion_result_t result = !g_value.status.session_active ? MOTION_INACTIVE
                              : g_value.status.mode != MOTION_AUTO ? MOTION_BUSY
                                                                   : MOTION_OK;
-    if (result == MOTION_OK)
+    if (MOTION_OK == result)
     {
         g_value.nav_target[0] = left;
         g_value.nav_target[1] = right;
         g_value.nav_since = now();
-        if (!g_value.target_log_since ||
-            now() - g_value.target_log_since >= 1000000)
+        if ((!g_value.target_log_since) ||
+            (now() - g_value.target_log_since >= 1000000))
         {
             motion_event_t event = {.now_us = now(),
                                     .owner = MOTION_BUDDY3,
@@ -509,7 +513,7 @@ motion_result_t nav_coordinator_navigation (motion_owner_t owner, int16_t left,
 motion_result_t nav_coordinator_route (motion_owner_t owner, char code)
 {
 #ifdef BUDDY_RUNTIME_MAPPING
-    if (owner != MOTION_BUDDY3 || code < 'A' || code > 'Z')
+    if (((owner != MOTION_BUDDY3) || (code < 'A')) || (code > 'Z'))
     {
         return MOTION_INVALID;
     }
@@ -520,12 +524,12 @@ motion_result_t nav_coordinator_route (motion_owner_t owner, char code)
     }
 #endif
     uintptr_t key = lock();
-    motion_result_t result =
-        !g_value.status.session_active ? MOTION_INACTIVE
-        : g_value.status.mode != MOTION_AUTO || g_value.feedback.navigation_busy
-            ? MOTION_BUSY
-            : MOTION_OK;
-    if (result == MOTION_OK)
+    motion_result_t result = !g_value.status.session_active ? MOTION_INACTIVE
+                             : (g_value.status.mode != MOTION_AUTO) ||
+                                     (g_value.feedback.navigation_busy)
+                                 ? MOTION_BUSY
+                                 : MOTION_OK;
+    if (MOTION_OK == result)
     {
         g_value.route = code;
         event(MOTION_EVENT_ROUTE);
@@ -536,8 +540,8 @@ motion_result_t nav_coordinator_route (motion_owner_t owner, char code)
 motion_result_t nav_coordinator_terrain (motion_owner_t owner,
                                          motion_terrain_t terrain)
 {
-    if (owner != MOTION_BUDDY4 ||
-        (unsigned)terrain > (unsigned)MOTION_DESCENDING)
+    if ((owner != MOTION_BUDDY4) ||
+        ((unsigned)terrain > (unsigned)MOTION_DESCENDING))
     {
         return MOTION_INVALID;
     }
@@ -560,12 +564,13 @@ motion_result_t nav_coordinator_speed_mode (motion_owner_t owner, unsigned mode)
     g_value.speed_mode_requested =
         drive_mode_valid(mode) ? mode : DRIVE_MODE_NONE;
     motion_result_t result = MOTION_OK;
-    if (owner != MOTION_BUDDY1 || !drive_mode_valid(mode))
+    if ((owner != MOTION_BUDDY1) || (!drive_mode_valid(mode)))
     {
         result = MOTION_INVALID;
     }
-    else if (g_value.status.session_active ||
-             g_value.status.mode != MOTION_OFF || !g_value.status.stopped)
+    else if (((g_value.status.session_active) ||
+              (g_value.status.mode != MOTION_OFF)) ||
+             (!g_value.status.stopped))
     {
         result = MOTION_NOT_STOPPED;
     }
@@ -596,7 +601,7 @@ motion_speed_mode_status_t nav_coordinator_speed_mode_status (void)
 bool nav_coordinator_command (uint32_t identifier_value,
                               motion_command_status_t * p_status_value)
 {
-    if (!identifier_value || !p_status_value)
+    if ((!identifier_value) || (!p_status_value))
     {
         return false;
     }
@@ -634,8 +639,8 @@ motion_output_t nav_coordinator_update (const motion_feedback_t * p_flags)
      * feedback snapshot. Compare request ages on that same live clock;
      * unsigned snapshot-request subtraction would underflow at startup. */
     uint64_t check_us = now();
-    bool still =
-        fabsf(p_flags->speed_mm_s[0]) < 5 && fabsf(p_flags->speed_mm_s[1]) < 5;
+    bool still = (fabsf(p_flags->speed_mm_s[0]) < 5) &&
+                 (fabsf(p_flags->speed_mm_s[1]) < 5);
     if (!still)
     {
         g_value.still_timing = false;
@@ -645,9 +650,10 @@ motion_output_t nav_coordinator_update (const motion_feedback_t * p_flags)
         g_value.still_timing = true;
         g_value.still_since = p_flags->now_us;
     }
-    g_value.status.stopped =
-        g_value.still_timing && p_flags->now_us - g_value.still_since >= 120000;
-    bool line = p_flags->line_level[0] >= 400 || p_flags->line_level[1] >= 400;
+    g_value.status.stopped = (g_value.still_timing) &&
+                             (p_flags->now_us - g_value.still_since >= 120000);
+    bool line =
+        (p_flags->line_level[0] >= 400) || (p_flags->line_level[1] >= 400);
     if (!line)
     {
         g_value.line_timing = false;
@@ -663,17 +669,18 @@ motion_output_t nav_coordinator_update (const motion_feedback_t * p_flags)
         if (g_value.resume)
         {
             g_value.status.mode =
-                MOTION_AUTO; /* adapter resets old navigation before the next optical tick */
+                MOTION_AUTO; /* adapter resets old navigation before the next
+                                optical tick */
         }
-        if (g_value.status.mode == MOTION_AUTO &&
-            check_us - g_value.nav_since > 100000)
+        if (MOTION_AUTO == g_value.status.mode &&
+            (check_us - g_value.nav_since > 100000))
         {
             g_value.status.mode = MOTION_FAULT;
             g_value.status.fault = g_value.reported_faults | NAV_FAULT_CONTROL;
             off();
             event(MOTION_EVENT_FAULT);
         }
-        else if (g_value.status.mode == MOTION_STOPPING)
+        else if (MOTION_STOPPING == g_value.status.mode)
         {
             g_value.status.navigation_interrupted |= p_flags->navigation_busy;
             if (g_value.status.stopped)
@@ -690,9 +697,9 @@ motion_output_t nav_coordinator_update (const motion_feedback_t * p_flags)
                 event(MOTION_EVENT_FAULT);
             }
         }
-        else if (g_value.status.mode == MOTION_DRIVING ||
-                 g_value.status.mode == MOTION_TURNING ||
-                 g_value.status.mode == MOTION_SETTLING)
+        else if (MOTION_DRIVING == g_value.status.mode ||
+                 MOTION_TURNING == g_value.status.mode ||
+                 MOTION_SETTLING == g_value.status.mode)
         {
             motion_command_state_t state =
                 motion_executor_step(&g_value.executor, p_flags);
@@ -705,8 +712,8 @@ motion_output_t nav_coordinator_update (const motion_feedback_t * p_flags)
                 remember(state);
                 off();
                 g_value.status.mode =
-                    state == MOTION_CMD_DONE ? MOTION_PAUSED : MOTION_FAULT;
-                event(state == MOTION_CMD_DONE ? MOTION_EVENT_DONE
+                    MOTION_CMD_DONE == state ? MOTION_PAUSED : MOTION_FAULT;
+                event(MOTION_CMD_DONE == state ? MOTION_EVENT_DONE
                                                : MOTION_EVENT_FAULT);
             }
             else
@@ -718,15 +725,15 @@ motion_output_t nav_coordinator_update (const motion_feedback_t * p_flags)
             }
         }
     }
-    output.external =
-        !g_value.status.session_active || g_value.status.mode != MOTION_AUTO;
-    if (g_value.status.session_active && g_value.status.mode == MOTION_AUTO)
+    output.external = (!g_value.status.session_active) ||
+                      (g_value.status.mode != MOTION_AUTO);
+    if ((g_value.status.session_active) && MOTION_AUTO == g_value.status.mode)
     {
         output.target_mm_s[0] = g_value.nav_target[0];
         output.target_mm_s[1] = g_value.nav_target[1];
     }
-    else if (g_value.status.mode == MOTION_DRIVING ||
-             g_value.status.mode == MOTION_TURNING)
+    else if (MOTION_DRIVING == g_value.status.mode ||
+             MOTION_TURNING == g_value.status.mode)
     {
         output.target_mm_s[0] = g_value.executor.target[0];
         output.target_mm_s[1] = g_value.executor.target[1];
@@ -749,9 +756,9 @@ bool nav_coordinator_commit (uint32_t epoch, void (*p_apply_value)(void *),
                              void * p_user_value)
 {
     uintptr_t key = lock();
-    bool ok_value = g_value.status.session_active &&
-                    g_value.status.mode != MOTION_FAULT &&
-                    epoch == g_value.status.generation;
+    bool ok_value = ((g_value.status.session_active) &&
+                     (g_value.status.mode != MOTION_FAULT)) &&
+                    (epoch == g_value.status.generation);
     if (ok_value && p_apply_value)
     {
         p_apply_value(p_user_value);
@@ -781,7 +788,7 @@ bool nav_coordinator_pop (motion_event_t * p_out)
 motion_result_t nav_coordinator_fault (motion_owner_t owner, unsigned bitmap,
                                        bool active)
 {
-    if (!owner_valid(owner) || !bitmap || (bitmap & ~NAV_FAULT_MASK))
+    if (((!owner_valid(owner)) || (!bitmap)) || (bitmap & ~NAV_FAULT_MASK))
     {
         return MOTION_INVALID;
     }
@@ -842,7 +849,7 @@ bool nav_coordinator_log_read (unsigned index, motion_event_t * p_event_value)
 void nav_coordinator_note (unsigned phase, char decoded)
 {
     uintptr_t key = lock();
-    if (g_value.status.session_active && g_value.status.mode == MOTION_AUTO)
+    if ((g_value.status.session_active) && MOTION_AUTO == g_value.status.mode)
     {
         motion_event_t event = {
             .now_us = now(),
@@ -857,21 +864,25 @@ void nav_coordinator_note (unsigned phase, char decoded)
     unlock(key);
 }
 
-/* Every accepted assist is bounded, expires, and never changes the line owner. */
+/* Every accepted assist is bounded, expires, and never changes the line owner.
+ */
 motion_result_t
 nav_coordinator_ramp_assist (motion_owner_t owner,
                              const motion_ramp_assist_t * p_first)
 {
-    if (owner != MOTION_BUDDY4 || !p_first || p_first->boost_milli > 200 ||
-        p_first->push_pwm_x100 > 6000 || p_first->hold_milli > 1000 ||
-        !p_first->ttl_ms || p_first->ttl_ms > 200)
+    if (((((((owner != MOTION_BUDDY4) || (!p_first)) ||
+            (p_first->boost_milli > 200)) ||
+           (p_first->push_pwm_x100 > 6000)) ||
+          (p_first->hold_milli > 1000)) ||
+         (!p_first->ttl_ms)) ||
+        (p_first->ttl_ms > 200))
     {
         return MOTION_INVALID;
     }
     uintptr_t key = lock();
     motion_result_t result = MOTION_OK;
-    bool requested =
-        p_first->boost_milli || p_first->push_pwm_x100 || p_first->hold_milli;
+    bool requested = ((p_first->boost_milli) || (p_first->push_pwm_x100)) ||
+                     (p_first->hold_milli);
     if (!requested)
     {
         clear_assist(0);
@@ -880,8 +891,9 @@ nav_coordinator_ramp_assist (motion_owner_t owner,
     {
         result = MOTION_INACTIVE;
     }
-    else if (g_value.status.mode != MOTION_AUTO ||
-             g_value.feedback.navigation_busy || !g_value.assist_eligible)
+    else if (((g_value.status.mode != MOTION_AUTO) ||
+              (g_value.feedback.navigation_busy)) ||
+             (!g_value.assist_eligible))
     {
         result = MOTION_BUSY;
     }
@@ -890,7 +902,7 @@ nav_coordinator_ramp_assist (motion_owner_t owner,
         bool was = assist_active();
         g_value.assist = *p_first;
         g_value.assist_deadline = now() + (uint64_t)p_first->ttl_ms * 1000;
-        if (!was || now() - g_value.assist_log_us >= 100000)
+        if ((!was) || (now() - g_value.assist_log_us >= 100000))
         {
             assist_event(1);
         }
@@ -901,9 +913,10 @@ nav_coordinator_ramp_assist (motion_owner_t owner,
 motion_ramp_assist_t nav_coordinator_get_assist (void)
 {
     uintptr_t key = lock();
-    if (assist_active() &&
-        (now() >= g_value.assist_deadline || !g_value.assist_eligible ||
-         g_value.status.mode != MOTION_AUTO || !g_value.status.session_active))
+    if ((assist_active()) &&
+        ((((now() >= g_value.assist_deadline) || (!g_value.assist_eligible)) ||
+          (g_value.status.mode != MOTION_AUTO)) ||
+         (!g_value.status.session_active)))
     {
         clear_assist(3);
     }
@@ -924,17 +937,17 @@ void nav_coordinator_assist_context (bool eligible)
 motion_result_t nav_coordinator_verified_barcode (motion_owner_t owner,
                                                   char code)
 {
-    if (owner != MOTION_BUDDY3 || code < 'A' || code > 'Z')
+    if (((owner != MOTION_BUDDY3) || (code < 'A')) || (code > 'Z'))
     {
         return MOTION_INVALID;
     }
     uintptr_t key = lock();
-    motion_result_t result =
-        !g_value.status.session_active ? MOTION_INACTIVE
-        : g_value.status.mode != MOTION_AUTO || g_value.feedback.navigation_busy
-            ? MOTION_BUSY
-            : MOTION_OK;
-    if (result == MOTION_OK)
+    motion_result_t result = !g_value.status.session_active ? MOTION_INACTIVE
+                             : (g_value.status.mode != MOTION_AUTO) ||
+                                     (g_value.feedback.navigation_busy)
+                                 ? MOTION_BUSY
+                                 : MOTION_OK;
+    if (MOTION_OK == result)
     {
         motion_event_t event = {.now_us = now(),
                                 .owner = g_value.status.owner,
