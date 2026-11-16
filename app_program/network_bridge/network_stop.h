@@ -12,6 +12,7 @@
 #include <stdint.h>
 
 #include "network_bridge.h"
+#include "src/platform/compact_signed.h"
 
 /* Source 15 subtype 0xC6: fixed 32-byte v0.2.1 frame (F2, len29, seq, C6,
  * version21, reserved byte5). Six full-width source fields remain u32 in native
@@ -22,7 +23,7 @@ typedef struct
 {
     unsigned valid : 1;
     unsigned flags : 3;
-    signed int link : 3;
+    unsigned link_bits : 3;
     unsigned failmask : 7;
     uint32_t stop_ms;
     uint32_t poll_age_ms;
@@ -86,7 +87,7 @@ rn_network_stop_candidate (const rn_status_t * p_status, uint32_t now_ms,
     return (rn_network_stop_snapshot_t){
         .valid = 1U,
         .flags = (unsigned)(p_status->flags & 7U),
-        .link = p_status->link,
+        .link_bits = compact_signed_pack(p_status->link, 3U),
         .failmask = rn_network_stop_failure_mask(p_status, now_ms, app_last_ms,
                                                  connected_since_ms),
         .stop_ms = now_ms,
@@ -151,10 +152,10 @@ rn_network_stop_encode (const rn_network_stop_snapshot_t * p_snapshot,
     rn_network_stop_put32(out, 18U, p_snapshot->ack_age_ms);
     rn_network_stop_put32(out, 22U, p_snapshot->connects);
     rn_network_stop_put32(out, 26U, p_snapshot->last_complete_ms);
-    uint16_t metadata = (uint16_t)(p_snapshot->flags & 7U) |
-                        (uint16_t)(((uint16_t)p_snapshot->link & 7U) << 3U) |
-                        (uint16_t)((p_snapshot->failmask & 0x7fU) << 6U) |
-                        (1U << 13U);
+    uint16_t metadata =
+        (uint16_t)(p_snapshot->flags & 7U) |
+        (uint16_t)(((uint16_t)p_snapshot->link_bits & 7U) << 3U) |
+        (uint16_t)((p_snapshot->failmask & 0x7fU) << 6U) | (1U << 13U);
     out[30] = (uint8_t)metadata;
     out[31] = (uint8_t)(metadata >> 8U);
 }

@@ -205,7 +205,7 @@ void ri_safety_packet (uint8_t seq, uint16_t run, uint8_t out[30])
     ri_lift_packet_t data = {.trip_ms = g_value.event_time_ms,
                              .sample_ms = g_shared.lift_sample_ms,
                              .events = g_value.event_count,
-                             .up_mg = g_value.up_projection_mg,
+                             .up_bits = g_value.up_projection_bits,
                              .norm_mg = g_value.norm_mg,
                              .reason = g_value.latched ? g_value.reason
                                        : stopped       ? stop_reason
@@ -521,7 +521,7 @@ void ri_report (void)
                     "up_mg=%d norm_mg=%u events=%u up_samples=%u "
                     "tilt_samples=%u upright_samples=%u reset_ready=%u\n",
               ri_safety_reason(), lift.latched, lift.armed, sample_ms,
-              lift.up_projection_mg, lift.norm_mg, lift.event_count,
+              imu_lift_projection(&lift), lift.norm_mg, lift.event_count,
               lift.up_samples, lift.tilt_samples, lift.upright_samples,
               ri_safety_can_reset());
 #endif

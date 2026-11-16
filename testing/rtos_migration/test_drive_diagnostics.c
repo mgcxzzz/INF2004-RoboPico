@@ -26,7 +26,7 @@ int main(void) {
     assert(file);assert(fwrite(f,1,sizeof f,file)==sizeof f);fclose(file);
     d=rl_drive_diag_make(9,9,200,9,9,-9999,-999,999);
     assert(d.saturated && d.bend_phase==3 && d.bend_side==2 && d.bend_percent==100);
-    assert(d.yaw_x10==-4096 && d.target_left==-180 && d.target_right==180);
+    assert(compact_signed_unpack(d.yaw_bits,13U)==-4096 && compact_signed_unpack(d.left_bits,9U)==-180 && compact_signed_unpack(d.right_bits,9U)==180);
     rl_drive_diag_pack(&d,0,0,0,f);assert(bits(f+3,114,1)==1);
     puts("PASS drive diagnostics packed bounds/reserved bits/C fixture");
     return 0;

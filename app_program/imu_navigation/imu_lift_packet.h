@@ -20,7 +20,7 @@ typedef struct
     uint32_t trip_ms;
     uint32_t sample_ms;
     uint16_t events;
-    signed up_mg : 13;
+    unsigned up_bits : 13;
     unsigned norm_mg : 12;
     unsigned reason : 2;
     unsigned latched : 1;
@@ -81,7 +81,7 @@ static inline void ri_lift_packet_encode (const ri_lift_packet_t * p_state,
     ri_lift_put32(p_data + 6, p_state->trip_ms);
     ri_lift_put32(p_data + 10, p_state->sample_ms);
     ri_lift_put16(p_data + 14, p_state->events);
-    ri_lift_put16(p_data + 16, (uint16_t)p_state->up_mg & 8191U);
+    ri_lift_put16(p_data + 16, (uint16_t)p_state->up_bits & 8191U);
     ri_lift_put16(p_data + 18, (uint16_t)p_state->norm_mg & 4095U);
     p_data[20] = (uint8_t)(p_state->reason | p_state->latched << 2 |
                            p_state->armed << 3 | p_state->fresh << 4 |

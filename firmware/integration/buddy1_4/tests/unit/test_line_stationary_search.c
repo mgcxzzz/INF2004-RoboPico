@@ -228,7 +228,7 @@ static void test_unknown_direction_is_symmetric(void) {
     assert(t.core.white && !t.search.active && !d.target[0] && !d.target[1]);
     now = t.core.white_since + LS_CONFIRM_US;
     d = circuit_line_demand_motion(&t, &cal, 184, 184, now, 0, wheel, stopped);
-    assert(t.search.active && t.search.first == 1 && t.search.phase == LS_PHASE_SETTLE_START &&
+    assert(t.search.active && line_search_direction(&t.search) == 1 && t.search.phase == LS_PHASE_SETTLE_START &&
            !d.target[0] && !d.target[1]);
     now += LS_STILL_US;
     d = circuit_line_demand_motion(&t, &cal, 184, 184, now, 0, wheel, stopped);

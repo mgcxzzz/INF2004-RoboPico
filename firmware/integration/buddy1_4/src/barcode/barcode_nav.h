@@ -343,7 +343,8 @@ static inline void barcode_mirror_tracker (circuit_tracker_t * p_sample)
     p_sample->bridge[0] = p_sample->bridge[1];
     p_sample->bridge[1] = value;
 #ifdef CIRCUIT_SWEEP_SEARCH
-    p_sample->search.first = -p_sample->search.first;
+    p_sample->search.first_bits =
+        compact_signed_pack(-line_search_direction(&p_sample->search), 2U);
 #endif
 }
 static inline void barcode_straight_gate (circuit_t * p_character,

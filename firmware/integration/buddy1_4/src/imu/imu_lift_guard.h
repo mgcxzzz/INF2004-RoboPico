@@ -14,6 +14,7 @@
 #include <string.h>
 
 #include "src/imu/imu_proc.h"
+#include "src/platform/compact_signed.h"
 
 /* Reuse the processor's car-frame sample type: forward, lateral, up, mg. */
 typedef b4_vec_t imu_lift_vec_t;
@@ -41,8 +42,9 @@ enum
 
 typedef struct
 {
-    signed up_projection_mg : 13; /* current projection on calibrated gravity */
-    unsigned norm_mg : 12;        /* current acceleration magnitude */
+    unsigned
+        up_projection_bits : 13; /* current projection on calibrated gravity */
+    unsigned norm_mg : 12;       /* current acceleration magnitude */
     int16_t
         min_cos_q15; /* minimum dot/(gravity*norm) among gravity-like samples */
     uint16_t
@@ -73,6 +75,12 @@ typedef struct
     uint32_t
         peak_saturated : 1; /* any sample exceeded the packed metric range */
 } imu_lift_guard_t;
+
+/** @brief Read the signed 13-bit calibrated-up projection (-4096..4095 mg). */
+static inline int32_t imu_lift_projection (const imu_lift_guard_t * p_guard)
+{
+    return compact_signed_unpack(p_guard->up_projection_bits, 13U);
+}
 
 static inline uint32_t imu_lift_isqrt_u64 (uint64_t value)
 {
@@ -225,7 +233,8 @@ imu_lift_guard_batch (imu_lift_guard_t * p_guard, const int16_t baseline_mg[3],
         bool const upward_accel =
             projection >= (int64_t)gravity_mg + IMU_LIFT_ACCEL_EXTRA_MG;
 
-        p_guard->up_projection_mg = imu_lift_clamp_s13(projection, &saturated);
+        p_guard->up_projection_bits = compact_signed_pack(
+            imu_lift_clamp_s13(projection, &saturated), 13U);
         p_guard->norm_mg = imu_lift_clamp_u12(norm, &saturated);
         p_guard->saturated = saturated;
         p_guard->current_valid = true;
@@ -261,10 +270,10 @@ imu_lift_guard_batch (imu_lift_guard_t * p_guard, const int16_t baseline_mg[3],
             p_guard->min_cos_sample_ms = sample_ms;
         }
         if (!p_guard->peak_up_set ||
-            p_guard->up_projection_mg > p_guard->peak_up_projection_mg)
+            imu_lift_projection(p_guard) > p_guard->peak_up_projection_mg)
         {
             p_guard->peak_up_set = true;
-            p_guard->peak_up_projection_mg = p_guard->up_projection_mg;
+            p_guard->peak_up_projection_mg = imu_lift_projection(p_guard);
         }
         p_guard->peak_saturated = p_guard->peak_saturated || saturated;
 

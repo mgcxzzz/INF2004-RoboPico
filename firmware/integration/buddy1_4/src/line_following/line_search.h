@@ -11,6 +11,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "src/motion/dual_logic.h"
+#include "src/platform/compact_signed.h"
 
 enum
 {
@@ -59,7 +60,7 @@ typedef struct
     uint64_t progress_since;
     uint64_t still_since;
     uint32_t mm;
-    signed first : 2;
+    unsigned first_bits : 2;
     unsigned phase : 3;
     unsigned stage : 3;
     double origin_wheel[2];
@@ -74,6 +75,13 @@ typedef struct
     unsigned progress_valid : 1;
     unsigned found_candidate : 1;
 } line_search_t;
+
+/** @brief Decode the stored first sweep direction, preserving zero-initialized state. */
+static inline int32_t line_search_direction (const line_search_t * p_state)
+{
+    return compact_signed_unpack(p_state->first_bits, 2U);
+}
+
 typedef struct
 {
     int16_t target[2];
@@ -120,10 +128,11 @@ static inline bool line_search_ready (line_search_t * p_state, uint64_t now,
 static inline void line_search_begin (line_search_t * p_state, uint64_t now,
                                       uint32_t mm_value, int direction)
 {
-    *p_state = (line_search_t){.since = now,
-                               .mm = mm_value,
-                               .first = direction < 0 ? -1 : 1,
-                               .active = true};
+    *p_state = (line_search_t){
+        .since = now,
+        .mm = mm_value,
+        .first_bits = compact_signed_pack(direction < 0 ? -1 : 1, 2U),
+        .active = true};
 }
 /* Forward-only arcs: coast one wheel and drive the other. Their directions
  * alternate;350/700/1050/1400/1750ms durations widen the angular sweep if
@@ -151,7 +160,8 @@ line_search_step (const line_search_t * p_state, uint64_t now,
         ++demand.stage;
         end += (uint64_t)(demand.stage + 1) * 350000;
     }
-    int direction = demand.stage % 2 ? -p_state->first : p_state->first;
+    int direction = demand.stage % 2 ? -line_search_direction(p_state)
+                                     : line_search_direction(p_state);
     demand.target[direction > 0 ? 1 : 0] =
         confirming ? LS_CONFIRM_SPEED : LS_SPEED;
     return demand;
@@ -163,7 +173,8 @@ line_search_step (const line_search_t * p_state, uint64_t now,
  * wheel direction crosses a zero-target, encoder-still dwell. */
 static inline float line_search_target_yaw (const line_search_t * p_state)
 {
-    int direction = (p_state->stage & 1U) ? -p_state->first : p_state->first;
+    int direction = (p_state->stage & 1U) ? -line_search_direction(p_state)
+                                          : line_search_direction(p_state);
     int degrees = p_state->stage < 2 ? LS_SMALL_ANGLE_DEG : LS_WIDE_ANGLE_DEG;
     /* heading_deg() uses left-minus-right, so this sign maps a left pivot to
        a negative observed yaw while preserving the optical recovery sign. */
@@ -184,14 +195,14 @@ static inline void line_search_stationary_begin (line_search_t * p_state,
 {
     /* With no directional memory, left is only the deterministic first leg;
        the subsequent bounded sweep covers the opposite side as well. */
-    *p_state = (line_search_t){.since = now,
-                               .mm = mm_value,
-                               .first = direction < 0 ? -1 : 1,
-                               .phase = LS_PHASE_SETTLE_START,
-                               .active = true,
-                               .wheel_valid = wheel && isfinite(wheel[0]) &&
-                                              isfinite(wheel[1]),
-                               .progress_valid = true};
+    *p_state = (line_search_t){
+        .since = now,
+        .mm = mm_value,
+        .first_bits = compact_signed_pack(direction < 0 ? -1 : 1, 2U),
+        .phase = LS_PHASE_SETTLE_START,
+        .active = true,
+        .wheel_valid = wheel && isfinite(wheel[0]) && isfinite(wheel[1]),
+        .progress_valid = true};
     if (!p_state->wheel_valid)
     {
         return; /* The first step reports LS_INPUT without dereferencing pose. */
@@ -372,8 +383,8 @@ static inline line_search_demand_t line_search_stationary_step (
     }
     if (p_state->phase == LS_PHASE_SWEEP)
     {
-        int direction =
-            (p_state->stage & 1U) ? -p_state->first : p_state->first;
+        int direction = (p_state->stage & 1U) ? -line_search_direction(p_state)
+                                              : line_search_direction(p_state);
         demand.target[0] = (int16_t)(-direction * LS_STATIONARY_SPEED);
         demand.target[1] = (int16_t)(direction * LS_STATIONARY_SPEED);
     }

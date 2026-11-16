@@ -10,6 +10,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
+#include "src/platform/compact_signed.h"
 
 /* Copied by the ADC/control owner. Canonical wire bits never depend on native
  * compiler bitfield layout. C8 v0.2.2: 18-byte frame, 15-byte payload.
@@ -36,9 +37,9 @@ typedef struct
     unsigned bend_percent : 7;
     unsigned recovery_phase : 3;
     unsigned sweep_stage : 3;
-    signed yaw_x10 : 13;
-    signed target_left : 9;
-    signed target_right : 9;
+    unsigned yaw_bits : 13;
+    unsigned left_bits : 9;
+    unsigned right_bits : 9;
     unsigned saturated : 1;
 } rl_drive_diagnostic_t;
 
@@ -70,9 +71,12 @@ rl_drive_diag_make (unsigned phase, unsigned side, unsigned percent,
     demand.recovery_phase =
         (unsigned)rl_diag_clamp((int)recovery, 0, 7, &clipped);
     demand.sweep_stage = (unsigned)rl_diag_clamp((int)stage, 0, 4, &clipped);
-    demand.yaw_x10 = rl_diag_clamp(yaw_x10, -4096, 4095, &clipped);
-    demand.target_left = rl_diag_clamp(left, -180, 180, &clipped);
-    demand.target_right = rl_diag_clamp(right, -180, 180, &clipped);
+    demand.yaw_bits =
+        compact_signed_pack(rl_diag_clamp(yaw_x10, -4096, 4095, &clipped), 13U);
+    demand.left_bits =
+        compact_signed_pack(rl_diag_clamp(left, -180, 180, &clipped), 9U);
+    demand.right_bits =
+        compact_signed_pack(rl_diag_clamp(right, -180, 180, &clipped), 9U);
     demand.saturated = clipped;
     return demand;
 }
@@ -107,9 +111,9 @@ static inline void rl_drive_diag_pack (const rl_drive_diagnostic_t * p_demand,
     rl_diag_put(p_data, 68, 7, p_demand->bend_percent);
     rl_diag_put(p_data, 75, 3, p_demand->recovery_phase);
     rl_diag_put(p_data, 80, 3, p_demand->sweep_stage);
-    rl_diag_put(p_data, 83, 13, (uint32_t)p_demand->yaw_x10);
-    rl_diag_put(p_data, 96, 9, (uint32_t)p_demand->target_left);
-    rl_diag_put(p_data, 105, 9, (uint32_t)p_demand->target_right);
+    rl_diag_put(p_data, 83, 13, p_demand->yaw_bits);
+    rl_diag_put(p_data, 96, 9, p_demand->left_bits);
+    rl_diag_put(p_data, 105, 9, p_demand->right_bits);
     rl_diag_put(p_data, 114, 1, p_demand->saturated);
 }
 #endif

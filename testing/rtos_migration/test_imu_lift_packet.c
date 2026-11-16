@@ -1,8 +1,9 @@
 #include <assert.h>
 #include <stdio.h>
+#include "src/platform/compact_signed.h"
 #include "app_program/imu_navigation/imu_lift_packet.h"
 int main(void) {
-    ri_lift_packet_t s = {.trip_ms=123400,.sample_ms=123390,.events=7,.up_mg=-1536,
+    ri_lift_packet_t s = {.trip_ms=123400,.sample_ms=123390,.events=7,.up_bits=compact_signed_pack(-1536,13U),
         .norm_mg=1024,.reason=1,.latched=1,.armed=1,.fresh=1,.can_reset=1,
         .up_ms=25,.tilt_ms=100,.upright_ms=500};
     uint8_t frame[RI_LIFT_PACKET_BYTES];

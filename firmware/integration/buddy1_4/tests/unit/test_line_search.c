@@ -84,7 +84,7 @@ static void mirrored_reacquire(int direction) {
     assert(!d.stop && !t.search.active);
     ++now;
     d = circuit_line_demand(&t, &cal, 184, 184, now, 0);
-    assert(t.search.active && t.search.first == direction && d.decision == 19);
+    assert(t.search.active && line_search_direction(&t.search) == direction && d.decision == 19);
     assert(d.target[direction > 0 ? 1 : 0] == LS_SPEED);
     /* A20ms line flash does not restart or terminate the search budget. */
     uint64_t origin = t.search.since;

@@ -63,7 +63,7 @@ static void test_upward_acceleration_dwell_and_latch(void) {
     feed(&guard, (imu_lift_vec_t){.up_mg = 1500}, 1, 1062, true);
     assert(guard.latched && guard.reason == IMU_LIFT_REASON_UP_ACCEL);
     assert(guard.event_count == 1U && guard.event_time_ms == 1062U);
-    assert(guard.up_projection_mg == 1500 && guard.norm_mg == 1500U);
+    assert(imu_lift_projection(&guard) == 1500 && guard.norm_mg == 1500U);
     assert(guard.peak_up_projection_mg == 3000 &&
            guard.last_candidate == IMU_LIFT_CANDIDATE_UP_ACCEL);
 
@@ -142,7 +142,7 @@ static void test_invalid_batch_and_metric_saturation(void) {
     /* C9 diagnostic values use native signed-13/unsigned-12 limits and flag
      * clipping instead of wrapping. */
     feed(&guard, (imu_lift_vec_t){.up_mg = -5000}, 1, 3080, true);
-    assert(guard.up_projection_mg == -4096);
+    assert(imu_lift_projection(&guard) == -4096);
     assert(guard.norm_mg == 4095U && guard.saturated);
     assert(guard.peak_saturated);
 }
