@@ -15,31 +15,58 @@
 #include <stdlib.h>
 /* Controller-private canonical bit stream; never used as a motor input.
  * 0.5-unit quantisation for speeds/PI, integer ADC/PWM/ticks. */
-#define DIAG_FIELDS(X)                                                         \
-    X(US, 32, 0)                                                               \
-    X(DT, 17, 0)                                                               \
-    X(COST, 17, 0)                                                             \
-    X(RAW_L, 12, 0)                                                            \
-    X(RAW_R, 12, 0)                                                            \
-    X(ADC_L, 12, 0)                                                            \
-    X(ADC_R, 12, 0)                                                            \
-    X(LEVEL_L, 10, 0)                                                          \
-    X(LEVEL_R, 10, 0)                                                          \
-    X(OPT_L, 9, 1) X(OPT_R, 9, 1) X(SOFT_L, 9, 1) X(SOFT_R, 9, 1) X(           \
-        TARGET_L, 9, 1) X(TARGET_R, 9, 1) X(SPEED_L, 12, 1) X(SPEED_R, 12, 1)  \
-        X(REF_BEFORE_L, 9, 0) X(REF_BEFORE_R, 9, 0) X(REF_L, 9, 0)             \
-            X(REF_R, 9, 0) X(I_BEFORE_L, 11, 1) X(I_BEFORE_R, 11, 1)           \
-                X(I_L, 11, 1) X(I_R, 11, 1) X(FF_L, 10, 0) X(FF_R, 10, 0)      \
-                    X(REQUEST_L, 11, 1) X(REQUEST_R, 11, 1) X(PWM_L, 11, 1) X( \
-                        PWM_R, 11, 1) X(TICKS_L, 12, 1) X(TICKS_R, 12, 1)      \
-                        X(PHASE, 4, 0) X(OPT_DECISION, 5, 0) X(DECISION, 5, 0) \
-                            X(PROFILE, 2, 0) X(ASSIST, 3, 0) X(FEEDBACK, 2, 0) \
-                                X(DRIVER, 2, 0)                                \
-                                    X(EXTERNAL, 1, 0) X(FLAGS, 19, 0)          \
-                                        X(MEAN_BEFORE, 9, 0)                   \
-                                            X(HALF_BEFORE, 9, 1) X(MEAN, 9, 0) \
-                                                X(HALF, 9, 1) X(GAIN, 3, 0)    \
-                                                    X(DAMP, 2, 0)
+/* Keep this X-macro schema one row per field; clang-format misreads its rows.
+ */
+// clang-format off
+#define DIAG_FIELDS(X) \
+    X(US, 32, 0) \
+    X(DT, 17, 0) \
+    X(COST, 17, 0) \
+    X(RAW_L, 12, 0) \
+    X(RAW_R, 12, 0) \
+    X(ADC_L, 12, 0) \
+    X(ADC_R, 12, 0) \
+    X(LEVEL_L, 10, 0) \
+    X(LEVEL_R, 10, 0) \
+    X(OPT_L, 9, 1) \
+    X(OPT_R, 9, 1) \
+    X(SOFT_L, 9, 1) \
+    X(SOFT_R, 9, 1) \
+    X(TARGET_R, 9, 1) \
+    X(SPEED_L, 12, 1) \
+    X(SPEED_R, 12, 1) \
+    X(REF_BEFORE_L, 9, 0) \
+    X(REF_BEFORE_R, 9, 0) \
+    X(REF_L, 9, 0) \
+    X(REF_R, 9, 0) \
+    X(I_BEFORE_L, 11, 1) \
+    X(I_BEFORE_R, 11, 1) \
+    X(I_L, 11, 1) \
+    X(I_R, 11, 1) \
+    X(FF_L, 10, 0) \
+    X(FF_R, 10, 0) \
+    X(REQUEST_L, 11, 1) \
+    X(REQUEST_R, 11, 1) \
+    X(PWM_L, 11, 1) \
+    X(TICKS_L, 12, 1) \
+    X(TICKS_R, 12, 1) \
+    X(PHASE, 4, 0) \
+    X(OPT_DECISION, 5, 0) \
+    X(DECISION, 5, 0) \
+    X(PROFILE, 2, 0) \
+    X(ASSIST, 3, 0) \
+    X(FEEDBACK, 2, 0) \
+    X(DRIVER, 2, 0) \
+    X(EXTERNAL, 1, 0) \
+    X(FLAGS, 19, 0) \
+    X(MEAN_BEFORE, 9, 0) \
+    X(HALF_BEFORE, 9, 1) \
+    X(MEAN, 9, 0) \
+    X(HALF, 9, 1) \
+    X(GAIN, 3, 0) \
+    X(DAMP, 2, 0)
+// clang-format on
+
 enum
 {
 #define DIAG_ENUM(n, w, s) D_##n,

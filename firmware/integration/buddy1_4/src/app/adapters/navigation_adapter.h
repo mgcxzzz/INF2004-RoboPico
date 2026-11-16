@@ -1,3 +1,5 @@
+#ifndef ROBOPICO_NAVIGATION_ADAPTER_H
+#define ROBOPICO_NAVIGATION_ADAPTER_H
 /**
  * @file navigation_adapter.h
  * @brief Navigation adapter.
@@ -188,5 +190,7 @@ static void interface_commit_outputs (void * argument)
         platform_motor_write(w, v.a, v.b);
     }
 }
+
+#endif /* ROBOPICO_NAVIGATION_ADAPTER_H */
 
 /* End of file. */

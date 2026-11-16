@@ -277,7 +277,8 @@ static void emit (b4_ctx_t const * p_ctx, b4_out_t * p_out, imu_evt_type_t type,
     p_e->motion = (uint32_t)p_ctx->motion & 0x7U;
     p_e->detail = detail & 0xFU;
     p_e->height_mm = (uint32_t)clamp(height_mm, 0, IMU_HEIGHT_MAX_MM);
-    p_e->pitch_dd = clamp(p_ctx->pitch_dd, -IMU_PITCH_MAX_DD, IMU_PITCH_MAX_DD);
+    p_e->pitch_bits = compact_signed_pack(
+        clamp(p_ctx->pitch_dd, -IMU_PITCH_MAX_DD, IMU_PITCH_MAX_DD), 11U);
     p_e->b_valid = sampling(p_ctx->state) ? 1U : 0U;
     p_e->b_odo = p_ctx->b_odo_now ? 1U : 0U;
     p_e->reserved = 0U;
@@ -2315,7 +2316,7 @@ void b4_fill_tlm (b4_ctx_t const * p_ctx, imu_event_t const * p_evt,
         p_tlm->detail = (uint8_t)p_evt->detail;
         p_tlm->height_mm = (uint8_t)p_evt->height_mm;
         p_tlm->motion = (uint8_t)p_evt->motion;
-        p_tlm->pitch_dd = (int16_t)p_evt->pitch_dd;
+        p_tlm->pitch_dd = (int16_t)imu_event_pitch(p_evt);
         p_tlm->t_ms = p_evt->t_ms;
     }
     else

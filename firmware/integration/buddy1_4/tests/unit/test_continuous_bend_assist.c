@@ -84,7 +84,7 @@ static void sustained_direction_confirms_only_with_matching_encoder_yaw(int dire
     for (unsigned k = 0; k < 40; ++k)
         out = step(&s, d, &c, &i, .01f);
     assert(s.bend_candidate && s.bend_confirmed);
-    assert(s.bend_direction == direction);
+    assert(continuous_bend_direction(&s) == direction);
     assert(s.bend_speed_scale < 0.81f && s.bend_speed_scale >= .79f);
     assert(s.bend_authority_scale > 1.0f && s.bend_authority_scale <= 1.10f);
     assert(out.target[0] >= 0 && out.target[1] >= 0);
@@ -146,7 +146,7 @@ static void exit_blends_then_busy_resets_state(void) {
 
     s.bend_candidate = 1;
     s.bend_confirmed = 1;
-    s.bend_direction = 1;
+    s.bend_direction_bits = compact_signed_pack(1, 2U);
     s.bend_speed_scale = .8f;
     s.bend_authority_scale = 1.1f;
     c.busy = true;

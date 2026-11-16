@@ -1,3 +1,5 @@
+#ifndef ROBOPICO_DIAGNOSTICS_ADAPTER_H
+#define ROBOPICO_DIAGNOSTICS_ADAPTER_H
 /**
  * @file diagnostics_adapter.h
  * @brief Diagnostics adapter.
@@ -285,5 +287,7 @@ static void observe_drive_tick (const circuit_input_t * i,
     }
     diag_cost(&diag_capture, slot, (uint32_t)(time_us_64() - began));
 }
+
+#endif /* ROBOPICO_DIAGNOSTICS_ADAPTER_H */
 
 /* End of file. */

@@ -1,6 +1,6 @@
-# Set up Buddy 1–4 RTOS v0.2.6
+# Set up Buddy 1–4 RTOS v0.2.7 cleanup candidate
 
-**PROVISIONAL main release. Buddy 5 is not integrated.** Use the complete new
+**PROVISIONAL cleanup candidate on barr-c-cleanup. Buddy 5 is not integrated.** Use the complete new
 bundle, not the old SDK/Step 5 helpers. Profile 1 defaults to the tested 45 mm/s cruise; 60/75 mm/s are optional trials.
 
 [v0.2.6 ramp fix and checks](ramp_timing_v0_2_6.md). Use the new
@@ -12,7 +12,7 @@ bundle/dashboard and hard-refresh; the old dashboard cannot explain junction/ben
    on the laptop. For optional USB capture/export install pyserial once:
    `py -3 -m pip install pyserial`(Windows) or use the Mac commands below.
 2. With motion stopped, enter BOOTSEL and copy
-   `firmware/robopico_buddy1_4_rtos_v0_2_6.uf2` to RPI-RP2. It reboots.
+   `firmware/robopico_buddy1_4_rtos_v0_2_7_cleanup.uf2` to RPI-RP2. It reboots.
    Saved Wi-Fi and front calibration are preserved. Keep the robot flat/still
    for IMU calibration. No w/l/r/k/c recalibration is needed for this update.
 3. Run **Start dashboard.cmd** and keep it open. Open http://localhost:8765/,
@@ -24,7 +24,7 @@ bundle/dashboard and hard-refresh; the old dashboard cannot explain junction/ben
    This writes a settings-only UF2 and preserves the application. Do not
    reflash the main UF2 afterward; the settings helper may close on completion.
    If existing settings work, skip this step.
-5. Confirm the dashboard identifies **RTOS Buddy 1–4 v0.2.6**, Profile 1 and
+5. Confirm the dashboard identifies **RTOS Buddy 1–4 v0.2.7**, Profile 1 and
    calibration. Expected saved values on the tested car are white122/138,
    black246/267; actual readback is authoritative. Wait for IMU calibrated
    Idle(valid1/fault0), car-online and ready clocks before Start.

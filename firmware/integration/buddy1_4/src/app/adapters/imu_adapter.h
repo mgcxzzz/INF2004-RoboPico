@@ -1,3 +1,5 @@
+#ifndef ROBOPICO_IMU_ADAPTER_H
+#define ROBOPICO_IMU_ADAPTER_H
 /**
  * @file imu_adapter.h
  * @brief Imu adapter.
@@ -134,5 +136,7 @@ static void buddy4_poll (uint64_t now)
     }
     b4v23_tick(now, m, &o);
 }
+
+#endif /* ROBOPICO_IMU_ADAPTER_H */
 
 /* End of file. */

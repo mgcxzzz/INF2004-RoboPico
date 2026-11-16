@@ -1,5 +1,9 @@
 # Firmware artifacts
 
+Branch candidate: [v0.2.7 C cleanup](v0_2_7_rtos_cleanup/) on `barr-c-cleanup`.
+Hardware smoke test is pending; [instructions](../../../../docs/coding_cleanup_v0_2_7.md).
+The existing v0.2.6 release remains the tested main baseline.
+
 Current: [v0.2.6 ramp snapshot timing correction](v0_2_6_rtos/).
 Use the complete bundle, its START_HERE.md and TEST_CHANGES.md.
 

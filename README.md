@@ -1,5 +1,11 @@
 # RoboPico — provisional Buddy 1–4 RTOS integration
 
+**This branch is `barr-c-cleanup`: v0.2.7 cleanup candidate, hardware smoke test
+pending.** [Candidate firmware/bundle](firmware/integration/buddy1_4/artifacts/v0_2_7_rtos_cleanup/)
+ · [Changes and exact smoke test](docs/coding_cleanup_v0_2_7.md)
+ · [Application coding standard](CODING_STANDARD.md).
+The tested main baseline described below remains available for rollback.
+
 **Current main release: v0.2.6, micro T-Kernel SMP. Buddy 5 is NOT integrated.**
 
 [Download firmware and full bundle](firmware/integration/buddy1_4/artifacts/v0_2_6_rtos/)

@@ -6,6 +6,7 @@
 #include "src/platform/compact_signed.h"
 #include "src/imu/imu_lift_guard.h"
 #include "src/line_following/line_search.h"
+#include "src/line_following/continuous_steering.h"
 #include "app_program/imu_navigation/imu_lift_packet.h"
 #include "app_program/line_navigation/drive_diagnostics.h"
 #include "app_program/network_bridge/network_stop.h"
@@ -19,6 +20,8 @@ SAME_LAYOUT(imu_lift_guard_t, baseline_lift_guard_t);
 SAME_LAYOUT(rl_drive_diagnostic_t, baseline_drive_diag_t);
 SAME_LAYOUT(rn_network_stop_snapshot_t, baseline_network_stop_t);
 SAME_LAYOUT(line_search_t, baseline_line_search_t);
+SAME_LAYOUT(continuous_steering_t, baseline_continuous_steering_t);
+SAME_LAYOUT(imu_event_t, baseline_imu_event_t);
 
 static void check_width(unsigned width) {
     const int32_t half = (int32_t)(UINT32_C(1) << (width - 1U));
@@ -35,6 +38,7 @@ int main(void) {
     check_width(2U);
     check_width(3U);
     check_width(9U);
+    check_width(11U);
     check_width(13U);
     assert(compact_signed_unpack(compact_signed_pack(-(INT32_C(1) << 30), 31U), 31U)
            == -(INT32_C(1) << 30));
@@ -53,13 +57,21 @@ int main(void) {
         assert(((uint32_t)bytes[19] | ((uint32_t)bytes[20] << 8U))
                == compact_signed_pack(value, 13U));
     }
+    for (int32_t pitch = -900; pitch <= 900; ++pitch) {
+        imu_event_t event = {.pitch_bits = compact_signed_pack(pitch, 11U)};
+        assert(imu_event_pitch(&event) == pitch);
+    }
+    for (int32_t direction = -1; direction <= 1; ++direction) {
+        continuous_steering_t steering = {.bend_direction_bits = compact_signed_pack(direction, 2U)};
+        assert(continuous_bend_direction(&steering) == direction);
+    }
     line_search_t search = {0};
     assert(line_search_direction(&search) == 0);
     search.first_bits = compact_signed_pack(-1, 2U);
     assert(line_search_direction(&search) == -1);
     search.first_bits = compact_signed_pack(-line_search_direction(&search), 2U);
     assert(line_search_direction(&search) == 1);
-    printf("PASS compact signed ranges and five native layouts: %zu/%zu/%zu/%zu/%zu bytes\n",
+    printf("PASS compact signed ranges and seven native layouts: %zu/%zu/%zu/%zu/%zu bytes\n",
            sizeof(ri_lift_packet_t), sizeof(imu_lift_guard_t), sizeof(rl_drive_diagnostic_t),
            sizeof(rn_network_stop_snapshot_t), sizeof(line_search_t));
     return 0;

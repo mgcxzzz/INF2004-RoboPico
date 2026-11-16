@@ -1,3 +1,5 @@
+#ifndef ROBOPICO_NETWORK_ADAPTER_H
+#define ROBOPICO_NETWORK_ADAPTER_H
 /**
  * @file network_adapter.h
  * @brief Network adapter.
@@ -831,5 +833,7 @@ static bool wifi_console_byte (int ch)
     }
     return true;
 }
+
+#endif /* ROBOPICO_NETWORK_ADAPTER_H */
 
 /* End of file. */

@@ -147,7 +147,7 @@ endif
 ifneq ($(filter $(APP),rtos_imu_wifi rtos_buddy1_4),)
 EXE_FILE := robopico_rtos_connected_imu_v0_1_5
 ifeq ($(APP),rtos_buddy1_4)
-EXE_FILE := robopico_buddy1_4_rtos_v0_2_6
+EXE_FILE := robopico_buddy1_4_rtos_v0_2_7_cleanup
 endif
 endif
 endif

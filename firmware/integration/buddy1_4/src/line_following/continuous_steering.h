@@ -9,6 +9,7 @@
 #define CONTINUOUS_STEERING_H
 
 #include <math.h>
+#include "src/platform/compact_signed.h"
 #include "src/barcode/barcode_nav.h"
 #include "src/motion/drive_mode.h"
 
@@ -57,8 +58,15 @@ typedef struct
     uint8_t bend_candidate : 1;
     uint8_t bend_confirmed : 1;
     uint8_t bend_exiting : 1;
-    int8_t bend_direction : 2;
+    uint8_t bend_direction_bits : 2;
 } continuous_steering_t;
+
+/** @brief Read the signed bend direction, including the neutral zero state. */
+static inline int32_t
+continuous_bend_direction (const continuous_steering_t * p_state)
+{
+    return compact_signed_unpack(p_state->bend_direction_bits, 2U);
+}
 
 static inline void continuous_steering_reset (continuous_steering_t * p_state)
 {
@@ -125,9 +133,10 @@ continuous_steering_update_bend (continuous_steering_t * p_state, float error,
     {
         if (enter_signal)
         {
-            if (p_state->bend_direction != error_direction)
+            if (continuous_bend_direction(p_state) != error_direction)
             {
-                p_state->bend_direction = error_direction;
+                p_state->bend_direction_bits =
+                    compact_signed_pack(error_direction, 2U);
                 p_state->bend_demand_duration = 0.0f;
                 p_state->bend_yaw_duration = 0.0f;
             }
@@ -150,7 +159,8 @@ continuous_steering_update_bend (continuous_steering_t * p_state, float error,
 
     if (p_state->bend_candidate)
     {
-        if (hold_signal && (error_direction == p_state->bend_direction))
+        if (hold_signal &&
+            (error_direction == continuous_bend_direction(p_state)))
         {
             p_state->bend_exit_duration = 0.0f;
             p_state->bend_exiting = 0;
@@ -160,7 +170,8 @@ continuous_steering_update_bend (continuous_steering_t * p_state, float error,
                     fminf(.50f, p_state->bend_demand_duration + delta_time);
             }
 
-            float yaw_ratio = p_state->bend_direction * measured_half /
+            float yaw_ratio = continuous_bend_direction(p_state) *
+                              measured_half /
                               fmaxf(fabsf(measured_mean), 10.0f);
             bool correct_yaw = (measured_mean >= 8.0f) && (yaw_ratio >= .08f);
             if (correct_yaw)
@@ -217,7 +228,7 @@ continuous_steering_update_bend (continuous_steering_t * p_state, float error,
         p_state->bend_speed_scale = 1.0f;
         p_state->bend_authority_scale = 1.0f;
         p_state->bend_exiting = 0;
-        p_state->bend_direction = 0;
+        p_state->bend_direction_bits = 0U;
         p_state->bend_exit_duration = 0.0f;
     }
     else if ((!p_state->bend_candidate) &&

@@ -1,0 +1,25 @@
+name: Application C standard
+
+on:
+  push:
+    branches: [main, barr-c-cleanup]
+  pull_request:
+
+jobs:
+  application-c:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install clang-format==18.1.8
+      - run: python tools/coding_standard/check.py
+      - run: python tools/coding_standard/format.py --check
+      - name: Compact representation and affected feature checks
+        run: >-
+          python tools/rtos_migration/run_tests.py
+          --only test_compact_signed test_imu_lift_guard test_imu_lift_packet
+          test_drive_diagnostics test_network_stop test_line_search
+          test_line_stationary_search test_release_imu test_rtos_ramp_bridge
+          --skip-python

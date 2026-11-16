@@ -847,9 +847,9 @@ void rtos_line_record (const bringup_status_t * p_state_value,
                           : p_steering->bend_candidate ? 1U
                                                        : 0U;
     rl_row_bend_phase(bend_phase, &row.meta, &row.aux[1]);
-    unsigned bend_side = p_steering->bend_direction > 0   ? 1U
-                         : p_steering->bend_direction < 0 ? 2U
-                                                          : 0U;
+    unsigned bend_side = continuous_bend_direction(p_steering) > 0   ? 1U
+                         : continuous_bend_direction(p_steering) < 0 ? 2U
+                                                                     : 0U;
     float reduction = (1.0f - p_steering->bend_speed_scale) * 500.0f;
     unsigned bend_percent = (p_steering->active) && (isfinite(reduction))
                                 ? (unsigned)lroundf(clampf(reduction, 0, 100))

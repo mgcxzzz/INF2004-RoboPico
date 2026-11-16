@@ -1,3 +1,5 @@
+#ifndef ROBOPICO_NAVIGATION_LOG_ADAPTER_H
+#define ROBOPICO_NAVIGATION_LOG_ADAPTER_H
 /**
  * @file navigation_log_adapter.h
  * @brief Navigation log adapter.
@@ -160,5 +162,7 @@ static void interface_dump_nav_log (void)
     puts("NAV_LOG_END. Request accepted is not movement completed; wait for "
          "DONE or query command_id.");
 }
+
+#endif /* ROBOPICO_NAVIGATION_LOG_ADAPTER_H */
 
 /* End of file. */

@@ -67,4 +67,34 @@ typedef struct {
     unsigned active : 1, waiting : 1, still_timing : 1, wheel_valid : 1, progress_valid : 1,
         found_candidate : 1;
 } baseline_line_search_t;
+typedef struct {
+    float mean, half;
+    int16_t emitted[2];
+    float previous_error, return_confidence, same_side_duration;
+    float gain, damp_weight;
+    /* Opt-in bend assist state. Durations and scales are finite, bounded
+     * values; bitfields make the state visible to compact diagnostics. */
+    float bend_demand_duration, bend_yaw_duration, bend_exit_duration;
+    float bend_speed_scale, bend_authority_scale;
+    uint8_t side : 2;
+    uint8_t active : 1;
+    uint8_t bend_candidate : 1;
+    uint8_t bend_confirmed : 1;
+    uint8_t bend_exiting : 1;
+    int8_t bend_direction : 2;
+} baseline_continuous_steering_t;
+typedef struct {
+    uint32_t type : 3;      /* imu_evt_type_t                       */
+    uint32_t motion : 3;    /* imu_motion_t at the time             */
+    uint32_t detail : 4;    /* imu_reject_t or IMU_FAULT_* code     */
+    uint32_t height_mm : 8; /* hump peak (or highest peak), mm      */
+    int32_t pitch_dd : 11;  /* body pitch, 0.1 deg, + = nose up     */
+    uint32_t b_valid : 1;   /* IMU data valid (calibrated, no fault) */
+    uint32_t b_odo : 1;     /* Buddy 2 estimate fresh               */
+    uint32_t reserved : 1;
+    uint16_t t_ms; /* sys_time_us() / 1000, wrapping: the
+                                 * shared 1 us clock is the team's
+                                 * timestamp base (integration test
+                                 * IMU + Motion Control, +-100 ms)      */
+} baseline_imu_event_t;
 #endif

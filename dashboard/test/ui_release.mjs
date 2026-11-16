@@ -48,13 +48,13 @@ try {
  await page.locator('#connect').click();await page.waitForFunction(()=>window.__m.connected);
  await emit(motion);await emit(nav);await emit(metadata);await emit(runtime);
  const releaseVersion=`${metadata[4]&15}.${metadata[4]>>>4}.${metadata[5]&15}`;
- assert.equal(releaseVersion,'0.2.6','the main release metadata advertises v0.2.6');
+ assert.equal(releaseVersion,'0.2.7','the cleanup release metadata advertises v0.2.7');
  assert.match(await page.locator('#profilePill').textContent(),new RegExp(`v${releaseVersion.replaceAll('.','\\.')}`));
  await page.locator('#dashboardTabs [data-view="diagnostics"]').click();
  assert.equal(await page.locator('#rtosRuntimeCard').isVisible(),true);
  assert.match(await page.locator('#releaseCal').textContent(),/122\/138/);
  await emit(lift);
- assert.equal(await page.locator('#imuStop').textContent(),'Run ended — lifted');
+ assert.equal(await page.locator('#imuStop').textContent(),'Run ended â€” lifted');
  assert.match(await page.locator('#imuStopDetails').textContent(),/reset permitted/);
  const upside=Buffer.from(lift);upside[2]++;upside[23]=(upside[23]&~3)|2;
  await emit(upside);assert.equal(await page.locator('#imuStop').textContent(),'Overturn stop');
@@ -66,7 +66,7 @@ try {
  await emit(motion);await emit(nav);await emit(metadata);await emit(runtime);
 
  await emit(fault);
- assert.equal(await page.locator('#encoderFault').textContent(),'Right encoder: error density · latched');
+ assert.equal(await page.locator('#encoderFault').textContent(),'Right encoder: error density Â· latched');
  assert.match(await page.locator('#encoderFaultDetails').textContent(),/Frozen target L\/R -45\/70 mm\/s/);
  await emit(networkStop);
  assert.match(await page.locator('#networkStop').textContent(),/Last recorded network stop/);

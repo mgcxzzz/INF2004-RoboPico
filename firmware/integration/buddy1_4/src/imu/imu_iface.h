@@ -26,6 +26,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include "src/platform/compact_signed.h"
 
 #include "src/telemetry/sys_tlm.h" /* shared helpers and frame header */
 
@@ -114,19 +115,25 @@ typedef enum
  * --------------------------------------------------------------------- */
 typedef struct
 {
-    uint32_t type : 3;      /* imu_evt_type_t                       */
-    uint32_t motion : 3;    /* imu_motion_t at the time             */
-    uint32_t detail : 4;    /* imu_reject_t or IMU_FAULT_* code     */
-    uint32_t height_mm : 8; /* hump peak (or highest peak), mm      */
-    int32_t pitch_dd : 11;  /* body pitch, 0.1 deg, + = nose up     */
-    uint32_t b_valid : 1;   /* IMU data valid (calibrated, no fault) */
-    uint32_t b_odo : 1;     /* Buddy 2 estimate fresh               */
+    uint32_t type : 3;        /* imu_evt_type_t                       */
+    uint32_t motion : 3;      /* imu_motion_t at the time             */
+    uint32_t detail : 4;      /* imu_reject_t or IMU_FAULT_* code     */
+    uint32_t height_mm : 8;   /* hump peak (or highest peak), mm      */
+    uint32_t pitch_bits : 11; /* body pitch, 0.1 deg, + = nose up     */
+    uint32_t b_valid : 1;     /* IMU data valid (calibrated, no fault) */
+    uint32_t b_odo : 1;       /* Buddy 2 estimate fresh               */
     uint32_t reserved : 1;
     uint16_t t_ms; /* sys_time_us() / 1000, wrapping: the
                     * shared 1 us clock is the team's
                     * timestamp base (integration test
                     * IMU + Motion Control, +-100 ms)      */
 } imu_event_t;
+
+/** @brief Decode event pitch; producers clamp it to +/-900 deci-degrees. */
+static inline int32_t imu_event_pitch (const imu_event_t * p_event)
+{
+    return compact_signed_unpack(p_event->pitch_bits, 11U);
+}
 
 /* ------------------------------------------------------------------------
  * Telemetry, source 4 (TLM_SRC_IMU). Payload 16 bytes.

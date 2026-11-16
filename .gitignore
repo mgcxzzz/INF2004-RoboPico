@@ -44,6 +44,7 @@ dashboard_session/
 **/rtos_line_session/
 **/rtos_adc_session/
 *.su
+!/firmware/integration/buddy1_4/artifacts/v0_2_7_rtos_cleanup/robopico_buddy1_4_rtos_v0_2_7_cleanup.uf2
 !/firmware/migration/micro_tkernel/step_02_line_following/firmware/robopico_rtos_line_following_v0_1.uf2
 !/firmware/migration/micro_tkernel/step_02_line_following/firmware/robopico_rtos_line_following_v0_1_1.uf2
 !/firmware/migration/micro_tkernel/step_02_line_following/firmware/robopico_rtos_line_following_v0_1_2.uf2

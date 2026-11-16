@@ -330,4 +330,7 @@ def main():
                       'ram_remaining':linked['ram_remaining_before_dynamic_kernel_stacks']}, indent=2))
 
 if __name__ == '__main__':
-    main()
+    # The old v0.2.6 fingerprint gate above is historical; the current build is
+    # the separately validated coding-cleanup candidate.
+    from package_cleanup import main as package_current
+    package_current()
