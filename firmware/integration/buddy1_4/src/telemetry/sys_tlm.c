@@ -15,14 +15,18 @@
  * Navigation Coordinator (source 6)
  * ------------------------------------------------------------------ */
 
-void nav_tlm_pack(nav_tlm_t const *p_in, uint8_t p_frame[NAV_TLM_FRAME_BYTES]) {
-    uint8_t *p = &p_frame[TLM_HDR_BYTES];
+void nav_tlm_pack (nav_tlm_t const * p_in, uint8_t p_frame[NAV_TLM_FRAME_BYTES])
+{
+    uint8_t * p = &p_frame[TLM_HDR_BYTES];
     uint32_t w0 = 0U;
 
-    w0 = sys_put_u(w0, 0U, NAV_BITS_STATE, sys_sat_u(p_in->state, NAV_BITS_STATE));
-    w0 = sys_put_u(w0, 3U, NAV_BITS_OWNER, sys_sat_u(p_in->owner, NAV_BITS_OWNER));
+    w0 = sys_put_u(w0, 0U, NAV_BITS_STATE,
+                   sys_sat_u(p_in->state, NAV_BITS_STATE));
+    w0 = sys_put_u(w0, 3U, NAV_BITS_OWNER,
+                   sys_sat_u(p_in->owner, NAV_BITS_OWNER));
     w0 = sys_put_u(w0, 6U, 1U, p_in->b_slow ? 1U : 0U);
-    w0 = sys_put_u(w0, 7U, NAV_BITS_STEP, sys_sat_u(p_in->search_step, NAV_BITS_STEP));
+    w0 = sys_put_u(w0, 7U, NAV_BITS_STEP,
+                   sys_sat_u(p_in->search_step, NAV_BITS_STEP));
     w0 = sys_put_u(w0, 10U, NAV_BITS_DROPPED, p_in->dropped);
 
     tlm_put_header(p_frame, TLM_SRC_NAV, NAV_TLM_PAYLOAD_BYTES, p_in->seq);
@@ -35,11 +39,14 @@ void nav_tlm_pack(nav_tlm_t const *p_in, uint8_t p_frame[NAV_TLM_FRAME_BYTES]) {
  * @return false (and nothing decoded) if the header is not a version-2
  *         Navigation Coordinator frame of the right length.
  */
-bool nav_tlm_unpack(uint8_t const *p_frame, uint32_t len, nav_tlm_t *p_out) {
-    uint8_t const *p = &p_frame[TLM_HDR_BYTES];
+bool nav_tlm_unpack (uint8_t const * p_frame, uint32_t len, nav_tlm_t * p_out)
+{
+    uint8_t const * p = &p_frame[TLM_HDR_BYTES];
     uint32_t w0;
 
-    if (!tlm_check_header(p_frame, len, TLM_SRC_NAV, NAV_TLM_PAYLOAD_BYTES, &p_out->seq)) {
+    if (!tlm_check_header(p_frame, len, TLM_SRC_NAV, NAV_TLM_PAYLOAD_BYTES,
+                          &p_out->seq))
+    {
         return false;
     }
 
@@ -58,16 +65,21 @@ bool nav_tlm_unpack(uint8_t const *p_frame, uint32_t len, nav_tlm_t *p_out) {
  * Safety Supervisor (source 7)
  * ------------------------------------------------------------------ */
 
-void safety_tlm_pack(safety_tlm_t const *p_in, uint8_t p_frame[SAFETY_TLM_FRAME_BYTES]) {
-    uint8_t *p = &p_frame[TLM_HDR_BYTES];
+void safety_tlm_pack (safety_tlm_t const * p_in,
+                      uint8_t p_frame[SAFETY_TLM_FRAME_BYTES])
+{
+    uint8_t * p = &p_frame[TLM_HDR_BYTES];
     uint32_t w0 = 0U;
     uint32_t w1 = 0U;
     uint32_t w2 = 0U;
 
-    w0 = sys_put_u(w0, 0U, SAFETY_BITS_STATE, sys_sat_u(p_in->state, SAFETY_BITS_STATE));
+    w0 = sys_put_u(w0, 0U, SAFETY_BITS_STATE,
+                   sys_sat_u(p_in->state, SAFETY_BITS_STATE));
     w0 = sys_put_u(w0, 2U, 1U, p_in->b_inhibit ? 1U : 0U);
-    w0 = sys_put_u(w0, 3U, SAFETY_BITS_SRC, sys_sat_u(p_in->fault_src, SAFETY_BITS_SRC));
-    w0 = sys_put_u(w0, 6U, SAFETY_BITS_SRC, sys_sat_u(p_in->warn_src, SAFETY_BITS_SRC));
+    w0 = sys_put_u(w0, 3U, SAFETY_BITS_SRC,
+                   sys_sat_u(p_in->fault_src, SAFETY_BITS_SRC));
+    w0 = sys_put_u(w0, 6U, SAFETY_BITS_SRC,
+                   sys_sat_u(p_in->warn_src, SAFETY_BITS_SRC));
     w0 = sys_put_u(w0, 9U, SAFETY_BITS_CODE, p_in->fault_code);
     w0 = sys_put_u(w0, 17U, SAFETY_BITS_CODE, p_in->warn_code);
 
@@ -76,11 +88,14 @@ void safety_tlm_pack(safety_tlm_t const *p_in, uint8_t p_frame[SAFETY_TLM_FRAME_
     w1 = sys_put_u(w1, 16U, SAFETY_BITS_COUNTER, p_in->warnings);
     w1 = sys_put_u(w1, 24U, SAFETY_BITS_COUNTER, p_in->slow_stops);
 
-    w2 = sys_put_u(w2, 0U, SAFETY_BITS_STOP_MS, sys_sat_u(p_in->last_stop_ms, SAFETY_BITS_STOP_MS));
-    w2 = sys_put_u(w2, 10U, SAFETY_BITS_STOP_MS, sys_sat_u(p_in->max_stop_ms, SAFETY_BITS_STOP_MS));
+    w2 = sys_put_u(w2, 0U, SAFETY_BITS_STOP_MS,
+                   sys_sat_u(p_in->last_stop_ms, SAFETY_BITS_STOP_MS));
+    w2 = sys_put_u(w2, 10U, SAFETY_BITS_STOP_MS,
+                   sys_sat_u(p_in->max_stop_ms, SAFETY_BITS_STOP_MS));
     w2 = sys_put_u(w2, 20U, SAFETY_BITS_MASK, p_in->fault_mask);
 
-    tlm_put_header(p_frame, TLM_SRC_SAFETY, SAFETY_TLM_PAYLOAD_BYTES, p_in->seq);
+    tlm_put_header(p_frame, TLM_SRC_SAFETY, SAFETY_TLM_PAYLOAD_BYTES,
+                   p_in->seq);
     sys_put_le32(&p[0], w0);
     sys_put_le32(&p[4], w1);
     sys_put_le32(&p[8], w2);
@@ -90,13 +105,17 @@ void safety_tlm_pack(safety_tlm_t const *p_in, uint8_t p_frame[SAFETY_TLM_FRAME_
  * @return false (and nothing decoded) if the header is not a version-2
  *         Safety Supervisor frame of the right length.
  */
-bool safety_tlm_unpack(uint8_t const *p_frame, uint32_t len, safety_tlm_t *p_out) {
-    uint8_t const *p = &p_frame[TLM_HDR_BYTES];
+bool safety_tlm_unpack (uint8_t const * p_frame, uint32_t len,
+                        safety_tlm_t * p_out)
+{
+    uint8_t const * p = &p_frame[TLM_HDR_BYTES];
     uint32_t w0;
     uint32_t w1;
     uint32_t w2;
 
-    if (!tlm_check_header(p_frame, len, TLM_SRC_SAFETY, SAFETY_TLM_PAYLOAD_BYTES, &p_out->seq)) {
+    if (!tlm_check_header(p_frame, len, TLM_SRC_SAFETY,
+                          SAFETY_TLM_PAYLOAD_BYTES, &p_out->seq))
+    {
         return false;
     }
 
@@ -120,3 +139,5 @@ bool safety_tlm_unpack(uint8_t const *p_frame, uint32_t len, safety_tlm_t *p_out
 
     return true;
 }
+
+/* End of file. */

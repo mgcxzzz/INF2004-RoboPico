@@ -61,54 +61,66 @@
  * Generic helpers: clamp, then mask and shift
  * --------------------------------------------------------------------- */
 
-static inline int32_t sys_clamp(int32_t value, int32_t lo, int32_t hi) {
+static inline int32_t sys_clamp (int32_t value, int32_t lo, int32_t hi)
+{
     return (value < lo) ? lo : ((value > hi) ? hi : value);
 }
 
 /** Mask of the low n bits (n = 1..32). */
-static inline uint32_t sys_mask(uint32_t bits) {
+static inline uint32_t sys_mask (uint32_t bits)
+{
     return (bits >= 32U) ? 0xFFFFFFFFU : ((1UL << bits) - 1UL);
 }
 
 /** Saturate an unsigned value to the largest that fits in `bits` bits. */
-static inline uint32_t sys_sat_u(uint32_t value, uint32_t bits) {
+static inline uint32_t sys_sat_u (uint32_t value, uint32_t bits)
+{
     uint32_t max = sys_mask(bits);
 
     return (value > max) ? max : value;
 }
 
-static inline uint32_t sys_put_u(uint32_t word, uint32_t shift, uint32_t bits, uint32_t value) {
+static inline uint32_t sys_put_u (uint32_t word, uint32_t shift, uint32_t bits,
+                                  uint32_t value)
+{
     uint32_t m = sys_mask(bits);
 
     return (word & ~(m << shift)) | ((value & m) << shift);
 }
 
-static inline uint32_t sys_get_u(uint32_t word, uint32_t shift, uint32_t bits) {
+static inline uint32_t sys_get_u (uint32_t word, uint32_t shift, uint32_t bits)
+{
     return (word >> shift) & sys_mask(bits);
 }
 
 /** Insert a signed (two's complement) field. Clamp it first. */
-static inline uint32_t sys_put_s(uint32_t word, uint32_t shift, uint32_t bits, int32_t value) {
+static inline uint32_t sys_put_s (uint32_t word, uint32_t shift, uint32_t bits,
+                                  int32_t value)
+{
     return sys_put_u(word, shift, bits, (uint32_t)value);
 }
 
 /** Extract a signed field and restore its sign (sign extension). */
-static inline int32_t sys_get_s(uint32_t word, uint32_t shift, uint32_t bits) {
+static inline int32_t sys_get_s (uint32_t word, uint32_t shift, uint32_t bits)
+{
     uint32_t raw = sys_get_u(word, shift, bits);
     uint32_t sign = 1UL << (bits - 1U);
 
     return (int32_t)(raw ^ sign) - (int32_t)sign;
 }
 
-static inline void sys_put_le32(uint8_t *p, uint32_t word) {
+static inline void sys_put_le32 (uint8_t * p, uint32_t word)
+{
     p[0] = (uint8_t)(word & 0xFFU);
     p[1] = (uint8_t)((word >> 8) & 0xFFU);
     p[2] = (uint8_t)((word >> 16) & 0xFFU);
     p[3] = (uint8_t)((word >> 24) & 0xFFU);
 }
 
-static inline uint32_t sys_get_le32(uint8_t const *p) {
-    return (uint32_t)p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24);
+static inline uint32_t sys_get_le32 (uint8_t const * p)
+{
+    return (uint32_t)p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16) |
+           ((uint32_t)p[3] << 24);
 }
 
 /* ------------------------------------------------------------------------
@@ -128,8 +140,9 @@ static inline uint32_t sys_get_le32(uint8_t const *p) {
 #define TLM_SRC_BARCODE_MAP (8U) /* S1 configuration readback          */
 
 /** Write the 3-byte header at the start of a frame. */
-static inline void tlm_put_header(uint8_t *p_frame, uint32_t source, uint32_t payload_bytes,
-                                  uint8_t seq) {
+static inline void tlm_put_header (uint8_t * p_frame, uint32_t source,
+                                   uint32_t payload_bytes, uint8_t seq)
+{
     p_frame[0] = (uint8_t)((TLM_VERSION & 0xFU) | ((source & 0xFU) << 4));
     p_frame[1] = (uint8_t)sys_sat_u(payload_bytes, 8U);
     p_frame[2] = seq;
@@ -140,10 +153,15 @@ static inline void tlm_put_header(uint8_t *p_frame, uint32_t source, uint32_t pa
  * and frame length = header + payload length. Returns its sequence number
  * through p_seq. A frame that fails is not decoded at all.
  */
-static inline bool tlm_check_header(uint8_t const *p_frame, uint32_t frame_len, uint32_t source,
-                                    uint32_t payload_bytes, uint8_t *p_seq) {
-    if ((frame_len != (TLM_HDR_BYTES + payload_bytes)) || ((p_frame[0] & 0xFU) != TLM_VERSION) ||
-        (((uint32_t)p_frame[0] >> 4) != source) || ((uint32_t)p_frame[1] != payload_bytes)) {
+static inline bool tlm_check_header (uint8_t const * p_frame,
+                                     uint32_t frame_len, uint32_t source,
+                                     uint32_t payload_bytes, uint8_t * p_seq)
+{
+    if ((frame_len != (TLM_HDR_BYTES + payload_bytes)) ||
+        ((p_frame[0] & 0xFU) != TLM_VERSION) ||
+        (((uint32_t)p_frame[0] >> 4) != source) ||
+        ((uint32_t)p_frame[1] != payload_bytes))
+    {
         return false;
     }
 
@@ -176,7 +194,8 @@ static inline bool tlm_check_header(uint8_t const *p_frame, uint32_t frame_len, 
 #define B5_TLM_PAYLOAD_BYTES (16U)
 #define B5_TLM_FRAME_BYTES (TLM_HDR_BYTES + B5_TLM_PAYLOAD_BYTES)
 
-typedef struct {
+typedef struct
+{
     uint8_t seq;
     uint8_t state;
     uint8_t fault;
@@ -194,8 +213,8 @@ typedef struct {
     uint16_t no_echo;
 } b5_tlm_t;
 
-void b5_tlm_pack(b5_tlm_t const *p_in, uint8_t p_frame[B5_TLM_FRAME_BYTES]);
-bool b5_tlm_unpack(uint8_t const *p_frame, uint32_t len, b5_tlm_t *p_out);
+void b5_tlm_pack (b5_tlm_t const * p_in, uint8_t p_frame[B5_TLM_FRAME_BYTES]);
+bool b5_tlm_unpack (uint8_t const * p_frame, uint32_t len, b5_tlm_t * p_out);
 
 /* ------------------------------------------------------------------------
  * Source 6: Navigation Coordinator. Payload 6 bytes.
@@ -217,7 +236,8 @@ bool b5_tlm_unpack(uint8_t const *p_frame, uint32_t len, b5_tlm_t *p_out);
 #define NAV_BITS_DROPPED (8U)
 #define NAV_DROPPED_MAX (255U)
 
-typedef struct {
+typedef struct
+{
     uint8_t seq;
     uint8_t state; /* nav_state_t */
     uint8_t owner; /* nav_owner_t */
@@ -227,8 +247,9 @@ typedef struct {
     uint16_t commands_sent;
 } nav_tlm_t;
 
-void nav_tlm_pack(nav_tlm_t const *p_in, uint8_t p_frame[NAV_TLM_FRAME_BYTES]);
-bool nav_tlm_unpack(uint8_t const *p_frame, uint32_t len, nav_tlm_t *p_out);
+void nav_tlm_pack (nav_tlm_t const * p_in,
+                   uint8_t p_frame[NAV_TLM_FRAME_BYTES]);
+bool nav_tlm_unpack (uint8_t const * p_frame, uint32_t len, nav_tlm_t * p_out);
 
 /* ------------------------------------------------------------------------
  * Source 7: Safety Supervisor. Payload 12 bytes.
@@ -262,7 +283,8 @@ bool nav_tlm_unpack(uint8_t const *p_frame, uint32_t len, nav_tlm_t *p_out);
 #define SAFETY_SRC_NONE (7U) /* "no fault yet" in a src field */
 #define SAFETY_STOP_MS_MAX (1023U)
 
-typedef struct {
+typedef struct
+{
     uint8_t seq;
     uint8_t state; /* safety_state_t */
     bool b_inhibit;
@@ -279,8 +301,10 @@ typedef struct {
     uint8_t fault_mask; /* SYS_FAULT_* bits */
 } safety_tlm_t;
 
-void safety_tlm_pack(safety_tlm_t const *p_in, uint8_t p_frame[SAFETY_TLM_FRAME_BYTES]);
-bool safety_tlm_unpack(uint8_t const *p_frame, uint32_t len, safety_tlm_t *p_out);
+void safety_tlm_pack (safety_tlm_t const * p_in,
+                      uint8_t p_frame[SAFETY_TLM_FRAME_BYTES]);
+bool safety_tlm_unpack (uint8_t const * p_frame, uint32_t len,
+                        safety_tlm_t * p_out);
 
 /* ------------------------------------------------------------------------
  * Source 3: Line and Barcode (Buddy 3). Payload 12 bytes.
@@ -312,7 +336,8 @@ bool safety_tlm_unpack(uint8_t const *p_frame, uint32_t len, safety_tlm_t *p_out
 #define S3_TLM_PAYLOAD_BYTES (12U)
 #define S3_TLM_FRAME_BYTES (TLM_HDR_BYTES + S3_TLM_PAYLOAD_BYTES)
 
-typedef struct {
+typedef struct
+{
     uint8_t seq;
     uint8_t state;
     uint8_t sensors; /* S3_SENSE_* bits */
@@ -330,8 +355,8 @@ typedef struct {
     uint8_t overflows;
 } s3_tlm_t;
 
-void s3_tlm_pack(s3_tlm_t const *p_in, uint8_t p_frame[S3_TLM_FRAME_BYTES]);
-bool s3_tlm_unpack(uint8_t const *p_frame, uint32_t len, s3_tlm_t *p_out);
+void s3_tlm_pack (s3_tlm_t const * p_in, uint8_t p_frame[S3_TLM_FRAME_BYTES]);
+bool s3_tlm_unpack (uint8_t const * p_frame, uint32_t len, s3_tlm_t * p_out);
 
 /* ------------------------------------------------------------------------
  * Source 1: WiFi and MQTT (Buddy 1). Payload 12 bytes. Sent as the
@@ -367,7 +392,8 @@ bool s3_tlm_unpack(uint8_t const *p_frame, uint32_t len, s3_tlm_t *p_out);
 #define B1_STATE_UNKNOWN (7U) /* operating state not reported yet */
 #define B1_RESULT_NONE (7U)   /* no command received yet          */
 
-typedef struct {
+typedef struct
+{
     uint8_t seq;
     uint8_t net;         /* b1_net_t */
     uint8_t state;       /* nav_state_t or B1_STATE_UNKNOWN */
@@ -382,8 +408,8 @@ typedef struct {
     uint8_t fill_pct;
 } b1_tlm_t;
 
-void b1_tlm_pack(b1_tlm_t const *p_in, uint8_t p_frame[B1_TLM_FRAME_BYTES]);
-bool b1_tlm_unpack(uint8_t const *p_frame, uint32_t len, b1_tlm_t *p_out);
+void b1_tlm_pack (b1_tlm_t const * p_in, uint8_t p_frame[B1_TLM_FRAME_BYTES]);
+bool b1_tlm_unpack (uint8_t const * p_frame, uint32_t len, b1_tlm_t * p_out);
 
 /* ------------------------------------------------------------------------
  * Supervisory commands, PC -> car, topic is28/cmd. No telemetry header.
@@ -433,7 +459,7 @@ bool b1_tlm_unpack(uint8_t const *p_frame, uint32_t len, b1_tlm_t *p_out);
 #define B1_ACK_UNSUPPORTED (5U) /* configuration parameter unknown  */
 
 /* Configuration parameters (B1_CMD_CONFIG, argument bits 12..15). */
-#define B1_CFG_TELEMETRY                                                                           \
+#define B1_CFG_TELEMETRY                                                       \
     (1U) /* value 0 = pause other buddies'
                                          * frames, 1 = forward them       */
 
@@ -483,7 +509,8 @@ bool b1_tlm_unpack(uint8_t const *p_frame, uint32_t len, b1_tlm_t *p_out);
 #define B2_TLM_REASON_PAYLOAD_BYTES (24U)
 #define B2_TLM_NUMERIC_PAYLOAD_BYTES (32U)
 #define B2_TLM_ROBUST_PAYLOAD_BYTES (36U) /* v0.5 */
-#define B2_TLM_PAYLOAD_BYTES (37U)        /* v0.6: 40-byte frame = B1_OUT_MAX, no spare room */
+#define B2_TLM_PAYLOAD_BYTES                                                   \
+    (37U) /* v0.6: 40-byte frame = B1_OUT_MAX, no spare room */
 /* v0.6 per-axis MAD bytes: ceil(mg / 4), saturating at 255 (>= 1020 mg). */
 #define B2_TLM_AXIS_MAD_LSB_MG (4U)
 #define B2_TLM_FRAME_BYTES (TLM_HDR_BYTES + B2_TLM_PAYLOAD_BYTES)
@@ -491,7 +518,8 @@ bool b1_tlm_unpack(uint8_t const *p_frame, uint32_t len, b1_tlm_t *p_out);
 #define B2_TLM_SIDE_VALID (2U)
 #define B2_TLM_SIDE_MODE (4U)
 #define B2_TLM_PASSIVE (8U)
-typedef struct {
+typedef struct
+{
     uint8_t seq, flags;
     int16_t left_mm_s, right_mm_s, centre_mm_s;
     int16_t roll_dd, side_height_mm;
@@ -499,7 +527,8 @@ typedef struct {
     uint16_t invalid_left, invalid_right;
     /* Extension: exclusions ORed since previous source2 publication, current
      * ramp state (level/candidate/rising/returning bits0..3), interval counts. */
-    uint8_t quality_reasons, ramp_state, quality_bad_samples, quality_total_samples;
+    uint8_t quality_reasons, ramp_state, quality_bad_samples,
+        quality_total_samples;
     /* v0.4 interval maxima (not simultaneous), absolute rates. Offset30:
      * number of ticks with refreshed rates; offset31 reserved zero. */
     uint16_t max_spread_mg, max_accel_mm_s2, max_turn_dd_s;
@@ -515,7 +544,9 @@ typedef struct {
      * preserved exactly (41 mg -> 11 -> 44 mg; 40 mg -> 10 -> 40 mg). */
     uint16_t max_axis_mad_mg[3];
 } b2_tlm_t;
-void b2_tlm_pack(b2_tlm_t const *in, uint8_t frame[B2_TLM_FRAME_BYTES]);
-bool b2_tlm_unpack(uint8_t const *frame, uint32_t len, b2_tlm_t *out);
+void b2_tlm_pack (b2_tlm_t const * in, uint8_t frame[B2_TLM_FRAME_BYTES]);
+bool b2_tlm_unpack (uint8_t const * frame, uint32_t len, b2_tlm_t * out);
 
 #endif /* SYS_TLM_H */
+
+/* End of file. */

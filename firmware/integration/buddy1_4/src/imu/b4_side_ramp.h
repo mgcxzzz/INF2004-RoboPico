@@ -16,7 +16,9 @@
  * which is +right for the current +Y/+Z sensor mounting. Magnitude is
  * checked against the measured calibration gravity before normalization.
  */
-bool b4_side_geometry(int16_t const baseline[3], int16_t const sample[3], int32_t g_mg,
-                      int16_t *height_mm, int16_t *roll_dd);
+bool b4_side_geometry (int16_t const baseline[3], int16_t const sample[3],
+                       int32_t g_mg, int16_t * height_mm, int16_t * roll_dd);
 
 #endif
+
+/* End of file. */

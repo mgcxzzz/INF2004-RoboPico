@@ -22,3 +22,5 @@
 #define nav_report_fault motion_report_fault
 #define nav_result_name motion_result_name
 #endif
+
+/* End of file. */

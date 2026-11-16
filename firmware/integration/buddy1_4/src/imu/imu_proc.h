@@ -20,7 +20,8 @@
 #include "src/imu/imu_iface.h"
 
 /* Observability only: exclusions seen by the existing side-ramp guards. */
-enum {
+enum
+{
     B4_Q_SPREAD = 1U,
     B4_Q_GRAVITY = 2U,
     B4_Q_ACCEL = 4U,
@@ -33,14 +34,16 @@ enum {
 
 /* One accelerometer sample in the CAR's frame (after the mounting axes
  * and signs of b4_config.h), mg. */
-typedef struct {
+typedef struct
+{
     int16_t fwd_mg;
     int16_t lat_mg;
     int16_t up_mg;
 } b4_vec_t;
 
 /* Everything the task hands over every period. */
-typedef struct {
+typedef struct
+{
     bool b_read_ok;            /* the I2C reads all worked          */
     uint8_t n;                 /* samples taken from the FIFO       */
     bool b_overrun;            /* the FIFO overflowed (data lost)   */
@@ -57,7 +60,8 @@ typedef struct {
 /* What the task must do after a call. */
 #define B4_OUT_EVENTS_MAX (4U)
 
-typedef struct {
+typedef struct
+{
     uint8_t n_events;
     imu_event_t events[B4_OUT_EVENTS_MAX];
     uint8_t fault;         /* IMU_FAULT_* to report now, 0 none */
@@ -71,14 +75,16 @@ typedef struct {
 /* Compact, RTOS-only diagnostics for side-ramp qualification interruptions.
  * These values are copied into the existing diagnostic snapshot; they do not
  * alter the IMU wire frame. */
-typedef enum {
+typedef enum
+{
     B4_SIDE_HOLD_NONE = 0,
     B4_SIDE_HOLD_ODO_GAP = 1,
     B4_SIDE_HOLD_QUALITY_SKIP = 2,
     B4_SIDE_HOLD_MIXED = 3
 } b4_side_hold_reason_t;
 
-typedef enum {
+typedef enum
+{
     B4_SIDE_CLEAR_NONE = 0,
     B4_SIDE_CLEAR_ODO_GAP_LONG = 1,
     B4_SIDE_CLEAR_SKIP_BUDGET = 2,
@@ -94,7 +100,8 @@ typedef enum {
 #endif
 
 /* Operating-state changes from the Navigation Coordinator, mapped. */
-typedef enum {
+typedef enum
+{
     B4_MISSION_START = 0, /* Ready -> Running: new run, reset maximum */
     B4_MISSION_RESUME,    /* Paused -> Running                        */
     B4_MISSION_STOP,      /* paused, stopped, e-stop, fault           */
@@ -103,7 +110,8 @@ typedef enum {
 } b4_mission_t;
 
 /* Hump profile (front-contact height rebuilt along the distance). */
-typedef struct {
+typedef struct
+{
     int32_t bins[B4_HUMP_BINS]; /* height, 0.1 mm, ring by distance  */
     uint32_t head;              /* newest bin                        */
     int32_t d_mm;               /* distance travelled (accumulated)  */
@@ -128,7 +136,8 @@ typedef struct {
 #define B4_RATE_N ((B4_RATE_WINDOW_MS / B4_PERIOD_MS) + 1U)
 
 /* The whole subsystem state. */
-typedef struct {
+typedef struct
+{
     imu_state_t state;
     bool b_mission; /* Running                           */
     uint8_t fault;  /* last IMU_FAULT_* (latched)        */
@@ -239,19 +248,24 @@ typedef struct {
 } b4_ctx_t;
 
 /* Statechart. */
-void b4_reset(b4_ctx_t *p_ctx);
-void b4_init_done(b4_ctx_t *p_ctx, bool b_ok, uint32_t t_us, b4_out_t *p_out);
-void b4_mission(b4_ctx_t *p_ctx, b4_mission_t event, uint32_t t_us, b4_out_t *p_out);
-void b4_tick(b4_ctx_t *p_ctx, b4_in_t const *p_in, b4_out_t *p_out);
+void b4_reset (b4_ctx_t * p_ctx);
+void b4_init_done (b4_ctx_t * p_ctx, bool b_ok, uint32_t t_us,
+                   b4_out_t * p_out);
+void b4_mission (b4_ctx_t * p_ctx, b4_mission_t event, uint32_t t_us,
+                 b4_out_t * p_out);
+void b4_tick (b4_ctx_t * p_ctx, b4_in_t const * p_in, b4_out_t * p_out);
 
 /* Fill a telemetry view from the context and the frame's event. */
-void b4_fill_tlm(b4_ctx_t const *p_ctx, imu_event_t const *p_evt, imu_tlm_t *p_tlm);
+void b4_fill_tlm (b4_ctx_t const * p_ctx, imu_event_t const * p_evt,
+                  imu_tlm_t * p_tlm);
 
 /* Helpers, exported for the tests and the bench tool. */
-int16_t b4_asin_dd(int32_t sin_q15);
-uint32_t b4_isqrt(uint32_t value);
-bool b4_nfr02_ok(int32_t est_mm, int32_t ref_mm);
-bool b4_side_geometry(int16_t const baseline[3], int16_t const sample[3], int32_t g_mg,
-                      int16_t *height_mm, int16_t *roll_dd);
+int16_t b4_asin_dd (int32_t sin_q15);
+uint32_t b4_isqrt (uint32_t value);
+bool b4_nfr02_ok (int32_t est_mm, int32_t ref_mm);
+bool b4_side_geometry (int16_t const baseline[3], int16_t const sample[3],
+                       int32_t g_mg, int16_t * height_mm, int16_t * roll_dd);
 
 #endif /* IMU_PROC_H */
+
+/* End of file. */

@@ -4,14 +4,18 @@
 #include "src/imu/imu_service.h"
 #include "src/motion/ramp_drive.h"
 #include "include/interfaces/nav_api.h"
-void ri_new_run(void);
+void ri_new_run (void);
 /* Snapshot the IMU first, then read hardware time internally for its age. */
-MotionRampAssist ri_ramp_step(float dt, bool following, const float speed[2],
-                              const int16_t target[2], const ContinuousDrive drive[2]);
-void ri_ramp_halt(uint64_t now);
-void ri_ramp_report(void);
-static inline int32_t ri_unboosted(const ContinuousDrive *s, int32_t output) {
+MotionRampAssist ri_ramp_step (float dt, bool following, const float speed[2],
+                               const int16_t target[2],
+                               const ContinuousDrive drive[2]);
+void ri_ramp_halt (uint64_t now);
+void ri_ramp_report (void);
+static inline int32_t ri_unboosted (const ContinuousDrive * s, int32_t output)
+{
     int32_t b = (int32_t)(s->boost_pwm + .5f);
     return output > b ? output - b : 0;
 }
 #endif
+
+/* End of file. */

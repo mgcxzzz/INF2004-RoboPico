@@ -14,30 +14,38 @@
 /**
  * @brief  Clamp every value to its field, then pack (sys_tlm.h rules).
  */
-void imu_tlm_pack(imu_tlm_t const *p_in, uint8_t p_frame[IMU_TLM_FRAME_BYTES]) {
-    uint8_t *p = &p_frame[TLM_HDR_BYTES];
+void imu_tlm_pack (imu_tlm_t const * p_in, uint8_t p_frame[IMU_TLM_FRAME_BYTES])
+{
+    uint8_t * p = &p_frame[TLM_HDR_BYTES];
     uint32_t w0 = 0U;
     uint32_t w1 = 0U;
     uint32_t w2 = 0U;
     uint32_t w3 = 0U;
 
-    w0 = sys_put_u(w0, 0U, IMU_BITS_STATE, sys_sat_u(p_in->state, IMU_BITS_STATE));
-    w0 = sys_put_u(w0, 3U, IMU_BITS_MOTION, sys_sat_u(p_in->motion, IMU_BITS_MOTION));
+    w0 = sys_put_u(w0, 0U, IMU_BITS_STATE,
+                   sys_sat_u(p_in->state, IMU_BITS_STATE));
+    w0 = sys_put_u(w0, 3U, IMU_BITS_MOTION,
+                   sys_sat_u(p_in->motion, IMU_BITS_MOTION));
     w0 = sys_put_u(w0, 6U, IMU_BITS_EVT, sys_sat_u(p_in->evt, IMU_BITS_EVT));
-    w0 = sys_put_u(w0, 9U, IMU_BITS_DETAIL, sys_sat_u(p_in->detail, IMU_BITS_DETAIL));
+    w0 = sys_put_u(w0, 9U, IMU_BITS_DETAIL,
+                   sys_sat_u(p_in->detail, IMU_BITS_DETAIL));
     w0 = sys_put_u(w0, 13U, 1U, p_in->b_valid ? 1U : 0U);
     w0 = sys_put_u(w0, 14U, 1U, p_in->b_odo ? 1U : 0U);
-    w0 = sys_put_s(w0, 15U, IMU_BITS_PITCH,
-                   sys_clamp(p_in->pitch_dd, -IMU_PITCH_MAX_DD, IMU_PITCH_MAX_DD));
-    w0 = sys_put_u(w0, 26U, IMU_BITS_FAULT, sys_sat_u(p_in->fault, IMU_BITS_FAULT));
+    w0 = sys_put_s(
+        w0, 15U, IMU_BITS_PITCH,
+        sys_clamp(p_in->pitch_dd, -IMU_PITCH_MAX_DD, IMU_PITCH_MAX_DD));
+    w0 = sys_put_u(w0, 26U, IMU_BITS_FAULT,
+                   sys_sat_u(p_in->fault, IMU_BITS_FAULT));
 
     w1 = sys_put_u(w1, 0U, IMU_BITS_HEIGHT, p_in->height_mm);
     w1 = sys_put_u(w1, 8U, IMU_BITS_HEIGHT, p_in->max_height_mm);
     w1 = sys_put_u(w1, 16U, IMU_BITS_COUNT8, p_in->humps);
     w1 = sys_put_u(w1, 24U, IMU_BITS_COUNT8, p_in->rejected);
 
-    w2 = sys_put_u(w2, 0U, IMU_BITS_SHOCK_MG, sys_sat_u(p_in->shock_mg, IMU_BITS_SHOCK_MG));
-    w2 = sys_put_u(w2, 12U, IMU_BITS_LATENCY, sys_sat_u(p_in->shock_ms, IMU_BITS_LATENCY));
+    w2 = sys_put_u(w2, 0U, IMU_BITS_SHOCK_MG,
+                   sys_sat_u(p_in->shock_mg, IMU_BITS_SHOCK_MG));
+    w2 = sys_put_u(w2, 12U, IMU_BITS_LATENCY,
+                   sys_sat_u(p_in->shock_ms, IMU_BITS_LATENCY));
     w2 = sys_put_u(w2, 18U, IMU_BITS_COUNT8, p_in->shocks);
     w2 = sys_put_u(w2, 26U, IMU_BITS_I2C_ERR, p_in->i2c_errors); /* wraps */
 
@@ -55,14 +63,17 @@ void imu_tlm_pack(imu_tlm_t const *p_in, uint8_t p_frame[IMU_TLM_FRAME_BYTES]) {
  * @return false (and nothing decoded) if the header is not a version-2
  *         IMU frame of the right length.
  */
-bool imu_tlm_unpack(uint8_t const *p_frame, uint32_t len, imu_tlm_t *p_out) {
-    uint8_t const *p = &p_frame[TLM_HDR_BYTES];
+bool imu_tlm_unpack (uint8_t const * p_frame, uint32_t len, imu_tlm_t * p_out)
+{
+    uint8_t const * p = &p_frame[TLM_HDR_BYTES];
     uint32_t w0;
     uint32_t w1;
     uint32_t w2;
     uint32_t w3;
 
-    if (!tlm_check_header(p_frame, len, TLM_SRC_IMU, IMU_TLM_PAYLOAD_BYTES, &p_out->seq)) {
+    if (!tlm_check_header(p_frame, len, TLM_SRC_IMU, IMU_TLM_PAYLOAD_BYTES,
+                          &p_out->seq))
+    {
         return false;
     }
 
@@ -93,39 +104,46 @@ bool imu_tlm_unpack(uint8_t const *p_frame, uint32_t len, imu_tlm_t *p_out) {
     return true;
 }
 
-char const *imu_state_name(imu_state_t state) {
-    static char const *const names[IMU_ST_COUNT] = {
+char const * imu_state_name (imu_state_t state)
+{
+    static char const * const names[IMU_ST_COUNT] = {
         "Initialising",    "Calibrating",    "Idle", "Motion Tracking",
         "Hump Processing", "Impact / Shock", "Fault"};
 
     return ((uint32_t)state < (uint32_t)IMU_ST_COUNT) ? names[state] : "?";
 }
 
-char const *imu_motion_name(imu_motion_t motion) {
-    static char const *const names[IMU_MOTION_COUNT] = {"unknown",      "stationary", "steady",
-                                                        "accelerating", "turning",    "climbing",
-                                                        "descending",   "impact"};
+char const * imu_motion_name (imu_motion_t motion)
+{
+    static char const * const names[IMU_MOTION_COUNT] = {
+        "unknown", "stationary", "steady",     "accelerating",
+        "turning", "climbing",   "descending", "impact"};
 
-    return ((uint32_t)motion < (uint32_t)IMU_MOTION_COUNT) ? names[motion] : "?";
+    return ((uint32_t)motion < (uint32_t)IMU_MOTION_COUNT) ? names[motion]
+                                                           : "?";
 }
 
-char const *imu_evt_name(imu_evt_type_t evt) {
-    static char const *const names[IMU_EVT_COUNT] = {"status",    "motion",        "hump start",
-                                                     "hump peak", "hump rejected", "impact",
-                                                     "fault",     "run summary"};
+char const * imu_evt_name (imu_evt_type_t evt)
+{
+    static char const * const names[IMU_EVT_COUNT] = {
+        "status",        "motion", "hump start", "hump peak",
+        "hump rejected", "impact", "fault",      "run summary"};
 
     return ((uint32_t)evt < (uint32_t)IMU_EVT_COUNT) ? names[evt] : "?";
 }
 
-char const *imu_reject_name(imu_reject_t reason) {
-    static char const *const names[8] = {"none",
-                                         "timeout",
-                                         "no descent (a ramp?)",
-                                         "height out of range",
-                                         "height did not return to 0",
-                                         "no odometry",
-                                         "shock",
-                                         "stopped"};
+char const * imu_reject_name (imu_reject_t reason)
+{
+    static char const * const names[8] = {"none",
+                                          "timeout",
+                                          "no descent (a ramp?)",
+                                          "height out of range",
+                                          "height did not return to 0",
+                                          "no odometry",
+                                          "shock",
+                                          "stopped"};
 
     return ((uint32_t)reason < 8U) ? names[reason] : "?";
 }
+
+/* End of file. */

@@ -23,14 +23,16 @@
 
 #include "src/imu/b4_config.h"
 
-typedef enum {
+typedef enum
+{
     B4_CHIP_NONE = 0,
     B4_CHIP_DLHC, /* LSM303DLHC */
     B4_CHIP_AGR   /* LSM303AGR  */
 } b4_chip_t;
 
 /* One accelerometer sample in the SENSOR's own axes, mg. */
-typedef struct {
+typedef struct
+{
     int16_t x;
     int16_t y;
     int16_t z;
@@ -40,18 +42,21 @@ typedef struct {
  * stream mode. Returns false if the accelerometer does not answer or has
  * the wrong ID. *p_chip says which one was found; *p_b_mag whether the
  * magnetometer answered too (not needed for any requirement). */
-bool b4_drv_init(b4_chip_t *p_chip, bool *p_b_mag);
+bool b4_drv_init (b4_chip_t * p_chip, bool * p_b_mag);
 
 /* Empty the FIFO: up to max samples (oldest first) into p_s. *p_n is the
  * number read (0 = nothing new), *p_b_overrun true if the FIFO had
  * overflowed (samples were lost). Returns false on an I2C error. */
-bool b4_drv_read_fifo(b4_raw_t *p_s, uint8_t max, uint8_t *p_n, bool *p_b_overrun);
+bool b4_drv_read_fifo (b4_raw_t * p_s, uint8_t max, uint8_t * p_n,
+                       bool * p_b_overrun);
 
 /* Raw magnetometer reading (X, Y, Z, sensor axes, LSB). */
-bool b4_drv_read_mag(b4_raw_t *p_m);
+bool b4_drv_read_mag (b4_raw_t * p_m);
 
 /* Low level, also used by the self-test. */
-bool b4_i2c_read_reg(uint8_t addr, uint8_t reg, uint8_t *p_buf, uint32_t len);
-bool b4_i2c_write_reg(uint8_t addr, uint8_t reg, uint8_t value);
+bool b4_i2c_read_reg (uint8_t addr, uint8_t reg, uint8_t * p_buf, uint32_t len);
+bool b4_i2c_write_reg (uint8_t addr, uint8_t reg, uint8_t value);
 
 #endif /* DRV_LSM303_H */
+
+/* End of file. */

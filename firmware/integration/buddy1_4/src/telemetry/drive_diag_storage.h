@@ -2,15 +2,17 @@
 #define BUDDY_DRIVE_DIAG_STORAGE_H
 #include "src/telemetry/drive_diag.h"
 #include "src/navigation/nav_log_storage.h"
-static inline void diag_header(uint8_t h[DIAG_HEADER], const DriveDiag *d) {
+static inline void diag_header (uint8_t h[DIAG_HEADER], const DriveDiag * d)
+{
     memset(h, 0, DIAG_HEADER);
     memcpy(h, "DGD1", 4);
     h[4] = 4;
     h[5] = DIAG_ROW_BYTES;
-    uint32_t flags = d->count | ((uint32_t)d->head << 9) | ((uint32_t)d->reason << 17) |
-                     ((uint32_t)d->profile << 23) | ((uint32_t)d->trigger << 25) |
-                     ((uint32_t)d->frozen << 28) | ((uint32_t)d->triggered << 29) |
-                     ((uint32_t)d->begun << 30);
+    uint32_t flags =
+        d->count | ((uint32_t)d->head << 9) | ((uint32_t)d->reason << 17) |
+        ((uint32_t)d->profile << 23) | ((uint32_t)d->trigger << 25) |
+        ((uint32_t)d->frozen << 28) | ((uint32_t)d->triggered << 29) |
+        ((uint32_t)d->begun << 30);
     nav_le32(h + 8, flags);
     nav_le32(h + 12, nav_crc((const uint8_t *)d->rows, sizeof(d->rows)));
     nav_le32(h + 20, d->total);
@@ -24,47 +26,70 @@ static inline void diag_header(uint8_t h[DIAG_HEADER], const DriveDiag *d) {
     nav_le64(h + 56, d->duration_us);
     nav_le64(h + 64, (uint64_t)d->ticks[0]);
     nav_le64(h + 72, (uint64_t)d->ticks[1]);
-    uint64_t cal = d->white[0] | ((uint64_t)d->white[1] << 12) | ((uint64_t)d->black[0] << 24) |
+    uint64_t cal = d->white[0] | ((uint64_t)d->white[1] << 12) |
+                   ((uint64_t)d->black[0] << 24) |
                    ((uint64_t)d->black[1] << 36);
     for (unsigned k = 0; k < 6; ++k)
+    {
         h[80 + k] = (uint8_t)(cal >> (k * 8));
+    }
     h[87] = (uint8_t)d->post;
     nav_le32(h + 16, nav_crc(h, DIAG_HEADER));
 }
-static inline bool diag_bank_valid(const uint8_t *bank) {
+static inline bool diag_bank_valid (const uint8_t * bank)
+{
     if (memcmp(bank, "DGD1", 4) || bank[4] != 4 || bank[5] != DIAG_ROW_BYTES)
+    {
         return false;
+    }
     uint8_t h[DIAG_HEADER];
     memcpy(h, bank, sizeof(h));
     uint32_t crc = nav_rd32(h + 16);
     memset(h + 16, 0, 4);
     if (nav_crc(h, sizeof(h)) != crc)
+    {
         return false;
+    }
     uint32_t bits = nav_rd32(h + 8);
-    unsigned count = bits & 511, head = (bits >> 9) & 255, profile = (bits >> 23) & 3;
-    if (count > DIAG_ROWS || (!profile) || (bits >> 31) || !(bits & (1u << 30)) ||
-        h[87] > DIAG_POST)
+    unsigned count = bits & 511, head = (bits >> 9) & 255,
+             profile = (bits >> 23) & 3;
+    if (count > DIAG_ROWS || (!profile) || (bits >> 31) ||
+        !(bits & (1u << 30)) || h[87] > DIAG_POST)
+    {
         return false;
+    }
     if (count < DIAG_ROWS && head != count)
+    {
         return false;
-    if (nav_crc(bank + DIAG_HEADER, DIAG_ROWS * DIAG_ROW_BYTES) != nav_rd32(h + 12))
+    }
+    if (nav_crc(bank + DIAG_HEADER, DIAG_ROWS * DIAG_ROW_BYTES) !=
+        nav_rd32(h + 12))
+    {
         return false;
-    const DiagRow *rows = (const DiagRow *)(bank + DIAG_HEADER);
+    }
+    const DiagRow * rows = (const DiagRow *)(bank + DIAG_HEADER);
     uint32_t previous = 0;
-    for (unsigned k = 0; k < count; ++k) {
-        const DiagRow *r = &rows[(head + DIAG_ROWS - count + k) % DIAG_ROWS];
+    for (unsigned k = 0; k < count; ++k)
+    {
+        const DiagRow * r = &rows[(head + DIAG_ROWS - count + k) % DIAG_ROWS];
         DiagValues v;
         diag_unpack(r, &v);
-        if ((k && v.v[D_US] <= previous) || v.v[D_PROFILE] < 1 || v.v[D_PROFILE] > 3)
+        if ((k && v.v[D_US] <= previous) || v.v[D_PROFILE] < 1 ||
+            v.v[D_PROFILE] > 3)
+        {
             return false;
+        }
         previous = (uint32_t)v.v[D_US];
         unsigned used = diag_bits() % 8;
         if (used && r->bytes[DIAG_ROW_BYTES - 1] >> used)
+        {
             return false;
+        }
     }
     return true;
 }
-static inline void diag_restore(DriveDiag *d, const uint8_t *bank) {
+static inline void diag_restore (DriveDiag * d, const uint8_t * bank)
+{
     memset(d, 0, sizeof(*d));
     uint32_t bits = nav_rd32(bank + 8);
     d->count = (uint16_t)(bits & 511);
@@ -88,7 +113,9 @@ static inline void diag_restore(DriveDiag *d, const uint8_t *bank) {
     d->ticks[1] = (int64_t)nav_rd64(bank + 72);
     uint64_t c = 0;
     for (unsigned k = 0; k < 6; ++k)
+    {
         c |= (uint64_t)bank[80 + k] << (k * 8);
+    }
     d->white[0] = (uint16_t)(c & 4095);
     d->white[1] = (uint16_t)((c >> 12) & 4095);
     d->black[0] = (uint16_t)((c >> 24) & 4095);
@@ -97,3 +124,5 @@ static inline void diag_restore(DriveDiag *d, const uint8_t *bank) {
     memcpy(d->rows, bank + DIAG_HEADER, sizeof(d->rows));
 }
 #endif
+
+/* End of file. */

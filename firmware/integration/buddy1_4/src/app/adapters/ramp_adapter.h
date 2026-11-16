@@ -28,26 +28,36 @@ static uint64_t ra_last_report_us;
 static uint8_t ra_seq, ra_target_seq, ra_max_i[2], ra_sat_ticks;
 static int16_t ra_pwm_now[2], ra_peak_pwm;
 
-static int16_t ra_added_pwm(unsigned w, float alpha_milli, float push_pwm) {
-    const ContinuousDrive *s = &continuous_wheel[w];
+static int16_t ra_added_pwm (unsigned w, float alpha_milli, float push_pwm)
+{
+    const ContinuousDrive * s = &continuous_wheel[w];
     if (!s->active || (alpha_milli <= 0.0f && push_pwm <= 0.0f))
+    {
         return 0;
+    }
     float v = continuous_feedforward(w, s->reference) * alpha_milli / 1000.0f;
     if (v > (float)RA_PWM_CAP)
+    {
         v = (float)RA_PWM_CAP;
+    }
     if (v < 0.0f)
+    {
         v = 0.0f;
+    }
     v += push_pwm > 0.0f ? push_pwm : 0.0f; /* v0.4 stall push */
     return (int16_t)(v + 0.5f);
 }
 
-static void ra_report(uint64_t now, uint8_t event) {
+static void ra_report (uint64_t now, uint8_t event)
+{
     RampAssistTlm t = {0};
     uint8_t frame[RA_TLM_FRAME_BYTES];
     t.uptime_ms = (uint32_t)(now / 1000u);
     t.event = event;
-    t.flags = (uint8_t)((RAMP_ASSIST_ACTIVE ? 1u : 0u) | (ra_state.assisting ? 2u : 0u) |
-                        (ra_state.latched ? 4u : 0u) | (ra_state.last_valid ? 8u : 0u) |
+    t.flags = (uint8_t)((RAMP_ASSIST_ACTIVE ? 1u : 0u) |
+                        (ra_state.assisting ? 2u : 0u) |
+                        (ra_state.latched ? 4u : 0u) |
+                        (ra_state.last_valid ? 8u : 0u) |
                         (uint8_t)((RA_DETECTOR_VERSION & 7u) << 4) |
                         0x80u); /* Buddy4 powered-acceptance estimator v0.2 */
     t.last_end = ra_state.last_end;
@@ -65,34 +75,43 @@ static void ra_report(uint64_t now, uint8_t event) {
     t.max_i_l = ra_max_i[0];
     t.max_i_r = ra_max_i[1];
     t.sat_ticks = ra_sat_ticks;
-    t.active_ms = (uint16_t)(ra_state.assisting
-                                 ? (now - ra_state.active_since_us) / 1000u > 65535u
-                                       ? 65535u
-                                       : (now - ra_state.active_since_us) / 1000u
-                                 : (ra_state.active_ms > 65535u ? 65535u : ra_state.active_ms));
+    t.active_ms =
+        (uint16_t)(ra_state.assisting
+                       ? (now - ra_state.active_since_us) / 1000u > 65535u
+                             ? 65535u
+                             : (now - ra_state.active_since_us) / 1000u
+                       : (ra_state.active_ms > 65535u ? 65535u
+                                                      : ra_state.active_ms));
     t.peak_pwm = ra_peak_pwm;
     ra_tlm_pack(&t, ra_seq++, frame);
     if (wifi_forward)
+    {
         (void)wifi_send(WIFI_TOPIC_TLM, frame, sizeof(frame));
+    }
     /* Separate layout: preserve all existing ramp/peak packets and expose the
      * coordinator-approved target constraint, rather than relabelling demand. */
     uint8_t detail[24] = {0xF2, 21, ra_target_seq++};
-    uint8_t *p = detail + 3;
+    uint8_t * p = detail + 3;
     MotionRampAssist approved = nav_get_ramp_assist();
     uint32_t ms = (uint32_t)(now / 1000u);
     for (unsigned i = 0; i < 4; ++i)
+    {
         p[i] = (uint8_t)(ms >> (8 * i));
+    }
     p[4] = 0xC1;
-    p[5] = (uint8_t)(8u | (approved.hold_milli ? 1u : 0u) | (approved.boost_milli ? 2u : 0u) |
+    p[5] = (uint8_t)(8u | (approved.hold_milli ? 1u : 0u) |
+                     (approved.boost_milli ? 2u : 0u) |
                      (approved.push_pwm_x100 ? 4u : 0u));
     p[6] = (uint8_t)approved.boost_milli;
     ra_put16(p + 7, approved.push_pwm_x100);
     ra_put16(p + 9, approved.hold_milli);
-    for (unsigned w = 0; w < 2; ++w) {
+    for (unsigned w = 0; w < 2; ++w)
+    {
         float requested = guard.active ? (float)demand.target[w] : 0.0f;
         float effective =
             requested >= 0
-                ? fmaxf(requested, RA_HOLD_MIN_MM_S * (float)approved.hold_milli / 1000.0f)
+                ? fmaxf(requested,
+                        RA_HOLD_MIN_MM_S * (float)approved.hold_milli / 1000.0f)
                 : requested;
         ra_put16(p + 11 + 2 * w, (uint16_t)(int16_t)lroundf(requested * 10));
         ra_put16(p + 15 + 2 * w, (uint16_t)(int16_t)lroundf(effective * 10));
@@ -100,7 +119,9 @@ static void ra_report(uint64_t now, uint8_t event) {
     p[19] = (uint8_t)nav_get_status().owner;
     p[20] = approved.ttl_ms;
     if (wifi_forward)
+    {
         (void)wifi_send(WIFI_TOPIC_TLM, detail, sizeof(detail));
+    }
     ra_interval_reset(&ra_state);
     ra_max_i[0] = ra_max_i[1] = 0;
     ra_sat_ticks = 0;
@@ -110,8 +131,10 @@ static void ra_report(uint64_t now, uint8_t event) {
 /* control_step, run active: after the existing mode selection and before the
  * per-wheel drive steps. `following` = continuous drive selected and no
  * line-recovery (white) state. */
-static void ramp_assist_control(uint64_t now, float dt, bool following) {
-    if (!ra_run_seen || guard.generation != ra_generation) {
+static void ramp_assist_control (uint64_t now, float dt, bool following)
+{
+    if (!ra_run_seen || guard.generation != ra_generation)
+    {
         ra_reset(&ra_state);
         ra_generation = guard.generation;
         ra_run_seen = true;
@@ -123,26 +146,38 @@ static void ramp_assist_control(uint64_t now, float dt, bool following) {
     }
     /* Observation of the existing controller after the previous step. */
     bool sat = false;
-    for (unsigned w = 0; w < 2; ++w) {
-        const ContinuousDrive *s = &continuous_wheel[w];
+    for (unsigned w = 0; w < 2; ++w)
+    {
+        const ContinuousDrive * s = &continuous_wheel[w];
         if (!s->active)
+        {
             continue;
+        }
         float m = s->integral < 0.0f ? -s->integral : s->integral;
         uint8_t mi = (uint8_t)(m > 255.0f ? 255.0f : m); /* v0.6: up to 255 */
         if (mi > ra_max_i[w])
+        {
             ra_max_i[w] = mi;
-        float lim =
-            s->hold_i_max > (float)CONTINUOUS_I_MAX ? s->hold_i_max : (float)CONTINUOUS_I_MAX;
+        }
+        float lim = s->hold_i_max > (float)CONTINUOUS_I_MAX
+                        ? s->hold_i_max
+                        : (float)CONTINUOUS_I_MAX;
         if (m >= lim - 1.0f)
+        {
             sat = true;
+        }
     }
     if (sat && ra_sat_ticks < 255)
+    {
         ra_sat_ticks++;
+    }
 
     MotionStatus st = nav_get_status();
     b4v23_tilt_t tilt = {0};
     if (b4h_ready)
+    {
         b4v23_tilt(&tilt);
+    }
     RampAssistInput in = {
         .now_us = now,
         .dt = dt,
@@ -153,12 +188,15 @@ static void ramp_assist_control(uint64_t now, float dt, bool following) {
         .tilt_us = tilt.t_us,
         .tilt_valid = tilt.valid,
         .tilt_mm = tilt.height_mm,
-        .tilt_skip = ra_tilt_skip(tilt.tracking, tilt.valid, tilt.quality_reasons), /* v0.3 */
-        .speed_mm_s = {velocity[0], velocity[1]}};                                  /* v0.4 */
+        .tilt_skip = ra_tilt_skip(tilt.tracking, tilt.valid,
+                                  tilt.quality_reasons), /* v0.3 */
+        .speed_mm_s = {velocity[0], velocity[1]}};       /* v0.4 */
     bool was = ra_state.assisting;
     float alpha = ramp_assist_step(&ra_state, &in);
     if (!was && ra_state.assisting)
+    {
         ra_peak_pwm = 0;
+    }
     motion_assist_context(following);
     MotionRampAssist requested = {.ttl_ms = 50};
 #if RAMP_ASSIST_ACTIVE
@@ -168,29 +206,40 @@ static void ramp_assist_control(uint64_t now, float dt, bool following) {
 #endif
     (void)nav_request_ramp_assist(MOTION_BUDDY4, &requested);
     MotionRampAssist approved = nav_get_ramp_assist();
-    for (unsigned w = 0; w < 2; ++w) {
+    for (unsigned w = 0; w < 2; ++w)
+    {
         motion_apply_ramp_profile(&continuous_wheel[w], &approved);
         ra_pwm_now[w] = ra_added_pwm(w, alpha, ra_state.push_pwm);
         if (ra_pwm_now[w] > ra_peak_pwm)
+        {
             ra_peak_pwm = ra_pwm_now[w];
+        }
     }
-    if (ra_state.pending_event != 0xff) {
+    if (ra_state.pending_event != 0xff)
+    {
         uint8_t ev = ra_state.pending_event;
         ra_state.pending_event = 0xff;
         ra_report(now, ev);
-    } else if (now - ra_last_report_us >= RA_REPORT_US)
+    }
+    else if (now - ra_last_report_us >= RA_REPORT_US)
+    {
         ra_report(now, RA_EVT_PERIODIC);
+    }
 }
 
 /* control_step, run NOT active (Stop, ESTOP, fault, run end): end any
  * assistance (reason STOPPED) and send one final report. */
-static void ramp_assist_halt(uint64_t now) {
+static void ramp_assist_halt (uint64_t now)
+{
     motion_assist_context(false);
     if (!ra_run_seen)
+    {
         return;
+    }
     RampAssistInput in = {.now_us = now, .run_active = false};
     (void)ramp_assist_step(&ra_state, &in);
-    for (unsigned w = 0; w < 2; ++w) {
+    for (unsigned w = 0; w < 2; ++w)
+    {
         continuous_wheel[w].boost_frac = 0.0f;
         continuous_wheel[w].boost_add = 0.0f;
         continuous_wheel[w].hold_min_speed = 0.0f;
@@ -198,7 +247,8 @@ static void ramp_assist_halt(uint64_t now) {
         continuous_wheel[w].hold_ki = 0.0f;
         ra_pwm_now[w] = 0;
     }
-    uint8_t ev = ra_state.pending_event != 0xff ? ra_state.pending_event : RA_EVT_PERIODIC;
+    uint8_t ev = ra_state.pending_event != 0xff ? ra_state.pending_event
+                                                : RA_EVT_PERIODIC;
     ra_state.pending_event = 0xff;
     ra_report(now, ev);
     ra_run_seen = false;
@@ -207,7 +257,10 @@ static void ramp_assist_halt(uint64_t now) {
 /* Output to seed the legacy controller when the continuous mode is left:
  * remove this step's added PWM so it is never carried into another
  * controller's integral. */
-static int32_t ramp_assist_unboosted(unsigned w, int32_t output) {
+static int32_t ramp_assist_unboosted (unsigned w, int32_t output)
+{
     int32_t b = (int32_t)(continuous_wheel[w].boost_pwm + 0.5f);
     return output - b < 0 ? 0 : output - b;
 }
+
+/* End of file. */

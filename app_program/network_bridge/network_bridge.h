@@ -3,7 +3,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-enum {
+enum
+{
     RN_PACKET_MAX = 64,
     RN_RX_MAX = 8,
     RN_TLM = 0,
@@ -11,14 +12,27 @@ enum {
     RN_HB = 2,
     RN_NETWORK_STOP_PACKET_BYTES = 32
 };
-enum { RN_CONFIGURED = 1, RN_CONNECTED = 2, RN_SUBSCRIBED = 4 };
+enum
+{
+    RN_CONFIGURED = 1,
+    RN_CONNECTED = 2,
+    RN_SUBSCRIBED = 4
+};
 /* Incoming MQTT PUBLISH must be non-retained. A broker replay is never a
  * fresh motion request; QoS/DUP bits do not change this condition. */
-static inline bool rn_live_command(bool command_topic, uint8_t fixed_header) {
+static inline bool rn_live_command (bool command_topic, uint8_t fixed_header)
+{
     return command_topic && (fixed_header & 0xf1U) == 0x30U;
 }
-enum { RN_URGENT_STOP = 1, RN_URGENT_ESTOP = 2, RN_URGENT_PAUSE = 4, RN_RX_BYTES = 25 };
-typedef struct {
+enum
+{
+    RN_URGENT_STOP = 1,
+    RN_URGENT_ESTOP = 2,
+    RN_URGENT_PAUSE = 4,
+    RN_RX_BYTES = 25
+};
+typedef struct
+{
     uint32_t polls, last_poll_ms, ipv4, broker_ipv4, connects;
     uint32_t published, received, tx_dropped, rx_dropped;
     uint32_t tx_coalesced, publish_mem, publish_error, telemetry_wait;
@@ -35,44 +49,52 @@ typedef struct {
     unsigned request_free : 5, nagle_off : 1;
 } RnStatus;
 /* No lwIP, radio or kernel typedefs cross this header. All messages are copied. */
-int32_t rn_init(void);
-bool rn_ready(void);
-bool rn_tx_push(uint8_t topic, const uint8_t *data, uint8_t len, uint32_t now);
-bool rn_tx_take(uint8_t *topic, uint8_t data[RN_PACKET_MAX], uint8_t *len, uint32_t now);
-bool rn_tx_take_budget(uint8_t *topic, uint8_t data[RN_PACKET_MAX], uint8_t *len, uint32_t now,
-                       bool telemetry);
-bool rn_rx_push(const uint8_t *data, uint8_t copied, uint32_t original, uint32_t now);
-void rn_publish_result(bool ok);
-void rn_status_update(const RnStatus *status);
-RnStatus rn_status(void);
-uint32_t rn_mapping_snapshot(void);
-uint8_t rn_next_sequence(unsigned source);
-void rn_app_task(int32_t code, void *exinf);
-void rn_report(void);
+int32_t rn_init (void);
+bool rn_ready (void);
+bool rn_tx_push (uint8_t topic, const uint8_t * data, uint8_t len,
+                 uint32_t now);
+bool rn_tx_take (uint8_t * topic, uint8_t data[RN_PACKET_MAX], uint8_t * len,
+                 uint32_t now);
+bool rn_tx_take_budget (uint8_t * topic, uint8_t data[RN_PACKET_MAX],
+                        uint8_t * len, uint32_t now, bool telemetry);
+bool rn_rx_push (const uint8_t * data, uint8_t copied, uint32_t original,
+                 uint32_t now);
+void rn_publish_result (bool ok);
+void rn_status_update (const RnStatus * status);
+RnStatus rn_status (void);
+uint32_t rn_mapping_snapshot (void);
+uint8_t rn_next_sequence (unsigned source);
+void rn_app_task (int32_t code, void * exinf);
+void rn_report (void);
 #ifdef APP_RTOS_IMU
 /* Kernel Wi-Fi owner publishes elapsed service wall times; copied only,
  * never calls network APIs from the diagnostic/application tasks. */
-void rn_service_sample(uint32_t radio_us, uint32_t timers_us, uint32_t mqtt_us);
+void rn_service_sample (uint32_t radio_us, uint32_t timers_us,
+                        uint32_t mqtt_us);
 #endif
-void rn_command_result(uint8_t code, uint8_t result);
-uint32_t rn_barrier(void);
-unsigned rn_take_urgent(void);
-bool rn_take_pause(void);
+void rn_command_result (uint8_t code, uint8_t result);
+uint32_t rn_barrier (void);
+unsigned rn_take_urgent (void);
+bool rn_take_pause (void);
 #if defined(APP_RTOS_LINE) && defined(APP_RTOS_NETWORK)
-int32_t rn_drive_init(void);
-bool rn_drive_enqueue(const uint8_t message[RN_RX_BYTES]);
-uint32_t rn_app_last_ms(void);
-void rn_drive_process(void *feedback); /* Control-core owner only. */
-bool rn_drive_paused(void);
-void rn_drive_cancel(void);
-void rn_drive_begin(void);
-bool rn_drive_online(void);
-bool rn_drive_online_record(bool record_failure);
-void rn_network_stop_packet(uint8_t seq, uint8_t out[RN_NETWORK_STOP_PACKET_BYTES]);
-void rn_drive_telemetry(uint32_t now);
-void rn_drive_set_telemetry(bool enabled);
-bool rn_drive_telemetry_enabled(void);
-uint8_t rn_drive_request_speed_mode(unsigned mode);
-void rn_drive_speed_mode_snapshot(uint8_t *requested_mode, uint8_t *last_result);
+int32_t rn_drive_init (void);
+bool rn_drive_enqueue (const uint8_t message[RN_RX_BYTES]);
+uint32_t rn_app_last_ms (void);
+void rn_drive_process (void * feedback); /* Control-core owner only. */
+bool rn_drive_paused (void);
+void rn_drive_cancel (void);
+void rn_drive_begin (void);
+bool rn_drive_online (void);
+bool rn_drive_online_record (bool record_failure);
+void rn_network_stop_packet (uint8_t seq,
+                             uint8_t out[RN_NETWORK_STOP_PACKET_BYTES]);
+void rn_drive_telemetry (uint32_t now);
+void rn_drive_set_telemetry (bool enabled);
+bool rn_drive_telemetry_enabled (void);
+uint8_t rn_drive_request_speed_mode (unsigned mode);
+void rn_drive_speed_mode_snapshot (uint8_t * requested_mode,
+                                   uint8_t * last_result);
 #endif
 #endif
+
+/* End of file. */

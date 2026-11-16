@@ -32,7 +32,8 @@
 /* ------------------------------------------------------------------------
  * IMU Terrain task state (statechart 6.4). 3 bits.
  * --------------------------------------------------------------------- */
-typedef enum {
+typedef enum
+{
     IMU_ST_INIT = 0,    /* Initialising: configure the GY-511       */
     IMU_ST_CALIBRATING, /* stationary gravity baseline              */
     IMU_ST_IDLE,        /* Sampling: Idle / Standby                 */
@@ -46,7 +47,8 @@ typedef enum {
 /* ------------------------------------------------------------------------
  * Motion class (FR-IMU-03). 3 bits. Order = priority when several apply.
  * --------------------------------------------------------------------- */
-typedef enum {
+typedef enum
+{
     IMU_MOTION_UNKNOWN = 0,  /* not calibrated, or no data to decide */
     IMU_MOTION_STATIONARY,   /* Buddy 2: |speed| < 10 mm/s           */
     IMU_MOTION_STEADY,       /* moving, none of the classes below    */
@@ -62,7 +64,8 @@ typedef enum {
  * Event type. 3 bits. A telemetry frame carries the event that caused it,
  * or IMU_EVT_STATUS for the periodic frame.
  * --------------------------------------------------------------------- */
-typedef enum {
+typedef enum
+{
     IMU_EVT_STATUS = 0,    /* periodic, nothing new                    */
     IMU_EVT_MOTION,        /* the motion class changed                 */
     IMU_EVT_HUMP_START,    /* FR-IMU-01: a hump was detected           */
@@ -75,7 +78,8 @@ typedef enum {
 } imu_evt_type_t;
 
 /* Why a hump estimate was rejected (a false peak is never kept). 3 bits. */
-typedef enum {
+typedef enum
+{
     IMU_REJ_NONE = 0,
     IMU_REJ_TIMEOUT,     /* profile took too long or too far         */
     IMU_REJ_NO_DESCENT,  /* went up and stayed up: a ramp            */
@@ -98,7 +102,7 @@ typedef enum {
 #define IMU_WARN_SHOCK (0x08U)        /* warning: shock (NFR-IMU-03)     */
 
 /* Field limits (minimum bits, each sized to its range). */
-#define IMU_HEIGHT_MAX_MM                                                                          \
+#define IMU_HEIGHT_MAX_MM                                                      \
     (255)                      /* 8 bits, 1 mm: humps the car can
                                          * climb are far below this      */
 #define IMU_PITCH_MAX_DD (900) /* 11 bits signed, +-90.0 deg   */
@@ -108,7 +112,8 @@ typedef enum {
  * Used on the chip (event hook below). It never leaves the chip as a C
  * struct: telemetry packs it with masks and shifts (imu_tlm_pack()).
  * --------------------------------------------------------------------- */
-typedef struct {
+typedef struct
+{
     uint32_t type : 3;      /* imu_evt_type_t                       */
     uint32_t motion : 3;    /* imu_motion_t at the time             */
     uint32_t detail : 4;    /* imu_reject_t or IMU_FAULT_* code     */
@@ -171,7 +176,8 @@ typedef struct {
 #define IMU_BITS_TIME (16U)
 
 /* Decoded view (what the receiver gets back). */
-typedef struct {
+typedef struct
+{
     uint8_t seq;    /* frame sequence (common header)       */
     uint8_t state;  /* imu_state_t                          */
     uint8_t motion; /* imu_motion_t                         */
@@ -193,22 +199,23 @@ typedef struct {
     uint16_t t_ms;
 } imu_tlm_t;
 
-void imu_tlm_pack(imu_tlm_t const *p_in, uint8_t p_frame[IMU_TLM_FRAME_BYTES]);
-bool imu_tlm_unpack(uint8_t const *p_frame, uint32_t len, imu_tlm_t *p_out);
+void imu_tlm_pack (imu_tlm_t const * p_in,
+                   uint8_t p_frame[IMU_TLM_FRAME_BYTES]);
+bool imu_tlm_unpack (uint8_t const * p_frame, uint32_t len, imu_tlm_t * p_out);
 
 /* Names for consoles and logs. */
-char const *imu_state_name(imu_state_t state);
-char const *imu_motion_name(imu_motion_t motion);
-char const *imu_evt_name(imu_evt_type_t evt);
-char const *imu_reject_name(imu_reject_t reason);
+char const * imu_state_name (imu_state_t state);
+char const * imu_motion_name (imu_motion_t motion);
+char const * imu_evt_name (imu_evt_type_t evt);
+char const * imu_reject_name (imu_reject_t reason);
 
 /* ------------------------------------------------------------------------
  * Provided by IMU Terrain (task context only)
  * --------------------------------------------------------------------- */
-imu_state_t imu_get_state(void);
-imu_motion_t imu_get_motion(void);
-uint8_t imu_get_highest_peak_mm(void); /* this run, 0 = none    */
-bool imu_data_valid(void);
+imu_state_t imu_get_state (void);
+imu_motion_t imu_get_motion (void);
+uint8_t imu_get_highest_peak_mm (void); /* this run, 0 = none    */
+bool imu_data_valid (void);
 
 /* imu_notify_state(nav_state_t) is declared in system/nav_iface.h: the
  * Navigation Coordinator calls it on every operating-state change. */
@@ -223,7 +230,8 @@ bool imu_data_valid(void);
  * (Buddy 4 only uses differences). age_ms = how old the estimate is;
  * Buddy 4 ignores it above B4_MOTION_FRESH_MS (the team's 50 ms rule).
  * Returns false if there is no estimate at all. */
-typedef struct {
+typedef struct
+{
     int16_t distance_mm;
     int16_t heading_dd;
     uint16_t age_ms;
@@ -233,14 +241,16 @@ typedef struct {
     int32_t distance_um;
 } imu_motion_in_t;
 
-bool imu_motion_get(imu_motion_in_t *p_est);
+bool imu_motion_get (imu_motion_in_t * p_est);
 
 /* WiFi and MQTT (Buddy 1): queue the IMU_TLM_FRAME_BYTES-byte frame for
  * MQTT. Called from the IMU task: copy the bytes and return, never block. */
-void imu_telemetry_publish(uint8_t const *p_frame, uint32_t len);
+void imu_telemetry_publish (uint8_t const * p_frame, uint32_t len);
 
 /* Anyone on the chip who wants IMU events as they happen (optional).
  * Called from the IMU task; copy the event and return, never block. */
-void imu_event_notify(imu_event_t const *p_evt);
+void imu_event_notify (imu_event_t const * p_evt);
 
 #endif /* IMU_IFACE_H */
+
+/* End of file. */

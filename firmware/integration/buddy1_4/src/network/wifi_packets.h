@@ -21,7 +21,8 @@
 #define WPK_HEARTBEAT_BYTES (WPK_HEADER_BYTES + WPK_HEARTBEAT_PAYLOAD_BYTES)
 #define WPK_DIAGNOSTICS_BYTES (WPK_HEADER_BYTES + WPK_DIAGNOSTICS_PAYLOAD_BYTES)
 
-enum {
+enum
+{
     WPK_SRC_HEARTBEAT = 1u,
     WPK_SRC_MAP = 8u,
     WPK_SRC_MOTION = 9u,
@@ -31,7 +32,8 @@ enum {
     WPK_SRC_LOG_CHUNK = 13u,
     WPK_SRC_DIAGNOSTICS = 14u
 };
-enum {
+enum
+{
     WPK_EVENT_STATUS = 0u,
     WPK_EVENT_RUN_BEGIN = 1u,
     WPK_EVENT_DECODED = 2u,
@@ -49,7 +51,8 @@ enum {
     WPK_EVENT_FAULT = 14u,
     WPK_EVENT_UNASSIGNED = 15u
 };
-enum {
+enum
+{
     WPK_LOG_STATUS_OK = 0u,
     WPK_LOG_STATUS_BUSY = 1u,
     WPK_LOG_STATUS_RANGE = 2u,
@@ -57,7 +60,8 @@ enum {
 };
 
 /* Source 1 payload is Buddy 1 v2, preserved for existing dashboard clients. */
-typedef struct {
+typedef struct
+{
     uint8_t seq, net, state, last_cmd, last_result;
     uint16_t uptime_s, published, lost;
     uint8_t accepted, rejected, connects, fill_pct;
@@ -70,7 +74,8 @@ typedef struct {
  * u16 0..1000 or 0xffff unavailable @32/@34; barcode calibration is
  * explicitly unavailable (0xffff) @36; line bitmask@38; distance_mm u32@39; heading centidegrees
  * i16 wrapped to +/-18000 @43. */
-typedef struct {
+typedef struct
+{
     uint8_t seq, phase, profile, flags, recovery_state, line_levels;
     uint32_t uptime_ms, elapsed_ms, distance_mm;
     uint16_t run_id, adc_left, adc_right, adc_barcode;
@@ -84,7 +89,8 @@ typedef struct {
  * u16 @5/@7/@9, calibrated line levels L/R u16 0..1000 or 0xffff unavailable @11/@13, last decoded
  * letter@15, pending letter/action/revision@16..18, executing
  * action/revision@19..20. */
-typedef struct {
+typedef struct
+{
     uint8_t seq, event, last_decoded_letter;
     uint8_t pending_letter, pending_action, pending_revision;
     uint8_t executing_action, executing_revision;
@@ -96,7 +102,8 @@ typedef struct {
 /* Source 11 event/status, payload offsets: uptime_ms@0,event@4,letter@5,
  * action@6,map_revision@7,command_id u32@8,generation u32@12,
  * fault_bitmap u16@16,owner/mode/command_state@18..20,detail u16@21. */
-typedef struct {
+typedef struct
+{
     uint8_t seq, event, letter, action, map_revision;
     uint8_t owner, mode, command_state;
     uint32_t uptime_ms;
@@ -104,7 +111,8 @@ typedef struct {
     uint16_t fault_bitmap, detail;
 } WifiNavPacket;
 
-typedef struct {
+typedef struct
+{
     uint8_t seq, result, flags;
     uint32_t uptime_ms, elapsed_ms, distance_mm;
     uint16_t run_id, line_events, nav_events, recoveries;
@@ -116,7 +124,8 @@ typedef struct {
  * rx_dropped/invalid_left/invalid_right are u32 at @8,@12,@16,@20,@24,@28,
  * @32,@36,@40,@44,@48,@52,@56. Flags: scanning,pending,front-cal-valid,
  * run-active in bits0..3; upper bits reserved. Threshold<=4095, bank<=62. */
-typedef struct {
+typedef struct
+{
     uint8_t seq, bank, flags;
     uint32_t uptime_ms;
     uint16_t threshold_adc;
@@ -127,18 +136,22 @@ typedef struct {
 
 /* All packers return false for a null pointer or an invalid semantic field.
  * Integers are encoded little-endian; each frame starts with v2 common header. */
-bool wpk_heartbeat(const WifiHeartbeat *in, uint8_t out[WPK_HEARTBEAT_BYTES]);
-bool wpk_motion(const WifiMotionPacket *in, uint8_t out[WPK_MOTION_BYTES]);
-bool wpk_line(const WifiLinePacket *in, uint8_t out[WPK_LINE_BYTES]);
-bool wpk_nav(const WifiNavPacket *in, uint8_t out[WPK_NAV_BYTES]);
-bool wpk_summary(const WifiSummaryPacket *in, uint8_t out[WPK_SUMMARY_BYTES]);
-bool wpk_diagnostics(const WifiDiagnosticsPacket *in, uint8_t out[WPK_DIAGNOSTICS_BYTES]);
+bool wpk_heartbeat (const WifiHeartbeat * in, uint8_t out[WPK_HEARTBEAT_BYTES]);
+bool wpk_motion (const WifiMotionPacket * in, uint8_t out[WPK_MOTION_BYTES]);
+bool wpk_line (const WifiLinePacket * in, uint8_t out[WPK_LINE_BYTES]);
+bool wpk_nav (const WifiNavPacket * in, uint8_t out[WPK_NAV_BYTES]);
+bool wpk_summary (const WifiSummaryPacket * in, uint8_t out[WPK_SUMMARY_BYTES]);
+bool wpk_diagnostics (const WifiDiagnosticsPacket * in,
+                      uint8_t out[WPK_DIAGNOSTICS_BYTES]);
 /* Source 13 row-based chunk response; payload offsets are dataset@0,
  * request_id@1,row_index u16@2,total_rows u16@4,part_index@6,part_count@7,
  * status@8,data_len@9,reserved zero u16@10,data@12. */
-bool wpk_log_chunk(uint8_t seq, uint8_t dataset, uint8_t request_id, uint16_t row_index,
-                   uint16_t total_rows, uint8_t part_index, uint8_t part_count, uint8_t status,
-                   const uint8_t *data, uint8_t length, uint8_t out[WIFI_PACKET_MAX],
-                   uint8_t *out_len);
+bool wpk_log_chunk (uint8_t seq, uint8_t dataset, uint8_t request_id,
+                    uint16_t row_index, uint16_t total_rows, uint8_t part_index,
+                    uint8_t part_count, uint8_t status, const uint8_t * data,
+                    uint8_t length, uint8_t out[WIFI_PACKET_MAX],
+                    uint8_t * out_len);
 
 #endif
+
+/* End of file. */

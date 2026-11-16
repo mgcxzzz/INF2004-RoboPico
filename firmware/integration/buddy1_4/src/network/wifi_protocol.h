@@ -6,7 +6,8 @@
 #include <stdint.h>
 
 /* Schema v2 command and acknowledgement values, compatible with Buddy 1. */
-enum {
+enum
+{
     WP_VERSION = 2u,
     WP_STOP_REASON = 49u,
     WP_ESTOP_REASON = 50u,
@@ -48,19 +49,29 @@ enum {
 /* GET_LOG arg: high nibble selects 0=motion, 1=diagnostic, 2=raw,
  * 3=navigation; low 12 bits are a row index. The transport/root enforces
  * stopped-only access. */
-enum { WP_LOG_MOTION = 0u, WP_LOG_DIAGNOSTIC = 1u, WP_LOG_RAW = 2u, WP_LOG_NAVIGATION = 3u };
+enum
+{
+    WP_LOG_MOTION = 0u,
+    WP_LOG_DIAGNOSTIC = 1u,
+    WP_LOG_RAW = 2u,
+    WP_LOG_NAVIGATION = 3u
+};
 
-typedef struct {
+typedef struct
+{
     uint8_t byte0, code, id;
     uint16_t arg;
     uint32_t mapping;
 } WifiCommand;
 
-uint8_t wp_parse(const uint8_t *p, size_t original_len, WifiCommand *cmd);
-bool wp_map_valid(uint32_t word);
-uint32_t wp_map_replace(uint32_t snapshot, uint32_t word);
-char wp_map_action(uint32_t snapshot, char letter);
-void wp_ack(const WifiCommand *cmd, uint8_t result, uint8_t state, uint8_t out[4]);
-void wp_map_frame(uint32_t snapshot, uint8_t id, uint8_t seq, uint8_t out[8]);
+uint8_t wp_parse (const uint8_t * p, size_t original_len, WifiCommand * cmd);
+bool wp_map_valid (uint32_t word);
+uint32_t wp_map_replace (uint32_t snapshot, uint32_t word);
+char wp_map_action (uint32_t snapshot, char letter);
+void wp_ack (const WifiCommand * cmd, uint8_t result, uint8_t state,
+             uint8_t out[4]);
+void wp_map_frame (uint32_t snapshot, uint8_t id, uint8_t seq, uint8_t out[8]);
 
 #endif
+
+/* End of file. */

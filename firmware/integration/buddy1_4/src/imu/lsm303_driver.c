@@ -107,9 +107,13 @@ static bool g_b_mag = false;
  * ================================================================== */
 
 #ifndef APP_RTOS_IMU
-static bool wait_until(uint32_t addr, uint32_t mask, uint32_t want, uint32_t start_us) {
-    while ((in_w(addr) & mask) != want) {
-        if ((sys_time_us() - start_us) > B4_I2C_TIMEOUT_US) {
+static bool wait_until (uint32_t addr, uint32_t mask, uint32_t want,
+                        uint32_t start_us)
+{
+    while ((in_w(addr) & mask) != want)
+    {
+        if ((sys_time_us() - start_us) > B4_I2C_TIMEOUT_US)
+        {
             return false;
         }
     }
@@ -119,23 +123,27 @@ static bool wait_until(uint32_t addr, uint32_t mask, uint32_t want, uint32_t sta
 #endif
 
 #ifndef APP_RTOS_IMU
-static void bus_setup(void) {
+static void bus_setup (void)
+{
     /* Reset the block so a bus left half-way by a fault starts clean. */
     set_w(RESETS_RESET, RESETS_RESET_I2C1);
     clr_w(RESETS_RESET, RESETS_RESET_I2C1);
 
-    while ((in_w(RESETS_RESET_DONE) & RESETS_RESET_I2C1) == 0U) {
+    while ((in_w(RESETS_RESET_DONE) & RESETS_RESET_I2C1) == 0U)
+    {
         /* a few clk_sys cycles */
     }
 
     out_w(GPIO_CTRL(B4_I2C_SDA_PIN), GPIO_CTRL_FUNCSEL_I2C);
-    out_w(GPIO(B4_I2C_SDA_PIN), GPIO_IE | GPIO_DRIVE_4MA | GPIO_PUE | GPIO_SHEMITT);
+    out_w(GPIO(B4_I2C_SDA_PIN),
+          GPIO_IE | GPIO_DRIVE_4MA | GPIO_PUE | GPIO_SHEMITT);
     out_w(GPIO_CTRL(B4_I2C_SCL_PIN), GPIO_CTRL_FUNCSEL_I2C);
-    out_w(GPIO(B4_I2C_SCL_PIN), GPIO_IE | GPIO_DRIVE_4MA | GPIO_PUE | GPIO_SHEMITT);
+    out_w(GPIO(B4_I2C_SCL_PIN),
+          GPIO_IE | GPIO_DRIVE_4MA | GPIO_PUE | GPIO_SHEMITT);
 
     out_w(IC_ENABLE, 0U);
-    out_w(IC_CON,
-          CON_MASTER | CON_SPEED_FAST | CON_RESTART_EN | CON_SLAVE_DISABLE | CON_TX_EMPTY_CTRL);
+    out_w(IC_CON, CON_MASTER | CON_SPEED_FAST | CON_RESTART_EN |
+                      CON_SLAVE_DISABLE | CON_TX_EMPTY_CTRL);
     out_w(IC_FS_SCL_HCNT, SCL_HCNT);
     out_w(IC_FS_SCL_LCNT, SCL_LCNT);
     out_w(IC_FS_SPKLEN, SCL_SPKLEN);
@@ -145,28 +153,33 @@ static void bus_setup(void) {
     out_w(IC_INTR_MASK, 0U); /* polled: no interrupts      */
 }
 #else
-static bool bus_setup(void) {
+static bool bus_setup (void)
+{
     uint32_t start_us = sys_time_us();
 
     /* Reset the block so a bus left half-way by a fault starts clean. */
     set_w(RESETS_RESET, RESETS_RESET_I2C1);
     clr_w(RESETS_RESET, RESETS_RESET_I2C1);
 
-    while ((in_w(RESETS_RESET_DONE) & RESETS_RESET_I2C1) == 0U) {
-        if ((uint32_t)(sys_time_us() - start_us) >= RI_RESET_READY_TIMEOUT_US) {
+    while ((in_w(RESETS_RESET_DONE) & RESETS_RESET_I2C1) == 0U)
+    {
+        if ((uint32_t)(sys_time_us() - start_us) >= RI_RESET_READY_TIMEOUT_US)
+        {
             ri_acquisition_record_reset_timeout();
             return false;
         }
     }
 
     out_w(GPIO_CTRL(B4_I2C_SDA_PIN), GPIO_CTRL_FUNCSEL_I2C);
-    out_w(GPIO(B4_I2C_SDA_PIN), GPIO_IE | GPIO_DRIVE_4MA | GPIO_PUE | GPIO_SHEMITT);
+    out_w(GPIO(B4_I2C_SDA_PIN),
+          GPIO_IE | GPIO_DRIVE_4MA | GPIO_PUE | GPIO_SHEMITT);
     out_w(GPIO_CTRL(B4_I2C_SCL_PIN), GPIO_CTRL_FUNCSEL_I2C);
-    out_w(GPIO(B4_I2C_SCL_PIN), GPIO_IE | GPIO_DRIVE_4MA | GPIO_PUE | GPIO_SHEMITT);
+    out_w(GPIO(B4_I2C_SCL_PIN),
+          GPIO_IE | GPIO_DRIVE_4MA | GPIO_PUE | GPIO_SHEMITT);
 
     out_w(IC_ENABLE, 0U);
-    out_w(IC_CON,
-          CON_MASTER | CON_SPEED_FAST | CON_RESTART_EN | CON_SLAVE_DISABLE | CON_TX_EMPTY_CTRL);
+    out_w(IC_CON, CON_MASTER | CON_SPEED_FAST | CON_RESTART_EN |
+                      CON_SLAVE_DISABLE | CON_TX_EMPTY_CTRL);
     out_w(IC_FS_SCL_HCNT, SCL_HCNT);
     out_w(IC_FS_SCL_LCNT, SCL_LCNT);
     out_w(IC_FS_SPKLEN, SCL_SPKLEN);
@@ -183,7 +196,9 @@ static bool bus_setup(void) {
  * rlen <= 16 (hardware FIFO).
  */
 #ifndef APP_RTOS_IMU /* RTOS uses the preemption-safe transport, same sensor/FIFO setup. */
-static bool xfer(uint8_t addr, uint8_t const *p_w, uint32_t wlen, uint8_t *p_r, uint32_t rlen) {
+static bool xfer (uint8_t addr, uint8_t const * p_w, uint32_t wlen,
+                  uint8_t * p_r, uint32_t rlen)
+{
     uint32_t start = sys_time_us();
     uint32_t i;
     bool b_ok = true;
@@ -193,10 +208,12 @@ static bool xfer(uint8_t addr, uint8_t const *p_w, uint32_t wlen, uint8_t *p_r, 
     (void)in_w(IC_CLR_INTR);
     out_w(IC_ENABLE, 1U);
 
-    for (i = 0U; (i < wlen) && b_ok; i++) {
+    for (i = 0U; (i < wlen) && b_ok; i++)
+    {
         uint32_t cmd = p_w[i];
 
-        if ((i == (wlen - 1U)) && (rlen == 0U)) {
+        if ((i == (wlen - 1U)) && (rlen == 0U))
+        {
             cmd |= CMD_STOP;
         }
 
@@ -204,19 +221,24 @@ static bool xfer(uint8_t addr, uint8_t const *p_w, uint32_t wlen, uint8_t *p_r, 
         out_w(IC_DATA_CMD, cmd);
     }
 
-    for (i = 0U; (i < rlen) && b_ok; i++) {
+    for (i = 0U; (i < rlen) && b_ok; i++)
+    {
         uint32_t cmd = CMD_READ;
 
-        if ((i == 0U) && (wlen > 0U)) {
+        if ((i == 0U) && (wlen > 0U))
+        {
             cmd |= CMD_RESTART;
         }
 
-        if (i == (rlen - 1U)) {
+        if (i == (rlen - 1U))
+        {
             cmd |= CMD_STOP;
         }
 
-        while (in_w(IC_TXFLR) >= FIFO_DEPTH_HW) {
-            if ((sys_time_us() - start) > B4_I2C_TIMEOUT_US) {
+        while (in_w(IC_TXFLR) >= FIFO_DEPTH_HW)
+        {
+            if ((sys_time_us() - start) > B4_I2C_TIMEOUT_US)
+            {
                 b_ok = false;
                 break;
             }
@@ -226,26 +248,34 @@ static bool xfer(uint8_t addr, uint8_t const *p_w, uint32_t wlen, uint8_t *p_r, 
     }
 
     /* Wait for the STOP (or an abort: no ACK, lost arbitration). */
-    while (b_ok && ((in_w(IC_RAW_INTR_STAT) & (INTR_STOP_DET | INTR_TX_ABRT)) == 0U)) {
-        if ((sys_time_us() - start) > B4_I2C_TIMEOUT_US) {
+    while (b_ok &&
+           ((in_w(IC_RAW_INTR_STAT) & (INTR_STOP_DET | INTR_TX_ABRT)) == 0U))
+    {
+        if ((sys_time_us() - start) > B4_I2C_TIMEOUT_US)
+        {
             b_ok = false;
         }
     }
 
-    if ((in_w(IC_RAW_INTR_STAT) & INTR_TX_ABRT) != 0U) {
+    if ((in_w(IC_RAW_INTR_STAT) & INTR_TX_ABRT) != 0U)
+    {
         (void)in_w(IC_CLR_TX_ABRT);
         b_ok = false;
     }
 
-    for (i = 0U; (i < rlen) && b_ok; i++) {
-        while (in_w(IC_RXFLR) == 0U) {
-            if ((sys_time_us() - start) > B4_I2C_TIMEOUT_US) {
+    for (i = 0U; (i < rlen) && b_ok; i++)
+    {
+        while (in_w(IC_RXFLR) == 0U)
+        {
+            if ((sys_time_us() - start) > B4_I2C_TIMEOUT_US)
+            {
                 b_ok = false;
                 break;
             }
         }
 
-        if (b_ok) {
+        if (b_ok)
+        {
             p_r[i] = (uint8_t)(in_w(IC_DATA_CMD) & 0xFFU);
         }
     }
@@ -256,11 +286,13 @@ static bool xfer(uint8_t addr, uint8_t const *p_w, uint32_t wlen, uint8_t *p_r, 
     return b_ok;
 }
 
-bool b4_i2c_read_reg(uint8_t addr, uint8_t reg, uint8_t *p_buf, uint32_t len) {
+bool b4_i2c_read_reg (uint8_t addr, uint8_t reg, uint8_t * p_buf, uint32_t len)
+{
     return xfer(addr, &reg, 1U, p_buf, len);
 }
 
-bool b4_i2c_write_reg(uint8_t addr, uint8_t reg, uint8_t value) {
+bool b4_i2c_write_reg (uint8_t addr, uint8_t reg, uint8_t value)
+{
     uint8_t buf[2];
 
     buf[0] = reg;
@@ -273,18 +305,23 @@ bool b4_i2c_write_reg(uint8_t addr, uint8_t reg, uint8_t value) {
  * Sensor
  * ================================================================== */
 
-static bool mag_init(void) {
+static bool mag_init (void)
+{
     uint8_t id[3] = {0U, 0U, 0U};
 
-    if (b4_i2c_read_reg(B4_MAG_ADDR, DLHC_IRA, id, 3U) && (id[0] == (uint8_t)'H') &&
-        (id[1] == (uint8_t)'4') && (id[2] == (uint8_t)'3')) {
+    if (b4_i2c_read_reg(B4_MAG_ADDR, DLHC_IRA, id, 3U) &&
+        (id[0] == (uint8_t)'H') && (id[1] == (uint8_t)'4') &&
+        (id[2] == (uint8_t)'3'))
+    {
         /* 75 Hz, +-1.3 gauss, continuous */
         return (b4_i2c_write_reg(B4_MAG_ADDR, DLHC_CRA, 0x18U) &&
                 b4_i2c_write_reg(B4_MAG_ADDR, DLHC_CRB, 0x20U) &&
                 b4_i2c_write_reg(B4_MAG_ADDR, DLHC_MR, 0x00U));
     }
 
-    if (b4_i2c_read_reg(B4_MAG_ADDR, AGR_WHO_AM_I_M, id, 1U) && (id[0] == 0x40U)) {
+    if (b4_i2c_read_reg(B4_MAG_ADDR, AGR_WHO_AM_I_M, id, 1U) &&
+        (id[0] == 0x40U))
+    {
         /* 100 Hz continuous, block data update */
         return (b4_i2c_write_reg(B4_MAG_ADDR, AGR_CFG_A, 0x0CU) &&
                 b4_i2c_write_reg(B4_MAG_ADDR, AGR_CFG_C, 0x10U));
@@ -293,7 +330,8 @@ static bool mag_init(void) {
     return false;
 }
 
-bool b4_drv_init(b4_chip_t *p_chip, bool *p_b_mag) {
+bool b4_drv_init (b4_chip_t * p_chip, bool * p_b_mag)
+{
     uint8_t id = 0U;
     uint8_t check = 0U;
     bool b_ok;
@@ -304,31 +342,37 @@ bool b4_drv_init(b4_chip_t *p_chip, bool *p_b_mag) {
 #else
     g_chip = B4_CHIP_NONE;
     g_b_mag = false;
-    if (!bus_setup()) {
+    if (!bus_setup())
+    {
         *p_chip = B4_CHIP_NONE;
         *p_b_mag = false;
         return false;
     }
 #endif
 
-    b_ok = b4_i2c_read_reg(B4_ACC_ADDR, ACC_WHO_AM_I, &id, 1U) && (id == ACC_ID);
+    b_ok =
+        b4_i2c_read_reg(B4_ACC_ADDR, ACC_WHO_AM_I, &id, 1U) && (id == ACC_ID);
 
-    if (b_ok) {
+    if (b_ok)
+    {
         b_ok = b4_i2c_write_reg(B4_ACC_ADDR, ACC_CTRL_REG1, REG1_400HZ_XYZ) &&
                b4_i2c_write_reg(B4_ACC_ADDR, ACC_CTRL_REG4, REG4_BDU_4G_HR) &&
                b4_i2c_write_reg(B4_ACC_ADDR, ACC_CTRL_REG5, REG5_FIFO_EN) &&
                b4_i2c_write_reg(B4_ACC_ADDR, ACC_FIFO_CTRL, FIFO_BYPASS) &&
                b4_i2c_write_reg(B4_ACC_ADDR, ACC_FIFO_CTRL, FIFO_STREAM) &&
-               b4_i2c_read_reg(B4_ACC_ADDR, ACC_CTRL_REG1, &check, 1U) && (check == REG1_400HZ_XYZ);
+               b4_i2c_read_reg(B4_ACC_ADDR, ACC_CTRL_REG1, &check, 1U) &&
+               (check == REG1_400HZ_XYZ);
     }
 
     g_b_mag = b_ok && mag_init();
 
-    if (b_ok) {
+    if (b_ok)
+    {
         /* The magnetometer tells the two chips apart. */
         uint8_t m = 0U;
 
-        g_chip = (b4_i2c_read_reg(B4_MAG_ADDR, AGR_WHO_AM_I_M, &m, 1U) && (m == 0x40U))
+        g_chip = (b4_i2c_read_reg(B4_MAG_ADDR, AGR_WHO_AM_I_M, &m, 1U) &&
+                  (m == 0x40U))
                      ? B4_CHIP_AGR
                      : B4_CHIP_DLHC;
     }
@@ -338,7 +382,9 @@ bool b4_drv_init(b4_chip_t *p_chip, bool *p_b_mag) {
     return b_ok;
 }
 
-bool b4_drv_read_fifo(b4_raw_t *p_s, uint8_t max, uint8_t *p_n, bool *p_b_overrun) {
+bool b4_drv_read_fifo (b4_raw_t * p_s, uint8_t max, uint8_t * p_n,
+                       bool * p_b_overrun)
+{
     uint8_t src = 0U;
     uint8_t n;
     uint8_t i;
@@ -346,42 +392,56 @@ bool b4_drv_read_fifo(b4_raw_t *p_s, uint8_t max, uint8_t *p_n, bool *p_b_overru
     *p_n = 0U;
     *p_b_overrun = false;
 
-    if (!b4_i2c_read_reg(B4_ACC_ADDR, ACC_FIFO_SRC, &src, 1U)) {
+    if (!b4_i2c_read_reg(B4_ACC_ADDR, ACC_FIFO_SRC, &src, 1U))
+    {
         return false;
     }
 
-    if ((src & FIFO_SRC_EMPTY) != 0U) {
+    if ((src & FIFO_SRC_EMPTY) != 0U)
+    {
         return true; /* nothing new                 */
     }
 
     n = src & FIFO_SRC_FSS;
 
-    if ((src & FIFO_SRC_OVRN) != 0U) {
+    if ((src & FIFO_SRC_OVRN) != 0U)
+    {
         *p_b_overrun = true;
         n = (uint8_t)B4_FIFO_DEPTH;
     }
 
-    if (n == 0U) {
+    if (n == 0U)
+    {
         n = 1U; /* not empty: at least one     */
     }
 
-    if (n > max) {
+    if (n > max)
+    {
         n = max;
     }
 
-    for (i = 0U; i < n; i++) {
+    for (i = 0U; i < n; i++)
+    {
         uint8_t b[6];
 
-        if (!b4_i2c_read_reg(B4_ACC_ADDR, (uint8_t)(ACC_OUT_X_L | AUTO_INC), b, 6U)) {
+        if (!b4_i2c_read_reg(B4_ACC_ADDR, (uint8_t)(ACC_OUT_X_L | AUTO_INC), b,
+                             6U))
+        {
             return false;
         }
 
         /* 12-bit, left-justified, little-endian; 2 mg per LSB at +-4 g */
-        p_s[i].x = (int16_t)(((int32_t)(int16_t)((uint16_t)b[0] | ((uint16_t)b[1] << 8)) / 16) *
+        p_s[i].x = (int16_t)(((int32_t)(int16_t)((uint16_t)b[0] |
+                                                 ((uint16_t)b[1] << 8)) /
+                              16) *
                              B4_MG_PER_LSB);
-        p_s[i].y = (int16_t)(((int32_t)(int16_t)((uint16_t)b[2] | ((uint16_t)b[3] << 8)) / 16) *
+        p_s[i].y = (int16_t)(((int32_t)(int16_t)((uint16_t)b[2] |
+                                                 ((uint16_t)b[3] << 8)) /
+                              16) *
                              B4_MG_PER_LSB);
-        p_s[i].z = (int16_t)(((int32_t)(int16_t)((uint16_t)b[4] | ((uint16_t)b[5] << 8)) / 16) *
+        p_s[i].z = (int16_t)(((int32_t)(int16_t)((uint16_t)b[4] |
+                                                 ((uint16_t)b[5] << 8)) /
+                              16) *
                              B4_MG_PER_LSB);
     }
 
@@ -389,15 +449,20 @@ bool b4_drv_read_fifo(b4_raw_t *p_s, uint8_t max, uint8_t *p_n, bool *p_b_overru
     return true;
 }
 
-bool b4_drv_read_mag(b4_raw_t *p_m) {
+bool b4_drv_read_mag (b4_raw_t * p_m)
+{
     uint8_t b[6];
 
-    if (!g_b_mag) {
+    if (!g_b_mag)
+    {
         return false;
     }
 
-    if (g_chip == B4_CHIP_AGR) {
-        if (!b4_i2c_read_reg(B4_MAG_ADDR, (uint8_t)(AGR_OUT_X_L | AUTO_INC), b, 6U)) {
+    if (g_chip == B4_CHIP_AGR)
+    {
+        if (!b4_i2c_read_reg(B4_MAG_ADDR, (uint8_t)(AGR_OUT_X_L | AUTO_INC), b,
+                             6U))
+        {
             return false;
         }
 
@@ -407,7 +472,8 @@ bool b4_drv_read_mag(b4_raw_t *p_m) {
         return true;
     }
 
-    if (!b4_i2c_read_reg(B4_MAG_ADDR, DLHC_OUT_X_H, b, 6U)) {
+    if (!b4_i2c_read_reg(B4_MAG_ADDR, DLHC_OUT_X_H, b, 6U))
+    {
         return false;
     }
 
@@ -416,3 +482,5 @@ bool b4_drv_read_mag(b4_raw_t *p_m) {
     p_m->y = (int16_t)(((uint16_t)b[4] << 8) | (uint16_t)b[5]);
     return true;
 }
+
+/* End of file. */

@@ -1,10 +1,22 @@
 BasedOnStyle: LLVM
 IndentWidth: 4
-ColumnLimit: 100
+ColumnLimit: 80
+BreakBeforeBraces: Allman
+InsertBraces: true
+PointerAlignment: Middle
+SpaceBeforeParens: Custom
+SpaceBeforeParensOptions:
+  AfterControlStatements: true
+  AfterFunctionDeclarationName: true
+  AfterFunctionDefinitionName: true
+  BeforeNonEmptyParentheses: false
 SortIncludes: Never
 IncludeBlocks: Preserve
-AllowShortFunctionsOnASingleLine: Empty
+AllowShortFunctionsOnASingleLine: None
 AllowShortIfStatementsOnASingleLine: Never
 AllowShortLoopsOnASingleLine: false
-BreakStringLiterals: false
+AllowShortBlocksOnASingleLine: Never
+AllowShortCaseLabelsOnASingleLine: false
+BreakStringLiterals: true
 ReflowComments: false
+LineEnding: LF

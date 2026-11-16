@@ -13,7 +13,8 @@
  * signed11 at 41; measured speed signed16 x10 at 44/46. */
 #define BR_ENCODER_FAULT_PACKET_BYTES 48U
 
-enum {
+enum
+{
     BR_ENCODER_FAULT_KIND_NONE = 0,
     BR_ENCODER_FAULT_KIND_BURST = 1,
     BR_ENCODER_FAULT_KIND_DENSITY = 2,
@@ -23,7 +24,8 @@ enum {
     BR_ENCODER_FAULT_WHEEL_RIGHT = 2
 };
 
-typedef struct {
+typedef struct
+{
     /* Native snapshot metadata is bounded; counters retain their full u32 range. */
     unsigned valid : 1;
     unsigned kind : 2;
@@ -40,42 +42,56 @@ typedef struct {
     int16_t measured_speed_x10[2];
 } BringupEncoderFaultSnapshot;
 
-static inline void br_encoder_fault_clear(BringupEncoderFaultSnapshot *snapshot) {
+static inline void
+br_encoder_fault_clear (BringupEncoderFaultSnapshot * snapshot)
+{
     *snapshot = (BringupEncoderFaultSnapshot){0};
 }
 
 /* First-trip-wins until an accepted Start or eligible Reset clears the latch. */
-static inline bool br_encoder_fault_capture_once(BringupEncoderFaultSnapshot *stored,
-                                                 const BringupEncoderFaultSnapshot *candidate) {
+static inline bool
+br_encoder_fault_capture_once (BringupEncoderFaultSnapshot * stored,
+                               const BringupEncoderFaultSnapshot * candidate)
+{
     if (stored->valid)
+    {
         return false;
+    }
     *stored = *candidate;
     stored->valid = 1U;
     return true;
 }
 
-static inline void br_encoder_fault_put32(uint8_t *out, unsigned at, uint32_t value) {
+static inline void br_encoder_fault_put32 (uint8_t * out, unsigned at,
+                                           uint32_t value)
+{
     out[at] = (uint8_t)value;
     out[at + 1U] = (uint8_t)(value >> 8U);
     out[at + 2U] = (uint8_t)(value >> 16U);
     out[at + 3U] = (uint8_t)(value >> 24U);
 }
 
-static inline uint32_t br_encoder_fault_signed_code(int16_t value, int16_t minimum,
-                                                     int16_t maximum, unsigned bits,
-                                                     bool *clamped) {
+static inline uint32_t
+br_encoder_fault_signed_code (int16_t value, int16_t minimum, int16_t maximum,
+                              unsigned bits, bool * clamped)
+{
     int16_t bounded = value;
-    if (bounded < minimum) {
+    if (bounded < minimum)
+    {
         bounded = minimum;
         *clamped = true;
-    } else if (bounded > maximum) {
+    }
+    else if (bounded > maximum)
+    {
         bounded = maximum;
         *clamped = true;
     }
     return (uint16_t)bounded & ((1UL << bits) - 1UL);
 }
 
-static inline void br_encoder_fault_put24(uint8_t *out, unsigned at, uint32_t value) {
+static inline void br_encoder_fault_put24 (uint8_t * out, unsigned at,
+                                           uint32_t value)
+{
     out[at] = (uint8_t)value;
     out[at + 1U] = (uint8_t)(value >> 8U);
     out[at + 2U] = (uint8_t)(value >> 16U);
@@ -83,41 +99,51 @@ static inline void br_encoder_fault_put24(uint8_t *out, unsigned at, uint32_t va
 
 /* 48 bytes total. flags: bit0 valid, bits1-2 kind, bits3-4 wheel,
  * bit5 indicates any bounded field was clamped, bits6-7 reserved. */
-static inline void br_encoder_fault_encode(const BringupEncoderFaultSnapshot *snapshot,
-                                           uint8_t seq,
-                                           uint8_t out[BR_ENCODER_FAULT_PACKET_BYTES]) {
+static inline void
+br_encoder_fault_encode (const BringupEncoderFaultSnapshot * snapshot,
+                         uint8_t seq,
+                         uint8_t out[BR_ENCODER_FAULT_PACKET_BYTES])
+{
     for (unsigned i = 0U; i < BR_ENCODER_FAULT_PACKET_BYTES; ++i)
+    {
         out[i] = 0U;
+    }
     out[0] = 0xf2U;
     out[1] = BR_ENCODER_FAULT_PACKET_BYTES - 3U;
     out[2] = seq;
     out[3] = 0xc4U;
     out[4] = 0x21U; /* v0.2.1 */
     if (!snapshot->valid)
+    {
         return; /* Versioned invalid frame clears any older dashboard snapshot. */
+    }
 
     bool clamped = false;
     uint32_t direction = snapshot->direction_duration_us;
     uint32_t recent_bad = snapshot->recent_window_bad;
     uint32_t recent_changes = snapshot->recent_window_changes;
-    if (direction > 0x1ffffU) {
+    if (direction > 0x1ffffU)
+    {
         direction = 0x1ffffU;
         clamped = true;
     }
-    if (recent_bad > 0xfffffU) {
+    if (recent_bad > 0xfffffU)
+    {
         recent_bad = 0xfffffU;
         clamped = true;
     }
-    if (recent_changes > 0xfffffU) {
+    if (recent_changes > 0xfffffU)
+    {
         recent_changes = 0xfffffU;
         clamped = true;
     }
     uint32_t target[2], pwm[2];
-    for (unsigned w = 0U; w < 2U; ++w) {
-        target[w] = br_encoder_fault_signed_code(snapshot->optical_target_mm_s[w], -180, 180,
-                                                 9U, &clamped);
-        pwm[w] = br_encoder_fault_signed_code(snapshot->previous_pwm[w], -1000, 1000, 11U,
-                                              &clamped);
+    for (unsigned w = 0U; w < 2U; ++w)
+    {
+        target[w] = br_encoder_fault_signed_code(
+            snapshot->optical_target_mm_s[w], -180, 180, 9U, &clamped);
+        pwm[w] = br_encoder_fault_signed_code(snapshot->previous_pwm[w], -1000,
+                                              1000, 11U, &clamped);
     }
     out[5] = (uint8_t)(1U | ((snapshot->kind & 3U) << 1U) |
                        ((snapshot->wheel & 3U) << 3U) | (clamped ? 0x20U : 0U));
@@ -128,7 +154,9 @@ static inline void br_encoder_fault_encode(const BringupEncoderFaultSnapshot *sn
     out[16] = (uint8_t)(direction >> 16U);
     uint64_t quality = (uint64_t)recent_bad | ((uint64_t)recent_changes << 20U);
     for (unsigned i = 0U; i < 5U; ++i)
+    {
         out[17U + i] = (uint8_t)(quality >> (8U * i));
+    }
     br_encoder_fault_put32(out, 22U, snapshot->lifetime_edges[0]);
     br_encoder_fault_put32(out, 26U, snapshot->lifetime_invalid[0]);
     br_encoder_fault_put32(out, 30U, snapshot->lifetime_edges[1]);
@@ -137,7 +165,8 @@ static inline void br_encoder_fault_encode(const BringupEncoderFaultSnapshot *sn
     uint32_t pwms = pwm[0] | (pwm[1] << 11U);
     br_encoder_fault_put24(out, 38U, targets);
     br_encoder_fault_put24(out, 41U, pwms);
-    for (unsigned w = 0U; w < 2U; ++w) {
+    for (unsigned w = 0U; w < 2U; ++w)
+    {
         uint16_t speed = (uint16_t)snapshot->measured_speed_x10[w];
         out[44U + 2U * w] = (uint8_t)speed;
         out[45U + 2U * w] = (uint8_t)(speed >> 8U);
@@ -145,3 +174,5 @@ static inline void br_encoder_fault_encode(const BringupEncoderFaultSnapshot *sn
 }
 
 #endif
+
+/* End of file. */

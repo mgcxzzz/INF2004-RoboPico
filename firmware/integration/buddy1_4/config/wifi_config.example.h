@@ -8,3 +8,5 @@
 #define MQTT_CLIENT_ID "buddy23"
 
 #endif
+
+/* End of file. */

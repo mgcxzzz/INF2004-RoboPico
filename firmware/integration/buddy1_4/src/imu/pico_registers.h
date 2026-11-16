@@ -9,24 +9,30 @@
 #include <stdint.h>
 #include <stddef.h>
 #ifdef APP_RTOS_IMU
-extern uint64_t board_time_us(void); /* Verified migration TIMER; no SDK runtime. */
+extern uint64_t
+board_time_us (void); /* Verified migration TIMER; no SDK runtime. */
 #else
 #include "hardware/timer.h" /* time_us_32() */
 #endif
 
-static inline void out_w(uint32_t a, uint32_t v) {
+static inline void out_w (uint32_t a, uint32_t v)
+{
     *(volatile uint32_t *)(uintptr_t)a = v;
 }
-static inline uint32_t in_w(uint32_t a) {
+static inline uint32_t in_w (uint32_t a)
+{
     return *(volatile uint32_t *)(uintptr_t)a;
 }
-static inline void clr_w(uint32_t a, uint32_t v) {
+static inline void clr_w (uint32_t a, uint32_t v)
+{
     *(volatile uint32_t *)(uintptr_t)(a + 0x3000U) = v;
 }
-static inline void set_w(uint32_t a, uint32_t v) {
+static inline void set_w (uint32_t a, uint32_t v)
+{
     *(volatile uint32_t *)(uintptr_t)(a + 0x2000U) = v;
 }
-static inline uint32_t sys_time_us(void) {
+static inline uint32_t sys_time_us (void)
+{
 #ifdef APP_RTOS_IMU
     return (uint32_t)board_time_us();
 #else
@@ -48,3 +54,5 @@ static inline uint32_t sys_time_us(void) {
 #define GPIO_PUE (1U << 3)
 #define GPIO_SHEMITT (1U << 1)
 #endif
+
+/* End of file. */

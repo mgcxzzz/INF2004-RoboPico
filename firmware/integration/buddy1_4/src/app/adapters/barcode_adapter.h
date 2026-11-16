@@ -48,22 +48,28 @@ static uint16_t bp_groups;
 static uint8_t bp_seq;
 static uint32_t bp_decodes, bp_applied, bp_conflicts;
 
-static uint8_t bp_build_flags(void) {
+static uint8_t bp_build_flags (void)
+{
     return (uint8_t)((BARCODE_PEAK_ACTIVE ? 1u : 0u) |
                      (BARCODE_PEAK_COMBINED ? BP_FLAG_COMBINED : 0u));
 }
-static void bp_send(const BpResult *r, uint64_t now, uint8_t flags) {
+static void bp_send (const BpResult * r, uint64_t now, uint8_t flags)
+{
     uint8_t frame[BP_TLM_FRAME];
     bp_tlm_pack(r, (uint32_t)(now / 1000u), flags, bp_groups, bp_seq++, frame);
     if (wifi_forward)
+    {
         (void)wifi_send(WIFI_TOPIC_TLM, frame, sizeof(frame));
+    }
 }
 
-static void barcode_partial_reset(void) {
+static void barcode_partial_reset (void)
+{
     bp_reset(&bp_state);
 }
 
-static void barcode_peak_begin(uint64_t now) {
+static void barcode_peak_begin (uint64_t now)
+{
     barcode_partial_reset();
     bp_groups = 0;
     bp_decodes = bp_applied = bp_conflicts = 0;
@@ -73,40 +79,57 @@ static void barcode_peak_begin(uint64_t now) {
     r.reason = BP_R_RUN_START;
     bp_send(&r, now, bp_build_flags());
     if (stdio_usb_connected())
-        printf(
-            "PROVISIONAL BUDDIES1-4 v0.1 (Buddy5 NOT integrated): v2.3 + Buddy4 v0.2 + ramp assist v0.6 %s + peak decoder v0.%u %s\n",
-            RAMP_ASSIST_ACTIVE ? "active" : "shadow", BP_VERSION,
-            BARCODE_PEAK_ACTIVE ? "active" : "shadow");
+    {
+        printf("PROVISIONAL BUDDIES1-4 v0.1 (Buddy5 NOT integrated): v2.3 + "
+               "Buddy4 v0.2 + ramp assist v0.6 %s + peak decoder v0.%u %s\n",
+               RAMP_ASSIST_ACTIVE ? "active" : "shadow", BP_VERSION,
+               BARCODE_PEAK_ACTIVE ? "active" : "shadow");
+    }
 }
 
-static void barcode_peak_sample(uint16_t adc, uint64_t now, const double wheel[2]) {
-    if (nav.busy) {
+static void barcode_peak_sample (uint16_t adc, uint64_t now,
+                                 const double wheel[2])
+{
+    if (nav.busy)
+    {
         bp_reset(&bp_state);
         return;
     } /* turning/U-turn: no labels */
     double mm = (wheel[0] + wheel[1]) * .5;
     BpResult r;
     if (!bp_sample(&bp_state, adc, mm, &r) || r.nbars < BP_REPORT_MIN_BARS)
+    {
         return;
+    }
     if (bp_groups < 65535u)
+    {
         ++bp_groups;
+    }
     uint8_t flags = bp_build_flags();
-    bool overlap = side_analog.accepted && fabs(r.start_mm - side_analog.accepted_start) <= 12 &&
+    bool overlap = side_analog.accepted &&
+                   fabs(r.start_mm - side_analog.accepted_start) <= 12 &&
                    fabs(r.end_mm - side_analog.accepted_end) <= 12;
-    if (r.decoded) {
+    if (r.decoded)
+    {
         ++bp_decodes;
         flags |= 2u;
         if (r.reverse)
+        {
             flags |= 16u;
-        if (overlap) {
+        }
+        if (overlap)
+        {
             flags |= 8u;
-            if (nav.last_code != r.code) {
+            if (nav.last_code != r.code)
+            {
                 flags |= 32u;
                 ++bp_conflicts;
 #if BARCODE_PEAK_ACTIVE
                 /* Two decoders disagree on one label: never keep either movement silently. */
                 if (nav.pending == nav.last_code)
+                {
                     nav.pending = 0;
+                }
                 nav.cross_candidate = nav.cross_ready = false;
                 side_analog.conflict = true;
                 side_analog.conflict_end = mm;
@@ -116,33 +139,42 @@ static void barcode_peak_sample(uint16_t adc, uint64_t now, const double wheel[2
             }
         }
 #if BARCODE_PEAK_ACTIVE
-        else {
+        else
+        {
             barcode_queue_code(&nav, r.code);
             nav.cross_candidate = nav.cross_ready = false;
             side_analog.accepted = true;
             side_analog.accepted_start = r.start_mm;
             side_analog.accepted_end = r.end_mm;
-            AnalogBank *v = &side_analog.bank[side_analog.selected];
+            AnalogBank * v = &side_analog.bank[side_analog.selected];
             barcode_reader_reset(
                 &v->reader, v->stable, now,
                 mm); /* a half-read noise frame must not block the junction search */
-            barcode_event(&nav, B_DECODE, now, mm, r.end_mm - r.start_mm, r.code,
-                          barcode_decode_action(&nav, r.code), 0x40u | (r.reverse ? 1u : 0u),
-                          r.pattern);
+            barcode_event(&nav, B_DECODE, now, mm, r.end_mm - r.start_mm,
+                          r.code, barcode_decode_action(&nav, r.code),
+                          0x40u | (r.reverse ? 1u : 0u), r.pattern);
             flags |= 4u;
             ++bp_applied;
         }
 #endif
     }
     if (r.overflow)
+    {
         flags |= 64u;
+    }
     bp_send(&r, now, flags);
     if (stdio_usb_connected())
-        printf(
-            "BPEAK v0.%u %s bars=%u code=%c reason=%u dir=%s removed=%u unit=%.2fmm nspace<=%.2f wspace>=%.2f nrise>=%.0f base=%.0f orig=%s%s%s\n",
-            BP_VERSION, BARCODE_PEAK_ACTIVE ? "active" : "shadow", r.nbars,
-            r.decoded ? r.code : '-', r.reason, r.reverse ? "rev" : "fwd", r.removed, r.unit_mm,
-            r.max_narrow_space, r.min_wide_space, r.min_narrow_rise, r.base,
-            overlap ? "same-frame" : "none", (flags & 4u) ? " APPLIED" : "",
-            (flags & 32u) ? " CONFLICT" : "");
+    {
+        printf("BPEAK v0.%u %s bars=%u code=%c reason=%u dir=%s removed=%u "
+               "unit=%.2fmm nspace<=%.2f wspace>=%.2f nrise>=%.0f base=%.0f "
+               "orig=%s%s%s\n",
+               BP_VERSION, BARCODE_PEAK_ACTIVE ? "active" : "shadow", r.nbars,
+               r.decoded ? r.code : '-', r.reason, r.reverse ? "rev" : "fwd",
+               r.removed, r.unit_mm, r.max_narrow_space, r.min_wide_space,
+               r.min_narrow_rise, r.base, overlap ? "same-frame" : "none",
+               (flags & 4u) ? " APPLIED" : "",
+               (flags & 32u) ? " CONFLICT" : "");
+    }
 }
+
+/* End of file. */

@@ -28,7 +28,8 @@
 
 /* Output-only steering adaptation. The optical tracker and barcode reader
  * continue to see the original ADC samples and make the original decisions. */
-typedef struct {
+typedef struct
+{
     float mean, half;
     int16_t emitted[2];
     float previous_error, return_confidence, same_side_duration;
@@ -45,16 +46,20 @@ typedef struct {
     int8_t bend_direction : 2;
 } ContinuousSteering;
 
-static inline void continuous_steering_reset(ContinuousSteering *s) {
+static inline void continuous_steering_reset (ContinuousSteering * s)
+{
     *s = (ContinuousSteering){0};
 }
 
-static inline float continuous_steering_finite(float x, float fallback) {
+static inline float continuous_steering_finite (float x, float fallback)
+{
     return isfinite(x) ? x : fallback;
 }
 
 #if CONTINUOUS_BEND_ASSIST
-static inline float continuous_steering_approach(float value, float target, float step) {
+static inline float continuous_steering_approach (float value, float target,
+                                                  float step)
+{
     float delta = target - value;
     return value + clampf(delta, -step, step);
 }
@@ -62,17 +67,20 @@ static inline float continuous_steering_approach(float value, float target, floa
 /* A bend may begin from optical evidence alone, but extra steering authority
  * requires persistent correctly signed encoder yaw as well. The encoder is
  * never allowed to create or retain a bend without the optical request. */
-static inline void continuous_steering_update_bend(ContinuousSteering *s, float error,
-                                                   float original_half, float desired_mean,
-                                                   float measured_half, float measured_mean,
-                                                   float dt) {
+static inline void continuous_steering_update_bend (
+    ContinuousSteering * s, float error, float original_half,
+    float desired_mean, float measured_half, float measured_mean, float dt)
+{
     error = clampf(error, -1.0f, 1.0f);
     float curvature = fabsf(original_half) / fmaxf(desired_mean, 10.0f);
     curvature = clampf(curvature, 0.0f, 1.0f);
     int8_t error_direction = error > 0.0f ? 1 : error < 0.0f ? -1 : 0;
-    int8_t request_direction = original_half > 0.0f ? 1 : original_half < 0.0f ? -1 : 0;
+    int8_t request_direction = original_half > 0.0f   ? 1
+                               : original_half < 0.0f ? -1
+                                                      : 0;
     bool aligned = error_direction != 0 && error_direction == request_direction;
-    bool enter_signal = aligned && fabsf(error) >= CONTINUOUS_BEND_ENTER_ERROR &&
+    bool enter_signal = aligned &&
+                        fabsf(error) >= CONTINUOUS_BEND_ENTER_ERROR &&
                         curvature >= CONTINUOUS_BEND_ENTER_CURVATURE;
     bool hold_signal = aligned && fabsf(error) >= CONTINUOUS_BEND_EXIT_ERROR &&
                        curvature >= CONTINUOUS_BEND_EXIT_CURVATURE;
@@ -80,54 +88,80 @@ static inline void continuous_steering_update_bend(ContinuousSteering *s, float 
     /* Handles callers that seed the legacy state directly in a test or
      * restore it from an older zero-initialized application snapshot. */
     if (!(s->bend_speed_scale > 0.0f) || !isfinite(s->bend_speed_scale))
+    {
         s->bend_speed_scale = 1.0f;
+    }
     if (!(s->bend_authority_scale > 0.0f) || !isfinite(s->bend_authority_scale))
+    {
         s->bend_authority_scale = 1.0f;
-    s->bend_speed_scale = clampf(s->bend_speed_scale, CONTINUOUS_BEND_SPEED_SCALE, 1.0f);
+    }
+    s->bend_speed_scale =
+        clampf(s->bend_speed_scale, CONTINUOUS_BEND_SPEED_SCALE, 1.0f);
     s->bend_authority_scale =
         clampf(s->bend_authority_scale, 1.0f, CONTINUOUS_BEND_AUTHORITY_SCALE);
 
     bool candidate_just_started = false;
-    if (!s->bend_candidate) {
-        if (enter_signal) {
-            if (s->bend_direction != error_direction) {
+    if (!s->bend_candidate)
+    {
+        if (enter_signal)
+        {
+            if (s->bend_direction != error_direction)
+            {
                 s->bend_direction = error_direction;
                 s->bend_demand_duration = 0.0f;
                 s->bend_yaw_duration = 0.0f;
             }
             s->bend_demand_duration = fminf(.50f, s->bend_demand_duration + dt);
-            if (s->bend_demand_duration >= CONTINUOUS_BEND_CANDIDATE_S) {
+            if (s->bend_demand_duration >= CONTINUOUS_BEND_CANDIDATE_S)
+            {
                 s->bend_candidate = 1;
                 candidate_just_started = true;
                 s->bend_exiting = 0;
                 s->bend_exit_duration = 0.0f;
             }
-        } else {
+        }
+        else
+        {
             s->bend_demand_duration = 0.0f;
             s->bend_yaw_duration = 0.0f;
         }
     }
 
-    if (s->bend_candidate) {
-        if (hold_signal && error_direction == s->bend_direction) {
+    if (s->bend_candidate)
+    {
+        if (hold_signal && error_direction == s->bend_direction)
+        {
             s->bend_exit_duration = 0.0f;
             s->bend_exiting = 0;
             if (!candidate_just_started)
-                s->bend_demand_duration = fminf(.50f, s->bend_demand_duration + dt);
+            {
+                s->bend_demand_duration =
+                    fminf(.50f, s->bend_demand_duration + dt);
+            }
 
-            float yaw_ratio = s->bend_direction * measured_half / fmaxf(fabsf(measured_mean), 10.0f);
+            float yaw_ratio = s->bend_direction * measured_half /
+                              fmaxf(fabsf(measured_mean), 10.0f);
             bool correct_yaw = measured_mean >= 8.0f && yaw_ratio >= .08f;
             if (correct_yaw)
+            {
                 s->bend_yaw_duration = fminf(.50f, s->bend_yaw_duration + dt);
+            }
             else
+            {
                 s->bend_yaw_duration = 0.0f;
+            }
             if (s->bend_demand_duration >= CONTINUOUS_BEND_CONFIRM_S &&
                 s->bend_yaw_duration >= CONTINUOUS_BEND_YAW_S)
+            {
                 s->bend_confirmed = 1;
-        } else {
+            }
+        }
+        else
+        {
             s->bend_exiting = 1;
             s->bend_exit_duration = fminf(.50f, s->bend_exit_duration + dt);
-            if (s->bend_exit_duration >= CONTINUOUS_BEND_DROPOUT_S) {
+            if (s->bend_exit_duration >= CONTINUOUS_BEND_DROPOUT_S)
+            {
                 s->bend_candidate = 0;
                 s->bend_confirmed = 0;
                 s->bend_demand_duration = 0.0f;
@@ -137,40 +171,47 @@ static inline void continuous_steering_update_bend(ContinuousSteering *s, float 
     }
 
     float speed_target = s->bend_candidate ? CONTINUOUS_BEND_SPEED_SCALE : 1.0f;
-    float authority_target = s->bend_confirmed ? CONTINUOUS_BEND_AUTHORITY_SCALE : 1.0f;
+    float authority_target =
+        s->bend_confirmed ? CONTINUOUS_BEND_AUTHORITY_SCALE : 1.0f;
     float blend_step = dt / CONTINUOUS_BEND_BLEND_S;
-    s->bend_speed_scale = continuous_steering_approach(s->bend_speed_scale, speed_target,
-                                                       blend_step * .20f);
+    s->bend_speed_scale = continuous_steering_approach(
+        s->bend_speed_scale, speed_target, blend_step * .20f);
     s->bend_authority_scale = continuous_steering_approach(
         s->bend_authority_scale, authority_target, blend_step * .10f);
-    s->bend_speed_scale = clampf(s->bend_speed_scale, CONTINUOUS_BEND_SPEED_SCALE, 1.0f);
+    s->bend_speed_scale =
+        clampf(s->bend_speed_scale, CONTINUOUS_BEND_SPEED_SCALE, 1.0f);
     s->bend_authority_scale =
         clampf(s->bend_authority_scale, 1.0f, CONTINUOUS_BEND_AUTHORITY_SCALE);
 
     /* Pending sensor dwell retains its direction until qualification. Clear
      * it only after both the dwell and any exit blend have ended. */
     if (!s->bend_candidate && s->bend_demand_duration <= 0.0f &&
-        s->bend_speed_scale >= 0.9999f && s->bend_authority_scale <= 1.0001f) {
+        s->bend_speed_scale >= 0.9999f && s->bend_authority_scale <= 1.0001f)
+    {
         s->bend_speed_scale = 1.0f;
         s->bend_authority_scale = 1.0f;
         s->bend_exiting = 0;
         s->bend_direction = 0;
         s->bend_exit_duration = 0.0f;
-    } else if (!s->bend_candidate &&
-               (s->bend_speed_scale < 0.9999f || s->bend_authority_scale > 1.0001f)) {
+    }
+    else if (!s->bend_candidate && (s->bend_speed_scale < 0.9999f ||
+                                    s->bend_authority_scale > 1.0001f))
+    {
         s->bend_exiting = 1;
     }
 }
 #endif
 
-static inline AnalogDemand continuous_steering_step_with_cruise(
-    ContinuousSteering *s, AnalogDemand d, Circuit *c, const CircuitInput *i, bool scanning,
-    unsigned profile, float dt, unsigned cruise_speed_mm_s) {
+static inline AnalogDemand continuous_steering_step_with_cruise (
+    ContinuousSteering * s, AnalogDemand d, Circuit * c, const CircuitInput * i,
+    bool scanning, unsigned profile, float dt, unsigned cruise_speed_mm_s)
+{
     bool ordinary = d.decision == SYM_STRAIGHT || d.decision == SYM_LEFT ||
                     d.decision == SYM_RIGHT || d.decision == C_FAST;
-    bool eligible =
-        c->phase == C_FOLLOW && !c->busy && !d.stop && !c->follower.core.white && ordinary;
-    if (!eligible) {
+    bool eligible = c->phase == C_FOLLOW && !c->busy && !d.stop &&
+                    !c->follower.core.white && ordinary;
+    if (!eligible)
+    {
         continuous_steering_reset(s);
         return d;
     }
@@ -194,13 +235,14 @@ static inline AnalogDemand continuous_steering_step_with_cruise(
      * profile's targets unchanged. Barcode activity also retains45mm/s. */
     bool scaled_cruise = profile == 1 && !scanning && cruise_speed_mm_s > 45U &&
                          d.target[0] > 10 && d.target[1] > 10;
-    float ceiling = scanning ? 45.0f
-                    : profile == 3 ? 135.0f
+    float ceiling = scanning        ? 45.0f
+                    : profile == 3  ? 135.0f
                     : scaled_cruise ? (float)cruise_speed_mm_s
                                     : 55.0f;
     desired_mean = clampf(desired_mean, 0.0f, ceiling);
     original_half = clampf(original_half, -desired_mean, desired_mean);
-    if (scaled_cruise) {
+    if (scaled_cruise)
+    {
         float scale = (float)cruise_speed_mm_s / 45.0f;
         desired_mean = clampf(desired_mean * scale, 0.0f, ceiling);
         original_half *= scale;
@@ -208,8 +250,10 @@ static inline AnalogDemand continuous_steering_step_with_cruise(
     }
 
     bool entering = !s->active;
-    if (entering) {
-        float measured_mean = fmaxf(0.0f, (measured_left + measured_right) * 0.5f);
+    if (entering)
+    {
+        float measured_mean =
+            fmaxf(0.0f, (measured_left + measured_right) * 0.5f);
         s->mean = fminf(measured_mean, ceiling);
         s->half = 0.0f;
         s->emitted[0] = s->emitted[1] = (int16_t)lroundf(s->mean);
@@ -225,8 +269,8 @@ static inline AnalogDemand continuous_steering_step_with_cruise(
     }
 
 #if CONTINUOUS_BEND_ASSIST
-    continuous_steering_update_bend(s, error, original_half, desired_mean, measured_half,
-                                    measured_mean, dt);
+    continuous_steering_update_bend(s, error, original_half, desired_mean,
+                                    measured_half, measured_mean, dt);
     desired_mean *= s->bend_speed_scale;
 #endif
 
@@ -234,9 +278,12 @@ static inline AnalogDemand continuous_steering_step_with_cruise(
      * sensor imbalance inside the core's straight dead zone has no half-turn
      * authority and must not earn full gain. */
     uint8_t side = original_half > 0.0f ? 1u : original_half < 0.0f ? 2u : 0u;
-    if (!entering && side != 0u && side == s->side) {
+    if (!entering && side != 0u && side == s->side)
+    {
         s->same_side_duration = fminf(0.35f, s->same_side_duration + dt);
-    } else if (side != s->side || side == 0u) {
+    }
+    else if (side != s->side || side == 0u)
+    {
         s->same_side_duration = 0.0f;
     }
     s->side = side;
@@ -249,11 +296,16 @@ static inline AnalogDemand continuous_steering_step_with_cruise(
     /* Scale return confidence by the normalized calibrated-error fall rate.
      * The 40ms EMA smooths it; the half slew already bounds output changes. */
     float abs_error = fabsf(error);
-    float fall_rate = dt > 0.0f ? fmaxf(0.0f, (fabsf(s->previous_error) - abs_error) / dt) : 0.0f;
+    float fall_rate =
+        dt > 0.0f ? fmaxf(0.0f, (fabsf(s->previous_error) - abs_error) / dt)
+                  : 0.0f;
     float confidence_target = clampf(fall_rate / 4.0f, 0.0f, 1.0f);
     if (original_half == 0.0f)
+    {
         confidence_target = 1.0f;
-    s->return_confidence += (confidence_target - s->return_confidence) * dt / (0.040f + dt);
+    }
+    s->return_confidence +=
+        (confidence_target - s->return_confidence) * dt / (0.040f + dt);
     s->return_confidence = clampf(s->return_confidence, 0.0f, 1.0f);
     s->damp_weight = s->return_confidence;
     float damping = clampf(0.35f * measured_half * s->damp_weight, -7.0f, 7.0f);
@@ -265,7 +317,9 @@ static inline AnalogDemand continuous_steering_step_with_cruise(
     desired_half = clampf(desired_half, -desired_mean, desired_mean);
     float outer = desired_mean + fabsf(desired_half);
     if (outer > ceiling)
+    {
         desired_mean = fmaxf(0.0f, ceiling - fabsf(desired_half));
+    }
 
     float evidence = clampf(fabsf(error) / 0.70f, 0.0f, 1.0f);
     float steer_rate = 120.0f + 180.0f * evidence;
@@ -278,7 +332,8 @@ static inline AnalogDemand continuous_steering_step_with_cruise(
     s->mean = fmaxf(0.0f, s->mean);
     s->half = clampf(s->half, -s->mean, s->mean);
 
-    for (unsigned w = 0; w < 2; ++w) {
+    for (unsigned w = 0; w < 2; ++w)
+    {
         float target = s->mean + (w ? s->half : -s->half);
         target = clampf(target, 0.0f, 135.0f);
         s->emitted[w] = (int16_t)lroundf(target);
@@ -290,11 +345,15 @@ static inline AnalogDemand continuous_steering_step_with_cruise(
 }
 
 /* Existing callers keep the profile's historical speeds by default. */
-static inline AnalogDemand continuous_steering_step(ContinuousSteering *s, AnalogDemand d,
-                                                    Circuit *c, const CircuitInput *i,
-                                                    bool scanning, unsigned profile, float dt) {
-    return continuous_steering_step_with_cruise(s, d, c, i, scanning, profile, dt,
-                                                DRIVE_MODE_BASELINE_SPEED);
+static inline AnalogDemand
+continuous_steering_step (ContinuousSteering * s, AnalogDemand d, Circuit * c,
+                          const CircuitInput * i, bool scanning,
+                          unsigned profile, float dt)
+{
+    return continuous_steering_step_with_cruise(s, d, c, i, scanning, profile,
+                                                dt, DRIVE_MODE_BASELINE_SPEED);
 }
 
 #endif
+
+/* End of file. */

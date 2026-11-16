@@ -25,7 +25,7 @@
  * --------------------------------------------------------------------- */
 #define B4_I2C_SDA_PIN (2U) /* GP2 */
 #define B4_I2C_SCL_PIN (3U) /* GP3 */
-#define B4_I2C_TIMEOUT_US                                                                          \
+#define B4_I2C_TIMEOUT_US                                                      \
     (2000U)                 /* one register transfer (a 6-byte
                                          * read takes about 0.2 ms at
                                          * 400 kHz)                      */
@@ -39,7 +39,7 @@
  * Calibration checks that the UP axis really carries gravity.
  * --------------------------------------------------------------------- */
 #ifndef B4_AXIS_FWD /* (the bench tool may set them) */
-#define B4_AXIS_FWD                                                                                \
+#define B4_AXIS_FWD                                                            \
     (1)                 /* +Y: prior car mounting check;
                                          * reconfirm with S4-C01 */
 #define B4_SIGN_FWD (1) /* TUNE: +1 or -1 */
@@ -59,7 +59,7 @@
 #define B4_PERIOD_MS (20U)         /* NFR-IMU-01: 50 Hz            */
 #define B4_WATCH_MS (200U)         /* Safety Supervisor health check */
 #define B4_STATUS_PERIOD_MS (500U) /* telemetry at least this often */
-#define B4_NAV_QUEUE                                                                               \
+#define B4_NAV_QUEUE                                                           \
     (8U) /* operating-state changes queued
                                          * between two samples           */
 
@@ -81,12 +81,12 @@
  * --------------------------------------------------------------------- */
 #define B4_CAL_WINDOW_MS (2000U)
 #define B4_CAL_DEADLINE_MS (10000U) /* not stable by then = fault  */
-#define B4_CAL_STABLE_MG                                                                           \
+#define B4_CAL_STABLE_MG                                                       \
     (40)                       /* TUNE: max peak-to-peak of each
                                          * axis inside the window        */
 #define B4_CAL_G_MIN_MG (850)  /* |g| outside this = sensor or */
 #define B4_CAL_G_MAX_MG (1150) /* scale wrong                   */
-#define B4_CAL_UP_MIN_PCT                                                                          \
+#define B4_CAL_UP_MIN_PCT                                                      \
     (90) /* UP axis carries >= 90 % of g,
                                          * i.e. board tilted < ~25 deg;
                                          * otherwise the mounting settings
@@ -112,19 +112,19 @@
  * estimate (IF-19, NAV_LINE_STALE_MS = 50 ms). Checked in task_imu.c.
  * --------------------------------------------------------------------- */
 #define B4_MOTION_FRESH_MS (50U)
-#define B4_RATE_WINDOW_MS                                                                          \
+#define B4_RATE_WINDOW_MS                                                      \
     (200U)                   /* speed, acceleration and turn
                                          * rate measured over this       */
 #define B4_STILL_MM_S (10)   /* slower = stationary          */
 #define B4_ACCEL_MM_S2 (200) /* TUNE: |dv/dt| above = accel. */
-#define B4_TURN_DD_S                                                                               \
+#define B4_TURN_DD_S                                                           \
     (200) /* TUNE: |turn rate| above (20
                                          * deg/s) = turning              */
-#define B4_CLASS_HOLD_MS                                                                           \
+#define B4_CLASS_HOLD_MS                                                       \
     (100U) /* a new class must last this
                                          * long before it is published
                                          * (hysteresis; impact excepted) */
-#define B4_QUIET_MG                                                                                \
+#define B4_QUIET_MG                                                            \
     (30) /* IMU-only fallback: deviation
                                          * below this = not moving       */
 
@@ -143,19 +143,19 @@
  * from Buddy 2's distance. See imu_proc.c.
  * --------------------------------------------------------------------- */
 #ifndef B4_WHEELBASE_MM
-#define B4_WHEELBASE_MM                                                                            \
+#define B4_WHEELBASE_MM                                                        \
     (84) /* S4-C05: user measured ~85 mm;
                                          * nearest 4 mm profile bin.
                                          * Block check pending.          */
 #endif
-#define B4_TRACK_MM                                                                                \
-    (113)                                       /* User measured drive-wheel
+#define B4_TRACK_MM                                                            \
+    (113)                         /* User measured drive-wheel
                                          * centre spacing, 28 Oct.
                                          * Static side bench only; the
                                          * production ramp model below
                                          * remains under review.        */
-#define B4_SIDE_NORM_TOL_PCT (8U)               /* gravity magnitude tolerance */
-#define B4_SIDE_SPREAD_MG (80U)                 /* previous raw peak-to-peak allowance */
+#define B4_SIDE_NORM_TOL_PCT (8U) /* gravity magnitude tolerance */
+#define B4_SIDE_SPREAD_MG (80U)   /* previous raw peak-to-peak allowance */
 #define B4_SIDE_MAD_MG (B4_SIDE_SPREAD_MG / 2U) /* robust axis deviation */
 /* v0.7: which axes the MAD guard checks. Side height is the projection of
  * gravity on the car's right axis, set by lateral and up; forward enters
@@ -188,24 +188,24 @@
 #define B4_SIDE_SKIP_MAX_PCT (25U)
 #define B4_HUMP_BIN_MM (4) /* profile resolution           */
 #define B4_HUMP_BINS (64U) /* 256 mm of history (2^n)      */
-#define B4_HUMP_START_MS                                                                           \
+#define B4_HUMP_START_MS                                                       \
     (60U) /* nose up > B4_TILT_ON_DD this
                                          * long = hump start [sustained] */
-#define B4_HUMP_END_MM                                                                             \
+#define B4_HUMP_END_MM                                                         \
     (B4_WHEELBASE_MM + 30) /* level this far
                                          * after the descent = hump end */
-#define B4_HUMP_END_MS                                                                             \
+#define B4_HUMP_END_MS                                                         \
     (600U)                         /* same, by time, when there is
                                          * no odometry                   */
 #define B4_HUMP_TIMEOUT_MS (8000U) /* profile timeout              */
-#define B4_HUMP_MAX_LEN_MM                                                                         \
+#define B4_HUMP_MAX_LEN_MM                                                     \
     (1000)                   /* profile longer than this = a
                                          * slope, not a hump (hump up to
                                          * ~700 mm + wheelbase + end)    */
 #define B4_HUMP_MIN_MM (5)   /* smaller = noise              */
 #define B4_HUMP_MAX_MM (120) /* larger = implausible for car */
 #define B4_HUMP_CLOSE_MM (5) /* the height must come back to */
-#define B4_HUMP_CLOSE_PCT                                                                          \
+#define B4_HUMP_CLOSE_PCT                                                      \
     (30) /* within max(5 mm, 30 % of the
                                          * peak) once the car is past it */
 
@@ -231,7 +231,7 @@
 /* ------------------------------------------------------------------------
  * Impact / Shock (NFR-IMU-03: notify within 50 ms)
  * --------------------------------------------------------------------- */
-#define B4_SHOCK_MG                                                                                \
+#define B4_SHOCK_MG                                                            \
     (1200)                      /* TUNE (S4-C04): one FIFO sample
                                          * this far from the gravity
                                          * baseline = shock              */
@@ -243,11 +243,11 @@
  * Data health -> Fault / Recovery
  * --------------------------------------------------------------------- */
 #define B4_I2C_ERR_MAX (3U) /* failed reads in a row (60 ms) */
-#define B4_STALE_MAX                                                                               \
+#define B4_STALE_MAX                                                           \
     (3U)                       /* periods in a row with no new
                                          * sample in the FIFO            */
 #define B4_STUCK_PERIODS (50U) /* identical raw data for 1 s   */
-#define B4_LATE_US                                                                                 \
+#define B4_LATE_US                                                             \
     (30000U) /* period longer than this =
                                          * frame(s) missed (NFR-IMU-01) */
 
@@ -258,3 +258,5 @@
 #define B4_FAULT_CRITICAL (0)
 
 #endif /* B4_CONFIG_H */
+
+/* End of file. */

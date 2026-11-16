@@ -25,9 +25,9 @@
 #include "src/imu/imu_lift_guard.h"
 /* Implemented by the RTOS mailbox owner. Samples are copied/processed before
  * the normal hump-quality gates and outside the wrapper's cross-core lock. */
-void ri_lift_guard_samples(int16_t const baseline_mg[3], int32_t gravity_mg,
-                           imu_lift_vec_t const *samples, uint8_t n,
-                           uint32_t sample_period_us, bool fresh_batch);
+void ri_lift_guard_samples (int16_t const baseline_mg[3], int32_t gravity_mg,
+                            imu_lift_vec_t const * samples, uint8_t n,
+                            uint32_t sample_period_us, bool fresh_batch);
 #endif
 #ifdef APP_RTOS_IMU
 #include "app_program/imu_navigation/imu_acquisition.h"
@@ -56,15 +56,15 @@ static b4v23_odo_t g_odo;   /* latest view, for source 2 */
 static b4v23_tilt_t g_tilt; /* ramp-assist v0.1: latest side tilt */
 #ifdef APP_RTOS_IMU
 static RiCalibration g_calibration;
-void b4v23_hump_qualification(RiHumpQualification *out) {
+void b4v23_hump_qualification (RiHumpQualification * out)
+{
     out->holds = g_ctx.side_diag_hold_count;
     out->recoveries = g_ctx.side_diag_recover_count;
     out->disarms = g_ctx.side_diag_disarm_count;
     out->early_clears = g_ctx.side_diag_early_clear_count;
-    out->flags = (g_ctx.side_level_ready ? 1U : 0U) |
-                 (g_ctx.side_candidate ? 2U : 0U) |
-                 (g_ctx.side_rising ? 4U : 0U) |
-                 (g_ctx.side_returning ? 8U : 0U);
+    out->flags =
+        (g_ctx.side_level_ready ? 1U : 0U) | (g_ctx.side_candidate ? 2U : 0U) |
+        (g_ctx.side_rising ? 4U : 0U) | (g_ctx.side_returning ? 8U : 0U);
     out->hold_reason = g_ctx.side_diag_last_hold_reason;
     out->clear_reason = g_ctx.side_diag_last_clear_reason;
     out->failure_reason = g_ctx.side_diag_last_failure_reason;
@@ -72,18 +72,24 @@ void b4v23_hump_qualification(RiHumpQualification *out) {
     out->gap_ms = gap_ms > 127U ? 127U : gap_ms;
     out->last_gap_ms = g_ctx.side_odo_gap_last_ms;
 }
-void b4v23_calibration(RiCalibration *out) {
+void b4v23_calibration (RiCalibration * out)
+{
     *out = g_calibration;
     out->state = g_ctx.state;
     out->fault = g_ctx.fault;
 }
-void ri_calibration_restart(uint8_t reasons, const b4_ctx_t *ctx, const int16_t mean[3]) {
+void ri_calibration_restart (uint8_t reasons, const b4_ctx_t * ctx,
+                             const int16_t mean[3])
+{
     ++g_calibration.restarts;
     g_calibration.last_reason = reasons;
     g_calibration.speed_restarts += (reasons & RI_CAL_SPEED) != 0;
     if (ctx->cal_n > g_calibration.best)
+    {
         g_calibration.best = ctx->cal_n > 100 ? 100 : ctx->cal_n;
-    for (unsigned i = 0; i < 3; ++i) {
+    }
+    for (unsigned i = 0; i < 3; ++i)
+    {
         int32_t lo = mean[i] < ctx->cal_min[i] ? mean[i] : ctx->cal_min[i];
         int32_t hi = mean[i] > ctx->cal_max[i] ? mean[i] : ctx->cal_max[i];
         g_calibration.axis_restarts[i] += (reasons & (1U << i)) != 0;
@@ -92,12 +98,15 @@ void ri_calibration_restart(uint8_t reasons, const b4_ctx_t *ctx, const int16_t 
 }
 #endif
 
-static void send_frame(const uint8_t *f, uint32_t n) {
+static void send_frame (const uint8_t * f, uint32_t n)
+{
     if (g_send)
+    {
         (void)g_send(f, n);
+    }
 }
 
-static void publish(imu_event_t const *p_evt) /* task_imu.c publish() */
+static void publish (imu_event_t const * p_evt) /* task_imu.c publish() */
 {
     imu_tlm_t t = k_no_tlm;
     uint8_t frame[IMU_TLM_FRAME_BYTES];
@@ -107,20 +116,28 @@ static void publish(imu_event_t const *p_evt) /* task_imu.c publish() */
     send_frame(frame, IMU_TLM_FRAME_BYTES);
 }
 
-static int32_t clamp_measurement(double v, int32_t lo, int32_t hi) {
+static int32_t clamp_measurement (double v, int32_t lo, int32_t hi)
+{
     if (!__builtin_isfinite(v))
+    {
         return 0;
+    }
     if (v >= (double)hi)
+    {
         return hi;
+    }
     if (v <= (double)lo)
+    {
         return lo;
+    }
     return (int32_t)v;
 }
 
 /* task_imu.c publish_motion_snapshot(), source 2, same 37-byte payload.
  * Speeds come from v2.3 velocity[]; the odometry-valid flag is Buddy4's own
  * strict interval check, independent of motor control. */
-static void publish_motion_snapshot(void) {
+static void publish_motion_snapshot (void)
+{
     b2_tlm_t t = {0};
     uint8_t frame[B2_TLM_FRAME_BYTES];
     t.seq = g_motion_seq++;
@@ -128,12 +145,16 @@ static void publish_motion_snapshot(void) {
 #if B4_SIDE_RAMP_MODE
     t.flags |= B2_TLM_SIDE_MODE;
     if (g_ctx.b_side_valid)
+    {
         t.flags |= B2_TLM_SIDE_VALID;
+    }
     t.roll_dd = g_ctx.side_roll_dd;
     t.side_height_mm = g_ctx.side_height_mm;
     t.quality_reasons = g_side_diag.reasons;
-    t.ramp_state = (uint8_t)((g_ctx.side_level_ready ? 1U : 0U) | (g_ctx.side_candidate ? 2U : 0U) |
-                             (g_ctx.side_rising ? 4U : 0U) | (g_ctx.side_returning ? 8U : 0U));
+    t.ramp_state = (uint8_t)((g_ctx.side_level_ready ? 1U : 0U) |
+                             (g_ctx.side_candidate ? 2U : 0U) |
+                             (g_ctx.side_rising ? 4U : 0U) |
+                             (g_ctx.side_returning ? 8U : 0U));
     t.quality_bad_samples = g_side_diag.bad;
     t.quality_total_samples = g_side_diag.total;
     t.max_spread_mg = g_side_diag.spread_mg;
@@ -146,27 +167,36 @@ static void publish_motion_snapshot(void) {
     t.max_axis_mad_mg[2] = g_side_diag.axis_mad_mg[2];
     t.min_fifo_samples = g_side_diag.min_fifo_samples;
 #endif
-    if (g_odo.have) {
+    if (g_odo.have)
+    {
         if (g_odo.clean && g_odo.age_ms <= B4_MOTION_FRESH_MS)
+        {
             t.flags |= B2_TLM_ODO_VALID;
-        t.left_mm_s = (int16_t)clamp_measurement(g_odo.left_mm_s, INT16_MIN, INT16_MAX);
-        t.right_mm_s = (int16_t)clamp_measurement(g_odo.right_mm_s, INT16_MIN, INT16_MAX);
+        }
+        t.left_mm_s =
+            (int16_t)clamp_measurement(g_odo.left_mm_s, INT16_MIN, INT16_MAX);
+        t.right_mm_s =
+            (int16_t)clamp_measurement(g_odo.right_mm_s, INT16_MIN, INT16_MAX);
         t.centre_mm_s = (int16_t)clamp_measurement(
-            ((double)g_odo.left_mm_s + g_odo.right_mm_s) * 0.5, INT16_MIN, INT16_MAX);
-        t.distance_mm = clamp_measurement(g_odo.centre_mm, INT32_MIN, INT32_MAX);
+            ((double)g_odo.left_mm_s + g_odo.right_mm_s) * 0.5, INT16_MIN,
+            INT16_MAX);
+        t.distance_mm =
+            clamp_measurement(g_odo.centre_mm, INT32_MIN, INT32_MAX);
         t.invalid_left =
-            (uint16_t)(g_odo.invalid_left > UINT16_MAX ? UINT16_MAX : g_odo.invalid_left);
+            (uint16_t)(g_odo.invalid_left > UINT16_MAX ? UINT16_MAX
+                                                       : g_odo.invalid_left);
         t.invalid_right =
-            (uint16_t)(g_odo.invalid_right > UINT16_MAX ? UINT16_MAX : g_odo.invalid_right);
+            (uint16_t)(g_odo.invalid_right > UINT16_MAX ? UINT16_MAX
+                                                        : g_odo.invalid_right);
     }
     b2_tlm_pack(&t, frame);
     send_frame(frame, B2_TLM_FRAME_BYTES);
     g_side_diag = (b4_diagnostics_t){0};
 }
 
-static void handle(b4_out_t *p_out, uint32_t t0_us);
+static void handle (b4_out_t * p_out, uint32_t t0_us);
 
-static void init_sensor(void) /* task_imu.c init_sensor() */
+static void init_sensor (void) /* task_imu.c init_sensor() */
 {
     b4_chip_t chip = B4_CHIP_NONE;
     bool b_mag = false;
@@ -175,7 +205,8 @@ static void init_sensor(void) /* task_imu.c init_sensor() */
 #endif
     bool b_ok = b4_drv_init(&chip, &b_mag);
 #ifdef APP_RTOS_IMU
-    if (!ri_acquisition_init_end()) {
+    if (!ri_acquisition_init_end())
+    {
         b_ok = false;
         chip = B4_CHIP_NONE;
         b_mag = false;
@@ -183,15 +214,20 @@ static void init_sensor(void) /* task_imu.c init_sensor() */
 #endif
     b4_out_t out;
 #ifndef APP_RTOS_IMU
-    if (g_console) {
+    if (g_console)
+    {
         if (b_ok)
-            printf(
-                "[imu] GY-511 found: %s, magnetometer %s; calibrating: keep the car still for %u s\n",
-                (chip == B4_CHIP_AGR) ? "LSM303AGR" : "LSM303DLHC", b_mag ? "yes" : "no",
-                (unsigned)(B4_CAL_WINDOW_MS / 1000U));
+        {
+            printf("[imu] GY-511 found: %s, magnetometer %s; calibrating: keep "
+                   "the car still for %u s\n",
+                   (chip == B4_CHIP_AGR) ? "LSM303AGR" : "LSM303DLHC",
+                   b_mag ? "yes" : "no", (unsigned)(B4_CAL_WINDOW_MS / 1000U));
+        }
         else
+        {
             printf("[imu] GY-511 not answering on I2C1 (SDA GP%u, SCL GP%u)\n",
                    (unsigned)B4_I2C_SDA_PIN, (unsigned)B4_I2C_SCL_PIN);
+        }
     }
 #endif /* RTOS uses copied diagnostics, never SDK/newlib console output. */
     out = k_no_out;
@@ -199,24 +235,32 @@ static void init_sensor(void) /* task_imu.c init_sensor() */
     handle(&out, sys_time_us());
 }
 
-static void handle(b4_out_t *p_out, uint32_t t0_us) /* task_imu.c handle() */
+static void handle (b4_out_t * p_out, uint32_t t0_us) /* task_imu.c handle() */
 {
     uint32_t i;
-    if (p_out->b_shock) {
+    if (p_out->b_shock)
+    {
         /* RTOS: also safety_report_fault(IMU, SHOCK, warning). v2.3 has no
          * Safety supervisor; the shock is reported in telemetry only. */
         uint32_t us = p_out->shock_age_us + (sys_time_us() - t0_us);
-        g_ctx.shock_ms = (uint8_t)(((us + 999U) / 1000U > 63U) ? 63U : ((us + 999U) / 1000U));
+        g_ctx.shock_ms =
+            (uint8_t)(((us + 999U) / 1000U > 63U) ? 63U
+                                                  : ((us + 999U) / 1000U));
     }
     /* p_out->fault / b_clear_fault: RTOS sys_fault/Safety only; the fault code
      * is carried in source 4 telemetry (lastFault/state). */
     for (i = 0U; i < (uint32_t)p_out->n_events; i++)
+    {
         publish(&p_out->events[i]);
+    }
     if (p_out->b_init)
+    {
         init_sensor(); /* after an authorised reset */
+    }
 }
 
-static void to_car(b4_raw_t const *p_r, b4_vec_t *p_v) /* task_imu.c to_car() */
+static void to_car (b4_raw_t const * p_r,
+                    b4_vec_t * p_v) /* task_imu.c to_car() */
 {
     int32_t a[3];
     a[0] = p_r->x;
@@ -227,8 +271,10 @@ static void to_car(b4_raw_t const *p_r, b4_vec_t *p_v) /* task_imu.c to_car() */
     p_v->lat_mg = (int16_t)a[AXIS_LAT];
 }
 
-static b4_mission_t map_mission(b4v23_mission_t m) {
-    switch (m) {
+static b4_mission_t map_mission (b4v23_mission_t m)
+{
+    switch (m)
+    {
     case B4V23_START:
         return B4_MISSION_START;
     case B4V23_RESUME:
@@ -240,7 +286,8 @@ static b4_mission_t map_mission(b4v23_mission_t m) {
     }
 }
 
-void b4v23_init(b4v23_send_fn send, bool console) {
+void b4v23_init (b4v23_send_fn send, bool console)
+{
     g_send = send;
     g_console = console;
 #ifdef APP_RTOS_IMU
@@ -253,22 +300,30 @@ void b4v23_init(b4v23_send_fn send, bool console) {
     g_started = true;
 }
 
-bool b4v23_due(uint64_t now_us) {
+bool b4v23_due (uint64_t now_us)
+{
     return g_started && now_us >= g_next_us;
 }
-uint32_t b4v23_last_tick_us(void) {
+uint32_t b4v23_last_tick_us (void)
+{
     return g_tick_us;
 }
-uint32_t b4v23_max_tick_us(void) {
+uint32_t b4v23_max_tick_us (void)
+{
     return g_tick_max_us;
 }
-void b4v23_tilt(b4v23_tilt_t *out) {
+void b4v23_tilt (b4v23_tilt_t * out)
+{
     if (out)
+    {
         *out = g_tilt;
+    }
 }
 
 /* One 20 ms period: task_imu.c loop body. */
-void b4v23_tick(uint64_t now_us, b4v23_mission_t mission, const b4v23_odo_t *odo) {
+void b4v23_tick (uint64_t now_us, b4v23_mission_t mission,
+                 const b4v23_odo_t * odo)
+{
     b4_out_t imu_out = k_no_out;
     uint32_t now = (uint32_t)now_us;
     uint32_t t_begin = sys_time_us();
@@ -276,13 +331,20 @@ void b4v23_tick(uint64_t now_us, b4v23_mission_t mission, const b4v23_odo_t *odo
 #ifdef APP_RTOS_RELEASE
     bool lift_fresh_batch = false;
 #endif
-    g_next_us = (g_next_us == 0U || now_us - g_next_us > (uint64_t)B4_PERIOD_MS * 1000U)
-                    ? now_us + (uint64_t)B4_PERIOD_MS * 1000U     /* (re)start the schedule */
-                    : g_next_us + (uint64_t)B4_PERIOD_MS * 1000U; /* fixed rate, no drift  */
+    g_next_us =
+        (g_next_us == 0U || now_us - g_next_us > (uint64_t)B4_PERIOD_MS * 1000U)
+            ? now_us +
+                  (uint64_t)B4_PERIOD_MS * 1000U /* (re)start the schedule */
+            : g_next_us +
+                  (uint64_t)B4_PERIOD_MS * 1000U; /* fixed rate, no drift  */
     if (odo)
+    {
         g_odo = *odo;
+    }
     if (mission != B4V23_NONE)
+    {
         b4_mission(&g_ctx, map_mission(mission), now, &imu_out);
+    }
 #ifdef APP_RTOS_RELEASE
     bool lift_calibrated = (g_ctx.state != IMU_ST_INIT) &&
                            (g_ctx.state != IMU_ST_CALIBRATING) &&
@@ -291,7 +353,8 @@ void b4v23_tick(uint64_t now_us, b4v23_mission_t mission, const b4v23_odo_t *odo
     g_in.t_us = now;
     g_in.gap_us = now - g_last_us;
     g_last_us = now;
-    if ((g_ctx.state != IMU_ST_INIT) && (g_ctx.state != IMU_ST_FAULT)) {
+    if ((g_ctx.state != IMU_ST_INIT) && (g_ctx.state != IMU_ST_FAULT))
+    {
         uint32_t i;
 #ifdef APP_RTOS_IMU
         uint32_t processor_start_us;
@@ -299,27 +362,40 @@ void b4v23_tick(uint64_t now_us, b4v23_mission_t mission, const b4v23_odo_t *odo
         g_in.b_overrun = false;
         ri_acquisition_fifo_begin();
 #endif
-        g_in.b_read_ok = b4_drv_read_fifo(g_raw, (uint8_t)B4_FIFO_DEPTH, &g_in.n, &g_in.b_overrun);
+        g_in.b_read_ok = b4_drv_read_fifo(g_raw, (uint8_t)B4_FIFO_DEPTH,
+                                          &g_in.n, &g_in.b_overrun);
 #ifdef APP_RTOS_IMU
         if (!ri_acquisition_fifo_end(g_in.n))
+        {
             g_in.b_read_ok = false;
+        }
         ri_acquisition_record(g_in.gap_us, g_in.b_read_ok, g_in.b_overrun);
         processor_start_us = sys_time_us();
 #endif
         for (i = 0U; i < (uint32_t)g_in.n; i++)
+        {
             to_car(&g_raw[i], &g_in.s[i]);
+        }
         /* b4_odometry_adapter.c semantics, from v2.3's encoders. */
-        g_in.b_motion = g_odo.have && g_odo.clean && (g_odo.age_ms <= B4_MOTION_FRESH_MS) &&
-                        __builtin_isfinite(g_odo.centre_mm) && __builtin_isfinite(g_odo.heading_dd);
-        if (g_in.b_motion) {
-            int32_t mm = clamp_measurement(g_odo.centre_mm, INT32_MIN, INT32_MAX);
-            int32_t dd = clamp_measurement(g_odo.heading_dd, INT32_MIN, INT32_MAX);
+        g_in.b_motion = g_odo.have && g_odo.clean &&
+                        (g_odo.age_ms <= B4_MOTION_FRESH_MS) &&
+                        __builtin_isfinite(g_odo.centre_mm) &&
+                        __builtin_isfinite(g_odo.heading_dd);
+        if (g_in.b_motion)
+        {
+            int32_t mm =
+                clamp_measurement(g_odo.centre_mm, INT32_MIN, INT32_MAX);
+            int32_t dd =
+                clamp_measurement(g_odo.heading_dd, INT32_MIN, INT32_MAX);
             double fine = g_odo.centre_mm * 1000.0;
             g_in.distance_mm = (int16_t)(uint16_t)mm;
             g_in.heading_dd = (int16_t)(uint16_t)dd;
-            g_in.b_fine_motion = (fine >= (double)INT32_MIN && fine <= (double)INT32_MAX);
+            g_in.b_fine_motion =
+                (fine >= (double)INT32_MIN && fine <= (double)INT32_MAX);
             g_in.distance_um = g_in.b_fine_motion ? (int32_t)fine : 0;
-        } else {
+        }
+        else
+        {
             g_in.distance_mm = 0;
             g_in.heading_dd = 0;
             g_in.b_fine_motion = false;
@@ -327,7 +403,8 @@ void b4v23_tick(uint64_t now_us, b4v23_mission_t mission, const b4v23_odo_t *odo
         }
 #ifdef APP_RTOS_IMU
         bool calibrating = g_ctx.state == IMU_ST_CALIBRATING;
-        if (calibrating) {
+        if (calibrating)
+        {
             g_calibration.failed_reads += !g_in.b_read_ok;
             g_calibration.empty_reads += g_in.b_read_ok && !g_in.n;
             g_calibration.late_gaps += g_in.gap_us > B4_LATE_US;
@@ -343,12 +420,15 @@ void b4v23_tick(uint64_t now_us, b4v23_mission_t mission, const b4v23_odo_t *odo
 #endif
         b4_tick(&g_ctx, &g_in, &imu_out);
 #ifdef APP_RTOS_IMU
-        if (calibrating) {
+        if (calibrating)
+        {
             uint32_t age_ms = (uint32_t)(now - g_ctx.cal_start_us) / 1000U;
             g_calibration.age_ms = (uint16_t)(age_ms > 65535 ? 65535 : age_ms);
             g_calibration.progress = g_ctx.cal_n > 100 ? 100 : g_ctx.cal_n;
             if (g_calibration.progress > g_calibration.best)
+            {
                 g_calibration.best = g_calibration.progress;
+            }
         }
         g_calibration.state = g_ctx.state;
         g_calibration.fault = g_ctx.fault;
@@ -361,21 +441,27 @@ void b4v23_tick(uint64_t now_us, b4v23_mission_t mission, const b4v23_odo_t *odo
     }
 #ifdef APP_RTOS_RELEASE
     lift_fresh_batch = lift_fresh_batch && (g_ctx.state != IMU_ST_INIT) &&
-                       (g_ctx.state != IMU_ST_CALIBRATING) && (g_ctx.state != IMU_ST_FAULT);
+                       (g_ctx.state != IMU_ST_CALIBRATING) &&
+                       (g_ctx.state != IMU_ST_FAULT);
     ri_lift_guard_samples(g_ctx.base, g_ctx.g_mg, g_in.s, g_in.n, B4_SAMPLE_US,
                           lift_fresh_batch);
 #endif
     /* ramp-assist v0.1: publish this period's tilt view (observer data). */
     g_tilt.seq++;
     g_tilt.t_us = now_us;
-    g_tilt.valid = processed && g_ctx.b_side_valid &&
-                   ((g_ctx.state == IMU_ST_TRACKING) || (g_ctx.state == IMU_ST_HUMP));
+    g_tilt.valid =
+        processed && g_ctx.b_side_valid &&
+        ((g_ctx.state == IMU_ST_TRACKING) || (g_ctx.state == IMU_ST_HUMP));
     g_tilt.height_mm = g_tilt.valid ? g_ctx.side_height_mm : 0;
-    g_tilt.tracking = processed && ((g_ctx.state == IMU_ST_TRACKING) ||
-                                    (g_ctx.state == IMU_ST_HUMP));       /* ramp-assist v0.3 */
-    g_tilt.quality_reasons = processed ? g_ctx.side_quality_reason : 0U; /* ramp-assist v0.3 */
+    g_tilt.tracking =
+        processed && ((g_ctx.state == IMU_ST_TRACKING) ||
+                      (g_ctx.state == IMU_ST_HUMP)); /* ramp-assist v0.3 */
+    g_tilt.quality_reasons =
+        processed ? g_ctx.side_quality_reason : 0U; /* ramp-assist v0.3 */
     handle(&imu_out, now);
-    if ((g_ctx.state != g_last_state) || ((now - g_status_us) >= (B4_STATUS_PERIOD_MS * 1000U))) {
+    if ((g_ctx.state != g_last_state) ||
+        ((now - g_status_us) >= (B4_STATUS_PERIOD_MS * 1000U)))
+    {
         publish(NULL);
         publish_motion_snapshot();
         g_status_us = now;
@@ -386,5 +472,9 @@ void b4v23_tick(uint64_t now_us, b4v23_mission_t mission, const b4v23_odo_t *odo
     ri_acquisition_record_tick(g_tick_us);
 #endif
     if (g_tick_us > g_tick_max_us)
+    {
         g_tick_max_us = g_tick_us;
+    }
 }
+
+/* End of file. */

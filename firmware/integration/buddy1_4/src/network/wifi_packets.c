@@ -1,43 +1,54 @@
 #include "src/network/wifi_packets.h"
 #include <stddef.h>
 
-static void put_header(uint8_t *out, uint8_t src, uint8_t payload, uint8_t seq) {
+static void put_header (uint8_t * out, uint8_t src, uint8_t payload,
+                        uint8_t seq)
+{
     out[0] = (uint8_t)((src << 4) | 2u);
     out[1] = payload;
     out[2] = seq;
 }
-static void put_u16(uint8_t *p, uint16_t x) {
+static void put_u16 (uint8_t * p, uint16_t x)
+{
     p[0] = (uint8_t)x;
     p[1] = (uint8_t)(x >> 8);
 }
-static void put_i16(uint8_t *p, int16_t x) {
+static void put_i16 (uint8_t * p, int16_t x)
+{
     put_u16(p, (uint16_t)x);
 }
-static void put_u32(uint8_t *p, uint32_t x) {
+static void put_u32 (uint8_t * p, uint32_t x)
+{
     p[0] = (uint8_t)x;
     p[1] = (uint8_t)(x >> 8);
     p[2] = (uint8_t)(x >> 16);
     p[3] = (uint8_t)(x >> 24);
 }
-static bool valid_action(uint8_t c) {
-    return c == (uint8_t)'S' || c == (uint8_t)'U' || c == (uint8_t)'L' || c == (uint8_t)'R' ||
-           c == (uint8_t)'-' || c == 0u;
+static bool valid_action (uint8_t c)
+{
+    return c == (uint8_t)'S' || c == (uint8_t)'U' || c == (uint8_t)'L' ||
+           c == (uint8_t)'R' || c == (uint8_t)'-' || c == 0u;
 }
-static bool valid_letter(uint8_t c) {
+static bool valid_letter (uint8_t c)
+{
     return c == 0u || (c >= (uint8_t)'A' && c <= (uint8_t)'Z');
 }
 
-bool wpk_heartbeat(const WifiHeartbeat *in, uint8_t out[WPK_HEARTBEAT_BYTES]) {
+bool wpk_heartbeat (const WifiHeartbeat * in, uint8_t out[WPK_HEARTBEAT_BYTES])
+{
     uint32_t w0, w1, w2;
     if (in == NULL || out == NULL)
+    {
         return false;
+    }
     w0 = (uint32_t)(in->net > 3u ? 3u : in->net) |
          ((uint32_t)(in->state > 7u ? 7u : in->state) << 2) |
          ((uint32_t)(in->last_cmd > 15u ? 15u : in->last_cmd) << 5) |
          ((uint32_t)(in->last_result > 7u ? 7u : in->last_result) << 9) |
          ((uint32_t)(in->uptime_s > 16383u ? 16383u : in->uptime_s) << 12);
     w1 = (uint32_t)in->published | ((uint32_t)in->lost << 16);
-    w2 = (uint32_t)in->accepted | ((uint32_t)in->rejected << 8) | ((uint32_t)in->connects << 16) |
+    w2 = (uint32_t)in->accepted | ((uint32_t)in->rejected << 8) |
+         ((uint32_t)in->connects << 16) |
          ((uint32_t)(in->fill_pct > 100u ? 100u : in->fill_pct) << 24);
     put_header(out, WPK_SRC_HEARTBEAT, WPK_HEARTBEAT_PAYLOAD_BYTES, in->seq);
     put_u32(out + 3, w0);
@@ -46,12 +57,17 @@ bool wpk_heartbeat(const WifiHeartbeat *in, uint8_t out[WPK_HEARTBEAT_BYTES]) {
     return true;
 }
 
-bool wpk_motion(const WifiMotionPacket *in, uint8_t out[WPK_MOTION_BYTES]) {
+bool wpk_motion (const WifiMotionPacket * in, uint8_t out[WPK_MOTION_BYTES])
+{
     if (in == NULL || out == NULL ||
-        (in->calibrated_level_left > 1000u && in->calibrated_level_left != 0xffffu) ||
-        (in->calibrated_level_right > 1000u && in->calibrated_level_right != 0xffffu) ||
+        (in->calibrated_level_left > 1000u &&
+         in->calibrated_level_left != 0xffffu) ||
+        (in->calibrated_level_right > 1000u &&
+         in->calibrated_level_right != 0xffffu) ||
         in->heading_cdeg < -18000 || in->heading_cdeg > 18000)
+    {
         return false;
+    }
     put_header(out, WPK_SRC_MOTION, WPK_MOTION_PAYLOAD_BYTES, in->seq);
     put_u32(out + 3, in->uptime_ms);
     put_u32(out + 7, in->elapsed_ms);
@@ -78,13 +94,20 @@ bool wpk_motion(const WifiMotionPacket *in, uint8_t out[WPK_MOTION_BYTES]) {
     return true;
 }
 
-bool wpk_line(const WifiLinePacket *in, uint8_t out[WPK_LINE_BYTES]) {
+bool wpk_line (const WifiLinePacket * in, uint8_t out[WPK_LINE_BYTES])
+{
     if (in == NULL || out == NULL || in->event > WPK_EVENT_UNASSIGNED ||
-        !valid_letter(in->last_decoded_letter) || !valid_letter(in->pending_letter) ||
-        !valid_action(in->pending_action) || !valid_action(in->executing_action) ||
-        (in->calibrated_level_left > 1000u && in->calibrated_level_left != 0xffffu) ||
-        (in->calibrated_level_right > 1000u && in->calibrated_level_right != 0xffffu))
+        !valid_letter(in->last_decoded_letter) ||
+        !valid_letter(in->pending_letter) ||
+        !valid_action(in->pending_action) ||
+        !valid_action(in->executing_action) ||
+        (in->calibrated_level_left > 1000u &&
+         in->calibrated_level_left != 0xffffu) ||
+        (in->calibrated_level_right > 1000u &&
+         in->calibrated_level_right != 0xffffu))
+    {
         return false;
+    }
     put_header(out, WPK_SRC_LINE, WPK_LINE_PAYLOAD_BYTES, in->seq);
     put_u32(out + 3, in->uptime_ms);
     out[7] = in->event;
@@ -102,10 +125,13 @@ bool wpk_line(const WifiLinePacket *in, uint8_t out[WPK_LINE_BYTES]) {
     return true;
 }
 
-bool wpk_nav(const WifiNavPacket *in, uint8_t out[WPK_NAV_BYTES]) {
+bool wpk_nav (const WifiNavPacket * in, uint8_t out[WPK_NAV_BYTES])
+{
     if (in == NULL || out == NULL || in->event > WPK_EVENT_UNASSIGNED ||
         !valid_letter(in->letter) || !valid_action(in->action))
+    {
         return false;
+    }
     put_header(out, WPK_SRC_NAV, WPK_NAV_PAYLOAD_BYTES, in->seq);
     put_u32(out + 3, in->uptime_ms);
     out[7] = in->event;
@@ -122,18 +148,24 @@ bool wpk_nav(const WifiNavPacket *in, uint8_t out[WPK_NAV_BYTES]) {
     return true;
 }
 
-bool wpk_log_chunk(uint8_t seq, uint8_t dataset, uint8_t request_id, uint16_t row_index,
-                   uint16_t total_rows, uint8_t part_index, uint8_t part_count, uint8_t status,
-                   const uint8_t *data, uint8_t length, uint8_t out[WIFI_PACKET_MAX],
-                   uint8_t *out_len) {
-    if (out == NULL || out_len == NULL || length > WPK_LOG_CHUNK_DATA_MAX || dataset > 3u ||
-        total_rows > 4096u || status > WPK_LOG_STATUS_UNAVAILABLE ||
-        (length != 0u && data == NULL) || (part_count == 0u) || part_index >= part_count ||
-        part_count > 2u || row_index > 0x0fffu ||
+bool wpk_log_chunk (uint8_t seq, uint8_t dataset, uint8_t request_id,
+                    uint16_t row_index, uint16_t total_rows, uint8_t part_index,
+                    uint8_t part_count, uint8_t status, const uint8_t * data,
+                    uint8_t length, uint8_t out[WIFI_PACKET_MAX],
+                    uint8_t * out_len)
+{
+    if (out == NULL || out_len == NULL || length > WPK_LOG_CHUNK_DATA_MAX ||
+        dataset > 3u || total_rows > 4096u ||
+        status > WPK_LOG_STATUS_UNAVAILABLE || (length != 0u && data == NULL) ||
+        (part_count == 0u) || part_index >= part_count || part_count > 2u ||
+        row_index > 0x0fffu ||
         (status == WPK_LOG_STATUS_OK && row_index >= total_rows) ||
         (status != WPK_LOG_STATUS_OK && length != 0u))
+    {
         return false;
-    put_header(out, WPK_SRC_LOG_CHUNK, (uint8_t)(WPK_LOG_CHUNK_HEADER_BYTES + length), seq);
+    }
+    put_header(out, WPK_SRC_LOG_CHUNK,
+               (uint8_t)(WPK_LOG_CHUNK_HEADER_BYTES + length), seq);
     out[3] = dataset;
     out[4] = request_id;
     put_u16(out + 5, row_index);
@@ -144,18 +176,25 @@ bool wpk_log_chunk(uint8_t seq, uint8_t dataset, uint8_t request_id, uint16_t ro
     out[12] = length;
     out[13] = 0u;
     out[14] = 0u;
-    if (length != 0u) {
+    if (length != 0u)
+    {
         uint8_t i;
         for (i = 0u; i < length; ++i)
+        {
             out[15u + i] = data[i];
+        }
     }
-    *out_len = (uint8_t)(WPK_HEADER_BYTES + WPK_LOG_CHUNK_HEADER_BYTES + length);
+    *out_len =
+        (uint8_t)(WPK_HEADER_BYTES + WPK_LOG_CHUNK_HEADER_BYTES + length);
     return true;
 }
 
-bool wpk_summary(const WifiSummaryPacket *in, uint8_t out[WPK_SUMMARY_BYTES]) {
+bool wpk_summary (const WifiSummaryPacket * in, uint8_t out[WPK_SUMMARY_BYTES])
+{
     if (in == NULL || out == NULL)
+    {
         return false;
+    }
     put_header(out, WPK_SRC_SUMMARY, WPK_SUMMARY_PAYLOAD_BYTES, in->seq);
     put_u32(out + 3, in->uptime_ms);
     put_u16(out + 7, in->run_id);
@@ -169,11 +208,16 @@ bool wpk_summary(const WifiSummaryPacket *in, uint8_t out[WPK_SUMMARY_BYTES]) {
     return true;
 }
 
-bool wpk_diagnostics(const WifiDiagnosticsPacket *in, uint8_t out[WPK_DIAGNOSTICS_BYTES]) {
-    if (in == NULL || out == NULL || in->threshold_adc > 4095u || in->bank > 62u ||
-        (in->flags & 0xf0u) != 0u)
+bool wpk_diagnostics (const WifiDiagnosticsPacket * in,
+                      uint8_t out[WPK_DIAGNOSTICS_BYTES])
+{
+    if (in == NULL || out == NULL || in->threshold_adc > 4095u ||
+        in->bank > 62u || (in->flags & 0xf0u) != 0u)
+    {
         return false;
-    put_header(out, WPK_SRC_DIAGNOSTICS, WPK_DIAGNOSTICS_PAYLOAD_BYTES, in->seq);
+    }
+    put_header(out, WPK_SRC_DIAGNOSTICS, WPK_DIAGNOSTICS_PAYLOAD_BYTES,
+               in->seq);
     put_u32(out + 3, in->uptime_ms);
     put_u16(out + 7, in->threshold_adc);
     out[9] = in->bank;
@@ -193,3 +237,5 @@ bool wpk_diagnostics(const WifiDiagnosticsPacket *in, uint8_t out[WPK_DIAGNOSTIC
     put_u32(out + 59, in->invalid_right);
     return true;
 }
+
+/* End of file. */

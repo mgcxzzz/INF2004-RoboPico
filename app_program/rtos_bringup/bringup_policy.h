@@ -4,7 +4,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-enum {
+enum
+{
     BR_CONTROL_US = 10000U,
     BR_LATE_US = 50000U,
     BR_PULSE_US = 3000000U,
@@ -14,7 +15,8 @@ enum {
     BR_CLOCK_WINDOW_US = 1000000U,
     BR_CLOCK_GOOD_WINDOWS = 3
 };
-enum {
+enum
+{
     BR_ACTIVE = 1U,
     BR_ESTOP = 2U,
     BR_CLOCK_OK = 4U,
@@ -25,7 +27,8 @@ enum {
     BR_IMU = 128U,
     BR_LATCHED = BR_ESTOP | BR_STALL | BR_LATE | BR_ENCODER | BR_IMU
 };
-enum {
+enum
+{
     BR_REASON_BOOT,
     BR_REASON_DONE,
     BR_REASON_SERIAL,
@@ -44,25 +47,39 @@ enum {
     BR_REASON_IMU_UNAVAILABLE = 15U
 };
 
-enum { BR_GAP_NONE, BR_GAP_REVALIDATE, BR_GAP_STOP };
+enum
+{
+    BR_GAP_NONE,
+    BR_GAP_REVALIDATE,
+    BR_GAP_STOP
+};
 
-static inline unsigned br_control_gap_action(uint16_t flags, uint32_t elapsed_us) {
+static inline unsigned br_control_gap_action (uint16_t flags,
+                                              uint32_t elapsed_us)
+{
     if (elapsed_us < BR_LATE_US)
+    {
         return BR_GAP_NONE;
+    }
     return (flags & BR_ACTIVE) != 0U ? BR_GAP_STOP : BR_GAP_REVALIDATE;
 }
 
-static inline bool br_clock_elapsed_ok(uint32_t timer_us, uint32_t kernel_ms) {
+static inline bool br_clock_elapsed_ok (uint32_t timer_us, uint32_t kernel_ms)
+{
     if (kernel_ms < 900U || kernel_ms > 1200U)
+    {
         return false;
+    }
     uint32_t expected = kernel_ms * 1000U;
-    uint32_t error = timer_us > expected ? timer_us - expected : expected - timer_us;
+    uint32_t error =
+        timer_us > expected ? timer_us - expected : expected - timer_us;
     return error <= 5000U + expected / 100U;
 }
 
 /* Production release uses the existing fresh MQTT/network supervisor. The
  * migration bench profiles retain terminal-DTR supervision. */
-static inline bool br_usb_supervised(unsigned usb) {
+static inline bool br_usb_supervised (unsigned usb)
+{
 #ifdef APP_RTOS_RELEASE
     (void)usb;
     return true;
@@ -71,40 +88,51 @@ static inline bool br_usb_supervised(unsigned usb) {
 #endif
 }
 
-static inline bool br_can_start(uint16_t flags, uint32_t now, uint32_t stopped, unsigned usb,
-                                bool buttons_released) {
+static inline bool br_can_start (uint16_t flags, uint32_t now, uint32_t stopped,
+                                 unsigned usb, bool buttons_released)
+{
     return (flags & (BR_READY | BR_CLOCK_OK | BR_ACTIVE | BR_LATCHED)) ==
                (BR_READY | BR_CLOCK_OK) &&
-           now - stopped >= BR_REST_US && br_usb_supervised(usb) && buttons_released;
+           now - stopped >= BR_REST_US && br_usb_supervised(usb) &&
+           buttons_released;
 }
 
 /* The release IMU guard is a copied cross-core observation. Keep it separate
  * from BR_LATCHED so a stale/unready sensor can inhibit motion without
  * manufacturing a sticky lifted/overturned latch. */
-static inline bool br_safety_allows_motion(uint16_t flags, bool imu_blocked) {
+static inline bool br_safety_allows_motion (uint16_t flags, bool imu_blocked)
+{
     return (flags & BR_LATCHED) == 0U && !imu_blocked;
 }
 
-static inline bool br_can_clear_latch(uint16_t flags, bool buttons_released,
-                                      bool imu_reset_allowed) {
-    return (flags & BR_ACTIVE) == 0U && (flags & BR_CLOCK_OK) != 0U && buttons_released &&
-           imu_reset_allowed;
+static inline bool br_can_clear_latch (uint16_t flags, bool buttons_released,
+                                       bool imu_reset_allowed)
+{
+    return (flags & BR_ACTIVE) == 0U && (flags & BR_CLOCK_OK) != 0U &&
+           buttons_released && imu_reset_allowed;
 }
 
-static inline bool br_command_fresh(uint32_t now, uint32_t received) {
+static inline bool br_command_fresh (uint32_t now, uint32_t received)
+{
     return now - received <= 500000U;
 }
 
-static inline bool br_command_after_stop(uint32_t now, uint32_t received, uint32_t stopped,
-                                         bool stop_seen) {
+static inline bool br_command_after_stop (uint32_t now, uint32_t received,
+                                          uint32_t stopped, bool stop_seen)
+{
     return br_command_fresh(now, received) &&
-           (!stop_seen || now - stopped > 500000U || (int32_t)(received - stopped) > 0);
+           (!stop_seen || now - stopped > 500000U ||
+            (int32_t)(received - stopped) > 0);
 }
 
-static inline bool br_outputs_allowed(uint16_t flags, bool irq_latched, unsigned usb,
-                                      bool buttons_released) {
-    return (flags & (BR_ACTIVE | BR_CLOCK_OK | BR_LATCHED)) == (BR_ACTIVE | BR_CLOCK_OK) &&
+static inline bool br_outputs_allowed (uint16_t flags, bool irq_latched,
+                                       unsigned usb, bool buttons_released)
+{
+    return (flags & (BR_ACTIVE | BR_CLOCK_OK | BR_LATCHED)) ==
+               (BR_ACTIVE | BR_CLOCK_OK) &&
            !irq_latched && br_usb_supervised(usb) && buttons_released;
 }
 
 #endif
+
+/* End of file. */
