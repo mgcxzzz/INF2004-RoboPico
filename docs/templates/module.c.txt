@@ -1,0 +1,17 @@
+/**
+ * @file module.c
+ * @brief Implementation of the module's single responsibility.
+ */
+#include "module.h"
+
+/**
+ * @brief Perform the named operation under the documented ownership contract.
+ */
+uint32_t module_operation (uint32_t * p_output)
+{
+    /* Validate inputs and document conversion/range assumptions here. */
+    return (0U);
+}
+
+/* End of file. */
+

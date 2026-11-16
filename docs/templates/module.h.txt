@@ -1,0 +1,21 @@
+/**
+ * @file module.h
+ * @brief Public contract for the module's single responsibility.
+ * @details State ownership, calling context and synchronization requirements.
+ */
+#ifndef ROBOPICO_MODULE_H
+#define ROBOPICO_MODULE_H
+
+#include <stdint.h>
+
+/**
+ * @brief Perform the named operation.
+ * @param p_output Non-null destination owned by the caller.
+ * @return Status and rejection conditions; acceptance is not completion.
+ */
+uint32_t module_operation (uint32_t * p_output);
+
+#endif /* ROBOPICO_MODULE_H */
+
+/* End of file. */
+
