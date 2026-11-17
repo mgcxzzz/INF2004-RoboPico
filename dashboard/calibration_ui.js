@@ -52,7 +52,7 @@
         if(pending && value.requestId===pending.id && value.operation===pending.operation) {
           if(value.capturing) notice='Capturing 32 fresh readings. Keep the robot flat and still.';
           else {notice=results[value.result];pending=null;}
-        }
+        } else if(!pending) notice=results[value.result];
         refresh();
       },
       ack(value,own) {
