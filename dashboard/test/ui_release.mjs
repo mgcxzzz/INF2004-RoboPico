@@ -14,7 +14,7 @@ const mock=prior.split('const mock = `')[1].split('`;')[0];
 const server=createServer(async(req,res)=>{
  const file=req.url==='/'?'index.html':req.url.slice(1);
  if(file==='favicon.ico'){res.writeHead(204).end();return;}
- if(!['index.html','is28_schema.js','vendor/mqtt.min.js'].includes(file)){res.writeHead(404).end();return;}
+ if(!['index.html','is28_schema.js','calibration_ui.js','vendor/mqtt.min.js'].includes(file)){res.writeHead(404).end();return;}
  res.writeHead(200,{'Content-Type':file.endsWith('.html')?'text/html; charset=utf-8':'text/javascript; charset=utf-8'});
  res.end(await readFile(join(root,file)));
 });
@@ -48,13 +48,13 @@ try {
  await page.locator('#connect').click();await page.waitForFunction(()=>window.__m.connected);
  await emit(motion);await emit(nav);await emit(metadata);await emit(runtime);
  const releaseVersion=`${metadata[4]&15}.${metadata[4]>>>4}.${metadata[5]&15}`;
- assert.equal(releaseVersion,'0.2.7','the cleanup release metadata advertises v0.2.7');
+ assert.equal(releaseVersion,'0.2.8','the cleanup release metadata advertises v0.2.8');
  assert.match(await page.locator('#profilePill').textContent(),new RegExp(`v${releaseVersion.replaceAll('.','\\.')}`));
  await page.locator('#dashboardTabs [data-view="diagnostics"]').click();
  assert.equal(await page.locator('#rtosRuntimeCard').isVisible(),true);
  assert.match(await page.locator('#releaseCal').textContent(),/122\/138/);
  await emit(lift);
- assert.equal(await page.locator('#imuStop').textContent(),'Run ended â€” lifted');
+ assert.equal(await page.locator('#imuStop').textContent(),'Run ended — lifted');
  assert.match(await page.locator('#imuStopDetails').textContent(),/reset permitted/);
  const upside=Buffer.from(lift);upside[2]++;upside[23]=(upside[23]&~3)|2;
  await emit(upside);assert.equal(await page.locator('#imuStop').textContent(),'Overturn stop');
@@ -66,7 +66,7 @@ try {
  await emit(motion);await emit(nav);await emit(metadata);await emit(runtime);
 
  await emit(fault);
- assert.equal(await page.locator('#encoderFault').textContent(),'Right encoder: error density Â· latched');
+ assert.equal(await page.locator('#encoderFault').textContent(),'Right encoder: error density · latched');
  assert.match(await page.locator('#encoderFaultDetails').textContent(),/Frozen target L\/R -45\/70 mm\/s/);
  await emit(networkStop);
  assert.match(await page.locator('#networkStop').textContent(),/Last recorded network stop/);

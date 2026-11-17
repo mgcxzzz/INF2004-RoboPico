@@ -92,6 +92,11 @@ uint8_t wp_parse (const uint8_t * p_data_value, size_t original_len,
     case WP_CMD_PING:
         return WP_ACK_ACCEPTED;
     case WP_CMD_CONFIG:
+        if (WP_CONFIG_CALIBRATION_KEY == (p_cmd_value->arg & 0xffu))
+        {
+            return (p_cmd_value->arg >> 8) <= 7u ? WP_ACK_ACCEPTED
+                                                 : WP_ACK_FORMAT;
+        }
         /* Stopped drive mode: low byte key2, high byte mode0..2. The legacy
          * telemetry1 nibble encoding0x1000/0x1001 remains unchanged. */
         if (WP_CONFIG_DRIVE_MODE_KEY == (p_cmd_value->arg & 0xffu))

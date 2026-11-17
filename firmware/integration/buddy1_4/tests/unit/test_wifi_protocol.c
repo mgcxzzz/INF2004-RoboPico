@@ -70,6 +70,12 @@ int main(void) {
     }
     p[3]=3; assert(wp_parse(p,4,&c)==WP_ACK_FORMAT);
     p[3]=0xff; assert(wp_parse(p,4,&c)==WP_ACK_FORMAT);
+    for(i=0;i<=7;++i) {
+        p[2]=WP_CONFIG_CALIBRATION_KEY;p[3]=(uint8_t)i;
+        assert(wp_parse(p,4,&c)==WP_ACK_ACCEPTED && c.arg==(uint16_t)((i<<8)|3U));
+    }
+    p[3]=8;assert(wp_parse(p,4,&c)==WP_ACK_FORMAT);
+    p[3]=0xff;assert(wp_parse(p,4,&c)==WP_ACK_FORMAT);
     p[2]=1;p[3]=0x10;assert(wp_parse(p,4,&c)==WP_ACK_ACCEPTED);
     p[0] = (uint8_t)((WP_CMD_GET << 4) | WP_VERSION);
     p[2] = p[3] = 0;

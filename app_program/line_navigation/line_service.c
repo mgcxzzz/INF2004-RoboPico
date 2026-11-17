@@ -7,6 +7,9 @@
  * @see docs/architecture.md and this feature's README for the full logic.
  */
 #include "line_service.h"
+#ifdef APP_RTOS_RELEASE
+#include "wireless_calibration.h"
+#endif
 #include "include/interfaces/nav_api.h"
 #ifdef APP_RTOS_BARCODE
 #include "../barcode_navigation/barcode_model.h"
@@ -32,6 +35,10 @@ static T_SPLOCK g_copy_lock;
 static line_planner_t g_planner;
 static line_power_t g_power;
 static line_calibration_t g_calibration_value;
+#ifdef APP_RTOS_RELEASE
+static rl_cal_session_t g_wireless_cal;
+static uint8_t g_calibration_frame[RL_CAL_FRAME_BYTES];
+#endif
 static circuit_input_t g_input;
 static float g_filtered[2];
 static uint16_t g_adc[3];
@@ -358,7 +365,11 @@ void rtos_line_side_poll (uint64_t now)
 
 bool rtos_line_ready (void)
 {
-    return g_adc_ok && (calibration_valid(&g_calibration_value));
+    return g_adc_ok && (calibration_valid(&g_calibration_value))
+#ifdef APP_RTOS_RELEASE
+           && !g_wireless_cal.session
+#endif
+        ;
 }
 
 bool rtos_line_pending (void)
@@ -461,8 +472,19 @@ void rtos_line_telemetry (wifi_motion_packet_t * p_out_value)
     leave(key);
 }
 #endif
+#ifdef APP_RTOS_RELEASE
+#include "wireless_calibration.inc"
+#endif
+
 static void calibration_command (unsigned command)
 {
+#ifdef APP_RTOS_RELEASE
+    if ('w' == command || 'l' == command || 'r' == command || 'k' == command ||
+        'c' == command)
+    {
+        rl_cal_abort(&g_wireless_cal, RL_CAL_CANCELLED);
+    }
+#endif
     if ((command != 'c') && (!g_adc_ok))
     {
         tm_printf((UB *)"CAL rejected: ADC not ready; existing calibration "
@@ -554,6 +576,9 @@ bool rtos_line_prepare (const motion_feedback_t * p_flags_value, double path,
             }
         }
     }
+#ifdef APP_RTOS_RELEASE
+    wireless_cal_tick();
+#endif
     g_input = (circuit_input_t){
         .now = p_flags_value->now_us,
         .wheel = {p_flags_value->wheel_mm[0], p_flags_value->wheel_mm[1]},

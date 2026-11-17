@@ -1,6 +1,6 @@
 <!doctype html>
 <!--
-  IS28 merged dashboard v0.2.7 (v0.1 simplified: Recording and the Firmware profile card removed).
+  IS28 merged dashboard v0.2.8 (v0.1 simplified: Recording and the Firmware profile card removed).
   One page for both firmware families on the same broker:
     - RTOS (micro T-Kernel) Buddy1/Buddy4 build: sources 1-8 plus release snapshots (source 15).
     - SDK v2.3 Buddy2/Buddy3 build (+ optional Buddy4 add-on): sources 1, 2, 4, 8, 9-14
@@ -15,9 +15,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>RoboPico Demo Console — v0.2.7</title>
+  <title>RoboPico Demo Console — v0.2.8</title>
 <script src="vendor/mqtt.min.js"></script>
 <script src="is28_schema.js"></script>
+<script src="calibration_ui.js"></script>
 <style>
   :root { --bg:#10151f; --card:#192130; --ink:#ecf1fa; --muted:#a8b5ca; --line:#303c50;
           --ok:#64d9b1; --warn:#ffd18a; --bad:#ffa1ab; --accent:#94a5ff; --soft:#273252; }
@@ -103,12 +104,13 @@
   .detail-panel { grid-column:1/-1; display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:12px; }
   .detail-panel[hidden] { display:none !important; }
   .detail-panel .wide { grid-column:1/-1; }
+  .detail-panel dl { grid-template-columns:minmax(0,1.2fr) minmax(0,1fr); }
   button.danger { background:#c52d46; border-color:#c52d46; color:#fff; }
   button.primary { background:#4056d6; border-color:#4056d6; color:#fff; }
   button:focus-visible, select:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
   [hidden] { display:none !important; }
   @media(max-width:900px) { .overview-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-  @media(max-width:600px) { .overview-grid,.detail-panel { grid-template-columns:1fr; } header .connections { margin-left:0; }
+  @media(max-width:600px) { .overview-grid,.detail-panel { grid-template-columns:1fr; } header { position:static; } header .connections { margin-left:0; }
     .run-strip-top { align-items:flex-start; } .top-controls { justify-content:flex-start; } }
   @media (max-width:560px) { input[type=text] { min-width:0; width:100%; } }
 </style>
@@ -116,7 +118,7 @@
 <body>
 <header>
   <div class="brandline">
-    <h1>RoboPico <span class="ver">Demo Console · v0.2.7</span></h1>
+    <h1>RoboPico <span class="ver">Demo Console · v0.2.8</span></h1>
     <span id="profilePill" class="pill muted">firmware: unknown</span>
   </div>
   <div class="connections">
@@ -410,6 +412,28 @@
     <canvas id="imuChart" aria-label="Live wheel-height difference and pitch chart"></canvas>
   </section>
 
+  <section id="frontCalibration" class="wide">
+    <h2>Front IR calibration · stopped only</h2>
+    <p class="muted">Keep the sensors at their normal driving height and keep the robot flat. Use the actual mat, away from seams and edges. This calibrates the two front sensors; barcode calibration is separate.</p>
+    <p><strong id="calStatus">Waiting for calibration status</strong></p>
+    <p>Live raw left / right: <strong id="calRaw">Unavailable</strong> · Active: <span id="calActive">Unknown</span></p>
+    <div class="row"><button data-cal-op="1">Begin calibration</button><button id="calRead">Read status</button></div>
+    <ol>
+      <li>Place <strong>both front sensors on plain white mat</strong>, hold still, then <button data-cal-op="2">Capture white</button>.</li>
+      <li>Place the <strong>left front sensor over black line</strong>, hold still, then <button data-cal-op="3">Capture left black</button>.</li>
+      <li>Place the <strong>right front sensor over black line</strong>, hold still, then <button data-cal-op="4">Capture right black</button>.</li>
+    </ol>
+    <p id="calProgress" aria-live="polite"></p>
+    <table><thead><tr><th>Staged raw ADC</th><th>Left</th><th>Right</th></tr></thead><tbody>
+      <tr><td>White</td><td id="calWhiteL">—</td><td id="calWhiteR">—</td></tr>
+      <tr><td>Black</td><td id="calBlackL">—</td><td id="calBlackR">—</td></tr>
+    </tbody></table>
+    <p id="calSpan">Capture all three positions before applying.</p>
+    <div class="row"><button data-cal-op="5">Use in RAM</button><button data-cal-op="6">Save and use</button><button data-cal-op="7">Discard pending samples</button></div>
+    <p class="small muted">Each capture averages 32 fresh readings. Start is blocked during staging. Use in RAM lasts until reboot; Save and use verifies flash before changing the active values. Discard leaves active values unchanged. An unused staging session expires after 2 minutes.</p>
+    <p id="calNotice" aria-live="polite"></p>
+  </section>
+
   <section id="mappingDetails" class="wide">
     <h2>Barcode letter mapping</h2>
     <p class="muted">Assign the four demo letters before starting a run. The car stores this mapping in RAM; send it again after power loss.</p>
@@ -483,7 +507,7 @@
 
 <script>
 'use strict';
-const DASHBOARD_VERSION = 'v0.2.7';
+const DASHBOARD_VERSION = 'v0.2.8';
 const $ = (id) => document.getElementById(id);
 const hasWindow = typeof window !== 'undefined';
 const SRC = IS28.SRC;
@@ -551,7 +575,7 @@ function activateDashboardTab(name) {
 function setupDashboardLayout() {
   const destinations = {
     telemetry: ['motionDetails', 'imuDetails', 'barcodeProgressDetails'],
-    diagnostics: ['stateDetails', 'networkDetails', 'barcodeDiagnosticDetails', 'rtosRuntimeSection', 'subsystemsDetails', 'mappingDetails'],
+    diagnostics: ['stateDetails', 'networkDetails', 'barcodeDiagnosticDetails', 'rtosRuntimeSection', 'subsystemsDetails', 'mappingDetails', 'frontCalibration'],
     logs: ['commandDetails', 'exportsDetails', 'connectivityDetails', 'messagesDetails']
   };
   for (const [name, ids] of Object.entries(destinations)) {
@@ -641,6 +665,7 @@ function liveActive() {
          Object.keys(fresh).some((k) => fresh[k] && !staleShown[k]);
 }
 function linkLost(reason) {
+  calibrationUI.invalidate(reason);
   if (liveActive()) invalidateLive(reason);
   hb.seen = false; hb.lastSeq = null; hb.lastUptime = null;
   lastUptime = null;
@@ -888,6 +913,10 @@ $('mapApply').onclick = () => {
 
 /* ---------- firmware profile ---------- */
 let releaseInfo = null, releaseRuntime = null, releaseSeenAt = 0, releaseRuntimeSeenAt = 0;
+const calibrationUI = RoboPicoCalibration.create({
+  send: operation => send(IS28.CMD.CONFIG, IS28.calibrationArg(operation)),
+  connected: () => !!(client && client.connected), now
+});
 let connectedDriveSeen = false, sdkDriveSeen = false, connectedBarcodeSeen = false, connectedImuSeen = false;
 function detectedProfile() {
   if (connectedDriveSeen) return sdkDriveSeen ? 'mixed' : 'rtos-connected';
@@ -971,6 +1000,7 @@ function profileText(p) {
 }
 function noteSource(src) { const t = now(), isNew = !seenSources.has(src); seenSources.set(src, t); if (!firstSeen.has(src)) firstSeen.set(src, t); if (isNew) updateProfile(); }
 function clearSeen() {
+  calibrationUI.invalidate("Waiting for calibration readback on this connection.");
   releaseInfo=releaseRuntime=null; releaseSeenAt=releaseRuntimeSeenAt=0; seenSources.clear(); firstSeen.clear();
   connectedDriveSeen = sdkDriveSeen = connectedBarcodeSeen = connectedImuSeen = false;
   lastImuStop=null; imuStopSeenAt=0; lastImuStopSeq=null; imuStopSignature=null; refreshImuStop();
@@ -1033,6 +1063,7 @@ function onMessage(topic, payload, packet) {
     if (own) delete pending[a.id];
     const ms = own ? ` in ${Math.round(now() - sent.time)} ms` : '';
     const name = ackName(a);
+    calibrationUI.ack(a, own);
     if (own && driveModePending && driveModePending.id === a.id && a.code === IS28.CMD.CONFIG) {
       if (a.accepted) {
         driveModePending.ack = true; driveModePending.ackAt = now();
@@ -1182,6 +1213,7 @@ function groupFresh(k) {
 /* Disconnect, last will or car restart: clear live readings (retained
  * export history is kept) so nothing from before looks current. */
 function invalidateLive(reason) {
+  calibrationUI.invalidate(reason);
   driveSeenAt=0;lastDriveState=null;driveStateSignature=null;
   $('driveState').textContent='Waiting for fresh bend/recovery telemetry';
   $('driveStateDetails').textContent=`Cleared: ${reason}.`;
@@ -1819,6 +1851,7 @@ function showSource15(d, f) {
     if(signature!==driveStateSignature) {driveStateSignature=signature;addEvent(`Drive state: ${bend}, recovery phase ${d.recoveryPhase}, sweep ${d.sweepStage}`,d,'drive-state',f);}
     return;
   }
+  if(d.kind==='front-calibration') { calibrationUI.update(d); return; }
   if(d.kind==='release') {
     releaseInfo=d; releaseSeenAt=now(); connectedDriveSeen=true; updateProfile(); updateLogDownloadControl();
     $('buildId').textContent=`Buddy 1–4 RTOS v${d.version} · ${d.wireless?'network supervised':'USB supervised'}`;

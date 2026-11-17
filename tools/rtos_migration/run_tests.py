@@ -17,7 +17,8 @@ host_float = ["-msse2", "-mfpmath=sse"] if os.name == "nt" else []
 sources = [CORE / "src/navigation" / (n + ".c") for n in ("motion_api", "nav_coordinator", "nav_codec")]
 sources.append(CORE / "src/motion/motion_executor.c")
 
-checks = [(ROOT / "testing/rtos_migration/test_compact_signed.c", []),
+checks = [(ROOT / "testing/rtos_migration/test_wireless_calibration.c", []),
+          (ROOT / "testing/rtos_migration/test_compact_signed.c", []),
           (ROOT / "testing/rtos_migration/test_bringup_policy.c", []),
           (ROOT / "testing/rtos_migration/test_imu_lift_guard.c", []),
           (ROOT / "testing/rtos_migration/test_imu_lift_packet.c", []),

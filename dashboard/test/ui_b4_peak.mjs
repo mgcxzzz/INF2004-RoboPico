@@ -20,7 +20,7 @@ const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; ch
 const server = createServer(async (req, res) => {
   const p = new URL(req.url, 'http://x').pathname;
   const file = p === '/' ? 'index.html' : p.slice(1);
-  if (!['index.html', 'is28_schema.js', 'vendor/mqtt.min.js'].includes(file)) { res.writeHead(404).end(); return; }
+  if (!['index.html', 'is28_schema.js', 'calibration_ui.js', 'vendor/mqtt.min.js'].includes(file)) { res.writeHead(404).end(); return; }
   const body = await readFile(join(root, file));
   res.writeHead(200, { 'Content-Type': types[file.slice(file.lastIndexOf('.'))] }); res.end(body);
 });

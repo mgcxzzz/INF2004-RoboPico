@@ -515,7 +515,8 @@ void rn_app_task (int32_t code, void * p_exinf_value)
 #ifdef APP_RTOS_RELEASE
                  || WP_CMD_GET_LOG == command.code ||
                  (WP_CMD_CONFIG == command.code &&
-                  WP_CONFIG_DRIVE_MODE_KEY == (command.arg & 0xffU))
+                  (WP_CONFIG_DRIVE_MODE_KEY == (command.arg & 0xffU) ||
+                   WP_CONFIG_CALIBRATION_KEY == (command.arg & 0xffU)))
 #endif
                      ))
             {
@@ -583,6 +584,9 @@ void rn_app_task (int32_t code, void * p_exinf_value)
             uint8_t mode_info[17];
             rtos_line_drive_mode_info(rn_next_sequence(15), now, mode_info);
             (void)rn_tx_push(RN_TLM, mode_info, sizeof(mode_info), now);
+            uint8_t calibration[RL_CAL_FRAME_BYTES];
+            rtos_line_cal_info(rn_next_sequence(15), calibration);
+            (void)rn_tx_push(RN_TLM, calibration, sizeof(calibration), now);
             uint8_t info[15];
             rtos_line_release_info(rn_next_sequence(15), info);
             (void)rn_tx_push(RN_TLM, info, sizeof(info), now);

@@ -154,3 +154,15 @@ kernel message buffers and eventual MQTT payloads as those stages migrate.
 Known hardware acceptance questions: current calibration contrast on the tilted
 front sensors, exact 100 Hz cadence/cost on the car, sharpest bend tracking,
 side-cross qualification and outgoing-line reacquisition after each turn.
+
+
+## Wireless front IR calibration (v0.2.8 candidate)
+
+`wireless_calibration.h` owns the bounded staged state machine and explicit CC/28
+wire codec. `wireless_calibration.inc` adapts it to the control owner: 32 existing
+fresh ADC frames per position, candidate validation, RAM application and the
+existing stopped flash writer with readback verification. The network task queues
+requests and copies the encoded mailbox; it does not access the ADC, staged
+structure or flash directly. Read/Cancel work without a good ADC. Stop serial,
+unsafe state and a two-minute deadline invalidate staging. Repeated request IDs
+are idempotent for five seconds. See [protocol and test instructions](../../docs/wireless_calibration_v0_2_8.md).

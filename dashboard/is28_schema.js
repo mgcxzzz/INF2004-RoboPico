@@ -85,6 +85,7 @@
                     'rejected: queue full', 'rejected: unsupported setting'];
   const CFG_TELEMETRY = 1;
   const CFG_DRIVE_MODE = 2;
+  const CFG_CALIBRATION = 3;
   const DRIVE_MODES = ['Baseline · 45 mm/s', 'Normal · 60 mm/s', 'Faster trial · 75 mm/s'];
 
   const EVENT_NAME = ['status','run_begin','decoded','queued','junction_confirmed','dispatch','completed',
@@ -570,10 +571,29 @@
     if (p.length === 15 && p[0] === 0xc8) return decodeDriveState(p);
     if (p.length === 27 && p[0] === 0xc9) return decodeImuLiftSafety(p);
     if (p.length === 25 && p[0] === 0xca) return decodeImuPeakEvidence(p);
+    if (p[0] === 0xcc) return decodeCalibrationStatus(p);
     if (p.length === 14 && p[0] === 0xcb) return decodeDriveModeStatus(p);
     if (p.length === 28) return decodeRampAssist(p);
     if (p.length === 24 && p[4] === 0xB1) return decodeBarcodePeak(p);
     return { error: 'unknown source-15 layout (payload ' + p.length + ' bytes' + (p.length > 4 ? ', byte4 0x' + p[4].toString(16) : '') + ')' };
+  }
+  function decodeCalibrationStatus(p) {
+    if (p.length !== 37 || p[0] !== 0xcc || p[1] !== 0x28) return {error:'unsupported calibration layout'};
+    const operation=p[9]&7, result=p[9]>>>4;
+    if ((p[9]&8) || result>12 || (p[10]&0xc0) || (p[11]&0xe0) || p[12]>32 || p[13]>3 || p[36]>5)
+      return {error:'invalid calibration fields'};
+    const bits=(at,width)=>{let v=0;for(let i=0;i<width;i++)v|=((p[14+((at+i)>>>3)]>>>((at+i)&7))&1)<<i;return v;};
+    const values=Array.from({length:8},(_,i)=>bits(i*12,12));
+    const raw=u32(Uint8Array.of(p[26],p[27],p[28],0),0), spread=u32(Uint8Array.of(p[33],p[34],p[35],0),0);
+    return {kind:'front-calibration',codec:0x28,uptimeMs:u32(p,2),revision:u16(p,6),requestId:p[8],operation,result,
+      session:!!(p[10]&1),valid:!!(p[10]&2),adcReady:!!(p[10]&4),canChange:!!(p[10]&8),
+      applied:!!(p[10]&16),saved:!!(p[10]&32),captured:p[11]&7,capturing:(p[11]>>>3)&3,samples:p[12],origin:p[13],
+      activeWhite:values.slice(0,2),activeBlack:values.slice(2,4),stagedWhite:values.slice(4,6),stagedBlack:values.slice(6,8),
+      raw:[raw&4095,raw>>>12],sampleMs:u32(p,29),spread:[spread&4095,spread>>>12],ack:p[36]};
+  }
+  function calibrationArg(operation) {
+    if (!Number.isInteger(operation) || operation<0 || operation>7) throw new RangeError('calibration operation must be 0..7');
+    return CFG_CALIBRATION | (operation<<8);
   }
   function decodeDriveModeStatus(p) {
     if (p.length !== 14 || p[0] !== 0xcb) return { error: 'unknown drive-mode status layout' };
@@ -751,15 +771,15 @@
   }
 
   const api = { VERSION, SRC, SRC_NAME, SRC_FAMILY, MAX_FRAME, CMD, CMD_NAME, MOTION_CMDS,
-                ACK_NAME, CFG_TELEMETRY, CFG_DRIVE_MODE, DRIVE_MODES, NAV_STATE, NET_STATE, EVENT_NAME, PROFILE_NAME,
+                ACK_NAME, CFG_TELEMETRY, CFG_DRIVE_MODE, CFG_CALIBRATION, DRIVE_MODES, NAV_STATE, NET_STATE, EVENT_NAME, PROFILE_NAME,
                 SDK_MODE, SDK_OWNER, SDK_MODE_OFF, SDK_MODE_FAULT, LOG_DATASETS, PAYLOAD,
-                decodeFrame, encodeCommand, configArg, driveModeArg, getLogArg, decodeAck, SeqTracker,
+                decodeFrame, encodeCommand, configArg, driveModeArg, calibrationArg, getLogArg, decodeAck, SeqTracker,
                 le32, u, s, u16, u32, i16, MAP_MOVEMENTS, mappingWord, encodeMapping,
                 mappedMovement, mappingReadbackStatus, mappingTimedOut, connectivityVerdict,
                 decodeB1, decodeB2Motion, decodeImu, decodeLine, decodeB5, decodeNav,
                 decodeSafety, decodeMapping, decodeMotion, decodeLineEvent, decodeNavEvent,
                 decodeSummary, decodeDiagnostics, decodeLogChunk, decodeRampAssist, decodeBarcodePeak,
-                decodeEncoderFault, decodeBarcodeCapture, decodeNetworkStop, decodeImuLiftSafety, decodeImuPeakEvidence, decodeDriveModeStatus,
+                decodeEncoderFault, decodeBarcodeCapture, decodeNetworkStop, decodeImuLiftSafety, decodeImuPeakEvidence, decodeDriveModeStatus, decodeCalibrationStatus,
                 decodeSource15, decodeStoredLine, picoUptimeMs, frameRunId,
                 detectProfile, effectiveProfile };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

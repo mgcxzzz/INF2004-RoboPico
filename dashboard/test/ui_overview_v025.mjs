@@ -16,7 +16,7 @@ const mock = mockSource.split('const mock = `')[1].split('`;')[0];
 const server = createServer(async (req, res) => {
   const path = new URL(req.url, 'http://local').pathname;
   const file = path === '/' ? 'index.html' : path.slice(1);
-  if (!['index.html', 'is28_schema.js', 'vendor/mqtt.min.js'].includes(file)) { res.writeHead(404).end(); return; }
+  if (!['index.html', 'is28_schema.js', 'calibration_ui.js', 'vendor/mqtt.min.js'].includes(file)) { res.writeHead(404).end(); return; }
   const type = file.endsWith('.html') ? 'text/html; charset=utf-8' : 'text/javascript; charset=utf-8';
   res.writeHead(200, { 'Content-Type': type }); res.end(await readFile(join(root, file)));
 });

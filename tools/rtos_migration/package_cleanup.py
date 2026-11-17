@@ -1,4 +1,4 @@
-"""Package the reviewed v0.2.7 C-cleanup candidate; never access a robot."""
+"""Package the reviewed v0.2.8 wireless-calibration candidate; never access a robot."""
 import hashlib
 import json
 import shutil
@@ -13,8 +13,8 @@ from package_release import collect_sources
 
 ROOT = common.ROOT
 CORE = ROOT / "firmware/integration/buddy1_4"
-ART = CORE / "artifacts/v0_2_7_rtos_cleanup"
-NAME = "robopico_buddy1_4_rtos_v0_2_7_cleanup"
+ART = CORE / "artifacts/v0_2_8_wireless_calibration"
+NAME = "robopico_buddy1_4_rtos_v0_2_8_wireless_calibration"
 BASELINE = "7b18596675e6198837851305500f6541b81774b6"
 common.ART = ART
 
@@ -29,11 +29,12 @@ def main():
     elf = built.with_suffix(".elf")
     layout = common.validate_uf2(built.read_bytes())
     linked = linked_checks(elf, network=True, barcode=True, imu=True, release=True)
-    assert int(linked["static_ram_end"], 16) <= 0x2002fe48, "Cleanup increased static RAM."
+    assert int(linked["static_ram_end"], 16) <= 0x2002ff48, "Calibration exceeded its 256-byte static growth budget."
     tool = ROOT.parent / ".buddy2-tools/arm-gcc/bin/arm-none-eabi-nm.exe"
     names = {line.split()[-1] for line in common.command(tool, "-g", elf).splitlines() if line.split()}
     for name in ("ri_lift_guard_samples", "ri_safety_packet", "ri_safety_reset_latch",
-                 "ri_safety_peak_packet", "rtos_line_drive_mode_info", "ri_ramp_step"):
+                 "ri_safety_peak_packet", "rtos_line_drive_mode_info", "ri_ramp_step",
+                 "rtos_line_cal_command", "rtos_line_cal_info"):
         assert name in names, "Required tested feature missing: " + name
     paths = set(collect_sources())
     paths.add(ROOT / "CODING_STANDARD.md")
@@ -46,8 +47,8 @@ def main():
     shutil.copyfile(built, firmware)
     baseline = json.loads((CORE / "artifacts/v0_2_6_rtos/BUILD_MANIFEST.json").read_text())
     manifest = {
-        "name": NAME, "version": "0.2.7", "branch": common.command("git", "branch", "--show-current"),
-        "status": "CLEANUP CANDIDATE; hardware smoke test pending; Buddy5 NOT integrated",
+        "name": NAME, "version": "0.2.8", "branch": common.command("git", "branch", "--show-current"),
+        "status": "WIRELESS CALIBRATION CANDIDATE; hardware smoke test pending; Buddy5 NOT integrated",
         "source_commit": common.command("git", "rev-parse", "HEAD"),
         "tested_main_baseline": BASELINE, "build_profile": baseline["build_profile"],
         "compiler": common.command(tool.with_name("arm-none-eabi-gcc.exe"), "--version").splitlines()[0],
@@ -57,19 +58,20 @@ def main():
         "change_boundary": ["Adapted Barr policy, braces/formatting, types/variables and declarations",
                             "Module contracts/guards, explicit logical grouping and equality style",
                             "Unsigned compact storage with explicit signed interpretation in seven native types",
-                            "Firmware/dashboard patch identification; no controller/calibration retuning"],
+                            "Stopped-only staged wireless front IR calibration and CC/28 readback",
+                            "Verified explicit persistence through existing flash adapter; no automatic retuning"],
         "preserved": ["micro T-Kernel SMP topology/priorities, deadlines, locks and copied communication",
                       "45 default, stopped-only 60/75 modes, both barcode decoders, 7mm junction gate",
                       "Bend/recovery, ramp assistance/acceptance, pickup latch and explicit eligible Reset",
                       "Powerbank operation, network supervision, optional captures and stopped wireless exports",
-                      "Wire schemas except advertised release patch; all saved calibration formats"],
+                      "Existing wire schemas preserved; new CC/28 status and CONFIG key3; saved formats unchanged"],
         "calibration_priority": baseline["calibration_priority"],
         "expected_tested_car_calibration": baseline["expected_tested_car_calibration"],
         "native_layouts": "Seven baseline size/alignment assertions compiled on host and Arm; no width expansion",
         "static_ram_delta_vs_v026": int(linked["static_ram_end"], 16) - 0x2002fe48,
         "linked_checks": linked,
-        "software_validation": "docs/coding_cleanup_validation.md records exact checks and limitations",
-        "hardware_validation": "Pending docs/coding_cleanup_v0_2_7.md smoke test; main not promoted",
+        "software_validation": "docs/wireless_calibration_v0_2_8.md records targeted checks and limitations",
+        "hardware_validation": "Pending docs/wireless_calibration_v0_2_8.md smoke test; main not promoted",
         "standard": "RoboPico C Standard 1.0, based on Barr-C:2018 with documented exceptions",
         "compliance_scope": "Mechanical gates and targeted semantic review; not exhaustive Barr/MISRA certification"}
     for name, value in (("BUILD_MANIFEST.json", manifest), ("SOURCE_SHA256.json", hashes)):
@@ -81,7 +83,7 @@ def main():
         for path in (firmware, ART / "BUILD_MANIFEST.json", ART / "SOURCE_SHA256.json"):
             archive.write(path, path.relative_to(ROOT).as_posix())
         archive.write(firmware, "firmware/" + firmware.name)
-        guide = (ROOT / "docs/coding_cleanup_v0_2_7.md").read_text(encoding="utf-8")
+        guide = (ROOT / "docs/wireless_calibration_v0_2_8.md").read_text(encoding="utf-8")
         archive.writestr("START_HERE.md", guide)
         archive.writestr("TEST_CHANGES.md", guide)
         for title, script, arguments in (

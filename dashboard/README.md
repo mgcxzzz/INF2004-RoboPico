@@ -25,3 +25,12 @@ and stopped data export. It does not implement Buddy5. Detailed feature logic
 lives under `firmware/integration/buddy1_4/src/*/README.md`; export instructions
 are in `docs/setup.md`. Vendored MQTT.js and its license are included for offline
 use.
+
+
+## Front IR calibration (v0.2.8 candidate)
+
+Open **Diagnostics → Front IR calibration** after a complete Stop. Follow
+[the staged capture and save instructions](../docs/wireless_calibration_v0_2_8.md).
+The controls require fresh source-15 CC/28 status from compatible firmware;
+older firmware cannot enable them. Command ACK alone never confirms an applied
+or saved calibration. Captures and saving work over MQTT with powerbank power.

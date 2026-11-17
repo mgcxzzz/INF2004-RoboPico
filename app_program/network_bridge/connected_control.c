@@ -294,6 +294,26 @@ void rn_drive_process (void * p_raw)
                 {
                     result = rn_drive_request_speed_mode(cmd.arg >> 8);
                 }
+#ifdef APP_RTOS_RELEASE
+                else if (WP_CONFIG_CALIBRATION_KEY == (cmd.arg & 0xffU))
+                {
+                    unsigned operation = cmd.arg >> 8U;
+                    if (operation != RL_CAL_READ &&
+                        operation != RL_CAL_CANCEL &&
+                        !rtos_line_request_fresh(u32(message + 21)))
+                    {
+                        result = WP_ACK_BUSY;
+                    }
+                    else
+                    {
+                        result = rtos_line_cal_command(operation, cmd.id);
+                    }
+                    uint8_t calibration[RL_CAL_FRAME_BYTES];
+                    rtos_line_cal_info(rn_next_sequence(15), calibration);
+                    (void)rn_tx_push(RN_TLM, calibration, sizeof(calibration),
+                                     now);
+                }
+#endif
                 else
                 {
                     result = WP_ACK_UNSUPPORTED;

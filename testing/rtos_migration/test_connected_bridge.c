@@ -157,6 +157,16 @@ static void rtos_line_telemetry(wifi_motion_packet_t *p) {
 static void bringup_stop_from(uint8_t reason, uint16_t latch, motion_owner_t who);
 #ifdef APP_RTOS_RELEASE
 #include "src/network/wifi_protocol.h"
+#include "app_program/line_navigation/wireless_calibration.h"
+static unsigned calibration_calls, calibration_operation;
+static uint8_t rtos_line_cal_command(unsigned op, uint8_t id) {
+    (void)id; ++calibration_calls; calibration_operation=op;
+    return rtos_line_mode_change_allowed()?WP_ACK_ACCEPTED:WP_ACK_BUSY;
+}
+static void rtos_line_cal_info(uint8_t seq, uint8_t out[RL_CAL_FRAME_BYTES]) {
+    memset(out,0,RL_CAL_FRAME_BYTES);out[2]=seq;
+}
+
 static void rtos_line_release_info(uint8_t seq, uint8_t out[15]) { (void)seq;memset(out,0,15); }
 #include "app_program/rtos_bringup/encoder_fault.h"
 static void bringup_encoder_fault_packet(uint8_t seq, uint8_t out[BR_ENCODER_FAULT_PACKET_BYTES]) { (void)seq;memset(out,0,BR_ENCODER_FAULT_PACKET_BYTES); }
@@ -197,8 +207,8 @@ static void request(unsigned code) {
     assert(tk_rcv_mbf(g_rx_queue, msg, 0) == RN_RX_BYTES);
     assert(rn_drive_enqueue(msg));
 }
-static void request_config(unsigned mode) {
-    uint16_t arg = (uint16_t)((mode << 8U) | 2U);
+static void request_config_key(unsigned key, unsigned mode) {
+    uint16_t arg = (uint16_t)((mode << 8U) | key);
     uint8_t data[4] = {(uint8_t)((WP_CMD_CONFIG << 4) | 2), 17, (uint8_t)arg,
                        (uint8_t)(arg >> 8U)};
     uint8_t msg[RN_RX_BYTES];
@@ -206,6 +216,7 @@ static void request_config(unsigned mode) {
     assert(tk_rcv_mbf(g_rx_queue, msg, 0) == RN_RX_BYTES);
     assert(rn_drive_enqueue(msg));
 }
+static void request_config(unsigned mode) {request_config_key(2U,mode);}
 static uint8_t last_ack_result(void) {
     uint8_t topic, len, payload[RN_PACKET_MAX], result = 0xffU;
     while (rn_tx_take(&topic, payload, &len, clock_ms))
@@ -323,6 +334,19 @@ int main(void) {
         (void)motion_update(&f);
     }
     assert(motion_get_status().stopped);
+#ifdef APP_RTOS_RELEASE
+    request_config_key(3,RL_CAL_BEGIN);
+    assert(calibration_calls==0); /* Network receive only queues work. */
+    rn_drive_process(&f);
+    assert(calibration_calls==1 && calibration_operation==RL_CAL_BEGIN);
+    assert(last_ack_result()==WP_ACK_ACCEPTED);
+    request_config_key(3,RL_CAL_WHITE);
+    clock_ms+=501;f.now_us=board_time_us();online();rn_drive_process(&f);
+    assert(calibration_calls==1 && last_ack_result()==WP_ACK_BUSY);
+    request_config_key(3,RL_CAL_WHITE);
+    rtos_line_cancel();clock_ms++;f.now_us=board_time_us();rn_drive_process(&f);
+    assert(calibration_calls==1 && last_ack_result()==WP_ACK_BUSY);
+#endif
     request_config(DRIVE_MODE_NORMAL60);
     rn_drive_process(&f);
     assert(motion_get_speed_mode_status().mode == DRIVE_MODE_NORMAL60 &&
