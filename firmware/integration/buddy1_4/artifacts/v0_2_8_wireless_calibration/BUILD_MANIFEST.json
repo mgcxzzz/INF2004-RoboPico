@@ -3,7 +3,7 @@
   "version": "0.2.8",
   "branch": "barr-c-cleanup",
   "status": "WIRELESS CALIBRATION CANDIDATE; hardware smoke test pending; Buddy5 NOT integrated",
-  "source_commit": "cf327c0c1d5eca05d219cbe65be62bcfd8cba275",
+  "source_commit": "dd8726bfdd9d62eb47c7c4bcf491a10903fae204",
   "tested_main_baseline": "7b18596675e6198837851305500f6541b81774b6",
   "build_profile": "APP=rtos_buddy1_4 SMP=1 CONSOLE=usb_cdc WIFI=cyw43 NET=lwip MQTT=1 CRASH_REPORT=0 TEST=0",
   "compiler": "arm-none-eabi-gcc.exe (Arm GNU Toolchain 14.2.Rel1 (Build arm-14.52)) 14.2.1 20241119",

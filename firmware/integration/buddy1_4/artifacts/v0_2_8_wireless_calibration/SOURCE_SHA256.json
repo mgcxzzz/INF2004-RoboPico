@@ -151,7 +151,7 @@
   "config/config_func.h": "6c35f2ce02a141f205f9164fe3436829554eabb5696ff6dd7df15f9560eed5f8",
   "config/config_tm.h": "3eda2e4399e37a1559fe09b1a010ebd989d4c23c5b1884bc9bd8e91a14baae4c",
   "config/wifi_secrets.example.h": "981999f9473f9e794fb9bd0ee0e29f111483226a0fbc42e3d8cfa434070687a0",
-  "dashboard/calibration_ui.js": "fa9ea57970c67a9b751b7a1d6d975f802fee637a8fe3577a0d392a4f5490545d",
+  "dashboard/calibration_ui.js": "40bb35b03f5124c56546889834b36eadd2297ca08ba219885f20fa90e2669c8b",
   "dashboard/index.html": "9f9ff0edecc39a903d6587d5392f5063da3bf3b27b4ab0ab0b9a090cecb34f66",
   "dashboard/is28_schema.js": "beb78ce6fa60603ffb3b0ddc718da4af34bb34fa837195cba8bacd5892660e75",
   "dashboard/mosquitto.conf": "d8de8b520d6526bf55b6b36c8f63b78c78a62b72953b9b42a7f154e975f502e7",
