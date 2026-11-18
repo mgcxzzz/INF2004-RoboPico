@@ -162,7 +162,8 @@ side-cross qualification and outgoing-line reacquisition after each turn.
 wire codec. `wireless_calibration.inc` adapts it to the control owner: 32 existing
 fresh ADC frames per position, candidate validation, RAM application and the
 existing stopped flash writer with readback verification. The network task queues
-requests and copies the encoded mailbox; it does not access the ADC, staged
-structure or flash directly. Read/Cancel work without a good ADC. Stop serial,
+requests. Periodic reports encode a protected copy on the bridge task. Command
+replies use the same encoder when requested. Each report checks ADC sample age
+and current calibration eligibility. Read/Cancel work without a good ADC. Stop serial,
 unsafe state and a two-minute deadline invalidate staging. Repeated request IDs
 are idempotent for five seconds. See [protocol and test instructions](../../docs/wireless_calibration_v0_2_8.md).

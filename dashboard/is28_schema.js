@@ -571,7 +571,7 @@
     if (p.length === 15 && p[0] === 0xc8) return decodeDriveState(p);
     if (p.length === 27 && p[0] === 0xc9) return decodeImuLiftSafety(p);
     if (p.length === 25 && p[0] === 0xca) return decodeImuPeakEvidence(p);
-    if (p[0] === 0xcc) return decodeCalibrationStatus(p);
+    if (p.length === 37 && p[0] === 0xcc) return decodeCalibrationStatus(p);
     if (p.length === 14 && p[0] === 0xcb) return decodeDriveModeStatus(p);
     if (p.length === 28) return decodeRampAssist(p);
     if (p.length === 24 && p[4] === 0xB1) return decodeBarcodePeak(p);

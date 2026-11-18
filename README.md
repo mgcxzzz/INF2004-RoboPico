@@ -1,8 +1,8 @@
 # RoboPico — provisional Buddy 1–4 RTOS integration
 
-**This branch is `barr-c-cleanup`: v0.2.8 wireless-calibration candidate; hardware
-acceptance pending.** [New firmware and complete bundle](firmware/integration/buddy1_4/artifacts/v0_2_8_wireless_calibration/)
- · [Wireless calibration instructions and validation](docs/wireless_calibration_v0_2_8.md)
+**This branch is `barr-c-cleanup`: v0.2.9 calibration-reporting candidate; hardware
+acceptance pending.** [New firmware and complete bundle](firmware/integration/buddy1_4/artifacts/v0_2_9_calibration_reporting/)
+ · [Setup and test instructions](docs/calibration_reporting_v0_2_9.md)
  · [Application coding standard](CODING_STANDARD.md).
 The earlier [v0.2.7 cleanup candidate](docs/coding_cleanup_v0_2_7.md) remains archived.
 The tested main baseline described below remains available for rollback.

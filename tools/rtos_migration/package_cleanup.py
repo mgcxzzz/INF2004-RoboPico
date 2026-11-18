@@ -1,4 +1,4 @@
-"""Package the reviewed v0.2.8 wireless-calibration candidate; never access a robot."""
+"""Package the reviewed v0.2.9 calibration-reporting candidate; never access a robot."""
 import hashlib
 import json
 import shutil
@@ -13,8 +13,8 @@ from package_release import collect_sources
 
 ROOT = common.ROOT
 CORE = ROOT / "firmware/integration/buddy1_4"
-ART = CORE / "artifacts/v0_2_8_wireless_calibration"
-NAME = "robopico_buddy1_4_rtos_v0_2_8_wireless_calibration"
+ART = CORE / "artifacts/v0_2_9_calibration_reporting"
+NAME = "robopico_buddy1_4_rtos_v0_2_9_calibration_reporting"
 BASELINE = "7b18596675e6198837851305500f6541b81774b6"
 common.ART = ART
 
@@ -47,8 +47,8 @@ def main():
     shutil.copyfile(built, firmware)
     baseline = json.loads((CORE / "artifacts/v0_2_6_rtos/BUILD_MANIFEST.json").read_text())
     manifest = {
-        "name": NAME, "version": "0.2.8", "branch": common.command("git", "branch", "--show-current"),
-        "status": "WIRELESS CALIBRATION CANDIDATE; hardware smoke test pending; Buddy5 NOT integrated",
+        "name": NAME, "version": "0.2.9", "branch": common.command("git", "branch", "--show-current"),
+        "status": "CALIBRATION REPORTING CANDIDATE; hardware smoke test pending; Buddy5 NOT integrated",
         "source_commit": common.command("git", "rev-parse", "HEAD"),
         "tested_main_baseline": BASELINE, "build_profile": baseline["build_profile"],
         "compiler": common.command(tool.with_name("arm-none-eabi-gcc.exe"), "--version").splitlines()[0],
@@ -59,7 +59,8 @@ def main():
                             "Module contracts/guards, explicit logical grouping and equality style",
                             "Unsigned compact storage with explicit signed interpretation in seven native types",
                             "Stopped-only staged wireless front IR calibration and CC/28 readback",
-                            "Verified explicit persistence through existing flash adapter; no automatic retuning"],
+                            "Encode calibration status when sent using a protected snapshot",
+                            "Dispatch dashboard calibration packets by length and subtype"],
         "preserved": ["micro T-Kernel SMP topology/priorities, deadlines, locks and copied communication",
                       "45 default, stopped-only 60/75 modes, both barcode decoders, 7mm junction gate",
                       "Bend/recovery, ramp assistance/acceptance, pickup latch and explicit eligible Reset",
@@ -70,8 +71,8 @@ def main():
         "native_layouts": "Seven baseline size/alignment assertions compiled on host and Arm; no width expansion",
         "static_ram_delta_vs_v026": int(linked["static_ram_end"], 16) - 0x2002fe48,
         "linked_checks": linked,
-        "software_validation": "docs/wireless_calibration_v0_2_8.md records targeted checks and limitations",
-        "hardware_validation": "Pending docs/wireless_calibration_v0_2_8.md smoke test; main not promoted",
+        "software_validation": "docs/calibration_reporting_v0_2_9.md records targeted checks and limitations",
+        "hardware_validation": "Pending docs/calibration_reporting_v0_2_9.md smoke test; main not promoted",
         "standard": "RoboPico C Standard 1.0, based on Barr-C:2018 with documented exceptions",
         "compliance_scope": "Mechanical gates and targeted semantic review; not exhaustive Barr/MISRA certification"}
     for name, value in (("BUILD_MANIFEST.json", manifest), ("SOURCE_SHA256.json", hashes)):
@@ -83,7 +84,7 @@ def main():
         for path in (firmware, ART / "BUILD_MANIFEST.json", ART / "SOURCE_SHA256.json"):
             archive.write(path, path.relative_to(ROOT).as_posix())
         archive.write(firmware, "firmware/" + firmware.name)
-        guide = (ROOT / "docs/wireless_calibration_v0_2_8.md").read_text(encoding="utf-8")
+        guide = (ROOT / "docs/calibration_reporting_v0_2_9.md").read_text(encoding="utf-8")
         archive.writestr("START_HERE.md", guide)
         archive.writestr("TEST_CHANGES.md", guide)
         for title, script, arguments in (

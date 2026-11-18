@@ -69,3 +69,14 @@ test('profile detection: source 15 is SDK-only', () => {
   assert.equal(M.detectProfile([1, 3, 15]), 'mixed');
   assert.equal(M.detectProfile([1, 2, 4]), 'unknown');
 });
+
+test('source 15: uptime byte 0xCC does not mask ramp or peak telemetry', () => {
+  for (const [length, kind] of [[28, 'ramp'], [24, 'peak']]) {
+    const bytes = Uint8Array.from(frames.find((frame) => frame[0] === 0xf2 && frame[1] === length));
+    bytes[3] = 0xcc;
+    const decoded = M.decodeFrame(bytes);
+    assert.equal(decoded.error, undefined);
+    assert.equal(decoded.data.kind, kind);
+    assert.equal(decoded.data.uptimeMs & 0xff, 0xcc);
+  }
+});

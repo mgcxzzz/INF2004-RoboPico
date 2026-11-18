@@ -62,3 +62,4 @@ dashboard_session/
 !/firmware/migration/micro_tkernel/step_05_imu/firmware/robopico_rtos_connected_imu_v0_1.uf2
 
 !/firmware/integration/buddy1_4/artifacts/v0_2_8_wireless_calibration/robopico_buddy1_4_rtos_v0_2_8_wireless_calibration.uf2
+!/firmware/integration/buddy1_4/artifacts/v0_2_9_calibration_reporting/robopico_buddy1_4_rtos_v0_2_9_calibration_reporting.uf2

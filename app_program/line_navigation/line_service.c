@@ -37,7 +37,6 @@ static line_power_t g_power;
 static line_calibration_t g_calibration_value;
 #ifdef APP_RTOS_RELEASE
 static rl_cal_session_t g_wireless_cal;
-static uint8_t g_calibration_frame[RL_CAL_FRAME_BYTES];
 #endif
 static circuit_input_t g_input;
 static float g_filtered[2];

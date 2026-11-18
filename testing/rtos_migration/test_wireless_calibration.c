@@ -16,7 +16,6 @@ static uint16_t g_adc[3]={120,200,180};
 static unsigned g_cal_origin=1;
 static line_calibration_t g_calibration_value={.white={122,138},.black={246,267},.mask=7};
 static rl_cal_session_t g_wireless_cal;
-static uint8_t g_calibration_frame[RL_CAL_FRAME_BYTES];
 static bringup_status_t hardware;
 static UINT enter(void) { assert(!depth);depth=1;return 0; }
 static void leave(UINT key) { (void)key;assert(depth);depth=0; }
@@ -88,6 +87,12 @@ int main(void) {
     assert(packet[0]==0xf2 && packet[1]==37 && packet[2]==42);
     FILE *file=fopen("testing/rtos_migration/build-host/front_calibration.bin","wb");
     assert(file && fwrite(packet,1,sizeof(packet),file)==sizeof(packet));fclose(file);
+    /* Report at send time, including a stop button or ageing ADC snapshot. */
+    buttons=2;rtos_line_cal_info(43,packet);
+    assert((packet[13] & 12U)==4U);
+    buttons=0;clock_ms+=101;rtos_line_cal_info(44,packet);
+    assert((packet[13] & 12U)==8U);
+    ticks(1,450,180);
     /* RAM-only application does not write flash, and can be explicitly saved later. */
     complete_candidate();assert(command(RL_CAL_APPLY)==WP_ACK_ACCEPTED && writes==2);
     assert(g_cal_origin==3 && !g_wireless_cal.saved && g_wireless_cal.applied);
