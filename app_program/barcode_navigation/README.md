@@ -1,17 +1,18 @@
 # Buddy3 RTOS barcode adapter
 
-Active main v0.2.2 adds production-only bend assistance and bounded stationary
+RTOS v0.2.2 introduced production-only bend assistance and bounded stationary
 line recovery, plus a 7 mm junction minimum. Archived default/SDK builds retain
 the previous behaviour unless explicitly opted in. The historical descriptions
-below are supplemented by [the current test guide](../../docs/drive_refinements_v0_2_2.md).
+below are supplemented by [the v0.2.2 test guide](../../docs/drive_refinements_v0_2_2.md).
 
 
-Main release APP=rtos_buddy1_4 enables the tested Buddy1–4 adapters plus
-network-supervised powerbank operation and stopped wireless exports. See
-[main setup](../../docs/setup.md) and [architecture](../../docs/architecture.md).
-The checkpoint history below describes the port and USB-supervised test profiles.
+The combined v0.2.13 profile uses `APP=rtos_buddy1_5` with network-supervised
+powerbank operation and stopped wireless logs. See [setup](../../docs/setup.md)
+and [architecture](../../docs/architecture.md).
 
-Experimental Step4. This folder adapts the SDK reference to the already tested
+## Migration checkpoints
+
+The experimental Step 4 checkpoint adapts the SDK reference to the already tested
 Step3B motion foundation. IMU/ramp and Buddy5 are not active in this image.
 
 `barcode_model.h` is hardware-free. `line_service.c` owns ADC0/1/2 and calls it

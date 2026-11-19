@@ -1,18 +1,16 @@
 # Navigation coordinator and request routing
 
-Main v0.2.0 uses the micro T-Kernel production profile. Active task/ownership
+The combined v0.2.13 build uses the micro T-Kernel profile. Active task/ownership
 adapters: [app_program/rtos_bringup](../../../../../app_program/rtos_bringup/README.md).
 See [RTOS architecture](../../../../../docs/architecture.md) and
 [current setup](../../../../../docs/setup.md). The shared logic below remains;
 references to the standalone SDK harness describe the historical adapter.
 
-**PROVISIONAL Buddy1–4 integration. Buddy5 is not integrated.**
-
 ## Ownership and execution
 
 All buddy-facing calls enter through `include/interfaces/nav_api.h`, which names the same shared facade implemented by `motion_api.c`. Calls are non-blocking requests, not a second motor driver. `nav_codec.c` round-trips each request through a validated canonical bit stream before policy handles it.
 
-At a normal run start, Buddy3 owns AUTO navigation. Line following, barcode recognition and junction turning remain Buddy3's navigation work. Buddy4 requests a bounded ramp modifier while Buddy3 remains owner. Buddy5 is not implemented in this image; its future avoidance hook may request a takeover and receive a lease.
+At a normal run start, Buddy3 owns AUTO navigation. Line following, barcode recognition and junction turning remain Buddy3's navigation work. Buddy4 requests a bounded ramp modifier while Buddy3 remains owner. In the combined profile, Buddy 5 requests a takeover when sonar confirms an obstacle on a qualified straight. It submits finite commands under its lease and uses `nav_resume_line` after reacquisition.
 
 A takeover removes output immediately, then waits for measured stillness before a finite move is allowed. Every external drive/turn/resume carries the current lease. Buddy5 may pre-empt an existing owner; stale/incorrect leases and other owners' moves are rejected. Finite motion reports RUNNING, DONE, CANCELLED or FAILED with a command ID. Resume requires the existing stopped/line-present confirmation; an interrupted junction requires explicit abandonment. It clears partial decoder state while preserving a completed pending route according to policy.
 

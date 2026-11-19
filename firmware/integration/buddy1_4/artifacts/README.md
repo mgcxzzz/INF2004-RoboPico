@@ -1,27 +1,16 @@
-# Firmware artifacts
+# RoboPico RTOS firmware downloads
 
-Branch candidate: [v0.2.7 C cleanup](v0_2_7_rtos_cleanup/) on `barr-c-cleanup`.
-Hardware smoke test is pending; [instructions](../../../../docs/coding_cleanup_v0_2_7.md).
-The existing v0.2.6 release remains the tested main baseline.
+| Release | Use |
+| --- | --- |
+| [v0.2.13 Buddy 1–5 combined](v0_2_13_combined/) | Current candidate on `barr-c-combined`. Use its full dashboard bundle. [First hardware tests](../../../../docs/buddy1_5_v0_2_13.md) |
+| [v0.2.12 Buddy 1–4](v0_2_12_caster_assist/) | Tested integration baseline and rollback image. [Test guide](../../../../docs/caster_assist_v0_2_12.md) |
+| [v0.2.11 caster assist](v0_2_11_caster_assist/) | Earlier load compensation candidate |
+| [v0.2.10 network stop](v0_2_10_network_stop/) | Network-stop timing and diagnostics |
+| [v0.2.9 calibration reporting](v0_2_9_calibration_reporting/) | Calibration telemetry handling |
+| [v0.2.8 wireless calibration](v0_2_8_wireless_calibration/) | Dashboard IR calibration |
+| [v0.2.7 BARR-C cleanup](v0_2_7_rtos_cleanup/) | Initial cleanup candidate |
+| [v0.2.6 ramp timing](v0_2_6_rtos/) | Prior Buddy 1–4 RTOS release |
 
-Current: [v0.2.6 ramp snapshot timing correction](v0_2_6_rtos/).
-Use the complete bundle, its START_HERE.md and TEST_CHANGES.md.
-
-Provisional Buddy 1–4 micro T-Kernel integration; Buddy 5 is not integrated.
-Lift/overturn safety replaces production collision classification. Saved Wi-Fi
-and front calibration are retained. The v0.2.2 7 mm junction qualification,
-bend assistance and stationary recovery remain; only junction improvements
-have new user feedback. Physical IMU safety acceptance is still pending.
-v0.2.5 adds stopped-only45/60/75 cruise modes (45 default), bounded wheel-load
-reserve,45-degree/100ms tilt qualification and retained IMU peak diagnostics.
-Use the complete new bundle; both firmware and dashboard changed.
-
-[v0.2.2 drive refinements](v0_2_2_rtos/), [v0.2.1 diagnostics](v0_2_1_rtos/)
-and [v0.2.0 RTOS](v0_2_0_rtos/) remain available for rollback/comparison.
-Older SDK artifacts are historical references.
-
-[v0.2.3 lift/overturn release](v0_2_3_rtos/) and
-[v0.2.4 clock correction](v0_2_4_rtos/) remain available. The v0.2.4 fix
-corrects a false diagnostic stale result; it does not weaken motor interlocks.
-
-[v0.2.5 Demo console and drive modes](v0_2_5_rtos/) remains available for rollback.
+Each release includes its manifest and checksums. The v0.2.13 ZIP includes
+`START_HERE.md`, the matching dashboard and the UF2 under `firmware/`.
+See the [SDK reference](../SDK_REFERENCE.md) for the older CMake build.

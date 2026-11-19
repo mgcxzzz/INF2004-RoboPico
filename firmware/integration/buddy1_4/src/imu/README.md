@@ -1,4 +1,4 @@
-## Active release v0.2.5: lift/overturn safety
+## Lift/overturn safety
 
 The production IMU FIFO additionally feeds an independent integer lift guard,
 using calibrated gravity projection and sustained steep orientation. It can stop
@@ -8,7 +8,8 @@ the Buddy 4 motion API/coordinator. It never writes PWM from acquisition or MQTT
 A qualified event is sticky; fresh upright evidence plus explicit Reset is required.
 Old Impact enum values remain compatible, but production collision classification
 is disabled; transient high dynamics still invalidate terrain measurements.
-Current qualification is45 degrees/100ms or upward+400mg/30ms. Protected freshness
+The accelerometer guard uses calibrated gravity and a dwell check. See
+`imu_lift_guard.h` for the current qualification thresholds. Protected freshness
 checks sample the hardware clock after acquiring the sample snapshot, retaining
 the100ms age limit. C9 codec0x25 reports current state; CA reports greatest valid
 tilt, upward projection and dwell peaks since explicit Reset. Reading diagnostic
@@ -18,13 +19,11 @@ The sections below describe the retained terrain/height baseline.
 
 # IMU and ramp estimation — Buddy 4
 
-Main v0.2.0 uses the micro T-Kernel production profile. Active task/ownership
+The combined v0.2.13 build uses the micro T-Kernel profile. Active task/ownership
 adapters: [app_program/imu_navigation](../../../../../app_program/imu_navigation/README.md).
 See [RTOS architecture](../../../../../docs/architecture.md) and
 [current setup](../../../../../docs/setup.md). The shared logic below remains;
 references to the standalone SDK harness describe the historical adapter.
-
-**PROVISIONAL Buddy1–4 integration. Buddy5 is not integrated.**
 
 ## Acquisition and coordinate system
 

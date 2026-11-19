@@ -54,17 +54,17 @@ def find_drives()->list[Path]:
 def main()->None:
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--drive',type=Path)
     args=parser.parse_args()
-    print('RTOS network setup. Flash the intended Step3A bench or Step3B connected-line UF2 first. Keep the robot stopped.')
+    print('RTOS network setup. Flash the RTOS firmware first and keep the robot stopped.')
     ssid=input('2.4 GHz Wi-Fi / hotspot name: ')
     password=getpass.getpass('Wi-Fi password (hidden; Enter for open network): ')
     broker=input('Laptop broker LAN IPv4 address: ').strip()
     try:payload=settings_uf2(settings_page(ssid,password,broker))
     except (ValueError,UnicodeError):raise SystemExit('Invalid settings: check IPv4 and field lengths. Nothing written.') from None
     print('Close PuTTY. Disconnect power, hold BOOTSEL while reconnecting Pico USB, then release BOOTSEL.')
-    input('When RPI-RP2 appears in File Explorer, press Enter here: ')
+    input('When the RPI-RP2 drive appears, press Enter here: ')
     drives=[args.drive] if args.drive else find_drives()
     if len(drives)!=1 or not bootsel_drive(drives[0]):
-        raise SystemExit('Expected exactly one RP2040 RPI-RP2 drive. Reconnect in BOOTSEL, or rerun with --drive E:/ using its actual letter.')
+        raise SystemExit('Expected one RP2040 RPI-RP2 drive. Reconnect in BOOTSEL, or pass its path with --drive.')
     try:
         with (drives[0]/'NETWORK.UF2').open('wb',buffering=0) as file:
             count=file.write(payload)

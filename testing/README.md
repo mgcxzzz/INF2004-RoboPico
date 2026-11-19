@@ -1,5 +1,9 @@
 # Testing
 
+For the combined RTOS branch, see the [v0.2.13 checks](../docs/testing.md) and
+the [physical obstacle test guide](../docs/buddy1_5_v0_2_13.md). The test record
+structure below applies to the project evidence.
+
 All test records for the project live in this folder. A test only counts as
 done when it is **written down here with its result and a saved log**.
 

@@ -8,7 +8,7 @@ operating-state report. A stale C9 reason is not presented as a current trip,
 and the dashboard never resets or restarts the car automatically.
 
 Use the full release bundle and hard-refresh the page after updating. Start
-with [the diagnostic test/download guide](../docs/diagnostics_v0_2_1.md).
+with [the combined setup and test guide](../docs/buddy1_5_v0_2_13.md).
 
 Run `python tools/dashboard/run_dashboard.py` from repository root or double-click
 Start dashboard.cmd. The helper serves this folder, starts a local Mosquitto
@@ -20,8 +20,9 @@ IPv4 on MQTT TCP1883, not localhost. Car-online requires a fresh heartbeat,
 independently of the browser-to-broker connection. The A–Z map applies through
 MQTT and uses confirmed readback.
 
-The **Obstacle & avoidance** overview shows detection, width, direction and
-line handback using fresh Buddy 5 telemetry from `APP=rtos_buddy1_5`. A fallback
+**Obstacle & avoidance** is the first card in the second row on the desktop
+overview. It shows detection, width, direction and line rejoin using fresh
+Buddy 5 telemetry from `APP=rtos_buddy1_5`. A fallback
 width is labelled **assumed**. **Diagnostics → Buddy 5 obstacle mission** shows
 the takeover gate, motion owner, probe policy, range, direction basis and
 record completeness. Width and direction traces have independent counters.
@@ -39,7 +40,7 @@ Setup instructions are in [the setup guide](../docs/setup.md). Vendored MQTT.js
 and its license are included for offline use.
 
 
-## Front IR calibration (v0.2.8 candidate)
+## Front IR calibration
 
 Open **Diagnostics → Front IR calibration** after a complete Stop. Follow
 [the staged capture and save instructions](../docs/wireless_calibration_v0_2_8.md).

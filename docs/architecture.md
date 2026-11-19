@@ -1,8 +1,11 @@
-# Buddy 1–4 micro T-Kernel architecture
+# Buddy 1–5 micro T-Kernel architecture
 
 Buddy requests -> shared navigation coordinator -> motion controller -> one
 generation-checked normal PWM commit. Buddy 3 owns ordinary line AUTO; Buddy 4
-requests bounded expiring ramp modifiers. Buddy 5 is not linked.
+requests bounded expiring ramp modifiers. In `APP=rtos_buddy1_5`, Buddy 5
+requests a lease for obstacle avoidance and hands control back through the
+same coordinator. The signed Buddy 5 adapter uses the shared wheel controller
+and commit checks.
 
 | Task / owner | Core | Priority | Responsibility |
 |---|---:|---:|---|
@@ -16,6 +19,13 @@ requests bounded expiring ramp modifiers. Buddy 5 is not linked.
 | Motor/ADC/Buddy 2+3 |1|14|100 Hz encoders/control; front ADC plus2ms side polling; one normal output writer|
 | Network application bridge |0|16|Copied commands, mapping/telemetry; never calls lwIP directly|
 | Diagnostics |0|18|Paced optional-host text reports|
+| Obstacle worker/Buddy 5 |1|20|Sonar and servo service, copied obstacle telemetry|
+
+The motion task steps the Buddy 5 mission and services pending sonar during
+the line-following guard. The GPIO IRQ on core 1 timestamps GP17 echo edges
+and handles the existing GP20 emergency cut. Buddy 5 publishes diagnostics via
+the bounded network queue. The MQTT consumer sequences the combined image's
+source-15 frames in dequeue order. See the [obstacle adapter](../app_program/obstacle_navigation/README.md).
 
 The network-supervised production profile allows USB absent. Start/Resume and
 output commit still require valid clocks, released buttons, no latched fault,
@@ -33,13 +43,16 @@ sensor/motor work is added to the network service context.
 
 Existing binary formats are retained. Source15 subtypeC2 adds compact release/
 calibration identity; C3 adds runtime counters for passive wireless evidence.
-The same source 15 sequence allocator is shared with peak/ramp/target packets.
+C2 indicates Buddy 5 capability, and E5 carries its mission status. Probe
+records and bypass events use explicit source-15 layouts.
 See [data representation](data_representation.md) for widths/concurrency.
 
 Feature logic and historical SDK adapters remain under
 firmware/integration/buddy1_4/src/. Active RTOS task adapters are documented in
-app_program/{rtos_bringup,line_navigation,barcode_navigation,network_bridge,imu_navigation}/.
+`app_program/` under the RTOS bring-up, line, barcode, network, IMU and
+obstacle adapters.
 
+## Earlier RTOS release changes
 
 v0.2.1 adds owner-latched encoder/network-stop snapshots and a latest-barcode
 capture with bounded pre-roll. They are observation paths, not new command

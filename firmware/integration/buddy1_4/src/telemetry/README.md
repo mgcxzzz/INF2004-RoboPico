@@ -1,14 +1,19 @@
 # Telemetry and stored diagnostics
 
-Main v0.2.0 uses the micro T-Kernel production profile. Active task/ownership
+The combined v0.2.13 build uses the micro T-Kernel profile. Active task/ownership
 adapters: [app_program/network_bridge](../../../../../app_program/network_bridge/README.md).
 See [RTOS architecture](../../../../../docs/architecture.md) and
 [current setup](../../../../../docs/setup.md). The shared logic below remains;
 references to the standalone SDK harness describe the historical adapter.
 
-**PROVISIONAL Buddy1–4 integration. Buddy5 is not integrated.**
+## Combined profile
 
-## Data paths
+The [dashboard guide](../../../../../dashboard/README.md) describes the
+combined run ZIP and Buddy 5 telemetry. The RTOS data owner and release
+codecs are documented in the [system architecture](../../../../../docs/architecture.md).
+The SDK history and row sizes below describe the standalone SDK harness.
+
+## SDK data paths
 
 The canonical binary packet format is retained. Byte/bit packing is explicit; native C bitfield layout is not a wire protocol. Existing motion, barcode/navigation, summary, diagnostics and stopped-log export layouts remain compatible. `drive_diag.h` stores a58-byte record with raw/filtered ADC, normalized levels, optical/soft/final requested targets, speed/reference/integral, output and timing/flags. `nav_log_storage.h` stores31-byte coordinator events.
 

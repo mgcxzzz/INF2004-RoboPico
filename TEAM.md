@@ -1,10 +1,9 @@
 # Team and subsystems
 
-Main's active production profile is **APP=rtos_buddy1_4**, Buddy 1–4 RTOS
-v0.2.4. Buddy 5 is not integrated. User authorized the migration/shared changes
-and promotion to main. [Active ownership and priorities](docs/architecture.md)
-replace the example task table for this profile. Smaller priority numbers run
-first; all ownership is retained from tested Step 5v0.1.5.
+The combined branch uses **APP=rtos_buddy1_5**, Buddy 1–5 RTOS v0.2.13.
+[Active ownership and priorities](docs/architecture.md) describes the RTOS
+profile. Smaller priority numbers run first. Buddy 5 uses the shared
+coordinator lease for obstacle maneuvers, and its worker runs on core 1.
 
 Core1 motor/ADC is the only normal encoder-drain/PWM owner. Core0 IMU solely
 owns I2C1 GP2/GP3. Safety may only stop/reduce committed output. Buddy requests
@@ -13,11 +12,10 @@ Cross-core data use copied bounded buffers or short locked snapshots; packed
 read-modify-write data are never concurrently mutated without synchronization.
 
 Production is network supervised with powerbank support; historical migration
-checkpoints retain USB-DTR supervision. Motors are off at boot; Start is explicit;
-network reconnect never resumes motion. See docs/setup.md and release STATUS.md.
-The template/example rows below describe the original example profile only,
-not the active Buddy 1–4 runtime. Historical checkpoint guides retain their own
-pin/priority/build records.
+checkpoints retain USB-DTR supervision. Motors are off at boot. Start is
+explicit, including after a network reconnect. See the [setup guide](docs/setup.md)
+and [release status](firmware/integration/buddy1_4/STATUS.md).
+The template rows below describe the original example profile.
 
 The tables are pre-filled with the **example** in `app_program/` (marked
 *example*). Replace those rows with your own as you replace the example code.

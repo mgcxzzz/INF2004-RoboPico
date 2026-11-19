@@ -1,15 +1,16 @@
-# RTOS line-navigation boundary (Step 2)
+# RTOS line-navigation boundary
 
-Active main v0.2.2 adds production-only bend assistance and bounded stationary
+RTOS v0.2.2 introduced production-only bend assistance and bounded stationary
 line recovery, plus a 7 mm junction minimum. Archived default/SDK builds retain
 the previous behaviour unless explicitly opted in. The historical descriptions
-below are supplemented by [the current test guide](../../docs/drive_refinements_v0_2_2.md).
+below are supplemented by [the v0.2.2 test guide](../../docs/drive_refinements_v0_2_2.md).
 
 
-Main release APP=rtos_buddy1_4 enables the tested Buddy1–4 adapters plus
-network-supervised powerbank operation and stopped wireless exports. See
-[main setup](../../docs/setup.md) and [architecture](../../docs/architecture.md).
-The checkpoint history below describes the port and USB-supervised test profiles.
+The combined v0.2.13 profile uses `APP=rtos_buddy1_5` with network-supervised
+powerbank operation and stopped wireless logs. See [setup](../../docs/setup.md)
+and [architecture](../../docs/architecture.md).
+
+## Migration checkpoints
 
 This folder ports the SDK integration's profile 1 execution boundary. It does
 not replace the reference tracker, Continuous V2 steering, PI controllers,
@@ -19,7 +20,7 @@ interfaces and calibration configuration retain the main baseline
 departure-guard edits in junction_logic.h/uturn_logic.h. Packaging checks every
 other shared source byte and exactly reconstructs these two permitted changes.
 
-Current Step 2 version is **v0.1.2**, the angle-only junction experiment. See
+The final Step 2 checkpoint is **v0.1.2**, the angle-only junction experiment. See
 `firmware/migration/micro_tkernel/step_02_line_following/UPDATE_V0_1_2.md`.
 APP=rtos_line and the Step3B APP=rtos_line_wifi define JUNCTION_ANGLE_GATE_ONLY=1; default0 retains the old
 white prerequisite for reference builds. Original steering/calibration, branch

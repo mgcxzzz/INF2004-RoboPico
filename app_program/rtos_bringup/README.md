@@ -1,9 +1,14 @@
-# RTOS Step1 application
+# RTOS bring-up and motor safety
 
-Main release APP=rtos_buddy1_4 enables the tested Buddy1–4 adapters plus
-network-supervised powerbank operation and stopped wireless exports. See
-[main setup](../../docs/setup.md) and [architecture](../../docs/architecture.md).
-The checkpoint history below describes the port and USB-supervised test profiles.
+The combined v0.2.13 profile uses `APP=rtos_buddy1_5` with network-supervised
+powerbank operation and stopped wireless logs. See [setup](../../docs/setup.md)
+and [architecture](../../docs/architecture.md).
+
+The combined motion task commits the coordinator-approved demand. The GPIO
+IRQ also timestamps Buddy 5 sonar echo edges on GP17. See the
+[obstacle adapter](../obstacle_navigation/README.md) for mission ownership.
+
+## Historical Step 1 motor bring-up
 
 `app_main.c` creates the five application tasks and prints USB diagnostics.
 `control.c` owns the kernel command buffer, stop state and motor task. USB

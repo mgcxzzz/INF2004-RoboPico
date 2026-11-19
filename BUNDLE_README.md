@@ -1,5 +1,14 @@
-# Provisional SDK integration bundle
+# RoboPico Buddy 1–5 RTOS bundle
 
-This package contains the complete Buddy1–4 SDK integration source, tests, UF2, dashboard, setup helpers, documentation and selected historical evidence. Buddy5 is not integrated. The original repository's separate micro T-Kernel source tree is not included in this standalone package; its historical guide is retained for context only.
+Open `START_HERE.md` in the extracted v0.2.13 bundle. It gives
+the flash, Wi-Fi, dashboard and first obstacle test steps. In a repository
+checkout, the same guide is [docs/buddy1_5_v0_2_13.md](docs/buddy1_5_v0_2_13.md).
 
-Start with docs/setup.md. The firmware is under firmware/integration/buddy1_4/artifacts/. Its BUILD_MANIFEST.json states the source/dependency baseline, calibration behavior, checks and limits. This restructured image still requires physical acceptance. No Wi-Fi credentials are embedded; runtime provisioning reuses/saves device settings. Use the included root Windows.cmd files or their documented Python equivalents.
+Flash `firmware/robopico_buddy1_5_rtos_v0_2_13.uf2` and launch the bundled
+dashboard. Use **Start dashboard.cmd** on Windows or
+`python3 tools/dashboard/run_dashboard.py` on macOS. The image uses the car's
+saved Wi-Fi settings. See the [setup guide](docs/setup.md) for a changed network.
+
+The bundle includes the combined firmware, dashboard, source, offline tests
+and build manifest. The manifest records the source commit, toolchain, firmware
+hash and RAM checks. End-to-end avoidance still needs a run on the robot.

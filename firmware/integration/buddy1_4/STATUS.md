@@ -1,9 +1,18 @@
-# Provisional Buddy 1–4 RTOS v0.2.6 status
+# Buddy 1–5 RTOS v0.2.13 status
 
-Main is intentionally promoted before the remaining full-circuit checks, per
-user instruction. Buddy 5 remains a blank integration point, not a working feature.
+The combined firmware on `barr-c-combined` is ready for physical integration
+testing. The ARM build, 55 C regression programs, nine Python stages, 36
+obstacle simulations and browser ZIP checks passed. The Buddy 1–4 build profile
+reproduces the published v0.2.12 UF2 byte for byte.
 
-| Feature | Current evidence |
+The Buddy 5 review firmware detected an obstacle at 295 mm on the robot and
+held before width probing. v0.2.13 adjusts how brief steering corrections
+affect the straight-track gate. A full obstacle run must still confirm width
+probe behavior, bypass and line rejoin. See the [v0.2.13 test guide](../../../docs/buddy1_5_v0_2_13.md).
+
+## Earlier Buddy 1–4 hardware evidence
+
+| Feature | Evidence from earlier releases |
 |---|---|
 | Micro T-Kernel clocks/tasks | Step 1 and subsequent captures passed verified clocks and about 100 Hz control |
 | Buddy 1 network/dashboard | Step 3 baseline/reconnect and connected controls passed; release adds network-supervised powerbank use |
@@ -11,7 +20,6 @@ user instruction. Buddy 5 remains a blank integration point, not a working featu
 | Buddy 3 line/barcode/junction | Straight, U-turn, decode/mapped dispatch passed; full L/R rejoin and sharp bends pending |
 | Buddy 4 IMU/ramp | Step 5v0.1.5 flat0 humps; same 10 mm one-sided ramp1 accepted/13 mm maximum; assistance active; clean measured motion timing |
 | Main powerbank policy and wireless stored exports | v0.2.0 user powerbank runs/downloads confirmed; v0.2.1 diagnostic runs received; v0.2.2 drive changes await physical acceptance |
-| Buddy 5 avoidance | NOT integrated |
 
 The successful ramp was one run. User declined another repeat before main
 promotion. The13 mm estimate differs+3 mm from the nominal 10 mm object; this
@@ -27,10 +35,9 @@ service loss or stale delivery stops motion; reconnect never restarts it.
 This acknowledges TCP delivery activity, not application-level execution.
 Heartbeat/release metadata continue when ordinary telemetry is off.
 
-Next: test v0.2.2 on a straight, troublesome bend, supported in-place recovery
-and the previously missed junction, with enough mat for sensors/wheels.
-Preserve failed runs and export before another Start. Further tuning versions
-can branch from this main baseline without changing the archived checkpoints.
+The v0.2.2 follow-up focused on straight tracking, the troublesome bend,
+in-place recovery and the previously missed junction, with enough mat for
+the sensors and wheels.
 
 ## Diagnostic update v0.2.1
 

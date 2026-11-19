@@ -1,15 +1,6 @@
-Current main v0.2.1 adds copied diagnostic snapshots around this unchanged
-
-Active main v0.2.2 adds production-only bend assistance and bounded stationary
-line recovery, plus a 7 mm junction minimum. Archived default/SDK builds retain
-the previous behaviour unless explicitly opted in. The historical descriptions
-below are supplemented by [the current test guide](../../../../../docs/drive_refinements_v0_2_2.md).
-
-feature logic. See [the diagnostic guide](../../../../../docs/diagnostics_v0_2_1.md).
-
 # Motion control — Buddy 2, with coordinator-approved ramp help
 
-## Active v0.2.5 additions
+## RTOS drive modes and load compensation
 
 The production RTOS adapter has a separate RAM cruise mode: Baseline45 (boot
 default), Normal60 and Faster-trial75 mm/s. A stopped-only request passes through
@@ -25,13 +16,16 @@ guards, physical420 cap and slew still apply. Buddy4 ramp modifiers compose with
 this controller through the same output owner. See the
 [release guide and hardware checks](../../../../../docs/demo_console_v0_2_5.md).
 
-Main v0.2.0 uses the micro T-Kernel production profile. Active task/ownership
+The combined v0.2.13 build uses the micro T-Kernel profile. Active task/ownership
 adapters: [app_program/rtos_bringup](../../../../../app_program/rtos_bringup/README.md).
 See [RTOS architecture](../../../../../docs/architecture.md) and
 [current setup](../../../../../docs/setup.md). The shared logic below remains;
 references to the standalone SDK harness describe the historical adapter.
 
-**PROVISIONAL Buddy1–4 integration. Buddy5 is not integrated.**
+RTOS v0.2.12 adds a bounded early PWM assist in low-speed sharp corrections.
+The [v0.2.12 test guide](../../../../../docs/caster_assist_v0_2_12.md) describes
+its limits. In v0.2.13 the Buddy 5 signed adapter invokes the same continuous
+wheel controller with private per-wheel state and the shared output commit.
 
 ## Ordinary control
 

@@ -1,19 +1,14 @@
-Current main v0.2.1 adds copied diagnostic snapshots around this unchanged
-feature logic. See [the diagnostic guide](../../../../../docs/diagnostics_v0_2_1.md).
-
 # Wi-Fi and MQTT — Buddy 1 transport
 
-Main v0.2.0 uses the micro T-Kernel production profile. Active task/ownership
+The combined v0.2.13 build uses the micro T-Kernel profile. Active task/ownership
 adapters: [app_program/network_bridge](../../../../../app_program/network_bridge/README.md).
 See [RTOS architecture](../../../../../docs/architecture.md) and
 [current setup](../../../../../docs/setup.md). The shared logic below remains;
 references to the standalone SDK harness describe the historical adapter.
 
-**PROVISIONAL Buddy1–4 integration. Buddy5 is not integrated.**
-
 ## Ownership and buffers
 
-The working SDK architecture is retained: core0 produces copied binary telemetry and consumes validated command data; core1 owns Wi-Fi, lwIP and MQTT. Subsystem logic never invokes MQTT callbacks directly. Fixed-size TX/RX queues bound memory, copy callback-owned data before returning and count drops. Local provisioning settings are stored separately from motion logs.
+In the RTOS profile, the kernel Wi-Fi service on core 0 owns CYW43, lwIP and MQTT. The application bridge exchanges copied packets with it. The historical SDK build runs the transport on core 1. Subsystem logic never invokes MQTT callbacks directly. Fixed-size TX/RX queues bound memory, copy callback-owned data before returning and count drops. Local provisioning settings are stored separately from motion logs.
 
 Startup loads the saved configuration, joins a2.4GHz access point, waits for an IP address, establishes TCP/MQTT and restores subscriptions after reconnect. TCP connection success alone is not MQTT readiness: CONNACK and SUBACK must complete. `n` exposes link, polling, MQTT stage, counters and provision status. Retry/timeout paths keep the control loop independent.
 

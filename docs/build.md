@@ -1,33 +1,35 @@
-# Build the Buddy1–4 RTOS cleanup candidate
+# Build RoboPico RTOS v0.2.13
 
-Ready-to-flash UF2 and full bundle are in
-firmware/integration/buddy1_4/artifacts/v0_2_7_rtos_cleanup/. Building is optional.
-Main uses micro T-Kernel SMP with the Pico SDK's low-level USB/radio/lwIP
-libraries; it is not the SDK CMake superloop. The build manifest pins actual
-compiler and SDK commits. Populate the SDK's USB/Wi-Fi/lwIP submodules.
+If you are flashing the robot, start with the
+[verified UF2 and dashboard bundle](../firmware/integration/buddy1_4/artifacts/v0_2_13_combined/).
+The manifest records the Arm compiler and Pico SDK revision. Populate that
+SDK's USB, Wi-Fi and lwIP submodules before rebuilding.
 
-With ARM GNU gcc/make available and PICO_SDK_PATH set, from build_make/:
+From `build_make/`, with GNU Arm GCC and make on PATH and `PICO_SDK_PATH` set:
 
 ```bash
-make -j4 APP=rtos_buddy1_4 SMP=1 CONSOLE=usb_cdc WIFI=cyw43 NET=lwip MQTT=1 CRASH_REPORT=0 TEST=0
+make -j4 APP=rtos_buddy1_5 SMP=1 CONSOLE=usb_cdc WIFI=cyw43 NET=lwip MQTT=1 CRASH_REPORT=0 TEST=0
 ```
 
-Output: `build_make/robopico_buddy1_4_rtos_v0_2_7_cleanup.uf2`.
-The Windows workspace helper is `tools/rtos_migration/build_release.sh` from
-Git Bash; it uses the existing sibling .buddy2-tools installation. Other
-machines can use the make command with their own toolchain/SDK paths.
+The result is `build_make/robopico_buddy1_5_rtos_v0_2_13.uf2`. On the project
+Windows build host, use the pinned toolchain in Git Bash from the repository root:
 
-APP=rtos_imu_wifi remains the USB-supervised Step5 checkpoint; the production
-profile additionally defines APP_RTOS_RELEASE. The package gate requires its
-wireless export/runtime symbols, source hashes, reserved-flash bounds,
-static RAM headroom and checked stack frames. No embedded Wi-Fi password.
-Settings and calibration reside beyond the code's enforced1MiB flash ceiling.
+```bash
+bash tools/rtos_migration/build_release.sh APP=rtos_buddy1_5
+```
 
-After committing reviewed source, run `python tools/rtos_migration/package_release.py`
-to package the candidate, complete sources, manifest and checksums. On this branch
-the entry point dispatches to `package_cleanup.py`; the v0.2.6 fingerprint checks
-are retained as historical release code. Mechanical and formatter gates, linked
-features, RAM bounds and archive hashes must pass before packaging succeeds.
+`APP=rtos_buddy1_4` builds the Buddy 1–4 v0.2.12 profile. It reproduced the
+published rollback UF2 byte for byte in validation.
 
-[The old SDK/CMake build](sdk_reference_build.md) is retained for comparison.
-The SDK artifacts at v0.1 are historical, not the current main runtime.
+To package v0.2.13 on the Windows build host, commit the reviewed source first,
+build the combined profile, then run:
+
+```bash
+python tools/rtos_migration/package_combined.py
+```
+
+The packager checks the C standard and formatter, linked features, reserved
+flash bounds, application stack frames, kernel allocation budget and ZIP
+checksums. Saved Wi-Fi and calibration sectors are above the 1 MiB code limit.
+
+[Offline test procedures](testing.md) · [Historical SDK/CMake build](sdk_reference_build.md)

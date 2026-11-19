@@ -1,6 +1,6 @@
 <!doctype html>
 <!--
-  IS28 merged dashboard v0.2.12 (v0.1 simplified: Recording and the Firmware profile card removed).
+  IS28 dashboard v0.2.13 with Buddy 5 obstacle mission telemetry.
   One page for both firmware families on the same broker:
     - RTOS (micro T-Kernel) Buddy1/Buddy4 build: sources 1-8 plus release snapshots (source 15).
     - SDK v2.3 Buddy2/Buddy3 build (+ optional Buddy4 add-on): sources 1, 2, 4, 8, 9-14
@@ -15,7 +15,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>RoboPico Demo Console — v0.2.12</title>
+  <title>RoboPico Demo Console — v0.2.13</title>
 <script src="vendor/mqtt.min.js"></script>
 <script src="vendor/jszip.min.js"></script>
 <script src="is28_schema.js"></script>
@@ -119,7 +119,7 @@
 <body>
 <header>
   <div class="brandline">
-    <h1>RoboPico <span class="ver">Demo Console · v0.2.12</span></h1>
+    <h1>RoboPico <span class="ver">Demo Console · v0.2.13</span></h1>
     <span id="profilePill" class="pill muted">firmware: unknown</span>
   </div>
   <div class="connections">

@@ -1,4 +1,22 @@
-# v0.2.4 focused clock-domain regression
+# v0.2.13 combined integration checks
+
+Run from the repository root with a host C compiler and Node.js:
+
+```sh
+python tools/rtos_migration/run_tests.py
+node --test dashboard/test/test_b5_rtos.js
+node dashboard/test/smoke_b5_panel.js dashboard
+```
+
+The C suite checks straight qualification, simulated mission stages, motion
+leasing, Stop and Pause behavior, and the guarded telemetry queue. The Node
+checks use C-packed fixture frames. With Playwright and Chrome available,
+`node dashboard/test/ui_release.mjs` verifies the combined overview and the
+full and interrupted run ZIP flows over simulated MQTT. Run the C suite first
+to generate its fixtures. See [the physical test guide](buddy1_5_v0_2_13.md)
+for the first obstacle run and logs to collect.
+
+## Historical v0.2.4 clock-domain regression
 
 Run `test_release_imu` and `test_release_exports`, then the actual C release codec
 and four `test_imu_lift_v023.js` cases. C9 layout stays0x23. The actual service

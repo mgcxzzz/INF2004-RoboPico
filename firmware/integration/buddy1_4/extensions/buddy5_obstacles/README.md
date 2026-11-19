@@ -1,5 +1,15 @@
-# Buddy5 integration point — NOT IMPLEMENTED
+# Buddy 5 obstacle algorithms
 
-This provisional image contains no ultrasonic detection/avoidance implementation. The default `buddy_extension_init/poll` hooks in src/app/buddy_hooks.c are no-ops. The example here is host-tested interface demonstration code and is not compiled by default.
+The v0.2.13 combined `APP=rtos_buddy1_5` build links the obstacle algorithms
+in this directory through the [RTOS obstacle adapter](../../../../../app_program/obstacle_navigation/README.md).
+The adapter services sonar and servo, coordinates mission stages, and invokes
+the shared navigation lease and motion APIs.
 
-Buddy5 should poll without blocking, request `nav_request_takeover`, wait for PAUSED/stopped, execute bounded distance/angle commands with the returned lease, and inspect command completion. It should find the line and stop over it before `nav_resume_line`; use explicit abandonment for an interrupted junction. Takeover clears Buddy4 ramp assistance; Buddy3 cannot overwrite the lease. Add a real extension with CMake's BUDDY_EXTENSION_SOURCE option only after integration testing.
+The reviewed modules provide width probing and estimation, direction probing,
+the automatic route, and line reacquisition. The reviewed SDK-derived files
+are covered by [coding exception CEX-08](../../../../../docs/coding_exceptions.md)
+to preserve source parity. See the
+[integration and provenance notes](../../../../../docs/buddy5_rtos_integration.md)
+for the port details and wire formats. The
+[v0.2.13 test guide](../../../../../docs/buddy1_5_v0_2_13.md) records software
+validation and the remaining physical checks.
