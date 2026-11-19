@@ -94,7 +94,7 @@ test('v0.2: attempted width probe whose REF is rejected is HELD; its 150 mm assu
   assert.equal(r[0].basisName, 'PROJECT_RANGE_ASSUMPTION'); assert.equal(r[0].endName, 'REFERENCE');
   const st = d.filter((f) => f.data.kind === 'b5-status').map((f) => f.data);
   const last = st[st.length - 1];
-  assert.equal(last.version, 3);
+  assert.equal(last.version, 4);
   assert.equal(last.stageName, 'hold'); assert.equal(last.reasonName, 'width probe aborted');
   assert.equal(last.widthPolicy, 3); assert.ok(last.widthFailed && !last.widthSkipped);
   assert.equal(last.widthDisplayMm, 150); assert.equal(last.widthBasis, 3);
@@ -128,7 +128,7 @@ test('v0.2: approach steering setpoint is reported and bounded to +/-8 deg', () 
   let seen = 0;
   for (const [name] of scenarios) for (const f of decodeAll(name)) {
     if (f.data.kind !== 'b5-status') continue;
-    assert.equal(f.data.version, 3);
+    assert.equal(f.data.version, 4);
     assert.ok(Math.abs(f.data.steerDeg) <= 8 && f.data.steerMaxDeg <= 8, name);
     if (f.data.steerMaxDeg > 0) seen++;
   }
@@ -208,12 +208,12 @@ test('E5 v3 reports the live width-probe state, side, sample phase and step', ()
   const st = of(decodeAll('185 offset RIGHT 60 -> LEFT'), 'b5-status');
   const during = st.filter((s) => s.stageName === 'width probe');
   assert.ok(during.length > 10);
-  assert.ok(during.every((s) => s.version === 3 && s.probeStateName !== null && s.samplePhaseName !== null));
+  assert.ok(during.every((s) => s.version === 4 && s.probeStateName !== null && s.samplePhaseName !== null));
   const states = new Set(during.map((s) => s.probeStateName)), sides = new Set(during.map((s) => s.probeSide));
   assert.ok(states.has('STEP') || states.has('OUT'), [...states].join(','));
   assert.ok(sides.has('L') && sides.has('R'), [...sides].join(','));
   assert.ok(during.some((s) => s.sampleStep > 0));
-  const bad = new Uint8Array(3 + 61); bad[0] = 0xF2; bad[1] = 61; bad[3 + 4] = 0xE5; bad[3 + 5] = 3; bad[3 + 59] = 0x30;
+  const bad = new Uint8Array(3 + 61); bad[0] = 0xF2; bad[1] = 61; bad[3 + 4] = 0xE5; bad[3 + 5] = 4; bad[3 + 59] = 0x30;
   assert.match(M.decodeFrame(bad).error, /range/);
   const v3In59 = new Uint8Array(3 + 59); v3In59[0] = 0xF2; v3In59[1] = 59; v3In59[3 + 4] = 0xE5; v3In59[3 + 5] = 3;
   assert.match(M.decodeFrame(v3In59).error, /version/);
@@ -252,4 +252,33 @@ test('a run mixing legacy and long width protocols is rejected, never merged', (
   const bytes = Uint8Array.from(scenarios.get('185 offset RIGHT 60 -> LEFT').find((b) => b[1] === 36 && b[3 + 4] === 0xD5));
   bytes[3 + 5] = 1; assert.match(M.decodeFrame(bytes).error, /D5/);
   assert.ok(d5bad);
+});
+
+test('v4 straight gate: allowed only on a straight; blocked close obstacle holds with the gate reason', () => {
+  /* integrated straight mission: the takeover happened with the gate open */
+  const st = of(decodeAll('185 offset RIGHT 60 -> LEFT'), 'b5-status');
+  const guard = st.filter((s) => s.stageName === 'guard' && s.run === 0);
+  assert.ok(guard.some((s) => s.gateReasonName === 'settling on a straight'));
+  const lastGuard = st.filter((s) => s.stageName === 'guard' && s.run === 0).pop();
+  assert.equal(lastGuard.gateReasonName, 'STRAIGHT (open)'); assert.ok(lastGuard.gateOpen);
+  assert.ok(st.some((s) => s.stageName === 'bypass'));
+  const cases = { 'blocked: confirmed bend': 'bend', 'blocked: bend exit': 'bend exit',
+    'blocked: junction mark': 'junction', 'blocked: recovery search': 'line lost / recovery',
+    'blocked: Buddy3 state unavailable': 'Buddy3 state unavailable', 'blocked: stale Buddy3 frames': 'stale Buddy3 state' };
+  for (const [name, gate] of Object.entries(cases)) {
+    const h = of(decodeAll(name), 'b5-status');
+    const l = h.find((s) => s.stageName === 'hold'); /* then the operator Stop cancels it */
+    assert.ok(l, name); assert.equal(l.reason, 19); assert.equal(h[h.length - 1].stageName, 'cancelled');
+    assert.match(l.reasonName, /takeover blocked/); assert.equal(l.blockedGateName, gate, name);
+    assert.ok(!h.some((s) => ['width probe', 'direction probe', 'bypass', 'approach'].includes(s.stageName)), name);
+    assert.equal(of(decodeAll(name), 'b5-width-record').length, 0);
+  }
+  /* every guard status names a reason; older captures say n/a */
+  for (const [name] of scenarios) for (const s of of(decodeAll(name), 'b5-status')) assert.ok(s.gateReasonName, name);
+  const old = of(decodeAll('185 offset RIGHT 60 -> LEFT', legacy), 'b5-status');
+  assert.ok(old.every((s) => s.gateReason === null && /n\/a/.test(s.gateReasonName)));
+  const v3 = new Uint8Array(3 + 61); v3[0] = 0xF2; v3[1] = 61; v3[3 + 4] = 0xE5; v3[3 + 5] = 3; v3[3 + 13] = 0x10;
+  assert.match(M.decodeFrame(v3).error, /reserved/);
+  const v4bad = new Uint8Array(3 + 61); v4bad[0] = 0xF2; v4bad[1] = 61; v4bad[3 + 4] = 0xE5; v4bad[3 + 5] = 4; v4bad[3 + 13] = 0xF0;
+  assert.match(M.decodeFrame(v4bad).error, /gate/);
 });

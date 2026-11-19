@@ -780,6 +780,41 @@ analog_demand_t rtos_line_follow (float delta_time_value)
 #endif
 }
 
+#ifdef APP_RTOS_BUDDY5
+void rtos_line_straight_sample (const analog_demand_t * p_demand,
+                                b5_line_sample_t * p_out)
+{
+    const circuit_t * p_circuit = &g_planner.circuit;
+    const continuous_steering_t * p_steering = &g_planner.steering;
+    *p_out = (b5_line_sample_t){
+        .now_us = g_input.now,
+        .wheel_mm = {(float)g_input.wheel[0], (float)g_input.wheel[1]},
+        .phase = p_circuit->phase,
+        .decision = p_demand->decision,
+        .valid = true,
+        .busy = (p_circuit->busy) || (g_planner.nav.busy),
+        .fault = p_circuit->fault,
+        .stop = p_demand->stop,
+        .line_lost = p_circuit->follower.core.white,
+#if defined(CIRCUIT_SWEEP_SEARCH) || defined(CIRCUIT_STATIONARY_SEARCH) ||     \
+    defined(LINE_STATIONARY_SEARCH)
+        .searching = p_circuit->follower.search.active,
+#endif
+        .junction_mark =
+            ((p_circuit->candidate) || (g_planner.nav.cross_candidate)) ||
+            (g_planner.nav.cross_ready),
+        .route_turn =
+            (0 != g_planner.nav.action) || (0U != g_planner.nav.uturn.stage),
+        .steering = p_steering->active,
+        .bend_pending = (!p_steering->bend_candidate) &&
+                        ((p_steering->bend_demand_duration > 0.0f) ||
+                         (0U != p_steering->bend_direction_bits)),
+        .bend_candidate = p_steering->bend_candidate,
+        .bend_confirmed = p_steering->bend_confirmed,
+        .bend_exiting = p_steering->bend_exiting};
+}
+#endif
+
 void rtos_line_feedback (motion_feedback_t * p_flags_value,
                          const analog_demand_t * p_demand_value)
 {

@@ -357,6 +357,7 @@
     <p id="b5Freshness" class="small muted">No Buddy 5 status (source-15 E5) received.</p>
     <dl>
       <dt>Stage / reason</dt><dd id="b5Stage">–</dd>
+      <dt>Takeover gate (straight only)</dt><dd id="b5Gate">–</dd>
       <dt>Coordinator (car-confirmed)</dt><dd id="b5Owner">–</dd>
       <dt>Front sonar</dt><dd id="b5Range">–</dd>
       <dt>Servo (requested / applied PWM command)</dt><dd id="b5Servo">–</dd>
@@ -1910,6 +1911,11 @@ function renderB5() {
     : `Fresh car-reported status (E5 #${b5.seq}, Pico ${s.uptimeMs} ms, mission run ${s.run}).`;
   $('b5Freshness').className = stale ? 'small bad' : 'small muted';
   $('b5Stage').textContent = `${prefix}${s.stageName}${s.reason ? ` · ${s.reasonName}${s.moduleReason ? ` (module ${s.moduleReason})` : ''}` : ''}${s.armed ? '' : ' · not armed'}${s.rearm ? ' · re-arming (front must clear)' : ''}`;
+  $('b5Gate').textContent = s.gateReason === null ? 'n/a (status before v4: no straight gate)'
+    : `${prefix}${s.gateOpen ? 'ALLOWED — straight' : 'BLOCKED — ' + s.gateReasonName}` +
+      ` · close echoes ${s.gateEchoes}/3 toward ${s.gateOpen ? 'takeover' : 'a NOT_STRAIGHT hold'}` +
+      (s.blockedGateName ? ` · HELD: close obstacle where the manoeuvre may not start (${s.blockedGateName}); width, direction and bypass not run` : '');
+  $('b5Gate').className = s.gateReason !== null && s.reason === 19 ? 'bad' : '';
   $('b5Owner').textContent = `${s.sessionActive ? 'session active' : 'no session'} · owner ${s.ownerName} · ${s.modeName}${s.stopped ? ' · stopped' : ''}`;
   const front = s.servoAppliedDeg !== null && Math.abs(s.servoAppliedDeg) <= 2;
   $('b5Range').textContent = s.pingAgeMs === null ? 'no ping reported yet' : s.pingMm === null
@@ -1966,7 +1972,7 @@ function renderB5() {
   const tag = $('overviewB5Tag');
   tag.textContent = stale ? 'Stale' : s.hold ? 'HOLD' : s.stageName;
   tag.className = 'pill ' + (stale ? 'neutral' : s.hold ? 'bad' : 'ok');
-  $('overviewB5Detect').textContent = stale ? 'Status stale' : s.stage === 1 ? `Guarding${s.pingMm !== null && front ? ` · ${s.pingMm} mm` : ''}` : s.stage === 0 ? 'Idle' : s.stageName;
+  $('overviewB5Detect').textContent = stale ? 'Status stale' : s.stage === 1 ? `Guarding${s.pingMm !== null && front ? ` · ${s.pingMm} mm` : ''}${s.gateReason === null ? '' : s.gateOpen ? ' · takeover allowed' : ` · takeover blocked (${s.gateReasonName})`}` : s.stage === 0 ? 'Idle' : s.reason === 19 ? `Held: obstacle off-straight (${s.blockedGateName})` : s.stageName;
   $('overviewB5Width').textContent = s.widthResult && s.widthDisplayMm !== null
     ? `${s.widthDisplayMm.toFixed(1)} mm${s.widthBasis === 3 ? ' (assumed)' : s.widthBasis === 2 ? ' (assumed completion)' : ' (estimate)'}` : 'Not measured';
   $('overviewB5Direction').textContent = s.basis === 1 ? `${s.sideName} (evidence)` : s.basis === 2 ? `${s.sideName} (default)` : s.basis === 3 ? 'Held' : '–';

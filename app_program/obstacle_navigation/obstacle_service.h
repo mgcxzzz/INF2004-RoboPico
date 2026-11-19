@@ -16,6 +16,7 @@
 
 #include "../rtos_bringup/bringup.h"
 #include "obstacle_policy.h"
+#include "b5_straight.h"
 
 /* Board port (board_obstacle.c). */
 uint32_t board_obstacle_init (void);
@@ -33,7 +34,10 @@ void rb5_service (uint64_t now_us);       /* one rb5_task pass (host tests) */
 
 /* Motion task (core1) hooks, in control.c order. */
 bool rb5_external (void);
-void rb5_frame (uint64_t now_us, const uint16_t level[2]);
+/* p_line: this frame's Buddy3 straight-gate sample, or NULL when Buddy3's
+ * line provider did not run (paused, Buddy5 owner, inactive). */
+void rb5_frame (uint64_t now_us, const uint16_t level[2],
+                const b5_line_sample_t * p_line);
 bool rb5_owned (const motion_output_t * p_demand);
 bool rb5_take_handback (const motion_output_t * p_demand);
 void rb5_power (const motion_output_t * p_demand, const float speed[2],

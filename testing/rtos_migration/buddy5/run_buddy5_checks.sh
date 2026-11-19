@@ -1,7 +1,8 @@
 #!/bin/sh
 # Focused Buddy 5 RTOS candidate host checks (logic only; no hardware).
 # usage: sh testing/rtos_migration/buddy5/run_buddy5_checks.sh <bench_tools/buddy5_sdk> [out_dir]
-# v0.2.12 long-width candidate: SDK width_long_probe v0.2 suites and decoder.
+# v0.2.12 long-width candidate: SDK width_long_probe v0.2 suites and decoder;
+# straight-gate revision: gate unit test and the gate mission scenarios.
 # Needs gcc (ASan/UBSan), python3 and node. Frozen bench folders are read only.
 set -u
 SDK=$1; OUT=${2:-/tmp/b5_checks}; mkdir -p "$OUT"
@@ -13,7 +14,8 @@ fails=0; run() { echo "== $*"; "$@" || { echo "FAILED: $*"; fails=$((fails+1)); 
 # 1. mission simulation + C-packed dashboard fixture (v0.2: steered approach
 #    and width policy need the coordinator extension, as in the APP build)
 STEER="-DMOTION_STEERED_DRIVE=1 -DLINE_CAL_MIN_SPAN=50"
-MSRC="testing/rtos_migration/test_b5_mission.c app_program/obstacle_navigation/b5_mission.c $E/width_probe.c \
+MSRC="testing/rtos_migration/test_b5_mission.c app_program/obstacle_navigation/b5_mission.c \
+  app_program/obstacle_navigation/b5_straight.c $E/width_probe.c \
   $E/width_estimate.c $E/edge_probe.c $E/automatic_bypass.c $E/manual_bypass.c $E/rect_route.c $E/stripe_detect.c \
   $E/profile/obstacle_profile.c $CORE"
 # APP profile: no SDK run-log copy (B5WP_RUN_ARCHIVE=0); the archive-on build
@@ -23,6 +25,11 @@ $CC $STEER -DB5WP_RUN_ARCHIVE=1 -Wall -Wextra -I $B -I app_program/obstacle_navi
 run "$OUT/test_b5_mission" "$ROOT/dashboard/test/fixtures/b5_rtos_mission_c_frames.txt"
 run "$OUT/test_b5_mission_arch" "$OUT/mission_frames_archive_on.txt" > "$OUT/mission_archive_on.log"
 run cmp "$ROOT/dashboard/test/fixtures/b5_rtos_mission_c_frames.txt" "$OUT/mission_frames_archive_on.txt"
+# 1c. straight-only takeover gate with the real Buddy3 bend monitor
+$CC -Wall -Wextra -DCONTINUOUS_BEND_ASSIST=1 -DCIRCUIT_SWEEP_SEARCH=1 -DCIRCUIT_STATIONARY_SEARCH=1 -DLINE_CAL_MIN_SPAN=50 \
+  -I $B -I app_program/obstacle_navigation testing/rtos_migration/test_b5_straight_gate.c \
+  app_program/obstacle_navigation/b5_straight.c -lm -o "$OUT/test_b5_straight_gate"
+run "$OUT/test_b5_straight_gate"
 # 1a. offline decoder: every mission run, replayed by the unchanged SDK v0.2 decoder
 mkdir -p "$OUT/mission_runs"
 python3 -B - "$ROOT/dashboard/test/fixtures/b5_rtos_mission_c_frames.txt" "$OUT/mission_runs" <<'PY'

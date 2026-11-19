@@ -45,6 +45,13 @@ bool rtos_line_prepare (const motion_feedback_t * p_flags, double path,
 bool rtos_line_ready (void);
 void rtos_line_begin (void);
 analog_demand_t rtos_line_follow (float delta_time);
+#ifdef APP_RTOS_BUDDY5
+#include "../obstacle_navigation/b5_straight.h"
+/* Buddy5 takeover gate: copy this frame's Buddy3 state (motion task, right
+ * after rtos_line_follow; observation only, nothing is changed). */
+void rtos_line_straight_sample (const analog_demand_t * p_demand,
+                                b5_line_sample_t * p_out);
+#endif
 void rtos_line_feedback (motion_feedback_t * p_flags,
                          const analog_demand_t * p_demand);
 line_envelope_t rtos_line_power (const motion_output_t * p_output,

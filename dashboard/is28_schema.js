@@ -540,6 +540,7 @@
    * All are source-15 layouts dispatched by EXACT payload length AND marker
    * byte 4 (none has length 28, so the ramp-assist rule is unaffected):
    *  E5 mission status v1 (54) / v2 (59) / v3 (61, v0.2.12 long-width candidate)
+   *     / v4 (61, + straight-only takeover gate: flags b12-15, byte 59 b6-7)
    *  Width, two protocols, never mixed within one run:
    *    legacy short probe (v0.1/v0.2): D1/D2 v4 (56/58), D3 v1 (58), D4 v1 (32)
    *    long probe (SDK width_long_probe v0.2): D1/D2 v10, D3 v3 (rule 2, basis 4
@@ -557,7 +558,10 @@
     'width probe could not start', 'no line evidence after alignment search', 'line lost during approach',
     'approach range not reached', 'direction probe aborted', 'direction unknown/contradictory',
     'direction probe could not start', 'fresh range unusable', 'bypass blocked (range/clearance)',
-    'bypass/rejoin fault'];
+    'bypass/rejoin fault', 'close obstacle while takeover blocked (not a straight)'];
+  /* E5 v4 flags b12-15: why Buddy5 may or may not take over here. Sonar
+   * still treats any close reflector as a possible obstacle. */
+  const B5M_GATE = ['unknown', 'STRAIGHT (open)', 'settling on a straight', 'stale Buddy3 state', 'Buddy3 state unavailable', 'bend entry', 'bend', 'bend exit', 'curve (encoder heading)', 'junction', 'turn', 'line lost / recovery', 'other'];
   const B5M_BASIS = ['none', 'probe evidence', 'DEFAULT side (healthy no preference)', 'held (no movement)'];
   const B5M_SIDE = ['none', 'right', 'left'];
   /* E5 v2 byte 19. "skipped" is a DELIBERATE no-attempt on a clean stopped
@@ -617,19 +621,21 @@
   }
   function decodeB5MissionStatus(p) {
     if (p[4] !== 0xE5 || !((p.length === 54 && p[5] === 1) || (p.length === 59 && p[5] === 2) ||
-                           (p.length === 61 && p[5] === 3))) {
+                           (p.length === 61 && (p[5] === 3 || p[5] === 4)))) {
       if ((p.length === 54 || p.length === 59 || p.length === 61) && p[4] === 0xE5)
         return { error: 'unsupported Buddy5 status version ' + p[5] + ' for length ' + p.length };
       return { error: 'unknown Buddy5 status layout' };
     }
-    const v2 = p[5] >= 2, v3 = p[5] === 3;
+    const v2 = p[5] >= 2, v3 = p[5] >= 3, v4 = p[5] === 4;
     const flags = u16(p, 12);
-    if ((flags & 0xf000) || (!v2 && p[19] !== 0)) return { error: 'Buddy5 status reserved bits are nonzero' };
+    if ((!v4 && (flags & 0xf000)) || (!v2 && p[19] !== 0) || (v3 && !v4 && (p[59] & 0xc0)))
+      return { error: 'Buddy5 status reserved bits are nonzero' };
+    if (v4 && (flags >> 12) >= B5M_GATE.length) return { error: 'Buddy5 status gate reason out of range' };
     if (v2 && (p[19] >= B5M_WIDTH_POLICY.length || Math.abs(i8(p, 54)) > 80 || p[55] > 80))
       return { error: 'Buddy5 status v2 field out of range' };
     if (p[8] >= B5M_STAGE.length || p[9] >= B5M_REASON.length || p[25] > 3 || p[28] > 2 || p[24] > 2)
       return { error: 'Buddy5 status field out of range' };
-    if ((!v3 && p[30] > 3) || p[30] > 4 || (v3 && (((p[59] >> 4) & 3) > 2 || (p[59] & 0xc0))))
+    if ((!v3 && p[30] > 3) || p[30] > 4 || (v3 && ((p[59] >> 4) & 3) > 2))
       return { error: 'Buddy5 status width field out of range' };
     const co = p[11], pingMm = u16(p, 14), pingAge = u16(p, 16);
     const policy = v2 ? p[19] : null;
@@ -662,9 +668,12 @@
       approachLegs: p[52] & 15, alignSteps: p[52] >> 4, discarded: p[53],
       widthLabel: b5WidthLabel(p[30]),
       probeState: v3 ? p[59] & 15 : null, probeStateName: v3 ? B5WP_STATE[p[59] & 15] : null,
-      probeSide: v3 ? ['none', 'L', 'R'][(p[59] >> 4) & 3] : null,
+      probeSide: v3 ? ['none', 'L', 'R', '?'][(p[59] >> 4) & 3] : null,
       samplePhase: v3 ? p[60] & 7 : null, samplePhaseName: v3 ? B5WP_PHASE[p[60] & 7] : null,
-      sampleStep: v3 ? p[60] >> 3 : null };
+      sampleStep: v3 ? p[60] >> 3 : null,
+      gateReason: v4 ? flags >> 12 : null, gateReasonName: v4 ? B5M_GATE[flags >> 12] : 'n/a (status before v4)',
+      gateOpen: v4 ? (flags >> 12) === 1 : null, gateEchoes: v4 ? p[59] >> 6 : null,
+      blockedGateName: v4 && p[9] === 19 ? (B5M_GATE[p[10]] || '?') : null };
   }
   function decodeB5WidthRecord(p) {
     const protocol = b5WidthProtocol(p);
@@ -1071,7 +1080,7 @@
                 detectProfile, effectiveProfile,
                 decodeB5Source15, decodeB5MissionStatus, decodeB5WidthRecord, decodeB5WidthSummary,
                 decodeB5WidthResult, decodeB5WidthRetry, decodeB5WidthLimits, decodeB5DirectionRecord, decodeB5DirectionSummary,
-                decodeB5Event, B5Tracker, B5M_STAGE, B5M_REASON, B5M_BASIS };
+                decodeB5Event, B5Tracker, B5M_STAGE, B5M_REASON, B5M_BASIS, B5M_GATE };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.IS28 = api;
 })(typeof self !== 'undefined' ? self : this);

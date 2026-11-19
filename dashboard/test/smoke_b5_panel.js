@@ -39,7 +39,7 @@ for (const l of lines) {
   if (!f.data || !f.data.kind || !f.data.kind.startsWith('b5-')) continue;
   ctx.__rx(f.data, f);
   if (f.data.kind === 'b5-status')
-    out[cur] = ['b5WidthPolicy', 'b5Width', 'b5Steer', 'b5WidthRaw', 'b5WidthProbe', 'b5WidthLimits', 'b5WidthVerify']
+    out[cur] = ['b5WidthPolicy', 'b5Width', 'b5Steer', 'b5WidthRaw', 'b5WidthProbe', 'b5WidthLimits', 'b5WidthVerify', 'b5Gate']
       .map((id) => el(id).textContent);
 }
 for (const k of ['185 offset RIGHT 60 -> LEFT', '100 offset RIGHT 35 -> LEFT', 'sonar faults in direction probe',
@@ -66,4 +66,7 @@ assert.match(sp, /^skipped/); assert.match(sw, /ASSUMED.*deliberately skipped/);
 assert.match(out['start 250 mm: clean skip'][5], /^no width probe in this mission/);
 assert.match(out['start 250 mm: clean skip'][6], /^no width probe in this mission/);
 assert.match(out['approach push 3.0deg -2mm steered'][2], /largest 8\.0° of ±8\.0° · at bound/);
+for (const k of ['blocked: confirmed bend', 'blocked: junction mark']) console.log(k, '\n   ', out[k][7]);
+assert.match(out['blocked: confirmed bend'][7], /^BLOCKED — bend · close echoes \d\/3 toward a NOT_STRAIGHT hold · HELD: close obstacle where the manoeuvre may not start \(bend\)/);
+assert.match(out['blocked: junction mark'][7], /HELD: .*\(junction\)/);
 console.log('PASS: Buddy5 panel smoke');

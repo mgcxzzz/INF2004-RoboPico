@@ -20,6 +20,7 @@
 #include "extensions/buddy5_obstacles/width_probe.h"
 #include "extensions/buddy5_obstacles/edge_probe.h"
 #include "src/line_following/line_logic.h"
+#include "b5_straight.h"
 #ifndef MOTION_STEERED_DRIVE
 #error "b5_mission needs the coordinator's lease-holder drive steering"
 #endif
@@ -63,6 +64,9 @@ typedef enum
     B5MI_R_RANGE,          /* fresh range unusable for the next stage       */
     B5MI_R_BYPASS_BLOCKED, /* plan refused (range/clearance): BLOCKED       */
     B5MI_R_BYPASS_FAULT,   /* bypass/rejoin fault (its own reason recorded) */
+    B5MI_R_NOT_STRAIGHT,   /* close obstacle while the takeover gate was
+                              closed: stopped, no probe or bypass; module
+                              reason = gate reason (b5_straight_reason_t) */
     B5MI_R_COUNT
 } b5mi_reason_t;
 
@@ -152,7 +156,12 @@ typedef struct
     uint64_t sub_since;
     unsigned sub;
     /* Sonar watch (guard / approach). */
-    unsigned confirm;
+    unsigned confirm;         /* fresh close echoes while the gate is open */
+    unsigned close_count;     /* consecutive close echoes, gate ignored    */
+    uint64_t taken_requested; /* request time of the ping just taken      */
+    /* Straight-only takeover gate (Buddy3 frames, same task). */
+    b5_straight_t straight;
+    uint8_t gate_reason; /* b5_straight_reason_t at the last guard step */
     unsigned fault_run;
     bool ping_pending;
     uint64_t last_ping;
@@ -210,6 +219,10 @@ bool b5_mission_begin (b5_mission_t * p_mission, uint64_t now);
 /* Copy one line observation (normalised 0..1000) for this motion frame. */
 void b5_mission_observe (b5_mission_t * p_mission, uint64_t now, uint16_t left,
                          uint16_t right);
+/* Copy one Buddy3 line-following frame into the takeover gate (motion
+ * task, before b5_mission_tick). */
+void b5_mission_line (b5_mission_t * p_mission,
+                      const b5_line_sample_t * p_sample);
 /* One decision step, right after motion_update(). Bounded, nonblocking. */
 void b5_mission_tick (b5_mission_t * p_mission, uint64_t now);
 /* Stop/Pause/E-stop/network loss: cancel whichever module runs. */

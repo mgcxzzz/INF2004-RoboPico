@@ -1,4 +1,4 @@
-# Buddy 5 RTOS integration (APP=rtos_buddy1_5, v0.2.12 long-width candidate 0.1)
+# Buddy 5 RTOS integration (APP=rtos_buddy1_5, v0.2.12 long-width straight-gate candidate 0.2)
 
 Experimental candidate on the v0.2.12 release. **Not physically validated.**
 `APP=rtos_buddy1_4` is byte-identical to a clean v0.2.12 build (same
@@ -15,9 +15,18 @@ Buddy 5 adapter and mission; the obstacle algorithms are ported SDK modules in
 ## Sequence (one Buddy 5 lease from the takeover to the hand-back)
 
 1. **Guard** (line following, Buddy 3 owns AUTO): servo centred, one ping per
-   60 ms. Three consecutive clean echoes ≤ 300 mm → `nav_request_takeover`.
-   Nothing beyond 300 mm triggers. After a hand-back the front must read
-   clear (> 300 mm or no return) for 1 s before the guard re-arms.
+   60 ms. **Straight-only takeover** (`b5_straight.c`): the takeover is
+   requested only while Buddy 3 has been following a straight for the last
+   200 mm and 300 ms (no bend state, junction, turn, loss or recovery; ≤ 6°
+   encoder heading change), and only after three consecutive clean echoes
+   ≤ 300 mm from pings requested after the gate opened. Losing the gate
+   discards the count. Three close echoes while the gate is closed stop the
+   robot and hold `NOT_STRAIGHT` (no probe, no bypass; Stop ends it). The
+   gate decides where the manoeuvre may start; sonar still treats any close
+   reflector, including a person's leg, as an obstacle. Nothing beyond 300 mm
+   triggers. After a hand-back the front must read clear (> 300 mm or no
+   return) for 1 s before the guard re-arms, and the gate needs fresh
+   straight evidence again.
 2. **Width policy, then width probe** (SDK width_long_probe v0.2,
    unchanged). Once stopped, a fresh stationary triplet (three clean echoes
    within 15 mm, two attempts) decides the policy (E5 byte 19):
@@ -90,7 +99,8 @@ applied PWM command, not a measured horn angle. Limit ±46°.
 ## Telemetry
 
 Source 15, all dispatched by exact length and marker byte: E5 mission status
-(version 3, 61 bytes: v2 plus the live width-probe state/side/phase/step;
+(version 4, 61 bytes: v2 plus the live width-probe state/side/phase/step and
+the takeover gate reason and echo count;
 every 500 ms and on stage change; the dashboard still decodes the 54/59-byte
 v1/v2 layouts), width D1/D2 v10, D3 v3, D4 v3 and the D5 v2 per-side limits
 frame (sent after D2),

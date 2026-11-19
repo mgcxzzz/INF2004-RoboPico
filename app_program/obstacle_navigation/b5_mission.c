@@ -77,6 +77,7 @@ static void enter (b5_mission_t * p_mission, b5mi_stage_t stage, uint64_t now)
     p_mission->sub = 0U;
     p_mission->evidence_timing = false;
     p_mission->confirm = 0U;
+    p_mission->close_count = 0U;
     p_mission->ping_pending = false;
     p_mission->progress_id = 0U;
 }
@@ -168,6 +169,7 @@ static bool watch_ping (b5_mission_t * p_mission, uint64_t now,
     if (p_mission->sensor.take(p_ping))
     {
         taken = true;
+        p_mission->taken_requested = p_mission->ping_requested;
         p_mission->ping_pending = false;
         p_mission->last_ping = now;
         if (B5_PING_FAULT == p_ping->cls)
@@ -422,9 +424,19 @@ static void guard_tick (b5_mission_t * p_mission, motion_status_t status,
     bool following =
         (MOTION_AUTO == status.mode) && (MOTION_BUDDY3 == status.owner);
     bool taken = watch_ping(p_mission, now, &ping);
+    /* Straight-only takeover gate, evaluated while Buddy3 still owns the
+     * motion. Losing it discards every qualifying echo counted so far. */
+    uint8_t gate = b5_straight_check(&p_mission->straight, now);
+    bool eligible = (B5S_STRAIGHT == gate);
+    p_mission->gate_reason = gate;
+    if (!eligible)
+    {
+        p_mission->confirm = 0U;
+    }
     if (!following)
     {
         p_mission->confirm = 0U;
+        p_mission->close_count = 0U;
         return;
     }
     if (taken)
@@ -459,7 +471,20 @@ static void guard_tick (b5_mission_t * p_mission, motion_status_t status,
         }
         else
         {
-            p_mission->confirm = near ? p_mission->confirm + 1U : 0U;
+            /* Only a ping REQUESTED after the gate opened qualifies, so an
+             * echo from before (or across) a curve never carries over. */
+            bool fresh = (eligible) && (p_mission->taken_requested >=
+                                        p_mission->straight.open_us);
+            p_mission->close_count = near ? p_mission->close_count + 1U : 0U;
+            p_mission->confirm = (near && fresh) ? p_mission->confirm + 1U : 0U;
+            if ((!eligible) &&
+                (p_mission->close_count >= (unsigned)B5MI_TRIGGER_CONFIRM))
+            {
+                /* Close obstacle where the manoeuvre must not start: stop
+                 * and hold; width, direction and bypass stay blocked. */
+                hold(p_mission, B5MI_R_NOT_STRAIGHT, gate, now);
+                return;
+            }
             if (p_mission->confirm >= (unsigned)B5MI_TRIGGER_CONFIRM)
             {
                 uint32_t lease = 0U;
@@ -995,9 +1020,18 @@ bool b5_mission_begin (b5_mission_t * p_mission, uint64_t now)
     p_mission->observed = now;
     p_mission->used_observation = 0U;
     reset_results(p_mission);
+    b5_straight_reset(&p_mission->straight, B5S_UNKNOWN);
+    p_mission->gate_reason = B5S_UNKNOWN;
+    p_mission->close_count = 0U;
     servo_front(p_mission, now);
     enter(p_mission, B5MI_GUARD, now);
     return true;
+}
+
+void b5_mission_line (b5_mission_t * p_mission,
+                      const b5_line_sample_t * p_sample)
+{
+    b5_straight_step(&p_mission->straight, p_sample);
 }
 
 void b5_mission_observe (b5_mission_t * p_mission, uint64_t now, uint16_t left,
@@ -1169,7 +1203,8 @@ const char * b5_mission_reason_name (unsigned reason)
                                                      "DIRECTION_BUSY",
                                                      "RANGE",
                                                      "BYPASS_BLOCKED",
-                                                     "BYPASS_FAULT"};
+                                                     "BYPASS_FAULT",
+                                                     "NOT_STRAIGHT"};
     return reason < (unsigned)B5MI_R_COUNT ? names[reason] : "INVALID";
 }
 

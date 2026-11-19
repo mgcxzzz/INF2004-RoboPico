@@ -17,6 +17,8 @@
 #include "extensions/buddy5_obstacles/edge_probe_pack.h"
 #include "extensions/buddy5_obstacles/b5_event_pack.h"
 #include "b5_mission_pack.h"
+#include "src/line_following/circuit_logic.h"
+#include "src/line_following/symmetric_logic.h"
 
 #define PI_F 3.14159265358979323846f
 #define FRAME_US 10000u
@@ -44,6 +46,7 @@ static unsigned g_contacts;
 static float g_min_clear = 1e9f;
 
 static uint64_t now_fn(void *p) { (void)p; return g_now; }
+static uint64_t g_ping_latency_us = 3000, g_req_at; /* request -> result */
 
 /* ---- geometry ---- */
 static void fwd(float h, float *fx, float *fy) { *fx = -sinf(h); *fy = cosf(h); }
@@ -77,8 +80,17 @@ static void check_contact(void) {
         }
 }
 /* Cone model: nearest box-outline point within +-7.5 deg of the beam. */
+static int (*g_ping_hook_fwd)(float path);
 static b5_ping_t measure(void) {
     b5_ping_t p = {0};
+    if (g_ping_hook_fwd) {
+        int r = g_ping_hook_fwd((float)((g_wheel[0] + g_wheel[1]) / 2));
+        if (r >= 0) {
+            if (r > 0) { p.cls = B5_PING_ECHO; p.range_mm = (uint32_t)r; p.width_us = (uint32_t)(r * 2000 / 343); }
+            else { p.cls = B5_PING_NO_RETURN; p.range_mm = B5_RANGE_FAR_MM; p.width_us = 30000; }
+            return p;
+        }
+    }
     float fx, fy; fwd(g_heading, &fx, &fy);
     float sx = g_x + 62 * fx, sy = g_y + 62 * fy;
     float beam = g_heading - (float)g_servo.applied / 10.0f * PI_F / 180.0f;
@@ -143,13 +155,14 @@ static void p_angle(int dd, uint64_t now) { b5_servo_slew_request(&g_servo, dd, 
 static bool p_settled(uint64_t now) { return b5_servo_slew_settled(&g_servo, now); }
 static bool p_request(uint64_t now) {
     if (g_busy || g_ready || now < g_next_ping) return false;
-    g_busy = true; g_next_ping = now + 60000; g_ready_at = now + 3000;
+    g_busy = true; g_next_ping = now + 60000; g_ready_at = now + g_ping_latency_us; g_req_at = now;
     g_result = measure();
     return true;
 }
+static bool g_took;            /* a ping was taken in this frame */
 static bool p_take(b5_ping_t *out) {
     if (!g_ready) return false;
-    *out = g_result; g_ready = false; return true;
+    *out = g_result; g_ready = false; g_took = true; return true;
 }
 static void p_cancel(void) { g_busy = g_ready = false; }
 static int p_applied(void) { return g_servo.applied; }
@@ -229,6 +242,8 @@ static void dump_status(void) {
                                  ((m->width.sample_phase == B5WP_PH_REF || m->width.sample_phase == B5WP_PH_FINAL ||
                                    m->width.sample_phase == B5WP_PH_MID) ? 0u : ((m->width.cur ? 2u : 1u) << 4))),
         .width_sample = (uint8_t)((m->width.sample_phase & 7u) | ((m->width.sample_step > 31u ? 31u : m->width.sample_step) << 3)),
+        .gate_reason = m->gate_reason,
+        .gate_echoes = (uint8_t)(m->gate_reason == B5S_STRAIGHT ? m->confirm : m->close_count),
         .width_reason = wr ? m->width.result.reason : 0,
         .width_display_mm100 = wr ? m->width.result.display_mm100 : skip ? B5WE_MID_MM100 : B5MP_NONE,
         .width_raw_mm100 = wr ? m->width.result.raw_mm100 : B5MP_NONE,
@@ -243,6 +258,18 @@ static void dump_status(void) {
     hexline(f, sizeof f);
 }
 
+/* ---- straight takeover gate inputs (scenario hooks) ---- */
+typedef void (*line_hook_t)(b5_line_sample_t *s, float path);
+typedef int (*ping_hook_t)(float path); /* >0 echo mm, 0 no return, <0 geometric */
+static line_hook_t g_line_hook;
+static ping_hook_t g_ping_hook;
+static bool g_no_line_samples, g_appear_when_open;
+typedef struct { uint64_t req_us, open_us; bool near; uint8_t gate; unsigned confirm, close; unsigned stage; } take_log_t;
+static take_log_t g_takes[4096];
+static unsigned g_ntakes;
+static bool g_drop_seen;               /* gate lost between two takes */
+static unsigned g_drop_before, g_drop_after;
+
 /* ---- simulation ---- */
 static unsigned g_stage_mask;
 static void frame(void) {
@@ -254,15 +281,36 @@ static void frame(void) {
     f.speed_mm_s[0] = g_speed[0]; f.speed_mm_s[1] = g_speed[1];
     f.line_level[0] = sim_level(-8); f.line_level[1] = sim_level(8);
     motion_status_t s = nav_get_status();
-    if (s.session_active && s.mode == MOTION_AUTO && s.owner == MOTION_BUDDY3) {
+    bool follow = s.session_active && s.mode == MOTION_AUTO && s.owner == MOTION_BUDDY3;
+    /* Buddy3 frame for the takeover gate (control.c: copied right after the
+     * provider ran). The sim line is straight; hooks inject bends etc. */
+    float path = (float)((g_wheel[0] + g_wheel[1]) / 2);
+    b5_line_sample_t ls = {.now_us = g_now, .wheel_mm = {(float)g_wheel[0], (float)g_wheel[1]},
+                           .phase = C_FOLLOW, .decision = 25, .valid = follow, .steering = true};
+    if (follow) {
         analog_demand_t d = analog_demand(&g_b3, &g_ident, f.line_level[0], f.line_level[1], g_now,
                                           (uint32_t)fabs((g_wheel[0] + g_wheel[1]) / 2));
         int16_t l = d.stop ? 45 : d.target[0], r = d.stop ? 45 : d.target[1];
+        ls.decision = 25; /* continuous steering output code (small corrections) */
         (void)nav_submit_navigation(MOTION_BUDDY3, l, r);
     }
+    if (g_line_hook && follow) g_line_hook(&ls, path);
     motion_output_t o = motion_update(&f);
     b5_mission_observe(&g_mission, g_now, f.line_level[0], f.line_level[1]);
+    if (!(g_no_line_samples && path >= 100)) /* stale: frames stop after 100 mm */
+        b5_mission_line(&g_mission, follow ? &ls : &(b5_line_sample_t){.now_us = g_now});
+    if (g_appear_when_open && g_mission.straight.open && !g_box.present) g_box.present = true;
+    g_took = false;
+    unsigned c_before = g_mission.confirm; uint8_t gate_before = g_mission.gate_reason;
     b5_mission_tick(&g_mission, g_now);
+    if (gate_before == B5S_STRAIGHT && g_mission.gate_reason != B5S_STRAIGHT && !g_took && !g_drop_seen) {
+        g_drop_seen = true; g_drop_before = c_before; g_drop_after = g_mission.confirm;
+    }
+    if (g_took && g_ntakes < sizeof g_takes / sizeof g_takes[0])
+        g_takes[g_ntakes++] = (take_log_t){g_mission.taken_requested, g_mission.straight.open_us,
+                                           g_result.cls == B5_PING_ECHO && g_result.range_mm <= 300,
+                                           g_mission.gate_reason, g_mission.confirm, g_mission.close_count,
+                                           g_mission.stage};
     g_stage_mask |= 1u << g_mission.stage;
     drain();
     if ((g_now / FRAME_US) % 50 == 0) dump_status();
@@ -292,6 +340,12 @@ typedef struct {
     unsigned hold_frames;  /* extra frames to observe a HOLD (default 100) */
     bool lose_line_in_approach, cancel;
     unsigned cancel_stage;
+    line_hook_t line_hook;   /* Buddy3 state injected into the gate frames */
+    ping_hook_t ping_hook;   /* scripted guard pings (>=0) or geometric (<0) */
+    bool no_line_samples;    /* Buddy3 frames stop arriving: stale */
+    bool appear_when_open;   /* box placed only once the gate first opens */
+    bool stop_at_takeover;   /* end the run once HALTING is entered */
+    unsigned ping_latency_us; /* request -> result (default 3 ms) */
 } scenario_t;
 
 typedef struct {
@@ -310,7 +364,11 @@ static outcome_t run(const scenario_t *sc) {
     g_fault_pings = 0; g_noise_pings = 0; g_line_present = true; g_b3 = (analog_tracker_t){0}; g_contacts = 0; g_min_clear = 1e9f;
     g_stage_mask = 0;
     g_box = (box_t){.cx = sc->cx, .face_y = sc->face_y, .width = sc->width, .depth = 150,
-                    .present = sc->width > 0};
+                    .present = sc->width > 0 && !sc->appear_when_open};
+    g_line_hook = sc->line_hook; g_ping_hook = sc->ping_hook; g_ping_hook_fwd = sc->ping_hook;
+    g_no_line_samples = sc->no_line_samples; g_appear_when_open = sc->appear_when_open && sc->width > 0;
+    g_ntakes = 0; g_drop_seen = false;
+    g_ping_latency_us = sc->ping_latency_us ? sc->ping_latency_us : 3000;
     b5_servo_slew_init(&g_servo, 460, B5_SERVO_STEP_MS, B5_SERVO_SPEED_DD_S, B5_SERVO_SETTLE_MS, g_now);
     motion_port_t port = {.now_us = now_fn};
     motion_init(&port);
@@ -356,6 +414,7 @@ static outcome_t run(const scenario_t *sc) {
             assert(g_speed[0] == 0 && g_speed[1] == 0);
             break;
         }
+        if (sc->stop_at_takeover && st == B5MI_HALTING) break;
         if (prev_stage == B5MI_BYPASS && st == B5MI_GUARD) {
             ++out.handbacks;
             for (int i = 0; i < 300; ++i) frame(); /* line following resumes */
@@ -393,6 +452,123 @@ static outcome_t run(const scenario_t *sc) {
            out.d0, out.bypass_range, g_contacts, g_min_clear, out.end_x, out.end_y,
            out.end_heading_deg, g_stage_mask);
     return out;
+}
+
+/* ---- straight-only takeover gate scenarios ---- */
+static void hook_bend(b5_line_sample_t *s, float path) { (void)path; s->bend_candidate = s->bend_confirmed = true; }
+static void hook_bend_exit(b5_line_sample_t *s, float path) { (void)path; s->bend_candidate = s->bend_exiting = true; }
+static void hook_junction(b5_line_sample_t *s, float path) { (void)path; s->junction_mark = true; }
+static void hook_recovery(b5_line_sample_t *s, float path) { (void)path; s->searching = true; s->decision = SYM_RECOVER_LEFT; }
+static void hook_invalid(b5_line_sample_t *s, float path) { (void)path; s->valid = false; }
+/* Carry-over: a bend until 300 mm with two close echoes inside it, then a
+ * straight; the gate opens after 200 mm of straight travel. Close echoes
+ * start one or two pings BEFORE the gate opens (requested while closed). */
+static void hook_carry(b5_line_sample_t *s, float path) {
+    if (path < 300) { s->bend_candidate = s->bend_confirmed = true; }
+    /* a close echo IN FLIGHT across the opening (requested while closed) */
+    if (g_mission.straight.open && g_busy && g_req_at < g_mission.straight.open_us) {
+        g_result.cls = B5_PING_ECHO; g_result.range_mm = 280;
+    }
+}
+static unsigned g_script_near;
+static int ping_carry(float path) {
+    if (path >= 250 && path < 300 && g_script_near < 2) { ++g_script_near; return 280; }
+    if (g_mission.straight.open) return 280;
+    /* the gate opens at ~207 mm of straight; 1-2 pings requested in the last
+     * 4 mm before it are close (fewer than three: no NOT_STRAIGHT hold) */
+    if (g_mission.gate_reason == B5S_SETTLING && g_mission.straight.travel_mm >= 203.0f) return 280;
+    return 0;
+}
+/* Re-qualify: straight; two qualifying close echoes after the gate opens,
+ * then (before any far echo is taken) a bend entry for 60 mm with far pings,
+ * then the straight again: three fresh echoes after the gate re-opens. */
+static unsigned g_req_phase1, g_req_state;
+static float g_req_bend_end;
+static void hook_requalify(b5_line_sample_t *s, float path) {
+    if (g_req_state == 0 && g_mission.confirm >= 2) { g_req_state = 1; g_req_bend_end = path + 60; }
+    if (g_req_state == 1) { if (path < g_req_bend_end) s->bend_pending = true; else g_req_state = 2; }
+}
+static int ping_requalify(float path) {
+    if (g_req_state == 0) return (g_mission.straight.open && path >= 420 && g_req_phase1 < 2) ? (++g_req_phase1, 280) : 0;
+    if (g_req_state == 1) return 0;
+    return g_mission.straight.open ? 280 : 0;
+}
+static void gate_scenarios(unsigned *p_failures) {
+#define GCHECK(c) do { if (!(c)) { printf("  FAIL %s:%d %s\n", __FILE__, __LINE__, #c); ++*p_failures; } } while (0)
+    const unsigned probing = (1u << B5MI_WIDTH) | (1u << B5MI_ALIGN) | (1u << B5MI_RANGE) | (1u << B5MI_APPROACH) |
+                             (1u << B5MI_DIRECTION) | (1u << B5MI_BYPASS);
+    /* 1. Close obstacle while the gate is closed: stop and HOLD NOT_STRAIGHT
+     * with the gate reason; no probe, no bypass; Buddy5 keeps the stopped
+     * robot until an operator Stop. */
+    struct { const char *name; line_hook_t hook; bool no_samples; uint8_t reason; } blocked[] = {
+        {"blocked: confirmed bend", hook_bend, false, B5S_BEND},
+        {"blocked: bend exit", hook_bend_exit, false, B5S_BEND_EXIT},
+        {"blocked: junction mark", hook_junction, false, B5S_JUNCTION},
+        {"blocked: recovery search", hook_recovery, false, B5S_LINE_LOST},
+        {"blocked: Buddy3 state unavailable", hook_invalid, false, B5S_UNAVAILABLE},
+        {"blocked: stale Buddy3 frames", NULL, true, B5S_STALE}};
+    for (unsigned i = 0; i < sizeof blocked / sizeof blocked[0]; ++i) {
+        scenario_t sb = {.name = blocked[i].name, .cx = 60, .width = 185, .face_y = 900,
+                         .line_hook = blocked[i].hook, .no_line_samples = blocked[i].no_samples};
+        outcome_t o = run(&sb);
+        motion_status_t st = nav_get_status();
+        GCHECK(o.final_stage == B5MI_HOLD && o.reason == B5MI_R_NOT_STRAIGHT);
+        GCHECK(g_mission.module_reason == blocked[i].reason);
+        GCHECK((g_stage_mask & probing) == 0 && g_mission.width.rec_index == 0 && g_mission.edge.rec_index == 0);
+        GCHECK(!g_mission.width_attempted && !g_mission.direction_attempted && !g_mission.bypass.session);
+        GCHECK(st.owner == MOTION_BUDDY5 && st.mode != MOTION_AUTO && g_contacts == 0);
+        GCHECK(o.handbacks == 0 && 900 - g_y > 300 && 900 - g_y < 400); /* stopped near the trigger (sonar 62 mm ahead of the axle) */
+        /* operator Stop still ends it (control.c order) */
+        b5_mission_cancel(&g_mission, g_now); (void)motion_stop(MOTION_BUDDY1); motion_session_end(1);
+        for (int k = 0; k < 50; ++k) frame();
+        GCHECK(!nav_get_status().session_active && g_speed[0] == 0 && g_speed[1] == 0);
+        printf("  %-34s -> HOLD %s module(gate)=%u, axle %.0f mm from the face\n", blocked[i].name,
+               b5_mission_reason_name(o.reason), g_mission.module_reason, 900 - g_y);
+    }
+    /* 2. Old close echoes never carry over into a new straight. */
+    g_script_near = 0;
+    scenario_t sc = {.name = "carry-over: echoes in bend, then straight", .line_hook = hook_carry,
+                     .ping_hook = ping_carry, .stop_at_takeover = true, .ping_latency_us = 55000};
+    outcome_t o = run(&sc);
+    GCHECK(g_mission.stage == B5MI_HALTING);
+    unsigned near_closed = 0, pre_open_after = 0, fresh = 0, at_takeover = 0;
+    for (unsigned k = 0; k < g_ntakes; ++k) {
+        const take_log_t *t = &g_takes[k];
+        if (t->near && t->gate != B5S_STRAIGHT) { ++near_closed; GCHECK(t->confirm == 0 && t->close <= 2); }
+        if (t->near && t->gate == B5S_STRAIGHT && t->req_us < t->open_us) { ++pre_open_after; GCHECK(t->confirm == 0); }
+        if (t->near && t->gate == B5S_STRAIGHT && t->req_us >= t->open_us) {
+            ++fresh; GCHECK(t->stage == B5MI_HALTING ? fresh == 3 : t->confirm == fresh); /* HALTING resets it */
+        }
+        if (t->stage == B5MI_HALTING) at_takeover = k;
+    }
+    GCHECK(near_closed >= 2 && pre_open_after >= 1 && fresh == 3 && at_takeover == g_ntakes - 1);
+    printf("  carry-over: %u close echoes while closed (bend/settling) and %u in-flight echo(es) requested before "
+           "opening never counted; takeover on the 3rd fresh echo (%u)\n", near_closed, pre_open_after, fresh);
+    (void)o;
+    b5_mission_cancel(&g_mission, g_now); (void)motion_stop(MOTION_BUDDY1); motion_session_end(1);
+    /* 3. Losing the gate resets the count: 2 qualifying echoes, bend entry,
+     * then three fresh echoes after the gate re-opens. */
+    g_req_phase1 = 0; g_req_state = 0;
+    scenario_t sr = {.name = "re-qualify: 2 echoes, bend entry, 3 fresh", .line_hook = hook_requalify,
+                     .ping_hook = ping_requalify, .stop_at_takeover = true};
+    o = run(&sr);
+    GCHECK(g_mission.stage == B5MI_HALTING);
+    unsigned max_before = 0, after = 0; uint64_t first_open = 0;
+    for (unsigned k = 0; k < g_ntakes; ++k) {
+        const take_log_t *t = &g_takes[k];
+        if (!first_open && t->gate == B5S_STRAIGHT) first_open = t->open_us;
+        if (t->gate == B5S_STRAIGHT && t->open_us == first_open && t->confirm > max_before) max_before = t->confirm;
+        if (t->gate == B5S_STRAIGHT && t->open_us != first_open && t->near) {
+            ++after; GCHECK(t->stage == B5MI_HALTING ? after == 3 : t->confirm == after);
+        }
+        if (t->gate == B5S_BEND_ENTRY) GCHECK(t->confirm == 0);
+    }
+    GCHECK(max_before == 2 && after == 3);
+    GCHECK(g_drop_seen && g_drop_before == 2 && g_drop_after == 0); /* reset by the gate, not by a far echo */
+    printf("  re-qualify: %u qualifying echoes discarded at bend entry; takeover after %u fresh echoes on the "
+           "re-opened straight\n", max_before, after);
+    b5_mission_cancel(&g_mission, g_now); (void)motion_stop(MOTION_BUDDY1); motion_session_end(1);
+#undef GCHECK
 }
 
 int main(int argc, char **argv) {
@@ -469,7 +645,11 @@ int main(int argc, char **argv) {
     CHECK(g_mission.width_gate_mm >= 270 && g_mission.width_gate_mm <= 330);
     /* A deliberate clean out-of-window stop is a labelled SKIP: no probe
      * attempt, no motion for it, mission continues. Distinct from FAILED. */
-    scenario_t snear = {.name = "start 250 mm: clean skip", .cx = 60, .width = 185, .face_y = 250 + 0};
+    /* v0.2.12 straight gate: the gate needs 200 mm of straight travel first,
+     * so the 250 mm box is placed in front once the gate has opened (a
+     * sudden obstacle), as a fixed 250 mm start would now hold NOT_STRAIGHT. */
+    scenario_t snear = {.name = "start 250 mm: clean skip", .cx = 60, .width = 185, .face_y = 250 + 230,
+                        .appear_when_open = true};
     o = run(&snear);
     CHECK(g_mission.width_policy == B5MI_WIDTH_SKIPPED); CHECK(!g_mission.width_attempted);
     CHECK(g_mission.width_gate_mm < 270 || g_mission.width_gate_mm > 330);
@@ -535,8 +715,7 @@ int main(int argc, char **argv) {
         CHECK(b5_wp_ready(&g_mission.width) && b5_ep_ready(&g_mission.edge));
         CHECK(!g_mission.bypass.session);
     }
-    /* Faster stop than the width REF window (face reached too close): the
-     * width probe ends REFERENCE with no motion and the mission continues. */
+    gate_scenarios(&failures);
     if (g_frames) fclose(g_frames);
     printf("%s: %u failure(s)\n", failures ? "FAIL" : "PASS", failures);
     return failures ? 1 : 0;

@@ -513,6 +513,8 @@ void bringup_control_task (INT code, void * p_exinf_value)
          * not run, exactly like an operator Pause; levels still feed the
          * coordinator. */
         bool buddy5 = (active && (!paused)) && (rb5_external());
+        b5_line_sample_t straight_sample = {0};
+        bool straight_valid = false; /* Buddy3 provider ran this frame */
 #else
         const bool buddy5 = false;
 #endif
@@ -523,6 +525,10 @@ void bringup_control_task (INT code, void * p_exinf_value)
         else if (active)
         {
             optical = rtos_line_follow(delta_time);
+#ifdef APP_RTOS_BUDDY5
+            rtos_line_straight_sample(&optical, &straight_sample);
+            straight_valid = true;
+#endif
             rtos_line_feedback(&feedback, &optical);
             if (optical.stop)
             {
@@ -552,7 +558,8 @@ void bringup_control_task (INT code, void * p_exinf_value)
              * kept, partial barcode/junction state is discarded. */
             rtos_line_resume();
         }
-        rb5_frame(now, feedback.line_level); /* decision step after update */
+        rb5_frame(now, feedback.line_level,
+                  straight_valid ? &straight_sample : NULL); /* after update */
         buddy5 = (active && (!paused)) && (rb5_owned(&demand));
         if (buddy5)
         {

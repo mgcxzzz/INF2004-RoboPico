@@ -42,7 +42,11 @@ REASON = ['none', 'cancelled', 'sonar fault', 'lease lost', 'move refused/interr
           'width probe could not start', 'no line evidence after alignment search', 'line lost during approach',
           'approach range not reached', 'direction probe aborted', 'direction unknown/contradictory',
           'direction probe could not start', 'fresh range unusable', 'bypass blocked (range/clearance)',
-          'bypass/rejoin fault']
+          'bypass/rejoin fault', 'close obstacle while takeover blocked (not a straight)']
+# E5 v4 takeover gate (flags b12-15); sonar still treats any close reflector as an obstacle
+GATE = ['unknown', 'STRAIGHT (open)', 'settling on a straight', 'stale Buddy3 state', 'Buddy3 state unavailable',
+        'bend entry', 'bend', 'bend exit', 'curve (encoder heading)', 'junction', 'turn', 'line lost / recovery',
+        'other']
 WPOLICY = ['none', 'measured', 'SKIPPED (clean range outside 270-330 mm, no probe)', 'FAILED (attempted, HOLD)',
            'running']
 BASIS = ['none', 'probe evidence', 'DEFAULT side (healthy, no preference)', 'held']
@@ -111,6 +115,11 @@ def decode_status(p):
         ws, wp = p[59], p[60]
         d.update(probe_state=name(WPSTATE, ws & 15), probe_side=['none', 'L', 'R', '?'][(ws >> 4) & 3],
                  sample_phase=name(WPHASE, wp & 7), sample_step=wp >> 3)
+    d.update(gate=None, gate_open=None, gate_echoes=None, blocked_gate=None)
+    if v >= 4:
+        g = u16(p, 12) >> 12
+        d.update(gate=name(GATE, g), gate_open=g == 1, gate_echoes=p[59] >> 6,
+                 blocked_gate=name(GATE, p[10]) if p[9] == 19 else None)
     return d
 
 
@@ -161,7 +170,7 @@ def decode(frame):
     if len(frame) < 9 or frame[0] != 0xF2 or len(frame) != 3 + frame[1]:
         return None
     p, n, m = frame[3:], frame[1], frame[3 + 4]
-    if m == 0xE5 and (n, p[5]) in ((54, 1), (59, 2), (61, 3)):
+    if m == 0xE5 and (n, p[5]) in ((54, 1), (59, 2), (61, 3), (61, 4)):
         return decode_status(p)
     proto = width_protocol(frame)
     if proto == 'unknown':
@@ -320,7 +329,10 @@ def main(argv=None):
         if k == 'status':
             if not statuses or (statuses[-1]['stage'], statuses[-1]['reason']) != (d['stage'], d['reason']):
                 print(f"E5 {d['ms']:>9} ms run {d['run']}: {d['stage']}"
-                      f"{'' if d['reason'] == 'none' else ' (' + d['reason'] + ')'}")
+                      f"{'' if d['reason'] == 'none' else ' (' + d['reason'] + ')'}"
+                      f"{' [gate: ' + d['blocked_gate'] + ']' if d.get('blocked_gate') else ''}")
+            if d.get('gate') and (not statuses or statuses[-1].get('gate') != d['gate']) and d['stage'] == 'guard':
+                print(f"E5 {d['ms']:>9} ms   takeover gate: {d['gate']}")
             statuses.append(d)
         elif k.startswith('width'):
             r = width.setdefault(d['run'], {'indices': set(), 'dup': 0, 'summary': None, 'result': None,
@@ -404,6 +416,13 @@ def main(argv=None):
         if s['version'] >= 3:
             print(f"  width probe {s['probe_state']} side {s['probe_side']} sample {s['sample_phase']} "
                   f"step {s['sample_step']}")
+        if s['version'] >= 4:
+            print(f"  takeover gate {'ALLOWED (straight)' if s['gate_open'] else 'BLOCKED: ' + s['gate']}, "
+                  f"close echoes {s['gate_echoes']}/3"
+                  + (f"; HELD: close obstacle where the manoeuvre may not start ({s['blocked_gate']}); "
+                     'width, direction and bypass not run' if s['blocked_gate'] else ''))
+        else:
+            print('  takeover gate: n/a (status before v4)')
     seqs = [e['seq'] for e in events]
     gaps = [(x, y) for x, y in zip(seqs, seqs[1:]) if (y - x) & 0xFFFF != 1]
     print(f"bypass events {len(events)}, event-seq gaps {gaps}, overwritten on car "

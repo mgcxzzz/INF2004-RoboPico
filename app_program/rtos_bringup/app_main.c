@@ -79,9 +79,11 @@ void bringup_help (void)
 {
 #if defined(APP_RTOS_BUDDY5)
     tm_printf((UB *)"\nROBOPICO BUDDY1-5 RTOS rtos_buddy1_5 v0.2.12 LONG-WIDTH "
-                    "CANDIDATE 0.1 | "
+                    "STRAIGHT-GATE CANDIDATE 0.2 | "
                     "EXPERIMENTAL | micro T-Kernel SMP | base v0.2.12\n");
-    tm_printf((UB *)"Buddy5: guard<=300mm -> width probe (display only) -> "
+    tm_printf((UB *)"Buddy5: takeover only on a straight (else a close "
+                    "obstacle holds NOT_STRAIGHT); guard<=300mm -> width "
+                    "probe (display only) -> "
                     "line align -> approach ~200mm -> direction probe -> "
                     "compact bypass -> 4th-turn line acquisition.\n");
     tm_printf((UB *)"Sonar GP16/GP17, servo GP12 +/-46deg. HOLD keeps the "

@@ -1,6 +1,6 @@
 /**
  * @file b5_mission_pack.h
- * @brief Buddy5 mission status, source 15 subtype 0xE5, version 3.
+ * @brief Buddy5 mission status, source 15 subtype 0xE5, version 4.
  * @details Car-confirmed snapshot (copied under DI by the Buddy5 task) sent
  * every 500 ms and on stage changes. It repeats the latest width/direction
  * results so a lost one-shot D3/BF frame cannot hide them, and carries the
@@ -9,8 +9,10 @@
  * with byte 19 zero; version 2 keeps bytes 0-53 and adds the width policy
  * (19) and approach steering (54-58). Version 3 (long width probe, v0.2.12
  * candidate) keeps bytes 0-58 and adds the live width-probe pose (59-60).
+ * Version 4 (straight-gate candidate) keeps the 61-byte layout and adds the
+ * takeover gate in two formerly zero fields: flags b12-15 and byte 59 b6-7.
  * Frame [0xF2, 61, seq] + payload, LE:
- *  0 u32 Pico ms           4 u8 0xE5             5 u8 version 3
+ *  0 u32 Pico ms           4 u8 0xE5             5 u8 version 4
  *  6 u16 mission run       8 u8 stage            9 u8 hold/end reason
  * 10 u8 module end/reason 11 u8 coordinator: owner b0-2, mode b3-5,
  *                               session b6, stopped b7
@@ -39,7 +41,13 @@
  * 56 u8 control frames at the +/-8 deg setpoint bound (saturates 255)
  * 57 u16 fresh range that decided the width policy, mm (0 = none)
  * 59 u8 width probe state b0-3 (B5WP_IDLE..B5WP_MID) | side b4-5 (0 none,
- *    1 left, 2 right; the side of the last stopped sample)
+ *    1 left, 2 right; the side of the last stopped sample) | v4: close
+ *    echoes counted toward the guard decision b6-7 (0-3; toward takeover
+ *    while the gate is open, toward the NOT_STRAIGHT hold while closed)
+ * v4: 12 u16 flags b12-15 = takeover gate reason (b5_straight_reason_t:
+ *    0 unknown, 1 STRAIGHT (open), 2 settling, 3 stale, 4 unavailable,
+ *    5 bend entry, 6 bend, 7 bend exit, 8 curve, 9 junction, 10 turn,
+ *    11 line lost/recovery, 12 other)
  * 60 u8 width sample phase b0-2 (B5WP_PH_*) | stop step b3-7 (0-31)
  * @see docs/buddy5_rtos_integration.md
  */
@@ -52,7 +60,7 @@
 enum
 {
     B5MP_MARKER = 0xE5U,
-    B5MP_VERSION = 3U,
+    B5MP_VERSION = 4U,
     B5MP_PAYLOAD = 61U,
     B5MP_FRAME = 64U,
     B5MP_NONE = 0xFFFFU
@@ -121,6 +129,8 @@ typedef struct
     uint16_t width_gate_mm;
     uint8_t width_state;  /* b0-3 probe state | b4-5 sample side */
     uint8_t width_sample; /* b0-2 sample phase | b3-7 step */
+    uint8_t gate_reason;  /* v4: b5_straight_reason_t (0-15)        */
+    uint8_t gate_echoes;  /* v4: close echoes counted (0-3)         */
 } b5_mission_status_t;
 
 static inline void b5mp_put16 (uint8_t * p_out, uint16_t value)
@@ -146,7 +156,9 @@ static inline void b5mp_pack (const b5_mission_status_t * p_status,
     p_payload[9] = p_status->reason;
     p_payload[10] = p_status->module_reason;
     p_payload[11] = p_status->coordinator;
-    b5mp_put16(p_payload + 12, (uint16_t)(p_status->flags & B5MP_F_MASK));
+    b5mp_put16(p_payload + 12,
+               (uint16_t)((p_status->flags & B5MP_F_MASK) |
+                          ((uint16_t)(p_status->gate_reason & 15U) << 12)));
     b5mp_put16(p_payload + 14, p_status->ping_mm);
     b5mp_put16(p_payload + 16, p_status->ping_age_ms);
     p_payload[18] = p_status->ping_class;
@@ -181,7 +193,11 @@ static inline void b5mp_pack (const b5_mission_status_t * p_status,
     p_payload[55] = p_status->steer_max_decideg;
     p_payload[56] = p_status->steer_saturated;
     b5mp_put16(p_payload + 57, p_status->width_gate_mm);
-    p_payload[59] = p_status->width_state;
+    p_payload[59] =
+        (uint8_t)((p_status->width_state & 0x3FU) |
+                  ((p_status->gate_echoes > 3U ? 3U
+                                               : (p_status->gate_echoes & 3U))
+                   << 6));
     p_payload[60] = p_status->width_sample;
 }
 

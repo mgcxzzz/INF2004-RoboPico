@@ -1,18 +1,19 @@
-# Buddy 5 RTOS candidate on v0.2.12 with the long width probe (APP=rtos_buddy1_5)
+# Buddy 5 RTOS candidate on v0.2.12: long width probe and straight-only takeover (APP=rtos_buddy1_5)
 
 **Status: built and host-checked; not flashed, not driven, not physically
 validated.** Base: `barr-c-cleanup` v0.2.12 `81a994f57e3828364492cc2806fcbea124dfa18a`
 (caster assist). It carries the Buddy 5 RTOS integration v0.2 (checkpoint
 `buddy5-rtos-integration` 573689b, on v0.2.9) and replaces its short width
-probe with the SDK `width_long_probe` v0.2 (UF2 71ae5473…). `APP=rtos_buddy1_4`
-is byte-identical to a clean v0.2.12 build with the same toolchain.
+probe with the SDK `width_long_probe` v0.2 (UF2 71ae5473…). Candidate 0.2 adds
+the straight-only takeover gate (below). `APP=rtos_buddy1_4` is byte-identical
+to a clean v0.2.12 build with the same toolchain.
 
 Build (from `build_make/`; run `make … clean` first when switching APP, the
 object directory is shared):
 
 ```bash
 make -j8 APP=rtos_buddy1_5 SMP=1 CONSOLE=usb_cdc WIFI=cyw43 NET=lwip MQTT=1 CRASH_REPORT=0 TEST=0
-# -> robopico_buddy1_5_rtos_v0_2_12_long_width_candidate.uf2
+# -> robopico_buddy1_5_rtos_v0_2_12_straight_gate_candidate.uf2
 ```
 
 The sequence, task ownership and adapter rules are in
@@ -139,6 +140,49 @@ the front, margin 50 mm, side 250 mm, depth 150 mm, no reverse):
   acquisition after the probes. The width estimate does not and must not
   prove clearance.
 
+## Straight-only takeover gate (straight-gate candidate 0.2)
+
+The width probe, the direction probe and the bypass assume a straight line
+segment, but Buddy 3 is in AUTO on curves too. The guard therefore asks for
+the takeover only while `b5_straight.c` reports positive, fresh evidence that
+Buddy 3 is stably following a straight. **Straight eligibility controls where
+the manoeuvre starts; it does not change what counts as an obstacle.** The
+sonar still treats any close reflector (a box, a wall on a curve, a person's
+leg) as a possible obstacle.
+
+- **Inputs** (`rtos_line_straight_sample()`, motion task, right after
+  `rtos_line_follow()`, observation only): circuit phase, busy and fault,
+  follower white and recovery search, the demand decision and stop, the
+  qualified junction edge and barcode cross mark, a barcode route action or
+  U-turn in progress, the continuous steering's `active` and bend flags
+  (dwell, candidate, confirmed, exiting), and the encoder wheel travel.
+  Nothing in Buddy 3 is changed.
+- **Open** only after every frame of the last 200 mm of travel (and at
+  least 300 ms) was ordinary straight following: phase `C_FOLLOW`, decision
+  24/25 (continuous steering) or straight/left/right/fast, no bend state,
+  no junction, turn, loss or recovery, and an encoder heading change of at
+  most 6° across the window. Small steering corrections on a straight are
+  allowed (sim: ±1.9° weave). The heading window catches gentle curves the
+  bend assist never flags: from a closed gate a curve tighter than about
+  R 1.9 m never opens it; entering such a curve from an open straight it
+  closes within about (6° + weave) × R of curve (52–56 mm at R 500,
+  89–166 mm at R 1200 in the host test). Curves gentler than ~1.9 m read as
+  straight.
+- **Closed** reasons (E5 v4): settling, stale (> 50 ms without a Buddy 3
+  frame), unavailable (provider not running, bend monitor inactive), bend
+  entry, bend, bend exit, curve, junction, turn, line lost/recovery, other.
+  Any closed frame restarts the evidence.
+- **Echo counting.** Three consecutive close echoes (≤ 300 mm) whose pings
+  were *requested after the gate opened* trigger the takeover, still
+  requested while Buddy 3 owns the motion. Losing the gate discards the
+  count; an echo from before the opening, from a curve or in flight across
+  the opening never counts.
+- **Blocked close obstacle.** Three consecutive close echoes while the gate is
+  closed stop the robot and hold `NOT_STRAIGHT` (E5 reason 19, module reason
+  = the gate reason). Buddy 5 keeps the stopped robot; width, direction and
+  bypass do not run; operator Stop ends it as before. Stop, E-stop, sensor
+  faults, network loss and the re-arm rule are unchanged.
+
 ## Width in the mission (long probe)
 
 At the ~300 mm stop (clean stopped range 270–330 mm) the mission runs the SDK
@@ -162,7 +206,7 @@ mission continues) are reported distinctly.
 
 | Marker / length | Meaning | Version |
 |---|---|---|
-| E5 / 61 | Buddy 5 mission status (dashboard also decodes v2/59 and v1/54) | 3 |
+| E5 / 61 | Buddy 5 mission status (dashboard also decodes v3/61, v2/59 and v1/54) | 4 |
 | D1 / 56, D2 / 58 | width records / summary (long probe) | 10 |
 | D3 / 58 | width display result, rule 2 | 3 |
 | D4 / 32 | rejected triplet before a retry | 3 |
@@ -199,7 +243,13 @@ the width policy (0 none). v3 only (61 bytes): 59 width-probe state b0–3
 LADDER MID) | side of the last stopped sample b4–5 (0 none, 1 left, 2 right);
 60 sample phase b0–2 (REF PRE OUT RET FINAL LAD_OUT LAD_RET MID) | stop step
 b3–7. Byte 30 may be basis 4 in v3. A skip reports basis 3, status INVALID
-and display 150.00 mm without any D1–D5 frame.
+and display 150.00 mm without any D1–D5 frame. v4 (same 61 bytes): flags
+b12–15 = takeover gate reason (0 unknown, 1 STRAIGHT = allowed, 2 settling,
+3 stale, 4 unavailable, 5 bend entry, 6 bend, 7 bend exit, 8 curve,
+9 junction, 10 turn, 11 line lost/recovery, 12 other); 59 b6–7 = close
+echoes counted (toward the takeover while open, toward the NOT_STRAIGHT hold
+while closed); reason 19 = NOT_STRAIGHT with byte 10 = the gate reason. v3
+frames must keep those bits zero.
 
 Verification labels (`b5_rtos_decode.py --sdk-width-decoder …/width_long_probe_v0_2/decode_width_long.py`):
 VERIFIED BY REPLAY only when every claimed record, D2, D3 and D5 were received
@@ -229,6 +279,11 @@ dashboard/offline completeness reports; it never fills or re-labels a gap.
 
 ## Resources (rtos_buddy1_5)
 
+- Straight-gate candidate 0.2: `__bss_end` 0x20032628 (+240 B: gate
+  window and counters), pool margin **808 B**; motion-task worst chain
+  3,512 B of 4,224 B (control 1,024 + rb5_frame 152 + the width chain below;
+  the gate step is 48 B on the shallow guard path). The figures below are
+  for candidate 0.1.
 - Static RAM end `__bss_end` 0x20032538 (56,008 B below 0x20040000; v0.2
   candidate 0x20032080; v0.2.12 Buddy 1–4 0x2002ff98).
 - Kernel pool model (`testing/rtos_migration/buddy5/kernel_pool_budget.py`):
@@ -254,6 +309,25 @@ dashboard/offline completeness reports; it never fills or re-labels a gap.
   Buddy 5 line shows `stack=3072`, and no `INIT FAILED`.
 
 ## Host checks run (logic only)
+
+Straight gate (candidate 0.2):
+- `testing/rtos_migration/test_b5_straight_gate.c` (real Buddy 3 bend
+  monitor, `CONTINUOUS_BEND_ASSIST=1`): straight with small corrections
+  opens after 207 mm and stays open over 2.7 m; left and right R 250 mm
+  curves block from bend entry through bend and exit and re-open 217 mm
+  after the curve; gentle R 500/1200 mm curves without bend flags never open
+  from closed and close within the heading budget when entered; every
+  junction, turn, route turn, loss, recovery, stop, fault, unavailable and
+  unexpected-decision state blocks and restarts the evidence; stale after
+  50 ms; 923 checks.
+- Mission simulation: the integrated straight-line mission completes as
+  before (takeover with the gate open); a close obstacle with a bend, bend
+  exit, junction mark, recovery search, unavailable or stale Buddy 3 state
+  holds `NOT_STRAIGHT` about 355 mm from the face with no probe or bypass,
+  and operator Stop still ends it; close echoes in a bend and an echo in
+  flight across the opening never count; two qualifying echoes are
+  discarded at a bend entry and three fresh ones are needed after the gate
+  re-opens.
 
 Re-run with `sh testing/rtos_migration/buddy5/run_buddy5_checks.sh <bench_tools/buddy5_sdk>`.
 

@@ -347,7 +347,8 @@ bool rb5_external (void)
     return rb5_external_frame(&status, g_handback);
 }
 
-void rb5_frame (uint64_t now, const uint16_t level[2])
+void rb5_frame (uint64_t now, const uint16_t level[2],
+                const b5_line_sample_t * p_line)
 {
     if (!__atomic_load_n(&g_hardware_ready, __ATOMIC_ACQUIRE))
     {
@@ -359,6 +360,8 @@ void rb5_frame (uint64_t now, const uint16_t level[2])
      * it never observes a half-updated queue. Keeping the step outside DI
      * leaves the encoder and ECHO interrupts unaffected. */
     b5_mission_observe(&g_mission, now, level[0], level[1]);
+    b5_line_sample_t none = {.now_us = now, .valid = false};
+    b5_mission_line(&g_mission, (NULL != p_line) ? p_line : &none);
     motion_status_t before = motion_get_status();
     if (g_mission.session)
     {
@@ -829,7 +832,11 @@ static void snapshot (uint64_t now, b5_mission_status_t * p_out)
         .width_sample =
             (uint8_t)((p_width->sample_phase & 7U) |
                       ((p_width->sample_step > 31U ? 31U : p_width->sample_step)
-                       << 3))};
+                       << 3)),
+        .gate_reason = p_mission->gate_reason,
+        .gate_echoes = (uint8_t)((B5S_STRAIGHT == p_mission->gate_reason)
+                                     ? p_mission->confirm
+                                     : p_mission->close_count)};
     leave(key);
 }
 
@@ -856,7 +863,12 @@ static void report (void)
     UINT key = enter();
     diag = g_diag;
     leave(key);
-    tm_printf((UB *)"B5_MISSION version=rtos_buddy1_5-v0.2.12-long-0.1 "
+    tm_printf((UB *)"B5_GATE reason=%u (1=STRAIGHT open) echoes=%u "
+                    "straight_travel_mm=%d heading_cdeg=%d\n",
+              status.gate_reason, status.gate_echoes,
+              (int)g_mission.straight.travel_mm,
+              (int)g_mission.straight.heading_cdeg);
+    tm_printf((UB *)"B5_MISSION version=rtos_buddy1_5-v0.2.12-straight-0.2 "
                     "stage=%s reason=%s "
                     "module=%u run=%u side=%u basis=%u decision=%u "
                     "states=0x%02x width_end=%u d0=%u trigger=%u start=%u\n",
