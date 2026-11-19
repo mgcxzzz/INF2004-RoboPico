@@ -53,6 +53,9 @@ static struct
     unsigned speed_mode_requested : 2;
     unsigned speed_mode_result : 4;
     uint32_t speed_mode_revision;
+#ifdef MOTION_STEERED_DRIVE
+    uint64_t steer_us; /* last accepted heading setpoint */
+#endif
 } g_value;
 static uintptr_t lock (void)
 {
@@ -476,6 +479,38 @@ motion_result_t nav_coordinator_resume (motion_owner_t owner, uint32_t lease,
     unlock(key);
     return result;
 }
+#ifdef MOTION_STEERED_DRIVE
+/* Lease holder only, during its own straight drive (not settling, not a
+ * turn): bounded heading setpoint relative to the drive's start heading.
+ * Never starts, extends or resumes motion; goal, speed, timeout, settle and
+ * the 12 deg heading fault are unchanged. */
+motion_result_t nav_coordinator_steer (motion_owner_t owner, uint32_t lease,
+                                       float degrees)
+{
+    if ((!isfinite(degrees)) ||
+        (fabsf(degrees) * 10.0f > (float)NAV_STEER_MAX_DECIDEG + 0.5f))
+    {
+        return MOTION_INVALID;
+    }
+    uintptr_t key = lock();
+    motion_result_t result = access(owner, lease);
+    if (MOTION_OK == result &&
+        ((MOTION_DRIVING != g_value.status.mode) ||
+         (!g_value.executor.active) || (g_value.executor.turning) ||
+         (g_value.executor.settling)))
+    {
+        result = MOTION_BUSY;
+    }
+    if (MOTION_OK == result)
+    {
+        g_value.executor.steer_mm =
+            degrees * 110.0f * 3.14159265358979323846f / 180.0f;
+        g_value.steer_us = now();
+    }
+    unlock(key);
+    return result;
+}
+#endif
 motion_result_t nav_coordinator_navigation (motion_owner_t owner, int16_t left,
                                             int16_t right)
 {
@@ -701,6 +736,16 @@ motion_output_t nav_coordinator_update (const motion_feedback_t * p_flags)
                  MOTION_TURNING == g_value.status.mode ||
                  MOTION_SETTLING == g_value.status.mode)
         {
+#ifdef MOTION_STEERED_DRIVE
+            /* A setpoint not refreshed within 100 ms lapses to the original
+             * straight hold, so a silent owner cannot keep steering. */
+            if ((g_value.executor.steer_mm != 0.0f) &&
+                ((p_flags->now_us < g_value.steer_us) ||
+                 (p_flags->now_us - g_value.steer_us > 100000U)))
+            {
+                g_value.executor.steer_mm = 0.0f;
+            }
+#endif
             motion_command_state_t state =
                 motion_executor_step(&g_value.executor, p_flags);
             g_value.status.progress_mm = g_value.executor.progress_mm;

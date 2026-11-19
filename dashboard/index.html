@@ -185,11 +185,12 @@
         <div class="overview-note">A live wheel-height estimate is not an accepted hump result.</div>
       </section>
       <section class="overview-card" aria-label="Obstacle rubric status">
-        <div class="overview-heading"><h3>Obstacle &amp; avoidance</h3><span class="pill neutral">Buddy 5 not integrated</span></div>
-        <div class="overview-detail"><span>Obstacle detection</span><span>Not integrated</span></div>
-        <div class="overview-detail"><span>Obstacle width</span><span>Unavailable</span></div>
-        <div class="overview-detail"><span>Bypass and line rejoin</span><span>Not integrated</span></div>
-        <div class="overview-note">All three obstacle rubric items remain visible without claiming support.</div>
+        <div class="overview-heading"><h3>Obstacle &amp; avoidance</h3><span id="overviewB5Tag" class="pill neutral">No Buddy 5 status</span></div>
+        <div class="overview-detail"><span>Obstacle detection</span><span id="overviewB5Detect">No Buddy 5 status received</span></div>
+        <div class="overview-detail"><span>Obstacle width</span><span id="overviewB5Width">Unavailable</span></div>
+        <div class="overview-detail"><span>Direction</span><span id="overviewB5Direction">Unavailable</span></div>
+        <div class="overview-detail"><span>Bypass and line rejoin</span><span id="overviewB5Bypass">Unavailable</span></div>
+        <div id="overviewB5Note" class="overview-note">Buddy1–4 firmware sends no Buddy 5 status; all three obstacle rubric items stay visible without claiming support.</div>
       </section>
       <section class="overview-card" aria-label="Wi-Fi MQTT broker and car heartbeat">
         <div class="overview-heading"><h3>Wi-Fi &amp; MQTT</h3><span id="overviewMqttTag" class="pill neutral">Unknown</span></div>
@@ -350,6 +351,32 @@
     <p id="rtosRuntime" class="small">Waiting for runtime counters.</p>
     <p id="rtosHump" class="small muted">Waiting for hump qualification.</p>
   </div></section>
+
+  <section id="buddy5Details" class="wide">
+    <h2>Buddy 5 obstacle mission (rtos_buddy1_5)</h2>
+    <p id="b5Freshness" class="small muted">No Buddy 5 status (source-15 E5) received.</p>
+    <dl>
+      <dt>Stage / reason</dt><dd id="b5Stage">–</dd>
+      <dt>Coordinator (car-confirmed)</dt><dd id="b5Owner">–</dd>
+      <dt>Front sonar</dt><dd id="b5Range">–</dd>
+      <dt>Servo (requested / applied PWM command)</dt><dd id="b5Servo">–</dd>
+      <dt>Direction</dt><dd id="b5Direction">–</dd>
+      <dt>Probe sides L / R</dt><dd id="b5Sides">–</dd>
+      <dt>Width policy (this mission)</dt><dd id="b5WidthPolicy">–</dd>
+      <dt>Width (display only)</dt><dd id="b5Width">–</dd>
+      <dt>Width basis / quality</dt><dd id="b5WidthBasis">–</dd>
+      <dt>Raw / corrected</dt><dd id="b5WidthRaw">–</dd>
+      <dt>Edge brackets / reach</dt><dd id="b5WidthBrackets">–</dd>
+      <dt>Retries / rejected triplets</dt><dd id="b5Retries">–</dd>
+      <dt>Trigger / width d0 / bypass start</dt><dd id="b5Ranges">–</dd>
+      <dt>Approach line steering</dt><dd id="b5Steer">–</dd>
+      <dt>Bypass / rejoin</dt><dd id="b5Bypass">–</dd>
+      <dt>Width records</dt><dd id="b5WidthRecords">–</dd>
+      <dt>Direction records</dt><dd id="b5DirRecords">–</dd>
+      <dt>Recent bypass events</dt><dd id="b5Events">–</dd>
+    </dl>
+    <p class="small muted">Width is a display estimate only: it never reduces clearance, authorises motion or clears a fault. "Admitted" counts are car-side (frames accepted into the car's network queue); "received" counts are what this dashboard got. A missing record is a telemetry gap, never a reason to move.</p>
+  </section>
 
   <section id="subsystemsDetails">
     <h2>Subsystems (RTOS summaries)</h2>
@@ -1199,6 +1226,7 @@ function tick() {
   }
   updateCarLink(t);
   updateProfile(); refreshOpState(); updateLogDownloadControl(); updateBufferStatus();
+  renderB5();
 }
 setInterval(tick, 250);
 
@@ -1580,6 +1608,14 @@ function summary(f) {
       if(d.kind==='runtime') return `RTOS reads ${d.reads}, read failures ${d.failed}, late ${d.lateGaps}, FIFO ${d.fifoOverruns}`;
       if(d.kind==='junction-decision') return `junction ${d.widthMm.toFixed(2)} mm: ${d.resultName}, entry ${d.blackEntry} ADC`;
       if(d.kind==='drive-state') return `bend phase ${d.bendPhase}, recovery phase ${d.recoveryPhase}, yaw ${d.recoveryYawDeg}°, targets ${d.targetLeft}/${d.targetRight}`;
+      if(d.kind==='b5-status') return `Buddy5 ${d.stageName}${d.reason ? ' ('+d.reasonName+')' : ''}, owner ${d.ownerName}, range ${d.pingMm===null?'none':d.pingMm+' mm'}`;
+      if(d.kind==='b5-width-record') return `Buddy5 width record run ${d.run} #${d.index} phase ${d.phase} expected ${d.expectedMm} mm`;
+      if(d.kind==='b5-width-summary') return `Buddy5 width summary run ${d.run} ${d.endName}, ${d.records} records, lost ${d.lost}`;
+      if(d.kind==='b5-width-result') return `Buddy5 width ${d.displayMm===null?'n/a':d.displayMm.toFixed(2)+' mm'} ${d.basisName} ${d.statusName}`;
+      if(d.kind==='b5-width-retry') return `Buddy5 rejected triplet run ${d.run} phase ${d.phase} attempt ${d.attempt}`;
+      if(d.kind==='b5-direction-record') return `Buddy5 direction record run ${d.run} #${d.index} phase ${d.phase} (near ${d.nearMm} mm)`;
+      if(d.kind==='b5-direction-summary') return `Buddy5 direction run ${d.run} ${d.endName}: ${d.decisionName} L ${d.stateLName}/R ${d.stateRName}`;
+      if(d.kind==='b5-event') return `Buddy5 event ${d.codeName} state ${d.stateName} phase ${d.phaseName} reason ${d.reasonName}`;
       return d.kind === 'ramp-targets' ? `ramp requested ${d.requested.join('/')} → effective ${d.effective.join('/')} mm/s, hold ${d.holdActive ? 'on' : 'off'}` : d.kind === 'peak' ?
       `barcode peak v0.${d.version} ${d.reasonName}, code ${d.code}, bars ${d.bars}${d.applied ? ', applied' : ''}${d.originalConflict ? ', CONFLICT' : ''}` :
       d.kind === 'barcode-capture' ? `barcode raw attempt ${d.attemptSequence}, ${d.reasonName}, code ${d.code}, ${d.rawCount} rows${d.finalized ? ', finalized' : ', unfinalized'}` :
@@ -1829,7 +1865,96 @@ function showPeakEvidence(d, retained, f) {
   }
 }
 function showRetainedPeakEvidence(d, f) { showPeakEvidence(d, true, f); refreshDashboardOverview(); }
+/* ---------- Buddy 5 (rtos_buddy1_5) ---------- */
+const b5 = { status: null, at: 0, seq: null, tracker: IS28.B5Tracker(), events: [], lastStage: null };
+const B5_STALE_MS = 1500;
+function b5Fmt(v, digits = 1) { return v === null || v === undefined ? 'n/a' : Number(v).toFixed(digits); }
+function receiveB5(d, f) {
+  b5.tracker.add(d);
+  if (d.kind === 'b5-status') {
+    b5.status = d; b5.at = now(); b5.seq = f.seq;
+    if (b5.lastStage !== d.stage) {
+      if (b5.lastStage !== null) addEvent(`Buddy 5 stage: ${d.stageName}${d.reason ? ` (${d.reasonName})` : ''}`, d, 'b5-status', f);
+      b5.lastStage = d.stage;
+    }
+  } else if (d.kind === 'b5-event') {
+    b5.events.push(`${d.codeName}${d.code === 4 ? ` ${d.a}` : ''}`);
+    if (b5.events.length > 8) b5.events.shift();
+    if (['PLAN', 'HANDBACK', 'STOPPED', 'HOLD_CLEARANCE', 'ACQUIRED', 'RETURN_FALLBACK'].includes(d.codeName))
+      addEvent(`Buddy 5 bypass event ${d.codeName} (state ${d.stateName}, reason ${d.reasonName})`, d, 'b5-event', f);
+  } else if (d.kind === 'b5-width-result') {
+    addEvent(`Buddy 5 width ${b5Fmt(d.displayMm, 2)} mm · ${d.basisName}${d.assumed ? ' (ASSUMED, not measured)' : ''} · run ${d.run} ${d.endName}`, d, 'b5-width', f);
+  } else if (d.kind === 'b5-direction-summary') {
+    addEvent(`Buddy 5 direction probe run ${d.run} ${d.endName}: ${d.decisionName} (L ${d.stateLName} / R ${d.stateRName}, near ${d.nearMm} mm)`, d, 'b5-direction', f);
+  }
+  renderB5();
+}
+function b5Completeness(rep, produced, admitted) {
+  if (!rep) return 'no records received';
+  const claim = rep.claimed === null ? 'summary not received' : `${rep.received}/${rep.claimed} received`;
+  const miss = rep.missing.length ? ` · MISSING indices ${rep.missing.join(', ')} (telemetry gap; not filled)` : '';
+  const car = produced === undefined ? '' : ` · car produced ${produced}, admitted ${admitted}`;
+  return `run ${rep.run}: ${claim}${miss}${rep.duplicates ? ` · ${rep.duplicates} duplicate(s)` : ''}${car}${rep.complete ? ' · complete' : ''}`;
+}
+function renderB5() {
+  const s = b5.status;
+  if (!s) return;
+  const age = now() - b5.at, stale = age > B5_STALE_MS;
+  const prefix = stale ? `STALE ${(age / 1000).toFixed(1)} s · last reported: ` : '';
+  $('b5Freshness').textContent = stale
+    ? `STALE: no E5 status for ${(age / 1000).toFixed(1)} s — values below are the last car-reported values, not live.`
+    : `Fresh car-reported status (E5 #${b5.seq}, Pico ${s.uptimeMs} ms, mission run ${s.run}).`;
+  $('b5Freshness').className = stale ? 'small bad' : 'small muted';
+  $('b5Stage').textContent = `${prefix}${s.stageName}${s.reason ? ` · ${s.reasonName}${s.moduleReason ? ` (module ${s.moduleReason})` : ''}` : ''}${s.armed ? '' : ' · not armed'}${s.rearm ? ' · re-arming (front must clear)' : ''}`;
+  $('b5Owner').textContent = `${s.sessionActive ? 'session active' : 'no session'} · owner ${s.ownerName} · ${s.modeName}${s.stopped ? ' · stopped' : ''}`;
+  const front = s.servoAppliedDeg !== null && Math.abs(s.servoAppliedDeg) <= 2;
+  $('b5Range').textContent = s.pingAgeMs === null ? 'no ping reported yet' : s.pingMm === null
+    ? `no echo (${s.pingClass}), ${s.pingAgeMs} ms old`
+    : `${s.pingMm} mm ${front ? 'ahead' : `on a ${s.servoAppliedDeg}° beam`} · ${s.pingAgeMs} ms old${s.pingFresh && !stale ? '' : ' (NOT fresh)'}`;
+  $('b5Servo').textContent = `${s.servoRequestedDeg}° / ${s.servoAppliedDeg}°${s.servoSettled ? ' settled' : ' moving'} (applied PWM command, not a measured horn angle)`;
+  $('b5Direction').textContent = !s.directionAttempted ? 'not probed in this mission'
+    : `${prefix}${s.basis === 1 ? `${s.sideName.toUpperCase()} from probe evidence` : s.basis === 2 ? `${s.sideName.toUpperCase()} — DEFAULT side (healthy probe, no preference)` : s.basis === 3 ? `HELD — no side (${s.directionEndName})` : 'pending'} · probe ${s.decisionName}`;
+  $('b5Sides').textContent = s.directionAttempted ? `${s.stateLName} / ${s.stateRName} · end ${s.directionEndName}` : '–';
+  const wr = b5.tracker.widthRun(), res = wr && wr.result;
+  $('b5WidthPolicy').textContent = s.widthPolicy === null ? 'n/a (v0.1 status layout)'
+    : `${prefix}${s.widthPolicyName}${s.widthGateMm ? ` · decided on a ${s.widthGateMm} mm stopped range` : ''}`;
+  $('b5WidthPolicy').className = s.widthFailed ? 'bad' : '';
+  $('b5Steer').textContent = s.steerDeg === null ? 'n/a (v0.1 status layout)'
+    : `${prefix}setpoint ${s.steerDeg.toFixed(1)}° (+left) · largest ${s.steerMaxDeg.toFixed(1)}° of ±8.0°${s.steerSaturated ? ` · at bound ${s.steerSaturated} frame(s)` : ''}`;
+  if (s.widthSkipped) {
+    $('b5Width').textContent = `${prefix}150.00 mm — ASSUMED project midpoint, NOT measured (width probe deliberately skipped)`;
+    $('b5WidthBasis').textContent = `${s.widthBasisName} · ${s.widthStatusName} · no probe attempt`;
+    $('b5WidthRaw').textContent = '–';
+  } else if (s.widthResult && s.widthDisplayMm !== null) {
+    const assumed = s.widthBasis === 3;
+    $('b5Width').textContent = `${prefix}${s.widthDisplayMm.toFixed(2)} mm${assumed ? ' — ASSUMED project midpoint, NOT measured' : ''}${s.widthFailed ? ' · probe FAILED: mission HELD' : ''}`;
+    $('b5WidthBasis').textContent = `${s.widthBasisName} · ${s.widthStatusName} · ${s.widthReasonName} · width probe end ${s.widthEndName}`;
+    $('b5WidthRaw').textContent = `${b5Fmt(s.widthRawMm, 2)} / ${b5Fmt(s.widthCorrectedMm, 2)} mm (raw midpoint / minus 10 mm, before the 100–200 mm limit)`;
+  } else {
+    $('b5Width').textContent = s.widthAttempted ? 'width probe running' : 'not measured in this mission';
+    $('b5WidthBasis').textContent = '–'; $('b5WidthRaw').textContent = '–';
+  }
+  $('b5WidthBrackets').textContent = res
+    ? `L ${res.left.statusName} [${b5Fmt(res.left.aMm)}, ${b5Fmt(res.left.bMm)}] · R ${res.right.statusName} [${b5Fmt(res.right.aMm)}, ${b5Fmt(res.right.bMm)}] mm · summed ${b5Fmt(res.spanLoMm)}–${b5Fmt(res.spanHiMm)} · sampled ${b5Fmt(res.sampledMm)} (from D3 run ${res.run})`
+    : 'D3 result not received';
+  $('b5Retries').textContent = `${s.widthRetries} used (max 4) · ${wr ? wr.retries.length : 0} rejected-triplet record(s) received`;
+  $('b5Ranges').textContent = `${s.triggerMm || '–'} / ${s.widthD0Mm || '–'} / ${s.bypassRangeMm || '–'} mm · approach legs ${s.approachLegs}, alignment search steps ${s.alignSteps}`;
+  $('b5Bypass').textContent = `${s.bypassStateName} · ${s.rejoinPhaseName}`;
+  $('b5WidthRecords').textContent = b5Completeness(b5.tracker.width(), s.widthProduced, s.widthAdmitted) + (s.backlog ? ' · car backlog pending' : '') + (s.discarded ? ` · ${s.discarded} unsent from an earlier run discarded by the car` : '');
+  $('b5DirRecords').textContent = b5Completeness(b5.tracker.direction(), s.directionProduced, s.directionAdmitted);
+  $('b5Events').textContent = b5.events.length ? b5.events.join(' → ') : '–';
+  const tag = $('overviewB5Tag');
+  tag.textContent = stale ? 'Stale' : s.hold ? 'HOLD' : s.stageName;
+  tag.className = 'pill ' + (stale ? 'neutral' : s.hold ? 'bad' : 'ok');
+  $('overviewB5Detect').textContent = stale ? 'Status stale' : s.stage === 1 ? `Guarding${s.pingMm !== null && front ? ` · ${s.pingMm} mm` : ''}` : s.stage === 0 ? 'Idle' : s.stageName;
+  $('overviewB5Width').textContent = s.widthResult && s.widthDisplayMm !== null
+    ? `${s.widthDisplayMm.toFixed(1)} mm${s.widthBasis === 3 ? ' (assumed)' : ''}` : 'Not measured';
+  $('overviewB5Direction').textContent = s.basis === 1 ? `${s.sideName} (evidence)` : s.basis === 2 ? `${s.sideName} (default)` : s.basis === 3 ? 'Held' : '–';
+  $('overviewB5Bypass').textContent = s.bypassStateName === 'DONE' ? 'Handed back to line' : s.bypassStateName;
+  $('overviewB5Note').textContent = 'Car-reported via source-15 E5. Width is display-only; candidate firmware is not physically validated.';
+}
 function showSource15(d, f) {
+  if (d.kind && d.kind.startsWith('b5-')) { receiveB5(d, f); return; }
   if (d.kind === 'drive-mode-status') { receiveDriveModeStatus(d); return; }
   if (d.kind === 'imu-lift-peak') {
     showPeakEvidence(d, false, f);

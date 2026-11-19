@@ -170,6 +170,14 @@ extern "C"
      * pending route is preserved otherwise. */
     motion_result_t motion_resume_line (motion_owner_t owner, uint32_t lease,
                                         bool abandon_navigation);
+#ifdef MOTION_STEERED_DRIVE
+    /* Lease holder's bounded heading setpoint (deg, +LEFT, |deg| <= 8,
+     * 0.1 deg resolution) relative to the start of its OWN active straight
+     * drive. Refresh at least every 100 ms or it lapses to straight. Busy
+     * outside that drive. Never starts or extends motion. */
+    motion_result_t motion_steer_drive (motion_owner_t owner, uint32_t lease,
+                                        float degrees);
+#endif
     motion_status_t motion_get_status (void);
     /* Runtime line cruise mode is RAM-only and may change only while the
      * complete supervisor/motion session is stopped. */

@@ -21,7 +21,13 @@ independently of the browser-to-broker connection. The A–Z map applies through
 MQTT and uses confirmed readback.
 
 This view retains the merged SDK/RTOS decoders, requested/effective ramp targets,
-and stopped data export. It does not implement Buddy5. Detailed feature logic
+and stopped data export. With the APP=rtos_buddy1_5 candidate it also shows the
+Buddy 5 panel (stage, car-confirmed owner, fresh front range, direction with
+evidence/DEFAULT/HELD basis, width with basis and assumption label, width
+policy measured/skipped/failed, approach steering setpoint, record
+completeness per run). Buddy1–4 firmware sends no Buddy 5 status and the panel
+says so; see `docs/buddy5_rtos_integration.md` and
+`tools/telemetry/b5_rtos_decode.py` for offline review. Detailed feature logic
 lives under `firmware/integration/buddy1_4/src/*/README.md`; export instructions
 are in `docs/setup.md`. Vendored MQTT.js and its license are included for offline
 use.

@@ -1,0 +1,25 @@
+{
+  "baseline": "Buddy5 v0.8.1 working tree snapshot; copied read-only; b5_pack.h shared-schema include relocation only",
+  "files": {
+    "obstacle_profile.c": {
+      "source": "/Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico-buddy5/app_program/subsystem5/obstacle_profile.c",
+      "sha256": "d6eccff0415266654dd418261fa75cd86b4dfaefa4e4e53cf49106faa5c6fbe2"
+    },
+    "obstacle_profile.h": {
+      "source": "/Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico-buddy5/app_program/subsystem5/obstacle_profile.h",
+      "sha256": "ab20bac8e61bab7db270b47662f6178773f5f507026f7de93d79bd20173d0f1c"
+    },
+    "b5_config.h": {
+      "source": "/Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico-buddy5/app_program/subsystem5/b5_config.h",
+      "sha256": "ffad75487c6c233b2f0d829badcb6c21b5a0e0b783cbe6108176ef12e551182e"
+    },
+    "b5_pack.c": {
+      "source": "/Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico-buddy5/app_program/subsystem5/b5_pack.c",
+      "sha256": "32c1699fe4500c06289b8f153f97319c677f5370cc36bff32771799ebe28e935"
+    },
+    "b5_pack.h": {
+      "source": "/Users/skyler/SIT/Y2T1/Embedded/INF2004-RoboPico-buddy5/app_program/subsystem5/b5_pack.h",
+      "sha256": "4ef1e909cc98f4fb9627ca7118dae277cae459c565152848f586d990a369e696"
+    }
+  }
+}

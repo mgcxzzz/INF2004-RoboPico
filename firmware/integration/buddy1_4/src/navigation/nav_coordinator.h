@@ -22,6 +22,10 @@ motion_result_t nav_coordinator_move (motion_owner_t owner, uint32_t lease,
                                       uint32_t * p_identifier);
 motion_result_t nav_coordinator_resume (motion_owner_t owner, uint32_t lease,
                                         bool abandon);
+#ifdef MOTION_STEERED_DRIVE
+motion_result_t nav_coordinator_steer (motion_owner_t owner, uint32_t lease,
+                                       float degrees);
+#endif
 motion_result_t nav_coordinator_route (motion_owner_t owner, char code);
 motion_result_t nav_coordinator_terrain (motion_owner_t owner,
                                          motion_terrain_t terrain);

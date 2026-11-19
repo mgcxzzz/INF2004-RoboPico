@@ -26,6 +26,12 @@ typedef struct
     uint64_t still_since;
     int16_t target[2];
     unsigned fault : 10;
+#ifdef MOTION_STEERED_DRIVE
+    /* Drive heading setpoint as right-minus-left wheel travel (mm), set only
+     * by the lease holder through the coordinator; 0 = original straight
+     * hold. The 12 deg heading fault is unchanged. */
+    float steer_mm;
+#endif
 } motion_executor_t;
 bool motion_executor_start (motion_executor_t * p_event,
                             const motion_feedback_t * p_flags, bool turn,

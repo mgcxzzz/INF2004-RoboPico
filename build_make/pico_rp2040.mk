@@ -20,8 +20,8 @@ SMP ?= 1
 
 # Explicit migration profile; the default template build remains available.
 APP ?= example
-ifneq ($(filter $(APP),example rtos_bringup rtos_line rtos_network rtos_line_wifi rtos_barcode_wifi rtos_imu_wifi rtos_buddy1_4),$(APP))
-$(error Unknown APP '$(APP)'; use example, rtos_bringup, rtos_line, rtos_network or rtos_line_wifi rtos_barcode_wifi rtos_imu_wifi rtos_buddy1_4)
+ifneq ($(filter $(APP),example rtos_bringup rtos_line rtos_network rtos_line_wifi rtos_barcode_wifi rtos_imu_wifi rtos_buddy1_4 rtos_buddy1_5),$(APP))
+$(error Unknown APP '$(APP)'; use example, rtos_bringup, rtos_line, rtos_network or rtos_line_wifi rtos_barcode_wifi rtos_imu_wifi rtos_buddy1_4 rtos_buddy1_5)
 endif
 
 ifneq ($(SMP),0)
@@ -133,7 +133,7 @@ EXE_FILE := robopico_rtos_line_following_v0_1_2
 endif
 endif
 
-ifneq ($(filter $(APP),rtos_network rtos_line_wifi rtos_barcode_wifi rtos_imu_wifi rtos_buddy1_4),)
+ifneq ($(filter $(APP),rtos_network rtos_line_wifi rtos_barcode_wifi rtos_imu_wifi rtos_buddy1_4 rtos_buddy1_5),)
 ifneq ($(SMP)-$(CONSOLE)-$(WIFI)-$(NET)-$(MQTT)-$(CRASH_REPORT)-$(TEST),1-usb_cdc-cyw43-lwip-1-0-0)
 $(error rtos_network requires SMP=1 CONSOLE=usb_cdc WIFI=cyw43 NET=lwip MQTT=1 CRASH_REPORT=0 TEST=0)
 endif
@@ -144,10 +144,13 @@ endif
 ifeq ($(APP),rtos_barcode_wifi)
 EXE_FILE := robopico_rtos_connected_barcode_v0_1_2
 endif
-ifneq ($(filter $(APP),rtos_imu_wifi rtos_buddy1_4),)
+ifneq ($(filter $(APP),rtos_imu_wifi rtos_buddy1_4 rtos_buddy1_5),)
 EXE_FILE := robopico_rtos_connected_imu_v0_1_5
 ifeq ($(APP),rtos_buddy1_4)
 EXE_FILE := robopico_buddy1_4_rtos_v0_2_12_caster_assist
+endif
+ifeq ($(APP),rtos_buddy1_5)
+EXE_FILE := robopico_buddy1_5_rtos_integration_v0_2_candidate
 endif
 endif
 endif
@@ -211,30 +214,36 @@ CFLAGS  += -DCNF_SMP=1
 ASFLAGS += -DCNF_SMP=1
 endif
 CFLAGS  += -DAPP_TEST=$(TEST)
-ifneq ($(filter $(APP),rtos_bringup rtos_line rtos_network rtos_line_wifi rtos_barcode_wifi rtos_imu_wifi rtos_buddy1_4),)
+ifneq ($(filter $(APP),rtos_bringup rtos_line rtos_network rtos_line_wifi rtos_barcode_wifi rtos_imu_wifi rtos_buddy1_4 rtos_buddy1_5),)
 CFLAGS += -DAPP_RTOS_BRINGUP=1 -DCNF_TIMER_PERIOD=1 -DUSE_SDEV_DRV=0 -ffunction-sections -fdata-sections
 INCPATH += -I../firmware/integration/buddy1_4
 LFLAGS += -Wl,--gc-sections -Wl,--defsym=__migration_flash_limit=0x10100000
 LDLIBS += -lm
 endif
-ifneq ($(filter $(APP),rtos_line rtos_line_wifi rtos_barcode_wifi rtos_imu_wifi rtos_buddy1_4),)
+ifneq ($(filter $(APP),rtos_line rtos_line_wifi rtos_barcode_wifi rtos_imu_wifi rtos_buddy1_4 rtos_buddy1_5),)
 CFLAGS += -DAPP_RTOS_LINE=1 -DBUDDY_WIFI_LOGGING=1 -DLINE_CAL_MIN_SPAN=50 -DCIRCUIT_SWEEP_SEARCH=1 -DJUNCTION_ANGLE_GATE_ONLY=1 -fstack-usage
 endif
-ifneq ($(filter $(APP),rtos_network rtos_line_wifi rtos_barcode_wifi rtos_imu_wifi rtos_buddy1_4),)
+ifneq ($(filter $(APP),rtos_network rtos_line_wifi rtos_barcode_wifi rtos_imu_wifi rtos_buddy1_4 rtos_buddy1_5),)
 CFLAGS += -DAPP_RTOS_NETWORK=1 -fstack-usage
 ifeq ($(APP),rtos_network)
 CFLAGS += -DAPP_RTOS_NET_BENCH=1
 endif
 endif
-ifneq ($(filter $(APP),rtos_barcode_wifi rtos_imu_wifi rtos_buddy1_4),)
+ifneq ($(filter $(APP),rtos_barcode_wifi rtos_imu_wifi rtos_buddy1_4 rtos_buddy1_5),)
 CFLAGS += -DAPP_RTOS_BARCODE=1 -DBUDDY_RUNTIME_MAPPING=1 -DBUDDY_COORDINATED_BARCODE=1
 endif
-ifneq ($(filter $(APP),rtos_imu_wifi rtos_buddy1_4),)
+ifneq ($(filter $(APP),rtos_imu_wifi rtos_buddy1_4 rtos_buddy1_5),)
 CFLAGS += -DAPP_RTOS_IMU=1
 INCPATH += -I..
 endif
-ifeq ($(APP),rtos_buddy1_4)
+ifneq ($(filter $(APP),rtos_buddy1_4 rtos_buddy1_5),)
 CFLAGS += -DAPP_RTOS_RELEASE=1 -DCONTINUOUS_BEND_ASSIST=1 -DCIRCUIT_STATIONARY_SEARCH=1 -DRTOS_JUNCTION_MIN_MM=7
+endif
+# Buddy5 candidate: Buddy1-4 release profile plus the Buddy5 mission. The
+# private Buddy5 wheel controller keeps the SDK automatic I300 limit.
+ifeq ($(APP),rtos_buddy1_5)
+CFLAGS += -DAPP_RTOS_BUDDY5=1 -DB5_PLAN_DEPTH_MM=150 -DB5_ALLOW_REVERSE=0 \
+    -DBUDDY5_DRIVE_I_MAX=300 -DMOTION_STEERED_DRIVE=1
 endif
 CFLAGS  += -DTM_CONSOLE_UART=$(CRASH_REPORT)
 ifeq ($(CRASH_REPORT),0)
@@ -269,7 +278,7 @@ endif
 ################################################################################
 
 PROFILE_ID := $(APP)-smp$(SMP)-$(CONSOLE)-wifi$(WIFI)-net$(NET)-mqtt$(MQTT)-crash$(CRASH_REPORT)-test$(TEST)
-ifeq ($(APP),rtos_buddy1_4)
+ifneq ($(filter $(APP),rtos_buddy1_4 rtos_buddy1_5),)
 PROFILE_ID := $(PROFILE_ID)-network_policy_v1-imu_status_clock_v1
 endif
 PROFILE_FILE := .build_profile

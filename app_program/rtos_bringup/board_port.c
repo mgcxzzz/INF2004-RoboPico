@@ -18,6 +18,14 @@
 #define BR_IO_INTE(n) (0x40014130U + 4U * (n)) /* processor 2, core 1 */
 #define BR_IO_INTS(n) (0x40014150U + 4U * (n))
 #define BR_IO_IRQ_BANK0 13U
+#ifdef APP_RTOS_BUDDY5
+#include "../obstacle_navigation/obstacle_service.h"
+/* Bank-2 edges acknowledged here: GP20/21 buttons plus the GP17 ECHO edges
+ * (disjoint bits, checked in obstacle_policy.h). */
+#define BR_BANK2_EDGES (0x00ff0000U | RB5_ECHO_EDGES)
+#else
+#define BR_BANK2_EDGES (0x00ff0000U)
+#endif
 
 static T_SPLOCK g_motion_lock;
 static volatile bench_encoder_t g_encoders[2];
@@ -127,7 +135,16 @@ static void board_gpio_isr (UINT vector)
     uint32_t first = BR_REG(BR_IO_INTS(0U));
     uint32_t buttons = BR_REG(BR_IO_INTS(2U));
     BR_REG(BR_IO_INTR(0U)) = first & 0x00ff00ffU;
-    BR_REG(BR_IO_INTR(2U)) = buttons & 0x00ff0000U;
+#ifdef APP_RTOS_BUDDY5
+    uint64_t echo_us = (buttons & RB5_ECHO_EDGES) != 0U ? board_time_us() : 0U;
+#endif
+    BR_REG(BR_IO_INTR(2U)) = buttons & BR_BANK2_EDGES;
+#ifdef APP_RTOS_BUDDY5
+    if ((buttons & RB5_ECHO_EDGES) != 0U)
+    {
+        rb5_echo_isr(buttons, echo_us); /* GP17 HC-SR04 ECHO: timestamp only */
+    }
+#endif
     if ((first & 0xffU) != 0U)
     {
         bench_encoder_update(&g_encoders[0], read_ab(0U));
@@ -168,10 +185,15 @@ bool board_gpio_init (void)
         g_bringup_irq_stop = 1U;
         return false;
     }
+#ifdef APP_RTOS_BUDDY5
+    uint32_t echo_edges = rb5_gpio_init(); /* TRIG low, ECHO input, servo PWM */
+#else
+    uint32_t echo_edges = 0U;
+#endif
     BR_REG(BR_IO_INTR(0U)) = 0x00cc00ccU;
-    BR_REG(BR_IO_INTR(2U)) = 4U << 16U;
+    BR_REG(BR_IO_INTR(2U)) = (4U << 16U) | echo_edges;
     BR_REG(BR_IO_INTE(0U)) = 0x00cc00ccU;
-    BR_REG(BR_IO_INTE(2U)) = 4U << 16U;
+    BR_REG(BR_IO_INTE(2U)) = (4U << 16U) | echo_edges;
     ClearInt(BR_IO_IRQ_BANK0);
     EnableInt(BR_IO_IRQ_BANK0, 0U);
     return true;

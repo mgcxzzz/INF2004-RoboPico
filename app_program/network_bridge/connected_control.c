@@ -15,6 +15,9 @@
 #include "src/network/wifi_packets.h"
 #include "src/network/wifi_protocol.h"
 #include "include/interfaces/nav_api.h"
+#ifdef APP_RTOS_BUDDY5
+#include "../obstacle_navigation/obstacle_service.h"
+#endif
 #include "src/motion/drive_mode.h"
 #if defined(APP_RTOS_RELEASE) && defined(APP_RTOS_IMU)
 #include "../imu_navigation/imu_service.h"
@@ -195,6 +198,16 @@ static uint8_t pause_line (void)
         rtos_line_cancel();
         return WP_ACK_ACCEPTED;
     }
+#ifdef APP_RTOS_BUDDY5
+    if (rb5_pause_request())
+    {
+        /* Pause while Buddy5 holds the lease cancels Buddy5; the run stays
+         * stopped and the old lease cannot Resume it (SDK rule). */
+        g_lease = 0;
+        bringup_zero_status();
+        return WP_ACK_ACCEPTED;
+    }
+#endif
     motion_result_t result = motion_pause(MOTION_BUDDY1, &g_lease);
     if (result != MOTION_OK)
     {

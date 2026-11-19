@@ -28,7 +28,23 @@ typedef enum
     NAV_VERIFIED_BARCODE,
     NAV_RAMP_ASSIST,
     NAV_SPEED_MODE
+#ifdef MOTION_STEERED_DRIVE
+    ,
+    NAV_STEER /* lease holder's bounded heading setpoint for its drive */
+#endif
 } nav_kind_t;
+#ifdef MOTION_STEERED_DRIVE
+enum
+{
+    NAV_KIND_LAST = 13,
+    NAV_STEER_MAX_DECIDEG = 80 /* +/-8.0 deg; executor faults at 12 deg */
+};
+#else
+enum
+{
+    NAV_KIND_LAST = 12
+};
+#endif
 typedef struct
 {
     unsigned kind : 4;

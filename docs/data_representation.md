@@ -247,3 +247,12 @@ struct, bitfield, wire field, queue or history row is introduced. Existing
 explicit packet encoders and reserved bits are unchanged. Clock ordering fixes
 age interpretation, without compressing timestamps or weakening stale limits.
 Linked RAM/stack and source-preservation evidence remains in the manifest.
+
+## Buddy 5 candidate (APP=rtos_buddy1_5)
+
+No existing record changes. Source 15 adds the E5 mission status (v0.2:
+59-byte payload, version 2 with width policy and approach steering; the
+54-byte version 1 of candidate v0.1 is still decoded) and carries the unchanged SDK Buddy 5 layouts D1–D4, BE/BF
+(version 3 = 25 mm near allowance) and B5 events; all dispatch by exact length
+and marker byte. Layouts, ranges and loss semantics are in
+[buddy5_rtos_integration.md](buddy5_rtos_integration.md). Buddy1–4 images send none of them.

@@ -235,6 +235,19 @@ bool rn_tx_push (uint8_t topic, const uint8_t * p_data_value, uint8_t len,
     count_drop(false);
     return false;
 }
+#ifdef APP_RTOS_BUDDY5
+/* Free bytes in the bounded telemetry queue (non-blocking reference). Lets
+ * the Buddy5 record stream back off so it never crowds out Buddy1-4 frames. */
+uint32_t rn_tx_free (void)
+{
+    T_RMBF queue;
+    if ((g_tx_queue < E_OK) || (E_OK != tk_ref_mbf(g_tx_queue, &queue)))
+    {
+        return 0U;
+    }
+    return queue.frbufsz < 0 ? 0U : (uint32_t)queue.frbufsz;
+}
+#endif
 bool rn_tx_take (uint8_t * p_topic_value, uint8_t data[RN_PACKET_MAX],
                  uint8_t * p_len_value, uint32_t now)
 {

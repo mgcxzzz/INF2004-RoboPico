@@ -7,6 +7,10 @@ acceptance pending.** [New firmware and complete bundle](firmware/integration/bu
 The earlier [v0.2.7 cleanup candidate](docs/coding_cleanup_v0_2_7.md) remains archived.
 The tested main baseline described below remains available for rollback.
 
+**Buddy 5 integration candidate (separate branch `buddy5-rtos-integration`,
+`APP=rtos_buddy1_5`): built and host-checked only, not physically validated.**
+See [docs/buddy5_rtos_integration.md](docs/buddy5_rtos_integration.md).
+
 **Current main release: v0.2.6, micro T-Kernel SMP. Buddy 5 is NOT integrated.**
 
 [Download firmware and full bundle](firmware/integration/buddy1_4/artifacts/v0_2_6_rtos/)

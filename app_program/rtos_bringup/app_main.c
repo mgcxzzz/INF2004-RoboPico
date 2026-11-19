@@ -16,6 +16,9 @@
 #ifdef APP_RTOS_LINE
 #include "../line_navigation/line_service.h"
 #endif
+#ifdef APP_RTOS_BUDDY5
+#include "../obstacle_navigation/obstacle_service.h"
+#endif
 
 static uint64_t port_now (void * p_user)
 {
@@ -49,10 +52,22 @@ static ER start (FP p_entry, PRI priority, UW processor, const char * p_name)
 
 void bringup_help (void)
 {
+#if defined(APP_RTOS_BUDDY5)
+    tm_printf((UB *)"\nROBOPICO BUDDY1-5 RTOS rtos_buddy1_5 v0.1 CANDIDATE | "
+                    "EXPERIMENTAL | micro T-Kernel SMP | base v0.2.9\n");
+    tm_printf((UB *)"Buddy5: guard<=300mm -> width probe (display only) -> "
+                    "line align -> approach ~200mm -> direction probe -> "
+                    "compact bypass -> 4th-turn line acquisition.\n");
+    tm_printf((UB *)"Sonar GP16/GP17, servo GP12 +/-46deg. HOLD keeps the "
+                    "robot stopped until Stop. o=Buddy5 report. Not "
+                    "physically validated.\n");
+#endif
 #if defined(APP_RTOS_RELEASE)
+#if !defined(APP_RTOS_BUDDY5)
     tm_printf((UB *)"\nROBOPICO BUDDY1-4 RTOS v0.2.12 CASTER ASSIST | "
                     "PROVISIONAL | micro "
                     "T-Kernel SMP | Buddy5 NOT integrated\n");
+#endif
     tm_printf((UB *)"Tested Step5 v0.1.5 logic: Continuous V2 Profile1 45mm/s; "
                     "barcode/junction110mm; IMU/ramp via NAV.\n");
     tm_printf((
@@ -293,6 +308,9 @@ EXPORT INT usermain (void)
                                 .outputs_off = port_off,
                                 .now_us = port_now};
     motion_init(&port);
+#ifdef APP_RTOS_BUDDY5
+    rb5_init();
+#endif
     ER result = bringup_create_objects();
 #ifdef APP_RTOS_IMU
     ri_init();
@@ -328,6 +346,13 @@ EXPORT INT usermain (void)
     {
         result = start((FP)bringup_safety_task, 6, TP_PRC2, "safety");
     }
+#ifdef APP_RTOS_BUDDY5
+    if (E_OK == result)
+    {
+        result =
+            start((FP)rb5_task, RB5_TASK_PRIORITY, TP_PRC2, "buddy5-obstacle");
+    }
+#endif
     if (E_OK == result)
     {
         result = start((FP)bringup_nav_task, 10, TP_PRC2, "nav-bench");

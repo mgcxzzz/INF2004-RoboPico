@@ -22,6 +22,24 @@
 #include "encoder_quality.h"
 static line_envelope_t g_committed_envelope;
 #endif
+#ifdef APP_RTOS_BUDDY5
+#include "../obstacle_navigation/obstacle_service.h"
+#include "extensions/buddy5_obstacles/signed_continuous.h"
+/* Buddy5's signed wheel demand shares the one committed envelope; the flag
+ * says how its outputs map to H-bridge levels. Guarded by the motion lock. */
+static bool g_committed_b5;
+static bool g_pending_b5;
+static dual_levels_t output_levels (const line_envelope_t * p_envelope,
+                                    bool buddy5, unsigned wheel, uint64_t now)
+{
+    return buddy5 ? b5_signed_levels(wheel,
+                                     b5_signed_cap(p_envelope->output[wheel]))
+                  : rl_levels(p_envelope, wheel, now);
+}
+#else
+#define output_levels(p_envelope, buddy5, wheel, now)                          \
+    rl_levels((p_envelope), (wheel), (now))
+#endif
 
 ID g_bringup_commands;
 static T_SPLOCK g_status_lock;
@@ -164,6 +182,9 @@ void bringup_stop_from (uint8_t reason, uint16_t latch,
 #if defined(APP_RTOS_LINE) && defined(APP_RTOS_NETWORK)
     rn_drive_cancel();
 #endif
+#ifdef APP_RTOS_BUDDY5
+    rb5_cancel(); /* Out-of-queue: Buddy5 never issues another move. */
+#endif
     (void)motion_stop(requester);
     motion_session_end(reason);
     bringup_zero_status();
@@ -252,9 +273,9 @@ static void apply_outputs (void * p_raw)
     for (unsigned wheel = 0U; wheel < 2U; ++wheel)
     {
 #ifdef APP_RTOS_LINE
-        dual_levels_t levels =
-            allowed ? rl_levels(p_envelope, wheel, board_time_us())
-                    : (dual_levels_t){0};
+        dual_levels_t levels = allowed ? output_levels(p_envelope, g_pending_b5,
+                                                       wheel, board_time_us())
+                                       : (dual_levels_t){0};
         board_motor_levels(wheel, levels.a, levels.b);
         int sign = (0 == wheel ? levels.a : levels.b) ? 1 : -1;
         g_status.pwm[wheel] = (int16_t)(sign * (int)(levels.a + levels.b));
@@ -266,6 +287,9 @@ static void apply_outputs (void * p_raw)
     }
 #ifdef APP_RTOS_LINE
     g_committed_envelope = allowed ? *p_envelope : (line_envelope_t){0};
+#endif
+#ifdef APP_RTOS_BUDDY5
+    g_committed_b5 = allowed && g_pending_b5;
 #endif
     status_leave(key);
 }
@@ -450,6 +474,16 @@ void bringup_control_task (INT code, void * p_exinf_value)
 #ifdef APP_RTOS_NETWORK
                 rn_drive_begin();
 #endif
+#ifdef APP_RTOS_BUDDY5
+                /* Arm the Buddy5 guard before the first optical/PWM demand. */
+                if (!rb5_begin(now))
+                {
+                    tm_printf((UB *)"B5 START rejected: need a fresh healthy "
+                                    "centred sonar result.\n");
+                    bringup_stop(BR_REASON_API, 0);
+                    active = false;
+                }
+#endif
                 for (unsigned wheel_value = 0; wheel_value < 2; ++wheel_value)
                 {
                     br_encoder_reset(&encoder_quality[wheel_value],
@@ -474,7 +508,15 @@ void bringup_control_task (INT code, void * p_exinf_value)
         }
 #endif
         analog_demand_t optical = {0};
-        if (active && paused)
+#ifdef APP_RTOS_BUDDY5
+        /* Buddy5 lease (or its accepted hand-back): Buddy3's provider does
+         * not run, exactly like an operator Pause; levels still feed the
+         * coordinator. */
+        bool buddy5 = (active && (!paused)) && (rb5_external());
+#else
+        const bool buddy5 = false;
+#endif
+        if (active && (paused || buddy5))
         {
             rtos_line_feedback(&feedback, NULL);
         }
@@ -503,7 +545,22 @@ void bringup_control_task (INT code, void * p_exinf_value)
             }
         }
         motion_output_t demand = motion_update(&feedback);
-        if ((active && (demand.external)) && (!paused))
+#ifdef APP_RTOS_BUDDY5
+        if (active && (rb5_take_handback(&demand)))
+        {
+            /* Same reset as network Resume: the pending decoded route is
+             * kept, partial barcode/junction state is discarded. */
+            rtos_line_resume();
+        }
+        rb5_frame(now, feedback.line_level); /* decision step after update */
+        buddy5 = (active && (!paused)) && (rb5_owned(&demand));
+        if (buddy5)
+        {
+            optical.target[0] = demand.target_mm_s[0]; /* encoder checks */
+            optical.target[1] = demand.target_mm_s[1];
+        }
+#endif
+        if (((active && (demand.external)) && (!paused)) && (!buddy5))
         {
             bringup_status_t current;
             bringup_get_status(&current);
@@ -603,7 +660,26 @@ void bringup_control_task (INT code, void * p_exinf_value)
                 }
             }
         }
-        if (active && (!paused))
+#ifdef APP_RTOS_BUDDY5
+        if ((active && (!paused)) && (buddy5))
+        {
+            int32_t out[2];
+            rb5_power(&demand, speed, delta_time, now, out);
+            line_envelope_t signed_envelope = {.output = {out[0], out[1]}};
+            g_pending_b5 = true;
+            bool committed = motion_commit(demand.generation, apply_outputs,
+                                           &signed_envelope);
+            g_pending_b5 = false;
+            int32_t applied[2] = {committed ? b5_signed_cap(out[0]) : 0,
+                                  committed ? b5_signed_cap(out[1]) : 0};
+            rb5_power_committed(applied);
+        }
+        else
+        {
+            rb5_power_idle();
+        }
+#endif
+        if ((active && (!paused)) && (!buddy5))
         {
             uintptr_t api_key = board_motion_lock(NULL);
             line_envelope_t previous_envelope = g_committed_envelope;
@@ -810,9 +886,11 @@ void bringup_safety_task (INT code, void * p_exinf_value)
                                         (!board_button_pressed(21U))));
             for (unsigned wheel = 0; wheel < 2; ++wheel)
             {
-                dual_levels_t cap = allowed ? rl_levels(&g_committed_envelope,
-                                                        wheel, board_time_us())
-                                            : (dual_levels_t){0};
+                dual_levels_t cap =
+                    allowed
+                        ? output_levels(&g_committed_envelope, g_committed_b5,
+                                        wheel, board_time_us())
+                        : (dual_levels_t){0};
                 dual_levels_t actual = board_motor_current(wheel);
                 dual_levels_t reduced = rl_reduce(actual, cap);
                 if ((reduced.a != actual.a) || (reduced.b != actual.b))
@@ -1018,6 +1096,12 @@ void bringup_nav_task (INT code, void * p_exinf_value)
         {
             bringup_help();
         }
+#ifdef APP_RTOS_BUDDY5
+        else if ('o' == command)
+        {
+            rb5_report_request();
+        }
+#endif
         else if ('p' == command || 'n' == command)
         {
             bringup_report();

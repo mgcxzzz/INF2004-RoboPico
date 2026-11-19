@@ -11,6 +11,9 @@
 #include "wireless_calibration.h"
 #endif
 #include "include/interfaces/nav_api.h"
+#ifdef APP_RTOS_BUDDY5
+#include "../obstacle_navigation/obstacle_service.h"
+#endif
 #ifdef APP_RTOS_BARCODE
 #include "../barcode_navigation/barcode_model.h"
 static rb_decoder_t g_barcode;
@@ -430,6 +433,12 @@ bool rtos_line_request_start (uint32_t received_us)
     {
         return false;
     }
+#ifdef APP_RTOS_BUDDY5
+    if (!rb5_start_allowed())
+    {
+        return false; /* Start needs a fresh healthy centred sonar result. */
+    }
+#endif
 #ifdef APP_RTOS_NETWORK
     if ((!rn_drive_online()) || (!bringup_can_start()))
     {
@@ -676,6 +685,13 @@ bool rtos_line_prepare (const motion_feedback_t * p_flags_value, double path,
                 tm_printf((UB *)"LINE start rejected: ADC not ready; see "
                                 "ADC/ADC_FIRST/ADC_LAST.\n");
             }
+#ifdef APP_RTOS_BUDDY5
+            else if (!rb5_start_allowed())
+            {
+                tm_printf((UB *)"B5 START rejected: need a fresh healthy "
+                                "centred sonar result; o=report.\n");
+            }
+#endif
             else
             {
                 tm_printf((UB *)"LINE start rejected: calibration invalid.\n");
