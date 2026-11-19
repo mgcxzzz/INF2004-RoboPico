@@ -1,14 +1,16 @@
 /**
  * @file b5_mission_pack.h
- * @brief Buddy5 mission status, source 15 subtype 0xE5, version 2.
+ * @brief Buddy5 mission status, source 15 subtype 0xE5, version 3.
  * @details Car-confirmed snapshot (copied under DI by the Buddy5 task) sent
  * every 500 ms and on stage changes. It repeats the latest width/direction
  * results so a lost one-shot D3/BF frame cannot hide them, and carries the
  * record counts admitted to the network queue so the dashboard can locate a
  * loss (car vs transport). Version 1 (candidate v0.1) had a 54-byte payload
  * with byte 19 zero; version 2 keeps bytes 0-53 and adds the width policy
- * (19) and approach steering (54-58). Frame [0xF2, 59, seq] + payload, LE:
- *  0 u32 Pico ms           4 u8 0xE5             5 u8 version 2
+ * (19) and approach steering (54-58). Version 3 (long width probe, v0.2.12
+ * candidate) keeps bytes 0-58 and adds the live width-probe pose (59-60).
+ * Frame [0xF2, 61, seq] + payload, LE:
+ *  0 u32 Pico ms           4 u8 0xE5             5 u8 version 3
  *  6 u16 mission run       8 u8 stage            9 u8 hold/end reason
  * 10 u8 module end/reason 11 u8 coordinator: owner b0-2, mode b3-5,
  *                               session b6, stopped b7
@@ -36,6 +38,9 @@
  * 55 u8 largest |setpoint| this mission run, 0.1 deg
  * 56 u8 control frames at the +/-8 deg setpoint bound (saturates 255)
  * 57 u16 fresh range that decided the width policy, mm (0 = none)
+ * 59 u8 width probe state b0-3 (B5WP_IDLE..B5WP_MID) | side b4-5 (0 none,
+ *    1 left, 2 right; the side of the last stopped sample)
+ * 60 u8 width sample phase b0-2 (B5WP_PH_*) | stop step b3-7 (0-31)
  * @see docs/buddy5_rtos_integration.md
  */
 #ifndef B5_MISSION_PACK_H
@@ -47,9 +52,9 @@
 enum
 {
     B5MP_MARKER = 0xE5U,
-    B5MP_VERSION = 2U,
-    B5MP_PAYLOAD = 59U,
-    B5MP_FRAME = 62U,
+    B5MP_VERSION = 3U,
+    B5MP_PAYLOAD = 61U,
+    B5MP_FRAME = 64U,
     B5MP_NONE = 0xFFFFU
 };
 _Static_assert(B5MP_FRAME <= 64U, "WIFI_PACKET_MAX is 64");
@@ -114,6 +119,8 @@ typedef struct
     uint8_t steer_max_decideg;
     uint8_t steer_saturated;
     uint16_t width_gate_mm;
+    uint8_t width_state;  /* b0-3 probe state | b4-5 sample side */
+    uint8_t width_sample; /* b0-2 sample phase | b3-7 step */
 } b5_mission_status_t;
 
 static inline void b5mp_put16 (uint8_t * p_out, uint16_t value)
@@ -174,6 +181,8 @@ static inline void b5mp_pack (const b5_mission_status_t * p_status,
     p_payload[55] = p_status->steer_max_decideg;
     p_payload[56] = p_status->steer_saturated;
     b5mp_put16(p_payload + 57, p_status->width_gate_mm);
+    p_payload[59] = p_status->width_state;
+    p_payload[60] = p_status->width_sample;
 }
 
 #endif

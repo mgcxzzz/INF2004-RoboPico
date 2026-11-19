@@ -536,14 +536,20 @@
       windowStartMs, eventCount };
   }
 
-  /* ---------- Buddy5 RTOS integration (rtos_buddy1_5 v0.1) ----------
+  /* ---------- Buddy5 RTOS integration (rtos_buddy1_5) ----------
    * All are source-15 layouts dispatched by EXACT payload length AND marker
    * byte 4 (none has length 28, so the ramp-assist rule is unaffected):
-    *  E5 mission status v1 (54) / v2 (59)   D1 width record v4 (56)  D2 width summary v4 (58)
-   *  D3 width result v1 (58)     D4 rejected triplet v1 (32)
+   *  E5 mission status v1 (54) / v2 (59) / v3 (61, v0.2.12 long-width candidate)
+   *  Width, two protocols, never mixed within one run:
+   *    legacy short probe (v0.1/v0.2): D1/D2 v4 (56/58), D3 v1 (58), D4 v1 (32)
+   *    long probe (SDK width_long_probe v0.2): D1/D2 v10, D3 v3 (rule 2, basis 4
+   *    CORROBORATED_EDGE_ESTIMATE), D4 v3, D5 v2 (36, per-side outward limits)
    *  BE direction record v2/v3 (48)  BF direction summary v2/v3 (44)
    *  B5 bypass/rejoin event v1 (32)
-   * Width is a DISPLAY estimate only; it never authorises motion. */
+   * D5's length 36 is only used by source 2 elsewhere, never in source 15.
+   * Width is a DISPLAY estimate only; it never authorises motion. The
+   * dashboard shows the car's (Pico) estimate; independent replay is offline
+   * (tools/telemetry/b5_rtos_decode.py --sdk-width-decoder). */
   const B5M_STAGE = ['idle', 'guard', 'halting', 'width probe', 'line alignment', 'approach',
                      'direction probe', 'bypass', 'hold', 'cancelled', 'fresh range'];
   const B5M_REASON = ['none', 'cancelled', 'sonar fault', 'lease lost', 'move refused/interrupted',
@@ -563,7 +569,26 @@
   const B5WP_END = ['NONE', 'COMPLETE', 'CANCELLED', 'MOVE', 'SENSOR', 'LEASE', 'TIMEOUT', 'REFERENCE',
                     'ALIGNMENT', 'TRAVEL', 'CLEARANCE'];
   const B5EP_END = ['NONE', 'COMPLETE', 'CANCELLED', 'MOVE', 'SENSOR', 'LEASE', 'TIMEOUT', 'REFERENCE', 'ALIGNMENT'];
-  const B5WE_BASIS = ['NONE', 'CALIBRATED_RANGE_RISE', 'EMPIRICAL_REACH_COMPLETION', 'PROJECT_RANGE_ASSUMPTION'];
+  const B5WE_BASIS = ['NONE', 'CALIBRATED_RANGE_RISE', 'EMPIRICAL_REACH_COMPLETION', 'PROJECT_RANGE_ASSUMPTION',
+                      'CORROBORATED_EDGE_ESTIMATE'];   /* basis 4: long protocol (D3 v3 / E5 v3) only */
+  const B5WP_SIDE_STATE = ['UNKNOWN', 'NO_INNER_IN', 'BOUNDARY', 'NOT_REACHED', 'CONTRADICTORY', 'UNCORROBORATED'];
+  const B5WP_STATE = ['IDLE', 'CLAIM', 'REF', 'TURN', 'PRE', 'STEP', 'OUT', 'RETRACE', 'RET', 'TURN_BACK', 'FINAL',
+                      'DONE', 'HOLD', 'TRIM', 'LADDER', 'MID'];
+  const B5WP_PHASE = ['REF', 'PRE', 'OUT', 'RET', 'FINAL', 'LAD_OUT', 'LAD_RET', 'MID'];
+  const B5WP_LIMIT = ['NONE', 'FAR', 'CEILING', 'CLEARANCE', 'STEPS', 'ABORT'];
+  /* Width wire versions per protocol (marker -> version). */
+  const B5W_LONG = { 0xD1: 10, 0xD2: 10, 0xD3: 3, 0xD4: 3, 0xD5: 2 };
+  const B5W_LEGACY = { 0xD1: 4, 0xD2: 4, 0xD3: 1, 0xD4: 1 };
+  function b5WidthProtocol(p) {
+    return B5W_LONG[p[4]] === p[5] ? 'long' : B5W_LEGACY[p[4]] === p[5] ? 'legacy' : null;
+  }
+  /* What a width basis means for the display (never for motion). */
+  function b5WidthLabel(basis) {
+    return basis === 1 ? 'estimate (calibrated range rise)'
+      : basis === 4 ? 'estimate (corroborated edge evidence)'
+      : basis === 2 ? 'ASSUMED completion of an unresolved edge'
+      : basis === 3 ? 'ASSUMED project midpoint, NOT measured' : 'none';
+  }
   const B5WE_STATUS = ['NONE', 'ESTIMATE', 'REACH_LIMIT', 'INVALID'];
   const B5WE_REASON = ['NONE', 'NO_RECORDS', 'INCONSISTENT', 'RUN_OR_REFERENCE', 'EDGES_UNRESOLVED'];
   const B5WE_EDGE = ['NO_DATA', 'ONSET', 'HIGH_FROM_START', 'WALK_FREE'];
@@ -591,18 +616,21 @@
     return out;
   }
   function decodeB5MissionStatus(p) {
-    if (p[4] !== 0xE5 || !((p.length === 54 && p[5] === 1) || (p.length === 59 && p[5] === 2))) {
-      if ((p.length === 54 || p.length === 59) && p[4] === 0xE5)
+    if (p[4] !== 0xE5 || !((p.length === 54 && p[5] === 1) || (p.length === 59 && p[5] === 2) ||
+                           (p.length === 61 && p[5] === 3))) {
+      if ((p.length === 54 || p.length === 59 || p.length === 61) && p[4] === 0xE5)
         return { error: 'unsupported Buddy5 status version ' + p[5] + ' for length ' + p.length };
       return { error: 'unknown Buddy5 status layout' };
     }
-    const v2 = p[5] === 2;
+    const v2 = p[5] >= 2, v3 = p[5] === 3;
     const flags = u16(p, 12);
     if ((flags & 0xf000) || (!v2 && p[19] !== 0)) return { error: 'Buddy5 status reserved bits are nonzero' };
     if (v2 && (p[19] >= B5M_WIDTH_POLICY.length || Math.abs(i8(p, 54)) > 80 || p[55] > 80))
       return { error: 'Buddy5 status v2 field out of range' };
     if (p[8] >= B5M_STAGE.length || p[9] >= B5M_REASON.length || p[25] > 3 || p[28] > 2 || p[24] > 2)
       return { error: 'Buddy5 status field out of range' };
+    if ((!v3 && p[30] > 3) || p[30] > 4 || (v3 && (((p[59] >> 4) & 3) > 2 || (p[59] & 0xc0))))
+      return { error: 'Buddy5 status width field out of range' };
     const co = p[11], pingMm = u16(p, 14), pingAge = u16(p, 16);
     const policy = v2 ? p[19] : null;
     return { kind: 'b5-status', version: p[5], uptimeMs: u32(p, 0), run: u16(p, 6),
@@ -631,11 +659,17 @@
       bypassRangeMm: u16(p, 44), bypassState: p[46], bypassStateName: B5A_STATE[p[46]] || '?',
       rejoinPhase: p[47], rejoinPhaseName: B5R_PHASE[p[47]] || '?',
       widthProduced: p[48], widthAdmitted: p[49], directionProduced: p[50], directionAdmitted: p[51],
-      approachLegs: p[52] & 15, alignSteps: p[52] >> 4, discarded: p[53] };
+      approachLegs: p[52] & 15, alignSteps: p[52] >> 4, discarded: p[53],
+      widthLabel: b5WidthLabel(p[30]),
+      probeState: v3 ? p[59] & 15 : null, probeStateName: v3 ? B5WP_STATE[p[59] & 15] : null,
+      probeSide: v3 ? ['none', 'L', 'R'][(p[59] >> 4) & 3] : null,
+      samplePhase: v3 ? p[60] & 7 : null, samplePhaseName: v3 ? B5WP_PHASE[p[60] & 7] : null,
+      sampleStep: v3 ? p[60] >> 3 : null };
   }
   function decodeB5WidthRecord(p) {
-    if (p[5] !== 4) return { error: 'unsupported D1 width record version ' + p[5] };
-    return { kind: 'b5-width-record', version: p[5], uptimeMs: u32(p, 0), run: u16(p, 6), index: u16(p, 8),
+    const protocol = b5WidthProtocol(p);
+    if (!protocol) return { error: 'unsupported D1 width record version ' + p[5] };
+    return { kind: 'b5-width-record', version: p[5], protocol, phaseName: B5WP_PHASE[p[10]] || '?', uptimeMs: u32(p, 0), run: u16(p, 6), index: u16(p, 8),
       phase: p[10], side: p[11], step: p[12], n: p[13], headingDeg: i16(p, 14) / 100,
       servoDeg: i16(p, 16) / 10, appliedDeg: i16(p, 18) / 10, pathMm: i16(p, 20) / 10,
       expectedMm: u16(p, 26), anchorMm: u16(p, 28), pings: b5pings(p, 32, 36), evidence: p[35],
@@ -643,32 +677,59 @@
       axisXMm: i16(p, 52) / 10, frontGapMm: i16(p, 54) / 10 };
   }
   function decodeB5WidthSummary(p) {
-    if (p[5] !== 4) return { error: 'unsupported D2 width summary version ' + p[5] };
-    return { kind: 'b5-width-summary', version: p[5], uptimeMs: u32(p, 0), run: u16(p, 6), end: p[8],
+    const protocol = b5WidthProtocol(p);
+    if (!protocol) return { error: 'unsupported D2 width summary version ' + p[5] };
+    const measured = p[9] === 1;
+    return { kind: 'b5-width-summary', version: p[5], protocol, uptimeMs: u32(p, 0), run: u16(p, 6), end: p[8],
       endName: B5WP_END[p[8]] || '?', widthResult: p[9], stateL: p[10], stateR: p[11], stepsL: p[12],
+      stateLName: B5WP_SIDE_STATE[p[10]] || '?', stateRName: B5WP_SIDE_STATE[p[11]] || '?',
       stepsR: p[13], records: u16(p, 14), lost: u16(p, 16), d0: u16(p, 18), flags: u16(p, 38),
+      outLMm: i16(p, 20) / 10, outRMm: i16(p, 22) / 10,
       finalHeadingDeg: i16(p, 32) / 100, netXMm: i16(p, 34) / 10, netYMm: i16(p, 36) / 10,
-      corrections: u16(p, 40) };
+      corrections: u16(p, 40),
+      /* IN/FAR axis-x brackets: only when both sides were bounded (widthResult 1) */
+      lInMm: measured ? i16(p, 44) / 10 : null, lFarMm: measured ? i16(p, 46) / 10 : null,
+      rInMm: measured ? i16(p, 48) / 10 : null, rFarMm: measured ? i16(p, 50) / 10 : null,
+      minFrontGapMm: i16(p, 56) / 10 };
   }
   function decodeB5WidthResult(p) {
-    if (p[5] !== 1) return { error: 'unsupported D3 width result version ' + p[5] };
-    if (p[9] > 3 || p[10] > 3 || p[11] > 4) return { error: 'D3 width result field out of range' };
+    const protocol = b5WidthProtocol(p);
+    if (!protocol) return { error: 'unsupported D3 width result version ' + p[5] };
+    if (p[9] > (protocol === 'long' ? 4 : 3) || p[10] > 3 || p[11] > 4)
+      return { error: 'D3 width result field out of range' };
     const side = (o) => ({ status: p[o], statusName: B5WE_EDGE[p[o]] || '?', n: p[o + 1],
       aMm: b5mm10(u16(p, o + 2)), bMm: b5mm10(u16(p, o + 4)), baseMm: i16(p, o + 6) / 4 });
-    return { kind: 'b5-width-result', version: p[5], uptimeMs: u32(p, 0), run: u16(p, 6), end: p[8],
+    return { kind: 'b5-width-result', version: p[5], protocol, uptimeMs: u32(p, 0), run: u16(p, 6), end: p[8],
       endName: B5WP_END[p[8]] || '?', basis: p[9], basisName: B5WE_BASIS[p[9]], status: p[10],
       statusName: B5WE_STATUS[p[10]], reason: p[11], reasonName: B5WE_REASON[p[11]],
       displayMm: b5mm100(u16(p, 12)), rawMm: b5mm100(u16(p, 14)), correctedMm: b5mm100(u16(p, 16)),
       sampledMm: b5mm10(u16(p, 18)), spanLoMm: b5mm10(u16(p, 20)), spanHiMm: b5mm10(u16(p, 22)),
       flags: u16(p, 24), left: side(26), right: side(34), d0: u16(p, 42), records: u16(p, 44),
       lost: u16(p, 46), offsetMm: u16(p, 48) / 10, rangeLoMm: u16(p, 50), rangeHiMm: u16(p, 52),
-      ruleId: p[56], widthResult: p[57], measured: p[9] === 1 || p[9] === 2, assumed: p[9] === 3 };
+      ruleId: p[56], widthResult: p[57], label: b5WidthLabel(p[9]),
+      /* legacy v1 meaning kept for old captures; long: measured = an estimate basis */
+      measured: protocol === 'long' ? (p[9] === 1 || p[9] === 4) : (p[9] === 1 || p[9] === 2),
+      assumedCompletion: protocol === 'long' && p[9] === 2, assumed: p[9] === 3 };
   }
   function decodeB5WidthRetry(p) {
-    if (p[5] !== 1) return { error: 'unsupported D4 retry version ' + p[5] };
-    return { kind: 'b5-width-retry', version: p[5], uptimeMs: u32(p, 0), run: u16(p, 6), phase: p[8],
+    const protocol = b5WidthProtocol(p);
+    if (!protocol) return { error: 'unsupported D4 retry version ' + p[5] };
+    return { kind: 'b5-width-retry', version: p[5], protocol, uptimeMs: u32(p, 0), run: u16(p, 6), phase: p[8],
       side: p[9], step: p[10], attempt: p[11], expectedMm: u16(p, 12), headingDeg: i16(p, 14) / 100,
       appliedDeg: i16(p, 16) / 10, pings: b5pings(p, 18, 22), dwellMs: u16(p, 28) };
+  }
+  function decodeB5WidthLimits(p) {
+    if (p[5] !== 2) return { error: 'unsupported D5 width limits version ' + p[5] };
+    if (p[18] >= B5WP_LIMIT.length || p[26] >= B5WP_LIMIT.length) return { error: 'D5 limit out of range' };
+    const side = (o) => {
+      const ct = i16(p, o + 4), mg = i16(p, o + 6);
+      return { limit: p[o], limitName: B5WP_LIMIT[p[o]], steps: p[o + 1], outMm: i16(p, o + 2) / 10,
+               clearTotalMm: ct === 0x7fff ? null : ct / 10, minTurnGapMm: mg === 0x7fff ? null : mg / 10 };
+    };
+    return { kind: 'b5-width-limits', version: p[5], protocol: 'long', uptimeMs: u32(p, 0), run: u16(p, 6),
+      end: p[8], endName: B5WP_END[p[8]] || '?', ceilingMm: u16(p, 10) / 10, overshootMm: u16(p, 12) / 10,
+      headingReserveDeg: u16(p, 14) / 100, marginMm: u16(p, 16) / 10, left: side(18), right: side(26),
+      d0: u16(p, 34) };
   }
   function decodeB5DirectionRecord(p) {
     if (p[5] !== 2 && p[5] !== 3) return { error: 'unsupported BE direction record version ' + p[5] };
@@ -698,11 +759,12 @@
   }
   function decodeB5Source15(p) {
     if (p.length < 6) return null;
-    if ((p.length === 54 || p.length === 59) && p[4] === 0xE5) return decodeB5MissionStatus(p);
+    if ((p.length === 54 || p.length === 59 || p.length === 61) && p[4] === 0xE5) return decodeB5MissionStatus(p);
     if (p.length === 56 && p[4] === 0xD1) return decodeB5WidthRecord(p);
     if (p.length === 58 && p[4] === 0xD2) return decodeB5WidthSummary(p);
     if (p.length === 58 && p[4] === 0xD3) return decodeB5WidthResult(p);
     if (p.length === 32 && p[4] === 0xD4) return decodeB5WidthRetry(p);
+    if (p.length === 36 && p[4] === 0xD5) return decodeB5WidthLimits(p);
     if (p.length === 48 && p[4] === 0xBE) return decodeB5DirectionRecord(p);
     if (p.length === 44 && p[4] === 0xBF) return decodeB5DirectionSummary(p);
     if (p.length === 32 && p[4] === 0xB5) return decodeB5Event(p);
@@ -715,17 +777,19 @@
     const width = new Map(), direction = new Map();
     function slot(map, run) {
       if (!map.has(run)) map.set(run, { run, indices: new Map(), duplicates: 0, summary: null, result: null,
-                                         retries: [] });
+                                         retries: [], limits: null, protocols: new Set() });
       return map.get(run);
     }
     function add(d) {
       if (!d || !d.kind) return;
+      if (d.kind.startsWith('b5-width-') && d.protocol) slot(width, d.run).protocols.add(d.protocol);
       if (d.kind === 'b5-width-record' || d.kind === 'b5-direction-record') {
         const r = slot(d.kind === 'b5-width-record' ? width : direction, d.run);
         if (r.indices.has(d.index)) r.duplicates++; else r.indices.set(d.index, d);
       } else if (d.kind === 'b5-width-summary') slot(width, d.run).summary = d;
       else if (d.kind === 'b5-width-result') slot(width, d.run).result = d;
       else if (d.kind === 'b5-width-retry') slot(width, d.run).retries.push(d);
+      else if (d.kind === 'b5-width-limits') slot(width, d.run).limits = d;
       else if (d.kind === 'b5-direction-summary') slot(direction, d.run).summary = d;
     }
     function report(map, run) {
@@ -734,9 +798,21 @@
       const claimed = r.summary ? r.summary.records : (r.result ? r.result.records : null);
       const missing = [];
       if (claimed !== null) for (let k = 0; k < claimed; k++) if (!r.indices.has(k)) missing.push(k);
+      const protocols = r.protocols ? [...r.protocols] : [];
+      const mixed = protocols.length > 1;
+      const long = protocols.length === 1 && protocols[0] === 'long';
+      const complete = claimed !== null && missing.length === 0 && !!r.summary && !mixed &&
+        (!long || (!!r.limits && !!r.result));
+      /* The dashboard never claims independent verification: a complete long
+       * run is "Pico-reported, capture complete" (replay offline); a gap means
+       * the car's number cannot be independently checked from this capture. */
+      const verification = map !== width ? null : mixed ? 'REJECTED: mixed width protocol versions in one run'
+        : !r.result ? 'no D3 result received'
+        : complete ? 'Pico-reported · capture complete (replay offline to verify)'
+        : 'Pico-reported · NOT independently verifiable (capture incomplete)';
       return { run, received: r.indices.size, claimed, missing, duplicates: r.duplicates,
-               summary: !!r.summary, result: !!r.result, retries: r.retries.length,
-               complete: claimed !== null && missing.length === 0 && !!r.summary };
+               summary: !!r.summary, result: !!r.result, limits: !!r.limits, retries: r.retries.length,
+               protocol: mixed ? 'mixed' : protocols[0] || null, complete, verification };
     }
     function latest(map) { let k = null; for (const run of map.keys()) k = run; return k; }
     return { add, width: (run) => report(width, run === undefined ? latest(width) : run),
@@ -994,7 +1070,7 @@
                 decodeSource15, decodeStoredLine, picoUptimeMs, frameRunId,
                 detectProfile, effectiveProfile,
                 decodeB5Source15, decodeB5MissionStatus, decodeB5WidthRecord, decodeB5WidthSummary,
-                decodeB5WidthResult, decodeB5WidthRetry, decodeB5DirectionRecord, decodeB5DirectionSummary,
+                decodeB5WidthResult, decodeB5WidthRetry, decodeB5WidthLimits, decodeB5DirectionRecord, decodeB5DirectionSummary,
                 decodeB5Event, B5Tracker, B5M_STAGE, B5M_REASON, B5M_BASIS };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.IS28 = api;

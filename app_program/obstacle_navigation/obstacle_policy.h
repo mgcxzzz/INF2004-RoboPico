@@ -25,6 +25,8 @@ enum
     RB5_ECHO_EDGES = RB5_ECHO_FALL | RB5_ECHO_RISE,
     RB5_BUTTON_EDGES = 0x00ff0000U,
     RB5_TASK_PRIORITY = 20,      /* TEAM.md Buddy5 band, core1 below motion */
+    RB5_TASK_STACK = 3072,       /* bytes; deepest chain (o report -> tm_printf)
+                                    ~1.8 KB, see the v0.2.12 long-width handoff */
     RB5_READY_MAX_MS = 100U,     /* start gate: readiness must be this fresh */
     RB5_READY_PING_US = 250000U, /* v0.6.1 b5_auto_ready(): good ping age   */
     RB5_FRAME_SPACING_US = 25000U,  /* SDK probe runtimes: one frame / 25 ms  */

@@ -1,5 +1,9 @@
 #ifndef B5_WIDTH_PROBE_PACK_H
 #define B5_WIDTH_PROBE_PACK_H
+/* width_long_probe v0.1: D1/D2 carry B5WP_WIRE_VERSION 9 (v4 byte layout and meaning,
+ * long-probe sequence bounds: up to 12 forward steps/side, 61 records, 190 mm ceiling).
+ * D3 is version 2 and D4 version 2 (byte layouts unchanged; D3 budget flags now mean the
+ * 190 mm ceiling). D5 v1 is new (see b5_wp_limits_pack). Older decoders reject them. */
 /* EXPERIMENTAL width diagnostic wire format, version 4 (B5WP_WIRE_VERSION; v4 = v3 layout and
  * phases with near allowance 25 and front_gap against the face plane - 25;
  * same byte layout as v1/v2). v3 semantics: expected = REF plane + pose for every
@@ -7,6 +11,7 @@
  * evidence 3 = TRANSITION; summary flags bits 11..15 (see width_probe.h). Source15 subtypes
  * 0xD1 (56-byte record) and 0xD2 (58-byte summary). Distinct from the
  * direction probe BE/BF frames, which are unchanged. Little-endian. */
+#include <math.h>
 #include <string.h>
 #include "extensions/buddy5_obstacles/width_probe.h"
 #include "extensions/buddy5_obstacles/b5_scan_pack.h"
@@ -36,7 +41,7 @@ static inline void b5_wp_retry_pack(const B5WPRetry *r, uint8_t seq,
     memset(out, 0, B5_WP_RETRY_FRAME);
     out[0] = 0xF2; out[1] = B5_WP_RETRY_PAYLOAD; out[2] = seq;
     uint8_t *p = out + 3;
-    b5_scan_u32(p, r->ms); p[4] = 0xD4; p[5] = 1u;
+    b5_scan_u32(p, r->ms); p[4] = 0xD4; p[5] = (uint8_t)B5WP_RETRY_WIRE;
     b5_scan_u16(p + 6, r->run);
     p[8] = r->phase; p[9] = r->side; p[10] = r->step; p[11] = r->attempt;
     b5_scan_u16(p + 12, r->expected_mm);
@@ -48,6 +53,41 @@ static inline void b5_wp_retry_pack(const B5WPRetry *r, uint8_t seq,
     }
     b5_scan_u16(p + 28, 50u);  /* extra dwell in ms */
     b5_scan_u16(p + 30, 15u);  /* reference spread limit remains 15 mm */
+}
+/* D5 v1, payload 36 (frame 39): per-run outward limit report, sent after D2.
+ * 0 ms u32, 4 0xD5, 5 ver, 6 run u16, 8 end u8, 9 0,
+ * 10 ceiling_mm10 (1900), 12 overshoot_mm10 (50), 14 heading reserve cdeg (500),
+ * 16 front margin mm10 (500),
+ * 18 L {limit u8 (0 none 1 FAR 2 CEILING 3 CLEARANCE 4 STEPS 5 ABORT), steps u8,
+ *       out_mm10 i16, clear_total_mm10 i16 (0x7FFF none: no step planned),
+ *       min_turn_gap_mm10 i16 (0x7FFF none)}, 26 R {same}, 34 d0 u16. LE. */
+#define B5_WP_LIM_PAYLOAD 36u
+#define B5_WP_LIM_FRAME (B5_WP_LIM_PAYLOAD + 3u)
+_Static_assert(B5_WP_LIM_FRAME <= 64u, "WIFI_PACKET_MAX is 64");
+static inline void b5_wp_limits_pack(const B5WidthProbe *t, uint8_t seq,
+                                     uint8_t out[B5_WP_LIM_FRAME]) {
+    memset(out, 0, B5_WP_LIM_FRAME);
+    out[0] = 0xF2; out[1] = B5_WP_LIM_PAYLOAD; out[2] = seq;
+    uint8_t *p = out + 3;
+    b5_scan_u32(p, t->summary.ms); p[4] = 0xD5; p[5] = (uint8_t)B5WP_LIMIT_WIRE;
+    b5_scan_u16(p + 6, t->summary.run);
+    p[8] = t->summary.end;
+    b5_scan_u16(p + 10, (uint16_t)lroundf(B5WP_BUDGET_MM * 10.0f));
+    b5_scan_u16(p + 12, (uint16_t)lroundf(B5WP_OVERSHOOT_MM * 10.0f));
+    b5_scan_u16(p + 14, (uint16_t)lroundf(B5WP_TURN_RESERVE_DEG * 100.0f));
+    b5_scan_u16(p + 16, (uint16_t)lroundf(B5WP_FRONT_MARGIN_MM * 10.0f));
+    for (unsigned k = 0; k < 2u; ++k) {
+        const B5WPSide *sd = &t->side[k];
+        uint8_t *s = p + 18 + 8 * k;
+        float ct = sd->clear_total_mm, mg = sd->min_turn_gap;
+        long ctv = ct < 0.0f ? 0x7FFF : lroundf(ct * 10.0f);
+        long mgv = mg > 1.0e5f ? 0x7FFF : lroundf(mg * 10.0f);
+        s[0] = sd->limit; s[1] = (uint8_t)sd->steps;
+        b5_scan_u16(s + 2, (uint16_t)(int16_t)lroundf(sd->out_mm * 10.0f));
+        b5_scan_u16(s + 4, (uint16_t)(int16_t)(ctv > 0x7FFF ? 0x7FFF : ctv < -0x7FFF ? -0x7FFF : ctv));
+        b5_scan_u16(s + 6, (uint16_t)(int16_t)(mgv > 0x7FFF ? 0x7FFF : mgv < -0x7FFF ? -0x7FFF : mgv));
+    }
+    b5_scan_u16(p + 34, t->summary.d0);
 }
 static inline void b5_wp_rec_pack(const B5WPRec *r, uint16_t d0, uint16_t lost, uint8_t seq,
                                   uint8_t out[B5_WP_REC_FRAME]) {

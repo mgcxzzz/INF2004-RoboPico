@@ -4,7 +4,7 @@
  * DISPLAY ESTIMATE ONLY: nothing in the firmware reads this result for motion,
  * clearance, bypass or handback.
  *
- * Exact integer port of the frozen stepped range-rise replay
+ * Legacy numeric path: exact integer port of the frozen stepped range-rise replay
  * (width_method_review_2026_11_18/replay_range_walk.py, SHA256 f2d73424...9207,
  * width_probe_json/onset/rel/two_sided) and of the calibration rule in
  * width_calibrated_v0_1/estimate_width.py (SHA256 c0c654d9...6c70):
@@ -26,12 +26,21 @@
  *      sampled = near onset inner end + far reach; display = (sampled + 200) / 2.
  *  C  anything else: display 150 (project range midpoint), reason preserved.
  *
+ * width_long_probe v0.2 extension: a side with boundary_ok may also use a clean
+ * all-FAR triplet containing NO_RETURN. Its adjacent valid REF (left) or MID
+ * (right), assigned to that side with centre=true by the caller, may bound a
+ * HIGH_FROM_START interval at its recorded |axis x|. Centre anchors never alter
+ * an existing numeric ONSET. New evidence yielding a two-sided estimate uses
+ * CORROBORATED_EDGE_ESTIMATE only when both sides have boundary_ok. The rule-1
+ * -10 mm correction and 100..200 mm
+ * limits remain heuristic coefficients; they are not newly validated here.
+ *
  * Units: positions mm10 (as recorded on the wire), residuals quarter-mm (exact for
  * medians of integer echoes), widths mm100 (exact for the mean of two tenths). */
 #include <stdbool.h>
 #include <stdint.h>
 
-#define B5WE_MAX_POINTS   48u
+#define B5WE_MAX_POINTS   64u   /* width_long_probe: >= 61 records (was 48) */
 #define B5WE_HIGH_Q       40      /* 10 mm, quarter-mm units */
 #define B5WE_FAR_Q        600     /* residual > 150 mm is F */
 #define B5WE_RIGHT_BASE_X10 600   /* right baseline window: |x| < 60 mm */
@@ -40,13 +49,13 @@
 #define B5WE_MAX_MM100    20000
 #define B5WE_MID_MM100    15000
 #define B5WE_NONE         0xFFFFu
-#define B5WE_RULE_ID      1u      /* frozen replay f2d73424 + estimate_width c0c654d9 */
+#define B5WE_RULE_ID      2u      /* corroborated edge extension; rule-1 numeric coefficients */
 
-enum { B5WE_K_NONE, B5WE_K_NUM, B5WE_K_FAR };
+enum { B5WE_K_NONE, B5WE_K_NUM, B5WE_K_FAR, B5WE_K_CLEAN_FAR };
 enum { B5WE_PSIDE_NONE, B5WE_PSIDE_L, B5WE_PSIDE_R };
 enum { B5WE_NO_DATA, B5WE_ONSET, B5WE_HIGH_FROM_START, B5WE_WALK_FREE };
 enum { B5WE_BASIS_NONE, B5WE_BASIS_CALIBRATED_RANGE_RISE, B5WE_BASIS_EMPIRICAL_REACH_COMPLETION,
-       B5WE_BASIS_PROJECT_RANGE_ASSUMPTION };
+       B5WE_BASIS_PROJECT_RANGE_ASSUMPTION, B5WE_BASIS_CORROBORATED_EDGE_ESTIMATE };
 enum { B5WE_STATUS_NONE, B5WE_STATUS_ESTIMATE, B5WE_STATUS_REACH_LIMIT, B5WE_STATUS_INVALID };
 enum { B5WE_REASON_NONE, B5WE_REASON_NO_RECORDS, B5WE_REASON_INCONSISTENT,
        B5WE_REASON_RUN_OR_REFERENCE, B5WE_REASON_EDGES_UNRESOLVED };
@@ -68,12 +77,14 @@ typedef struct {
     uint8_t side;      /* B5WE_PSIDE_* */
     uint8_t centre;    /* REF, MID or FINAL record */
     uint8_t kind;      /* B5WE_K_* */
+    uint8_t legacy_kind; /* CLEAN_FAR only: original echo-only feature, otherwise unused */
     uint16_t absx10;   /* |axis x| in 0.1 mm, as recorded */
     int32_t res4;      /* residual in quarter-mm (K_NUM only) */
 } B5WEPoint;
 
 typedef struct {
     bool not_reached, last_out_in, return_ok, cap_budget;
+    bool boundary_ok;  /* caller verified BOUNDARY, inner-IN revisit and retrace */
 } B5WESideIn;
 
 typedef struct {
@@ -103,7 +114,7 @@ typedef struct {
     B5WESide side[2];
 } B5WEResult;
 
-/* Feature of one stopped record (exactly the replay's res()). */
+/* Feature of one stopped record; CLEAN_FAR retains the legacy echo-only feature. */
 B5WEPoint b5_we_point(uint8_t side, bool centre, const uint8_t cls[3], const uint16_t value[3],
                       uint16_t expected_mm, int16_t axis_x_mm10);
 void b5_we_estimate(const B5WEInput *in, B5WEResult *out);

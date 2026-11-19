@@ -31,6 +31,31 @@ static void port_off (void * p_user)
     board_motor_off();
 }
 
+#ifdef APP_RTOS_BUDDY5
+/* Buddy5 task only: as start() but with its own measured stack size, so the
+ * kernel pool keeps headroom for every Buddy1-4 task (see the handoff). */
+static ER start_sized (FP p_entry, PRI priority, UW processor,
+                       const char * p_name, SZ stack_bytes)
+{
+    T_CTSK definition = {0};
+    definition.task = p_entry;
+    definition.tskatr = TA_HLNG | TA_RNG1 | TA_ASSPRC;
+    definition.assprc = processor;
+    definition.itskpri = priority;
+    definition.stksz = stack_bytes;
+    ID identifier = tk_cre_tsk(&definition);
+    if (identifier < E_OK)
+    {
+        return identifier;
+    }
+    ER result = tk_sta_tsk(identifier, 0);
+    tm_printf(
+        (UB *)"TASK name=%s id=%d priority=%d core=%d stack=%d result=%d\n",
+        p_name, identifier, priority, processor - 1U, (INT)stack_bytes, result);
+    return result;
+}
+#endif
+
 static ER start (FP p_entry, PRI priority, UW processor, const char * p_name)
 {
     T_CTSK definition = {0};
@@ -53,8 +78,9 @@ static ER start (FP p_entry, PRI priority, UW processor, const char * p_name)
 void bringup_help (void)
 {
 #if defined(APP_RTOS_BUDDY5)
-    tm_printf((UB *)"\nROBOPICO BUDDY1-5 RTOS rtos_buddy1_5 v0.1 CANDIDATE | "
-                    "EXPERIMENTAL | micro T-Kernel SMP | base v0.2.9\n");
+    tm_printf((UB *)"\nROBOPICO BUDDY1-5 RTOS rtos_buddy1_5 v0.2.12 LONG-WIDTH "
+                    "CANDIDATE 0.1 | "
+                    "EXPERIMENTAL | micro T-Kernel SMP | base v0.2.12\n");
     tm_printf((UB *)"Buddy5: guard<=300mm -> width probe (display only) -> "
                     "line align -> approach ~200mm -> direction probe -> "
                     "compact bypass -> 4th-turn line acquisition.\n");
@@ -349,8 +375,8 @@ EXPORT INT usermain (void)
 #ifdef APP_RTOS_BUDDY5
     if (E_OK == result)
     {
-        result =
-            start((FP)rb5_task, RB5_TASK_PRIORITY, TP_PRC2, "buddy5-obstacle");
+        result = start_sized((FP)rb5_task, RB5_TASK_PRIORITY, TP_PRC2,
+                             "buddy5-obstacle", RB5_TASK_STACK);
     }
 #endif
     if (E_OK == result)

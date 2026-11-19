@@ -1,9 +1,10 @@
-# Buddy 5 RTOS integration (APP=rtos_buddy1_5, candidate v0.2)
+# Buddy 5 RTOS integration (APP=rtos_buddy1_5, v0.2.12 long-width candidate 0.1)
 
-Experimental candidate. **Not physically validated.** `APP=rtos_buddy1_4`
-is byte-identical to its build before this change (same compiler). v0.2
-addresses INTEGRATION_REVIEW_2026-11-19: width-probe failures hold, and the
-300→200 mm approach is line-steered under the Buddy 5 lease.
+Experimental candidate on the v0.2.12 release. **Not physically validated.**
+`APP=rtos_buddy1_4` is byte-identical to a clean v0.2.12 build (same
+compiler). It keeps the v0.2 integration (width failures hold, line-steered
+300→200 mm approach under the Buddy 5 lease) and replaces the short width
+probe with the SDK `width_long_probe` v0.2.
 
 The Buddy1–4 release keeps its tasks, coordinator, line follower, barcode
 route, ramp assistance, saved Wi-Fi and IR calibration. This folder adds the
@@ -17,12 +18,15 @@ Buddy 5 adapter and mission; the obstacle algorithms are ported SDK modules in
    60 ms. Three consecutive clean echoes ≤ 300 mm → `nav_request_takeover`.
    Nothing beyond 300 mm triggers. After a hand-back the front must read
    clear (> 300 mm or no return) for 1 s before the guard re-arms.
-2. **Width policy, then width probe** (width_calibrated_probe v0.2,
+2. **Width policy, then width probe** (SDK width_long_probe v0.2,
    unchanged). Once stopped, a fresh stationary triplet (three clean echoes
    within 15 mm, two attempts) decides the policy (E5 byte 19):
    - inside the probe's own REF window 270–330 mm → the probe is attempted.
-     Its REF rule, 10 cm diagonal per side, one-retry-per-pose (max 4)
-     recovery, D1–D4 telemetry and on-Pico estimate are unchanged. **Any
+     Its REF rule, clearance-limited diagonal per side (20 mm steps, 220 mm
+     ceiling, 12 steps, ±46° servo, first-FAR stop, retrace, stationary retry,
+     return corroboration), D1–D5 telemetry and the rule-2 on-Pico estimate
+     are unchanged. A complete run with an unresolved edge shows its labelled
+     fallback and the mission continues. **Any
      non-COMPLETE end holds (`WIDTH_ABORT`, module reason = end code),
      `REFERENCE` included**: END_REFERENCE alone is not evidence of a clean
      skip. The probe's D3 (150 mm `PROJECT_RANGE_ASSUMPTION`) stays the
@@ -60,7 +64,8 @@ Buddy 5 adapter and mission; the obstacle algorithms are ported SDK modules in
    kept and an interrupted junction is refused (existing rule).
 
 Width is a display estimate. It never sets clearance, authorises motion or
-clears a hold.
+clears a hold. The display is the raw edge midpoint − 10 mm, limited to
+100–200 mm; E5/D3 carry all three values.
 
 ## Ownership
 
@@ -85,9 +90,10 @@ applied PWM command, not a measured horn angle. Limit ±46°.
 ## Telemetry
 
 Source 15, all dispatched by exact length and marker byte: E5 mission status
-(version 2, 59 bytes: width policy, deciding range, steering setpoint/peak/
-bound count; every 500 ms and on stage change; the dashboard still decodes the
-54-byte v0.1 layout), D1/D2/D3/D4 width (unchanged layouts),
+(version 3, 61 bytes: v2 plus the live width-probe state/side/phase/step;
+every 500 ms and on stage change; the dashboard still decodes the 54/59-byte
+v1/v2 layouts), width D1/D2 v10, D3 v3, D4 v3 and the D5 v2 per-side limits
+frame (sent after D2),
 BE/BF direction (v2 layout, version 3 = 25 mm near allowance), B5 bypass events
 (unchanged v1). One record frame per 25 ms. A refused push keeps its header
 sequence for the retry, so a sequence gap means a loss after admission. See

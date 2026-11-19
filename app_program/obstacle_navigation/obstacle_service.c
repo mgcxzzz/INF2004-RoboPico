@@ -570,6 +570,31 @@ static bool send_width (void)
         }
         return true;
     }
+    /* Long probe: D5 per-side limits after D2 (SDK radio order). Packed under
+     * the lock from the finished probe; 39 bytes. */
+    uint8_t limits_frame[B5_WP_LIM_FRAME];
+    key = enter();
+    bool limits = (!p_width->summary_pending) && (p_width->limits_pending);
+    uint16_t limits_run = p_width->summary.run;
+    if (limits)
+    {
+        b5_wp_limits_pack(p_width, 0U, limits_frame);
+    }
+    leave(key);
+    if (limits)
+    {
+        limits_frame[2] = next_sequence(); /* outside the lock */
+        if (push(limits_frame, sizeof(limits_frame)))
+        {
+            key = enter();
+            if (p_width->summary.run == limits_run)
+            {
+                p_width->limits_pending = false;
+            }
+            leave(key);
+        }
+        return true;
+    }
     if (retry)
     {
         uint8_t retry_frame[B5_WP_RETRY_FRAME];
@@ -700,7 +725,7 @@ static void snapshot (uint64_t now, b5_mission_status_t * p_out)
     bool width_result = (p_mission->width_attempted) && (b5_wp_ready(p_width));
     bool width_skipped = B5MI_WIDTH_SKIPPED == p_mission->width_policy;
     bool backlog = (p_width->rec_count != 0U) || (p_width->summary_pending) ||
-                   (p_width->result_pending) ||
+                   (p_width->result_pending) || (p_width->limits_pending) ||
                    (p_width->retry_sent < p_width->retry_count) ||
                    (p_edge->rec_count != 0U) || (p_edge->summary_pending) ||
                    (p_mission->bypass.ev_count != 0U);
@@ -793,7 +818,18 @@ static void snapshot (uint64_t now, b5_mission_status_t * p_out)
         .steer_decideg = (int8_t)p_mission->steer_decideg, /* |v| <= 80 */
         .steer_max_decideg = p_mission->steer_max_decideg,
         .steer_saturated = p_mission->steer_saturated,
-        .width_gate_mm = p_mission->width_gate_mm};
+        .width_gate_mm = p_mission->width_gate_mm,
+        /* E5 v3: live long-probe pose; side only for side phases */
+        .width_state = (uint8_t)((p_width->state & 15U) |
+                                 (((B5WP_PH_REF == p_width->sample_phase) ||
+                                   (B5WP_PH_FINAL == p_width->sample_phase) ||
+                                   (B5WP_PH_MID == p_width->sample_phase))
+                                      ? 0U
+                                      : ((p_width->cur ? 2U : 1U) << 4))),
+        .width_sample =
+            (uint8_t)((p_width->sample_phase & 7U) |
+                      ((p_width->sample_step > 31U ? 31U : p_width->sample_step)
+                       << 3))};
     leave(key);
 }
 
@@ -820,7 +856,8 @@ static void report (void)
     UINT key = enter();
     diag = g_diag;
     leave(key);
-    tm_printf((UB *)"B5_MISSION version=rtos_buddy1_5-0.2 stage=%s reason=%s "
+    tm_printf((UB *)"B5_MISSION version=rtos_buddy1_5-v0.2.12-long-0.1 "
+                    "stage=%s reason=%s "
                     "module=%u run=%u side=%u basis=%u decision=%u "
                     "states=0x%02x width_end=%u d0=%u trigger=%u start=%u\n",
               b5_mission_stage_name(status.stage),
@@ -828,13 +865,18 @@ static void report (void)
               status.run, status.side, status.basis, status.decision,
               status.states, status.width_end, status.width_d0_mm,
               status.trigger_mm, status.bypass_range_mm);
-    tm_printf((UB *)"B5_WIDTH display_mm100=%u raw_mm100=%u corrected_mm100=%u "
-                    "basis=%u status=%u reason=%u retries=%u produced=%u "
-                    "admitted=%u (DISPLAY ONLY; never used for motion)\n",
-              status.width_display_mm100, status.width_raw_mm100,
-              status.width_corrected_mm100, status.width_basis,
-              status.width_status, status.width_reason, status.width_retries,
-              status.width_produced, status.width_admitted);
+    tm_printf((UB *)"B5_WIDTH long_probe=v0.2 rule=%u raw_mm100=%u "
+                    "corrected_before_clamp_mm100=%u display_mm100=%u "
+                    "(-10mm, 100-200mm) basis=%u status=%u reason=%u "
+                    "retries=%u produced=%u admitted=%u limits=%u/%u "
+                    "out_mm10=%d/%d (DISPLAY ONLY; never used for motion)\n",
+              (unsigned)B5WE_RULE_ID, status.width_raw_mm100,
+              status.width_corrected_mm100, status.width_display_mm100,
+              status.width_basis, status.width_status, status.width_reason,
+              status.width_retries, status.width_produced,
+              status.width_admitted, g_mission.width.side[0].limit,
+              g_mission.width.side[1].limit, g_mission.width.summary.out_l_mm10,
+              g_mission.width.summary.out_r_mm10);
     tm_printf((UB *)"B5_SONAR triggers=%u edges=%u echo=%u no_return=%u "
                     "fault=%u trig_pulse_us=%u..%u trig_to_rise_us=%u..%u "
                     "trig_gap_us=%u..%u frames=%u refused=%u status=%u "

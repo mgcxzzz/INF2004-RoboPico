@@ -176,6 +176,10 @@ static void drain(void) {
         uint8_t f[B5_WP_SUM_FRAME]; b5_wp_sum_pack(&g_mission.width.summary, g_seq++, f); hexline(f, sizeof f);
         g_mission.width.summary_pending = false;
     }
+    if (g_mission.width.limits_pending) {          /* long probe D5 after D2 */
+        uint8_t f[B5_WP_LIM_FRAME]; b5_wp_limits_pack(&g_mission.width, g_seq++, f); hexline(f, sizeof f);
+        g_mission.width.limits_pending = false;
+    }
     while (g_mission.width.retry_sent < g_mission.width.retry_count) {
         uint8_t f[B5_WP_RETRY_FRAME];
         b5_wp_retry_pack(&g_mission.width.retries[g_mission.width.retry_sent++], g_seq++, f); hexline(f, sizeof f);
@@ -221,6 +225,10 @@ static void dump_status(void) {
         .width_policy = m->width_policy, .steer_decideg = (int8_t)m->steer_decideg,
         .steer_max_decideg = m->steer_max_decideg, .steer_saturated = m->steer_saturated,
         .width_gate_mm = m->width_gate_mm,
+        .width_state = (uint8_t)((m->width.state & 15u) |
+                                 ((m->width.sample_phase == B5WP_PH_REF || m->width.sample_phase == B5WP_PH_FINAL ||
+                                   m->width.sample_phase == B5WP_PH_MID) ? 0u : ((m->width.cur ? 2u : 1u) << 4))),
+        .width_sample = (uint8_t)((m->width.sample_phase & 7u) | ((m->width.sample_step > 31u ? 31u : m->width.sample_step) << 3)),
         .width_reason = wr ? m->width.result.reason : 0,
         .width_display_mm100 = wr ? m->width.result.display_mm100 : skip ? B5WE_MID_MM100 : B5MP_NONE,
         .width_raw_mm100 = wr ? m->width.result.raw_mm100 : B5MP_NONE,
@@ -400,6 +408,27 @@ int main(int argc, char **argv) {
     CHECK(fabsf(o.end_x) < 15); CHECK(o.end_y > 900 + 150);
     CHECK(g_mission.width_policy == B5MI_WIDTH_MEASURED);
     CHECK(g_mission.steer_max_decideg <= B5MI_STEER_MAX_DECIDEG);
+    /* Long probe (SDK width_long_probe v0.2): the whole chain width -> align ->
+     * approach -> direction -> bypass ran in one mission; every outward pass is
+     * bounded by clearance and the 220 mm ceiling and reports a stop reason;
+     * D2, D5 and D3 were all drained; width stays display-only. */
+    {
+        const unsigned need = (1u << B5MI_WIDTH) | (1u << B5MI_ALIGN) | (1u << B5MI_RANGE) |
+                              (1u << B5MI_APPROACH) | (1u << B5MI_DIRECTION) | (1u << B5MI_BYPASS);
+        CHECK((g_stage_mask & need) == need);
+        CHECK(g_mission.width.end == B5WP_END_COMPLETE);
+        CHECK(!g_mission.width.summary_pending && !g_mission.width.limits_pending &&
+              !g_mission.width.result_pending);
+        CHECK(g_mission.width.summary.records <= B5WP_MAX_RECORDS);
+        for (unsigned k = 0; k < 2u; ++k) {
+            const B5WPSide *sd = &g_mission.width.side[k];
+            CHECK(sd->limit == B5WP_LIM_FAR || sd->limit == B5WP_LIM_CEILING ||
+                  sd->limit == B5WP_LIM_CLEARANCE || sd->limit == B5WP_LIM_STEPS);
+            CHECK(sd->out_mm <= B5WP_BUDGET_MM + 0.05f && sd->steps <= B5WP_MAX_STEPS);
+            CHECK(sd->min_turn_gap >= B5WP_FRONT_MARGIN_MM - 0.15f);
+        }
+        CHECK(g_mission.width.summary.min_front_gap_mm10 >= (int16_t)(B5WP_FRONT_MARGIN_MM * 10.0f) - 2);
+    }
     scenario_t sl = {.name = "185 offset LEFT 60 -> RIGHT", .cx = -60, .width = 185, .face_y = 900};
     o = run(&sl);
     CHECK(o.handbacks == 1); CHECK(o.side == B5_SIDE_RIGHT); CHECK(o.basis == B5MI_DIR_EVIDENCE);

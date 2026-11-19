@@ -365,8 +365,11 @@
       <dt>Width policy (this mission)</dt><dd id="b5WidthPolicy">–</dd>
       <dt>Width (display only)</dt><dd id="b5Width">–</dd>
       <dt>Width basis / quality</dt><dd id="b5WidthBasis">–</dd>
-      <dt>Raw / corrected</dt><dd id="b5WidthRaw">–</dd>
+      <dt>Raw / corrected before clamp / displayed</dt><dd id="b5WidthRaw">–</dd>
+      <dt>Width probe (live)</dt><dd id="b5WidthProbe">–</dd>
       <dt>Edge brackets / reach</dt><dd id="b5WidthBrackets">–</dd>
+      <dt>Outward stop reason / reach (D5)</dt><dd id="b5WidthLimits">–</dd>
+      <dt>Width verification</dt><dd id="b5WidthVerify">–</dd>
       <dt>Retries / rejected triplets</dt><dd id="b5Retries">–</dd>
       <dt>Trigger / width d0 / bypass start</dt><dd id="b5Ranges">–</dd>
       <dt>Approach line steering</dt><dd id="b5Steer">–</dd>
@@ -1613,6 +1616,7 @@ function summary(f) {
       if(d.kind==='b5-width-summary') return `Buddy5 width summary run ${d.run} ${d.endName}, ${d.records} records, lost ${d.lost}`;
       if(d.kind==='b5-width-result') return `Buddy5 width ${d.displayMm===null?'n/a':d.displayMm.toFixed(2)+' mm'} ${d.basisName} ${d.statusName}`;
       if(d.kind==='b5-width-retry') return `Buddy5 rejected triplet run ${d.run} phase ${d.phase} attempt ${d.attempt}`;
+      if(d.kind==='b5-width-limits') return `Buddy5 width limits run ${d.run}: L ${d.left.limitName} ${d.left.outMm} mm / R ${d.right.limitName} ${d.right.outMm} mm (ceiling ${d.ceilingMm} mm)`;
       if(d.kind==='b5-direction-record') return `Buddy5 direction record run ${d.run} #${d.index} phase ${d.phase} (near ${d.nearMm} mm)`;
       if(d.kind==='b5-direction-summary') return `Buddy5 direction run ${d.run} ${d.endName}: ${d.decisionName} L ${d.stateLName}/R ${d.stateRName}`;
       if(d.kind==='b5-event') return `Buddy5 event ${d.codeName} state ${d.stateName} phase ${d.phaseName} reason ${d.reasonName}`;
@@ -1883,7 +1887,7 @@ function receiveB5(d, f) {
     if (['PLAN', 'HANDBACK', 'STOPPED', 'HOLD_CLEARANCE', 'ACQUIRED', 'RETURN_FALLBACK'].includes(d.codeName))
       addEvent(`Buddy 5 bypass event ${d.codeName} (state ${d.stateName}, reason ${d.reasonName})`, d, 'b5-event', f);
   } else if (d.kind === 'b5-width-result') {
-    addEvent(`Buddy 5 width ${b5Fmt(d.displayMm, 2)} mm · ${d.basisName}${d.assumed ? ' (ASSUMED, not measured)' : ''} · run ${d.run} ${d.endName}`, d, 'b5-width', f);
+    addEvent(`Buddy 5 width ${b5Fmt(d.displayMm, 2)} mm · ${d.basisName} (${d.label}) · run ${d.run} ${d.endName}`, d, 'b5-width', f);
   } else if (d.kind === 'b5-direction-summary') {
     addEvent(`Buddy 5 direction probe run ${d.run} ${d.endName}: ${d.decisionName} (L ${d.stateLName} / R ${d.stateRName}, near ${d.nearMm} mm)`, d, 'b5-direction', f);
   }
@@ -1926,17 +1930,33 @@ function renderB5() {
     $('b5WidthBasis').textContent = `${s.widthBasisName} · ${s.widthStatusName} · no probe attempt`;
     $('b5WidthRaw').textContent = '–';
   } else if (s.widthResult && s.widthDisplayMm !== null) {
-    const assumed = s.widthBasis === 3;
-    $('b5Width').textContent = `${prefix}${s.widthDisplayMm.toFixed(2)} mm${assumed ? ' — ASSUMED project midpoint, NOT measured' : ''}${s.widthFailed ? ' · probe FAILED: mission HELD' : ''}`;
+    const assumed = s.widthBasis === 3 || s.widthBasis === 2;
+    $('b5Width').textContent = `${prefix}${s.widthDisplayMm.toFixed(2)} mm — ${assumed ? '' : 'Pico '}${s.widthLabel}${s.widthFailed ? ' · probe FAILED: mission HELD' : ''}`;
     $('b5WidthBasis').textContent = `${s.widthBasisName} · ${s.widthStatusName} · ${s.widthReasonName} · width probe end ${s.widthEndName}`;
-    $('b5WidthRaw').textContent = `${b5Fmt(s.widthRawMm, 2)} / ${b5Fmt(s.widthCorrectedMm, 2)} mm (raw midpoint / minus 10 mm, before the 100–200 mm limit)`;
+    const clamped = s.widthCorrectedMm !== null && Math.abs(s.widthCorrectedMm - s.widthDisplayMm) > 0.004;
+    $('b5WidthRaw').textContent = s.widthRawMm === null
+      ? `n/a / n/a / ${b5Fmt(s.widthDisplayMm, 2)} mm (no measured estimate: displayed value is ${assumed ? 'an assumption' : 'not a measurement'})`
+      : `${b5Fmt(s.widthRawMm, 2)} / ${b5Fmt(s.widthCorrectedMm, 2)} / ${b5Fmt(s.widthDisplayMm, 2)} mm (raw edge midpoint · minus 10 mm before the 100–200 mm limit · displayed${clamped ? ', LIMITED to the project range' : ''})`;
   } else {
     $('b5Width').textContent = s.widthAttempted ? 'width probe running' : 'not measured in this mission';
     $('b5WidthBasis').textContent = '–'; $('b5WidthRaw').textContent = '–';
   }
+  $('b5WidthProbe').textContent = s.probeState === null ? 'n/a (status v1/v2: short probe layout)'
+    : `${prefix}${s.probeStateName}${s.probeSide !== 'none' ? ` · side ${s.probeSide}` : ''} · last sample ${s.samplePhaseName}${s.sampleStep ? ` step ${s.sampleStep}` : ''}`;
+  const sum = wr && wr.summary;
   $('b5WidthBrackets').textContent = res
-    ? `L ${res.left.statusName} [${b5Fmt(res.left.aMm)}, ${b5Fmt(res.left.bMm)}] · R ${res.right.statusName} [${b5Fmt(res.right.aMm)}, ${b5Fmt(res.right.bMm)}] mm · summed ${b5Fmt(res.spanLoMm)}–${b5Fmt(res.spanHiMm)} · sampled ${b5Fmt(res.sampledMm)} (from D3 run ${res.run})`
+    ? `L ${res.left.statusName} [${b5Fmt(res.left.aMm)}, ${b5Fmt(res.left.bMm)}] · R ${res.right.statusName} [${b5Fmt(res.right.aMm)}, ${b5Fmt(res.right.bMm)}] mm axis x · summed ${b5Fmt(res.spanLoMm)}–${b5Fmt(res.spanHiMm)} · sampled ${b5Fmt(res.sampledMm)} (D3 run ${res.run})${sum ? ` · sides ${sum.stateLName || sum.stateL} / ${sum.stateRName || sum.stateR}${sum.lInMm !== null && sum.lInMm !== undefined ? ` · IN/FAR L ${b5Fmt(sum.lInMm)}/${b5Fmt(sum.lFarMm)} R ${b5Fmt(sum.rInMm)}/${b5Fmt(sum.rFarMm)}` : ''}` : ''}`
     : 'D3 result not received';
+  const lim = wr && wr.limits;
+  const noProbe = !s.widthAttempted ? 'no width probe in this mission' : null;
+  $('b5WidthLimits').textContent = noProbe || (lim
+    ? ['left', 'right'].map((k) => `${k === 'left' ? 'L' : 'R'} ${lim[k].limitName} · ${b5Fmt(lim[k].outMm)} mm in ${lim[k].steps} steps${lim[k].clearTotalMm !== null ? ` (clearance allowed ${b5Fmt(lim[k].clearTotalMm)})` : ''}${lim[k].minTurnGapMm !== null ? ` · min modelled turn gap ${b5Fmt(lim[k].minTurnGapMm)}` : ''}`).join(' | ') + ` · ceiling ${lim.ceilingMm} mm, margin ${lim.marginMm} mm`
+    : (wr && wr.summary && wr.summary.protocol === 'legacy' ? 'n/a (legacy short probe: no D5)' : 'D5 limits not received'));
+  if (lim && !noProbe) $('b5WidthLimits').textContent = `run ${lim.run}: ${$('b5WidthLimits').textContent}`;
+  const wrep = b5.tracker.width();
+  const wproto = wrep && wrep.protocol ? ` · ${wrep.protocol === 'long' ? 'long probe (D1/D2 v10, D3 v3, D5 v2)' : wrep.protocol === 'legacy' ? 'legacy short probe (original rules)' : wrep.protocol}` : '';
+  $('b5WidthVerify').textContent = noProbe || (wrep ? `run ${wrep.run}: ${wrep.verification}${wproto}` : '–');
+  $('b5WidthVerify').className = !noProbe && wrep && !wrep.complete ? 'bad' : '';
   $('b5Retries').textContent = `${s.widthRetries} used (max 4) · ${wr ? wr.retries.length : 0} rejected-triplet record(s) received`;
   $('b5Ranges').textContent = `${s.triggerMm || '–'} / ${s.widthD0Mm || '–'} / ${s.bypassRangeMm || '–'} mm · approach legs ${s.approachLegs}, alignment search steps ${s.alignSteps}`;
   $('b5Bypass').textContent = `${s.bypassStateName} · ${s.rejoinPhaseName}`;
@@ -1948,7 +1968,7 @@ function renderB5() {
   tag.className = 'pill ' + (stale ? 'neutral' : s.hold ? 'bad' : 'ok');
   $('overviewB5Detect').textContent = stale ? 'Status stale' : s.stage === 1 ? `Guarding${s.pingMm !== null && front ? ` · ${s.pingMm} mm` : ''}` : s.stage === 0 ? 'Idle' : s.stageName;
   $('overviewB5Width').textContent = s.widthResult && s.widthDisplayMm !== null
-    ? `${s.widthDisplayMm.toFixed(1)} mm${s.widthBasis === 3 ? ' (assumed)' : ''}` : 'Not measured';
+    ? `${s.widthDisplayMm.toFixed(1)} mm${s.widthBasis === 3 ? ' (assumed)' : s.widthBasis === 2 ? ' (assumed completion)' : ' (estimate)'}` : 'Not measured';
   $('overviewB5Direction').textContent = s.basis === 1 ? `${s.sideName} (evidence)` : s.basis === 2 ? `${s.sideName} (default)` : s.basis === 3 ? 'Held' : '–';
   $('overviewB5Bypass').textContent = s.bypassStateName === 'DONE' ? 'Handed back to line' : s.bypassStateName;
   $('overviewB5Note').textContent = 'Car-reported via source-15 E5. Width is display-only; candidate firmware is not physically validated.';

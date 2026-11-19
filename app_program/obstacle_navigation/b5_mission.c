@@ -131,6 +131,11 @@ static void drain_width (b5_mission_t * p_mission)
         p_mission->width.retry_sent++;
         p_mission->stale_dropped++;
     }
+    if (p_mission->width.limits_pending) /* long probe D5 */
+    {
+        p_mission->width.limits_pending = false;
+        p_mission->stale_dropped++;
+    }
 }
 
 static void drain_edge (b5_mission_t * p_mission)

@@ -23,6 +23,13 @@
 #define WP_RUN_LIMIT_US    UINT64_C(180000000)
 #define WP_MIN_TURN_DEG    1.0f   /* smaller heading changes: sample in place (trim may follow) */
 
+#ifdef B5WP_HOST_TEST_HOOKS
+/* HOST TESTS ONLY (never defined in the firmware build): model-visible heading error on
+ * ladder/PRE/return turns, and a step scale to force the maximum-length sequence. */
+float b5wp_test_turn_bias_deg = 0.0f;
+float b5wp_test_step_scale = 1.0f;
+#endif
+
 static bool still(MotionStatus s) { return s.mode == MOTION_PAUSED && s.stopped; }
 
 static bool lease_ok(const B5WidthProbe *t, MotionStatus s) {
@@ -96,6 +103,24 @@ float b5_wp_turn_front_gap(float d0_mm, float pivot_y_mm) {
 /* Next outward command from the MEASURED cumulative outward travel. The
  * overshoot allowance is reserved so an accepted segment cannot carry the
  * cumulative measured travel past the budget. */
+/* width_long_probe: outward travel (along the current leg) still allowed by the
+ * clearance model from the integrated pose. After the travel, BOTH the worst in-place
+ * turn corner radius (so a trim, turn or the retrace start at the new stop stays
+ * inside the model) and the heading-dependent front corner must keep the 50 mm
+ * front margin to the modelled face plane (shaft + d0 - 25). The forward projection
+ * uses cos(|heading| - 5 deg) (heading reserve, never above 1). The 5 mm overshoot
+ * reserve is applied by the caller. Model only, never a physical guarantee. */
+float b5_wp_clear_travel(float d0_mm, float net_y_mm, float heading_deg) {
+    float plane = B5WP_SHAFT_MM + d0_mm - B5WP_FACE_MARGIN_MM - B5WP_FRONT_MARGIN_MM;
+    float h = heading_deg * WP_DEG;
+    float turn_lim = plane - sqrtf(B5WP_CAR_FRONT_MM * B5WP_CAR_FRONT_MM +
+                                   B5WP_CAR_HALF_W_MM * B5WP_CAR_HALF_W_MM);
+    float front_lim = plane - (B5WP_CAR_FRONT_MM * cosf(h) + B5WP_CAR_HALF_W_MM * fabsf(sinf(h)));
+    float lim = turn_lim < front_lim ? turn_lim : front_lim;
+    float reserve = fabsf(heading_deg) - B5WP_TURN_RESERVE_DEG;
+    float c = cosf((reserve > 0.0f ? reserve : 0.0f) * WP_DEG);
+    return (lim - net_y_mm) / c;
+}
 float b5_wp_next_step(float out_mm, unsigned steps) {
     if (steps >= B5WP_MAX_STEPS) return 0.0f;
     float cmd = B5WP_BUDGET_MM - out_mm - B5WP_OVERSHOOT_MM;
@@ -228,10 +253,19 @@ static uint8_t push_record(B5WidthProbe *t, uint64_t now) {
         t->servo_in_range = false;
     if (t->est_in.n < B5WE_MAX_POINTS) {          /* display estimator input (no feedback) */
         bool centre = r.phase == B5WP_PH_REF || r.phase == B5WP_PH_MID || r.phase == B5WP_PH_FINAL;
+        /* Actual adjacent centre observation, never an assumed edge at zero.
+         * The estimator may use it only after this side's boundary corroborates. */
+        uint8_t est_side = r.side == B5WP_SIDE_L ? B5WE_PSIDE_L :
+                           r.side == B5WP_SIDE_R ? B5WE_PSIDE_R : B5WE_PSIDE_NONE;
+        if (r.phase == B5WP_PH_REF) est_side = B5WE_PSIDE_L;
+        else if (r.phase == B5WP_PH_MID) est_side = B5WE_PSIDE_R;
         t->est_in.pt[t->est_in.n++] = b5_we_point(
-            r.side == B5WP_SIDE_L ? B5WE_PSIDE_L : r.side == B5WP_SIDE_R ? B5WE_PSIDE_R : B5WE_PSIDE_NONE,
-            centre, r.cls, r.value, r.expected_mm, r.axis_x_mm10);
+            est_side, centre, r.cls, r.value, r.expected_mm, r.axis_x_mm10);
     }
+#if B5WP_RUN_ARCHIVE
+    if (t->arch_n < B5WP_MAX_RECORDS) t->arch[t->arch_n++] = r;   /* v0.1.1 run log */
+    else if (t->arch_lost != UINT16_MAX) ++t->arch_lost;
+#endif
     if (t->rec_count >= B5WP_QUEUE_CAP) {
         if (t->lost != UINT16_MAX) ++t->lost;
     } else {
@@ -267,6 +301,11 @@ static void compute_width(B5WidthProbe *t) {
 
 static void finish(B5WidthProbe *t, unsigned end, uint64_t now) {
     if (!b5_wp_ready(t)) stop_if_owned(t);
+    /* A side whose outward pass had not ended when the run ended was aborted. */
+    if (end != B5WP_END_COMPLETE && t->state != B5WP_CLAIM && t->d0 &&
+        t->side[t->cur].limit == B5WP_LIM_NONE)
+        t->side[t->cur].limit = B5WP_LIM_ABORT;
+    t->limits_pending = true;
     if (sensor_available(t)) t->sensor.cancel();
     t->ping_active = false;
     t->command_active = false;
@@ -327,6 +366,8 @@ static void finish(B5WidthProbe *t, unsigned end, uint64_t now) {
         in->side[k].last_out_in = sd->stop[sd->last].visited && sd->stop[sd->last].out_cls == B5WP_IN;
         in->side[k].return_ok = sd->return_ok;
         in->side[k].cap_budget = sd->cap_budget;
+        in->side[k].boundary_ok = sd->state == B5WP_ST_BOUNDARY &&
+            sd->return_ok && sd->ret_in_ok && !sd->contradictory;
     }
     b5_we_estimate(in, &t->result);
     t->result_ms = (uint32_t)(now / 1000u);
@@ -376,6 +417,9 @@ static void turn_to(B5WidthProbe *t, unsigned turn_state, float target_deg,
     t->after_phase = phase;
     t->after_step = step;
     float delta = target_deg - t->heading_deg;
+#ifdef B5WP_HOST_TEST_HOOKS
+    if (fabsf(delta) >= WP_MIN_TURN_DEG) delta += b5wp_test_turn_bias_deg;
+#endif
     if (fabsf(delta) < WP_MIN_TURN_DEG) {
         begin_pose(t, pose_state, phase, step, now);
         return;
@@ -433,24 +477,49 @@ static void begin_return(B5WidthProbe *t, uint64_t now);
  * 3 = PRE +-45, 4.. = forward steps. Outward: 1, 2, 3, steps, until the first
  * all-FAR or a cap. Return: only stops actually visited, in reverse order,
  * ending at heading 0 (MID after L, FINAL after R). */
+/* width_long_probe: the next outward command is the smallest of the nominal step, the
+ * ceiling remainder and the clearance remainder (both less the overshoot reserve). Below
+ * the minimum step the pass ends on whichever of ceiling or clearance is the tighter
+ * (a tie counts as the ceiling); the step bound is checked first. The original
+ * end-of-segment front-corner inspection is kept as a second guard. */
 static void plan_step(B5WidthProbe *t, uint64_t now) {
     B5WPSide *sd = &t->side[t->cur];
     if (sd->steps >= B5WP_MAX_STEPS) {
         sd->cap_steps = true;
+        sd->limit = B5WP_LIM_STEPS;
         begin_return(t, now);
         return;
     }
-    float cmd = b5_wp_next_step(sd->out_mm, sd->steps);
-    if (cmd <= 0.0f) {
-        sd->cap_budget = true;
+    float clear = b5_wp_clear_travel((float)t->d0, t->net_y_mm, t->heading_deg);
+    sd->clear_total_mm = sd->out_mm + clear;
+    float rem_ceiling = B5WP_BUDGET_MM - sd->out_mm - B5WP_OVERSHOOT_MM;
+    float rem_clear = clear - B5WP_OVERSHOOT_MM;
+    float cmd = B5WP_STEP_MM;
+    if (rem_ceiling < cmd) cmd = rem_ceiling;
+    if (rem_clear < cmd) cmd = rem_clear;
+#ifdef B5WP_HOST_TEST_HOOKS
+    if (cmd >= B5WP_MIN_STEP_MM && b5wp_test_step_scale < 1.0f) {
+        cmd *= b5wp_test_step_scale;
+        if (cmd < B5WP_MIN_STEP_MM) cmd = B5WP_MIN_STEP_MM;
+    }
+#endif
+    if (cmd < B5WP_MIN_STEP_MM) {
+        if (rem_ceiling <= rem_clear) {
+            sd->cap_budget = true;          /* travel ceiling: completion-eligible as before */
+            sd->limit = B5WP_LIM_CEILING;
+        } else {
+            sd->cap_clear = true;
+            sd->limit = B5WP_LIM_CLEARANCE;
+        }
         begin_return(t, now);
         return;
     }
-    /* Inspected footprint at the end of the worst accepted segment. */
+    /* Inspected footprint at the end of the worst accepted segment (unchanged guard). */
     float reach = cmd + B5WP_OVERSHOOT_MM;
     float y_end = t->net_y_mm + reach * cosf(t->heading_deg * WP_DEG);
     if (b5_wp_front_gap((float)t->d0, y_end, t->heading_deg) < B5WP_FRONT_MARGIN_MM) {
         sd->cap_clear = true;
+        sd->limit = B5WP_LIM_CLEARANCE;
         begin_return(t, now);
         return;
     }
@@ -527,7 +596,10 @@ static void outward_sample(B5WidthProbe *t, unsigned k, uint8_t v, float axis, u
     st->path_mm = sd->path_mm;
     sd->last = k;
     if (k <= B5WP_STOP_PRE) sd->turn_deg = t->heading_deg;
+    float turn_gap = b5_wp_turn_front_gap((float)t->d0, t->net_y_mm);
+    if (turn_gap < sd->min_turn_gap) sd->min_turn_gap = turn_gap;
     if (v == B5WP_FAR) {            /* first all-FAR: stop outward here */
+        sd->limit = B5WP_LIM_FAR;
         sd->far_stop = (int)k;
         sd->far_x = axis;
         if (sd->last_in >= 0) {
@@ -671,22 +743,28 @@ static bool collect_triplet(B5WidthProbe *t, uint64_t now) {
 static bool retry_sample(B5WidthProbe *t, uint16_t expected, uint64_t now) {
     if (t->pose_retried || t->retry_count >= B5WP_RETRIES_PER_RUN) return false;
     bool reference = t->sample_phase == B5WP_PH_REF;
+    B5WPSide *sd = &t->side[t->cur];
+    bool returning = t->sample_phase == B5WP_PH_RET || t->sample_phase == B5WP_PH_LAD_RET;
+    bool boundary_transition = returning && sd->boundary && sd->in_stop >= 0 &&
+        sd->ret_k == (unsigned)sd->in_stop &&
+        b5_wp_classify(t->ping, expected) == B5WP_TRANSITION;
     bool short_fault = false, clean_in_window = true;
-    for (unsigned i = 0; i < 3u; ++i) {
-        b5_ping_t p = t->ping[i];
-        if (p.cls == B5_PING_FAULT && p.why == B5_PING_WHY_SHORT) {
-            short_fault = true;
-            clean_in_window = false;
-        } else if (p.cls != B5_PING_ECHO || p.why != B5_PING_WHY_OK) {
-            /* NO_RISE, stuck-high, watchdog and other faults require investigation. */
-            return false;
-        } else if (reference) {
-            if (p.range_mm < B5WP_D0_MIN_MM || p.range_mm > B5WP_D0_MAX_MM) return false;
-        } else if ((long)p.range_mm < (long)expected - WP_GATE_NEAR_MM) {
-            return false;
+    if (!boundary_transition) {
+        for (unsigned i = 0; i < 3u; ++i) {
+            b5_ping_t p = t->ping[i];
+            if (p.cls == B5_PING_FAULT && p.why == B5_PING_WHY_SHORT) {
+                short_fault = true;
+                clean_in_window = false;
+            } else if (p.cls != B5_PING_ECHO || p.why != B5_PING_WHY_OK) {
+                return false; /* faults and arbitrary mixed observations are not edge evidence */
+            } else if (reference) {
+                if (p.range_mm < B5WP_D0_MIN_MM || p.range_mm > B5WP_D0_MAX_MM) return false;
+            } else if ((long)p.range_mm < (long)expected - WP_GATE_NEAR_MM) {
+                return false;
+            }
         }
+        if (!short_fault && !(reference && clean_in_window)) return false;
     }
-    if (!short_fault && !(reference && clean_in_window)) return false;
 
     B5WPRetry *r = &t->retries[t->retry_count++];
     *r = (B5WPRetry){.ms = t->sample_ms, .run = t->run,
@@ -716,9 +794,11 @@ static void sample_done(B5WidthProbe *t, uint64_t now) {
     uint8_t phase = t->sample_phase;
     uint16_t expected = b5_wp_expected_mm(t->d0, t->sample_heading_cdeg, mm10(t->net_y_mm));
     uint16_t reference = 0;
+    uint8_t candidate = phase == B5WP_PH_REF ? B5WP_UNKNOWN : b5_wp_classify(t->ping, expected);
     bool rejected = phase == B5WP_PH_REF ? !valid_reference(t->ping, &reference) :
-                    b5_wp_classify(t->ping, expected) == B5WP_UNKNOWN;
-    if (rejected && retry_sample(t, phase == B5WP_PH_REF ? 0u : expected, now)) return;
+                    candidate == B5WP_UNKNOWN;
+    if ((rejected || candidate == B5WP_TRANSITION) &&
+        retry_sample(t, phase == B5WP_PH_REF ? 0u : expected, now)) return;
     if (phase == B5WP_PH_REF) {
         uint16_t d0 = 0;
         t->ref_ok = valid_reference(t->ping, &d0);
@@ -794,7 +874,7 @@ bool b5_wp_ready(const B5WidthProbe *t) {
 }
 bool b5_wp_begin(B5WidthProbe *t, uint64_t now) {
     if (!b5_wp_ready(t) || t->rec_count || t->summary_pending || t->result_pending ||
-        t->retry_sent < t->retry_count ||
+        t->retry_sent < t->retry_count || t->limits_pending ||
         !sensor_available(t))
         return false;
     uint32_t lease = 0;
@@ -812,8 +892,11 @@ bool b5_wp_begin(B5WidthProbe *t, uint64_t now) {
     t->began = t->since = now;
     t->servo_in_range = true;
     t->min_front_gap = 1.0e6f;
-    for (unsigned i = 0; i < 2u; ++i)
+    for (unsigned i = 0; i < 2u; ++i) {
         t->side[i].in_stop = t->side[i].far_stop = t->side[i].last_in = -1;
+        t->side[i].min_turn_gap = 1.0e6f;
+        t->side[i].clear_total_mm = -1.0f;   /* no step planned */
+    }
     t->sensor.cancel();
     t->sensor.angle(0, now);
     t->servo_dd = 0;

@@ -31,18 +31,39 @@ try { vm.runInContext('globalThis.__rx = receiveB5;\n' + code, ctx); } catch (e)
 const lines = fs.readFileSync(path.join(dir, 'test/fixtures/b5_rtos_mission_c_frames.txt'), 'utf8').split('\n');
 let cur = null; const out = {};
 for (const l of lines) {
-  if (l.startsWith('SCENARIO ')) { cur = l.slice(9); continue; }
+  if (l.startsWith('SCENARIO ')) {   /* each simulated mission restarts at width run 1: fresh panel state */
+    cur = l.slice(9); vm.runInContext('b5.tracker = IS28.B5Tracker(); b5.events = []; b5.status = null; b5.lastStage = null;', ctx); continue;
+  }
   if (!l.startsWith('TLM ')) continue;
   const f = ctx.IS28.decodeFrame(Uint8Array.from(Buffer.from(l.slice(4), 'hex')));
-  if (f.data && f.data.kind === 'b5-status') { ctx.__rx(f.data, f); out[cur] = [el('b5WidthPolicy').textContent, el('b5Width').textContent, el('b5Steer').textContent]; }
+  if (!f.data || !f.data.kind || !f.data.kind.startsWith('b5-')) continue;
+  ctx.__rx(f.data, f);
+  if (f.data.kind === 'b5-status')
+    out[cur] = ['b5WidthPolicy', 'b5Width', 'b5Steer', 'b5WidthRaw', 'b5WidthProbe', 'b5WidthLimits', 'b5WidthVerify']
+      .map((id) => el(id).textContent);
 }
-for (const k of ['185 offset RIGHT 60 -> LEFT', 'REF rejected, then clean sonar: HOLD', 'start 250 mm: clean skip', 'approach push 3.0deg -2mm steered'])
+for (const k of ['185 offset RIGHT 60 -> LEFT', '100 offset RIGHT 35 -> LEFT', 'sonar faults in direction probe',
+                 '185 centred -> default (labelled)', 'REF rejected, then clean sonar: HOLD', 'start 250 mm: clean skip',
+                 'approach push 3.0deg -2mm steered'])
   console.log(k, '\n   ', out[k].join('\n    '));
-const [mp, mw] = out['185 offset RIGHT 60 -> LEFT'];
-assert.match(mp, /^measured/); assert.doesNotMatch(mw, /ASSUMED/);
+/* long probe, 185 box: right side clearance-limited before its edge -> labelled assumption */
+const [mp, mw, , mraw, , mlim, mver] = out['185 offset RIGHT 60 -> LEFT'];
+assert.match(mp, /^measured/); assert.match(mw, /^150\.00 mm — ASSUMED project midpoint/);
+assert.match(mraw, /^n\/a \/ n\/a \/ 150\.00 mm/);
+assert.match(mlim, /^run 1: L FAR .* \| R CLEARANCE .* ceiling 220 mm, margin 50 mm$/);
+assert.match(mver, /^run 1: Pico-reported · capture complete \(replay offline to verify\) · long probe/);
+const [, ew, , eraw] = out['100 offset RIGHT 35 -> LEFT'];
+assert.match(ew, /^156\.15 mm — Pico estimate/); assert.match(eraw, /^166\.15 \/ 156\.15 \/ 156\.15 mm/);
+assert.doesNotMatch(eraw, /LIMITED/);
+const [, cw, , craw] = out['sonar faults in direction probe'];
+assert.match(cw, /^200\.00 mm — Pico estimate/); assert.match(craw, /^246\.25 \/ 236\.25 \/ 200\.00 mm.*LIMITED/);
+assert.match(out['185 centred -> default (labelled)'][6], /NOT independently verifiable/);
 const [fp, fw] = out['REF rejected, then clean sonar: HOLD'];
 assert.match(fp, /^failed/); assert.match(fw, /^150\.00 mm — ASSUMED.*FAILED: mission HELD/);
+assert.match(out['REF rejected, then clean sonar: HOLD'][4], /^HOLD · last sample REF/);
 const [sp, sw] = out['start 250 mm: clean skip'];
 assert.match(sp, /^skipped/); assert.match(sw, /ASSUMED.*deliberately skipped/); assert.doesNotMatch(sw, /FAILED/);
+assert.match(out['start 250 mm: clean skip'][5], /^no width probe in this mission/);
+assert.match(out['start 250 mm: clean skip'][6], /^no width probe in this mission/);
 assert.match(out['approach push 3.0deg -2mm steered'][2], /largest 8\.0° of ±8\.0° · at bound/);
 console.log('PASS: Buddy5 panel smoke');

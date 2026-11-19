@@ -1,6 +1,36 @@
 #ifndef B5_WIDTH_PROBE_H
 #define B5_WIDTH_PROBE_H
 
+/* v0.2 candidate: wire10, 220 mm outer ceiling (clearance still binds first),
+ * one bounded stationary retry for TRANSITION at the returning IN edge stop,
+ * and provenance-labelled corroborated edge display estimates. Earlier version
+ * comments below describe historical baselines, not the current wire policy. */
+
+/* width_long_probe v0.1.1 = v0.1 + LOGGING ONLY: every accepted-or-rejected stopped
+ * record of the run is also kept in arch[] (never dropped by the radio queue); with the
+ * retained D2/D5/D4/D3 state it is saved to one flash sector after the run has stopped
+ * and can be exported over USB (width_probe_log.h, width_probe_runtime.c). Motion,
+ * clearance, sampling, gates, retries, estimator and all wire versions are unchanged. */
+
+/* width_long_probe v0.1 (separate EXPERIMENTAL image, based on width_calibrated_probe v0.2):
+ * the arbitrary 100 mm diagonal limit is replaced by a CLEARANCE-LIMITED pass with a
+ * 190 mm measured outward ceiling per side. The countertracked 45 deg PRE leg, the
+ * +-46 deg servo cap, the ladder, three-ping sampling, gates, stationary retries,
+ * dwell, retrace of visited stops only, holds and the display estimator (coefficients,
+ * -10 mm correction, 100-200 mm limits) are unchanged. Each outward step is the
+ * smallest of: the 20 mm nominal step, the 190 mm ceiling less the 5 mm overshoot
+ * reserve, and the travel that keeps the modelled worst-turn corner radius (and the
+ * heading-dependent front corner) >= 50 mm from the modelled face plane after the
+ * worst accepted segment, using the integrated pose and a 5 deg heading reserve, so
+ * the trim/turn/retrace at the new stop stays inside the same model. The pass stops at
+ * the first of: confirmed disappearance (first all-FAR, unchanged), ceiling, clearance,
+ * step bound or fault. A ceiling/clearance/step limit retraces normally and is
+ * reported (summary cap flags; new D5 limits frame); a fault keeps its hold.
+ * Wire: D1/D2 v9 (v4 layout and semantics, long-probe sequence bounds), D3 v2, D4 v2
+ * (layouts unchanged), D5 v1 (new). Older decoders reject these versions; v4/D3 v1
+ * captures keep their 100 mm meaning. The estimator's completion rule still requires
+ * the TRAVEL CEILING (cap_budget), never a clearance or step limit. */
+
 /* width_calibrated_probe v0.1 (separate image): width probe v0.2.1 motion, sampling,
  * clearance, Stop/fault handling and D1/D2 wire v4 UNCHANGED. Added: at the end of
  * every attempted run (any end code) the Pico computes a DISPLAY width from the
@@ -44,19 +74,29 @@
 #include "extensions/buddy5_obstacles/width_estimate.h"
 
 #define B5WP_RETRIES_PER_RUN  4u
-#define B5WP_RESULT_WIRE      1u   /* D3 width result frame version (new; D1/D2 stay v4) */
+#ifndef B5WP_RUN_ARCHIVE         /* SDK v0.1.1+ run-log copy for the USB/flash export (default on).
+                                    0 = no copy: RTOS build, which has no archive exporter and
+                                    needs the RAM; probe, estimator and wire output are unchanged. */
+#define B5WP_RUN_ARCHIVE      1
+#endif
+#define B5WP_RESULT_WIRE      3u   /* D3 v3: rule2, basis4, budget flags = 220 mm ceiling */
+#define B5WP_RETRY_WIRE       3u   /* D4 v3: includes bounded boundary-TRANSITION retry */
+#define B5WP_LIMIT_WIRE       2u   /* D5 v2: same layout, 220 mm outer ceiling */
 
-#define B5WP_WIRE_VERSION 4u   /* v1 rolling; v2 stable PRE; v3 REF plane + ladder (-15/+60);
-                                  v4 = v3 with near allowance 25 + face-plane margin 25 */
+#define B5WP_WIRE_VERSION 10u   /* v1 rolling; v2 stable PRE; v3 REF plane + ladder (-15/+60);
+                                  v4 = v3 with near allowance 25 + face-plane margin 25;
+                                  (5-8 other experiments); v9 = v4 semantics, long
+                                  clearance-limited diagonal: 190 mm ceiling, 12 steps */
 #define B5WP_NEAR_MM          25       /* plane association: IN if expected-25 <= echo <= expected+60 */
 #define B5WP_FAR_MM           60       /* unchanged */
 #define B5WP_FACE_MARGIN_MM   25.0f    /* modelled face plane moved 25 mm nearer in clearance checks */
 #define B5WP_SERVO_LIMIT_DD   460      /* shared verified +/-46 deg command cap */
-#define B5WP_BUDGET_MM        100.0f   /* cumulative MEASURED outward drive per side */
+#define B5WP_BUDGET_MM        220.0f   /* travel CEILING: cumulative MEASURED outward drive per side */
+#define B5WP_TURN_RESERVE_DEG 5.0f     /* heading reserve in the clearance projection */
 #define B5WP_STEP_MM          20.0f    /* nominal adaptive step */
 #define B5WP_OVERSHOOT_MM     5.0f     /* allowed measured-minus-command; also budget reserve */
 #define B5WP_MIN_STEP_MM      5.0f     /* a smaller remaining step means budget exhausted */
-#define B5WP_MAX_STEPS        8u       /* hard bound on outward segments per side */
+#define B5WP_MAX_STEPS        12u      /* hard bound on outward segments per side (10 nominal) */
 #define B5WP_RETURN_RESIDUAL_MM 2.0f   /* path residual allowed after retrace */
 #define B5WP_RUNG_DEG         15.0f    /* ladder rung spacing: +-15, +-30, then PRE +-45 */
 #define B5WP_PRE_DEG          45.0f
@@ -71,16 +111,18 @@
 #define B5WP_CAR_REAR_MM      60.0f    /* axle mid -> rear (<60 measured; 190 total) */
 #define B5WP_CAR_HALF_W_MM    67.5f    /* 135 mm widest point, measured 2026-11-01 */
 #define B5WP_SHAFT_MM         62.0f    /* same model shaft as the direction probe */
-#define B5WP_MAX_TRIMS        16u      /* bounded stopped-pose corrections per run */
+#define B5WP_MAX_TRIMS        24u      /* bounded stopped-pose corrections per run (16 at 45 records) */
 /* Stops per side: 0 = frontal (REF for L, MID for R), 1/2 = rungs, 3 = PRE,
  * 4.. = forward steps. */
 #define B5WP_STOP_PRE         3u
 #define B5WP_MAX_STOPS        (B5WP_STOP_PRE + 1u + B5WP_MAX_STEPS)
-/* REF + per side (2 rungs + PRE + 8 steps outward, 8 step/PRE returns, 2 rung
- * returns) + MID + FINAL = 45. */
+/* REF + per side (2 rungs + PRE + 12 steps outward, 12 step/PRE returns, 2 rung
+ * returns) + MID + FINAL = 61. */
 #define B5WP_MAX_RECORDS      (3u + 2u * (2u + 1u + 2u * B5WP_MAX_STEPS + 2u))
-#define B5WP_QUEUE_CAP        48u
+#define B5WP_QUEUE_CAP        64u
 _Static_assert(B5WP_QUEUE_CAP >= B5WP_MAX_RECORDS, "queue holds a whole run");
+_Static_assert(B5WE_MAX_POINTS >= B5WP_MAX_RECORDS, "estimator keeps every record of a run");
+_Static_assert(B5WP_MAX_STEPS <= 255u && B5WP_MAX_RECORDS <= 255u, "u8 step / point counts");
 #define B5WP_NO_ANCHOR        0xFFFFu
 
 enum {
@@ -107,6 +149,9 @@ enum {
     B5WP_ST_UNCORROBORATED  /* IN->FAR outward but the IN-bound stop not IN on return  */
 };
 enum { B5WP_WIDTH_INCOMPLETE, B5WP_WIDTH_MEASURED };
+/* D5: why a side's outward pass ended (first that applied). */
+enum { B5WP_LIM_NONE, B5WP_LIM_FAR, B5WP_LIM_CEILING, B5WP_LIM_CLEARANCE, B5WP_LIM_STEPS,
+       B5WP_LIM_ABORT };
 enum {
     B5WP_FLAG_REF_OK = 1u << 0, B5WP_FLAG_FINAL_REF_OK = 1u << 1,
     B5WP_FLAG_L_RETURN_OK = 1u << 2, B5WP_FLAG_R_RETURN_OK = 1u << 3,
@@ -158,6 +203,9 @@ typedef struct {
     uint8_t state;
     bool boundary, contradictory, transition, cap_budget, cap_clear, cap_steps;
     bool return_ok, ret_in_ok;
+    uint8_t limit;                 /* B5WP_LIM_*: why the outward pass ended */
+    float clear_total_mm;          /* clearance-allowed outward travel at the last plan (out + remaining) */
+    float min_turn_gap;            /* smallest modelled worst-turn gap at a visited outward stop */
     unsigned steps, last, ret_k;   /* last = outermost visited stop; ret_k = stop being revisited */
     int in_stop, far_stop, last_in; /* stop indices, -1 = none */
     float path_mm, out_mm, turn_deg;
@@ -212,6 +260,12 @@ typedef struct {
     bool pose_retried;
     B5WPRetry retries[B5WP_RETRIES_PER_RUN];
     unsigned retry_count, retry_sent;
+    bool limits_pending;          /* D5 after D2 */
+    /* v0.1.1 logging only: a copy of every pushed record, independent of the radio queue */
+#if B5WP_RUN_ARCHIVE
+    B5WPRec arch[B5WP_MAX_RECORDS];
+#endif
+    uint16_t arch_n, arch_lost;
 } B5WidthProbe;
 
 void b5_wp_init(B5WidthProbe *t, const B5SensorPort *port);
@@ -229,7 +283,10 @@ const char *b5_wp_end_name(unsigned end);
 float b5_wp_axis_x(float net_x_mm, float heading_deg, float applied_deg, float range_mm);
 float b5_wp_front_gap(float d0_mm, float pivot_y_mm, float heading_deg);
 float b5_wp_turn_front_gap(float d0_mm, float pivot_y_mm);
-float b5_wp_next_step(float out_mm, unsigned steps); /* 0 = budget/step bound reached */
+float b5_wp_next_step(float out_mm, unsigned steps); /* ceiling only; 0 = ceiling/step bound reached */
+/* Outward travel still allowed by the clearance model from the current integrated pose
+ * (before the overshoot reserve); see width_probe.c. */
+float b5_wp_clear_travel(float d0_mm, float net_y_mm, float heading_deg);
 bool  b5_wp_segment_ok(float command_mm, float measured_mm);
 /* REF-plane expected range from quantized wire values (heading cdeg, net y 0.1 mm). */
 uint16_t b5_wp_expected_mm(uint16_t d0, int16_t heading_cdeg, int16_t net_y_mm10);

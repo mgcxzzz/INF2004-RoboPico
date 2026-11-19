@@ -1,6 +1,7 @@
 #!/bin/sh
 # Focused Buddy 5 RTOS candidate host checks (logic only; no hardware).
 # usage: sh testing/rtos_migration/buddy5/run_buddy5_checks.sh <bench_tools/buddy5_sdk> [out_dir]
+# v0.2.12 long-width candidate: SDK width_long_probe v0.2 suites and decoder.
 # Needs gcc (ASan/UBSan), python3 and node. Frozen bench folders are read only.
 set -u
 SDK=$1; OUT=${2:-/tmp/b5_checks}; mkdir -p "$OUT"
@@ -12,21 +13,71 @@ fails=0; run() { echo "== $*"; "$@" || { echo "FAILED: $*"; fails=$((fails+1)); 
 # 1. mission simulation + C-packed dashboard fixture (v0.2: steered approach
 #    and width policy need the coordinator extension, as in the APP build)
 STEER="-DMOTION_STEERED_DRIVE=1 -DLINE_CAL_MIN_SPAN=50"
-$CC $STEER -Wall -Wextra -I $B -I app_program/obstacle_navigation testing/rtos_migration/test_b5_mission.c \
-  app_program/obstacle_navigation/b5_mission.c $E/width_probe.c $E/width_estimate.c $E/edge_probe.c \
-  $E/automatic_bypass.c $E/manual_bypass.c $E/rect_route.c $E/stripe_detect.c $E/profile/obstacle_profile.c $CORE -lm -o "$OUT/test_b5_mission"
+MSRC="testing/rtos_migration/test_b5_mission.c app_program/obstacle_navigation/b5_mission.c $E/width_probe.c \
+  $E/width_estimate.c $E/edge_probe.c $E/automatic_bypass.c $E/manual_bypass.c $E/rect_route.c $E/stripe_detect.c \
+  $E/profile/obstacle_profile.c $CORE"
+# APP profile: no SDK run-log copy (B5WP_RUN_ARCHIVE=0); the archive-on build
+# must produce byte-identical telemetry (the copy is write-only).
+$CC $STEER -DB5WP_RUN_ARCHIVE=0 -Wall -Wextra -I $B -I app_program/obstacle_navigation $MSRC -lm -o "$OUT/test_b5_mission"
+$CC $STEER -DB5WP_RUN_ARCHIVE=1 -Wall -Wextra -I $B -I app_program/obstacle_navigation $MSRC -lm -o "$OUT/test_b5_mission_arch"
 run "$OUT/test_b5_mission" "$ROOT/dashboard/test/fixtures/b5_rtos_mission_c_frames.txt"
+run "$OUT/test_b5_mission_arch" "$OUT/mission_frames_archive_on.txt" > "$OUT/mission_archive_on.log"
+run cmp "$ROOT/dashboard/test/fixtures/b5_rtos_mission_c_frames.txt" "$OUT/mission_frames_archive_on.txt"
+# 1a. offline decoder: every mission run, replayed by the unchanged SDK v0.2 decoder
+mkdir -p "$OUT/mission_runs"
+python3 -B - "$ROOT/dashboard/test/fixtures/b5_rtos_mission_c_frames.txt" "$OUT/mission_runs" <<'PY'
+import re, sys
+out, n = None, 0
+for line in open(sys.argv[1]):
+    if line.startswith('SCENARIO'):
+        n += 1
+        out = open(f"{sys.argv[2]}/{n:02d}_{re.sub(r'[^A-Za-z0-9]+', '_', line[9:].strip()).strip('_')}.txt", 'w')
+    elif out:
+        out.write(line)
+PY
+for f in "$OUT"/mission_runs/*.txt; do
+  run python3 -B tools/telemetry/b5_rtos_decode.py "$f" --sdk-width-decoder "$SDK/width_long_probe_v0_2/decode_width_long.py" \
+    --json "${f%.txt}.json" > "${f%.txt}.decoded"
+done
+grep -h "WIDTH " "$OUT"/mission_runs/*.decoded | sed 's/:.*//' | sort | uniq -c
+run python3 -B tools/telemetry/b5_rtos_decode.py "$ROOT/dashboard/test/fixtures/b5_rtos_mission_c_frames_v0_2_legacy.txt" > "$OUT/legacy_fixture.decoded"
 # 1b. NAV_STEER coordinator extension (codec, gating, bound, 100 ms lapse)
 $CC $STEER -Wall -Wextra -I $B testing/rtos_migration/test_nav_steer.c $CORE -lm -o "$OUT/test_nav_steer"
 run "$OUT/test_nav_steer"
-# 2. frozen width v0.2 suites against the ported files
-W=$SDK/width_calibrated_probe_v0_2/source/firmware/integration/buddy1_4/tests/width_only
-mkdir -p "$OUT/w/tests/width_only"; cp "$W"/* "$OUT/w/tests/width_only/"; cp "$W"/test_width_calibrated.c "$W"/test_retry_speed.c "$OUT/w/"
-printf '#include "src/motion/motion_port.h"\ntypedef motion_feedback_t MotionFeedback;\ntypedef motion_output_t MotionOutput;\ntypedef motion_port_t MotionPort;\ntypedef motion_event_t MotionEvent;\n' > "$OUT/w/sdk_names.h"
-for t in test_width_calibrated test_retry_speed; do
-  $CC -I "$OUT/w" -I $B -include "$OUT/w/sdk_names.h" "$OUT/w/$t.c" $E/width_probe.c $E/width_estimate.c $E/profile/obstacle_profile.c $CORE -lm -o "$OUT/w/$t"
-  (cd "$OUT/w" && run "./$t")
+# 2. SDK width_long_probe v0.2 suites against the ported (byte-identical) width
+#    files and the v0.2.12 RTOS motion core. The SDK USB/flash archive helper is
+#    not part of the RTOS build; its header-only builder is staged into the test
+#    include path only because test_width_long_v02.c exercises it.
+L=$SDK/width_long_probe_v0_2
+W=$L/source/firmware/integration/buddy1_4/tests/width_only
+mkdir -p "$OUT/w/tests/width_only" "$OUT/w/extensions/buddy5_obstacles"
+cp "$W"/*.c "$W"/*.h "$OUT/w/tests/width_only/"; cp "$W"/*.c "$W"/*.h "$OUT/w/"
+cp "$L/source/firmware/integration/buddy1_4/extensions/buddy5_obstacles/width_probe_log.h" "$OUT/w/extensions/buddy5_obstacles/"
+for f in width_estimate.c width_estimate.h width_probe_pack.h; do
+  run cmp "$L/source/firmware/integration/buddy1_4/extensions/buddy5_obstacles/$f" "$E/$f"
 done
+# width_probe.c/.h: SDK text plus ONLY the B5WP_RUN_ARCHIVE guard (no line removed or changed)
+for f in width_probe.c width_probe.h; do
+  run python3 -B - "$L/source/firmware/integration/buddy1_4/extensions/buddy5_obstacles/$f" "$E/$f" <<'PY'
+import difflib, sys
+a, b = (open(x).read().splitlines() for x in sys.argv[1:3])
+ok = {'#if B5WP_RUN_ARCHIVE', '#endif', '#define B5WP_RUN_ARCHIVE      1'}
+bad = [l for l in difflib.ndiff(a, b) if l[:2] in ('- ', '+ ') and not (l.startswith('+ ') and (
+       l[2:].strip() in ok or l[2:].startswith('#ifndef B5WP_RUN_ARCHIVE') or l[2:].lstrip().startswith(('0 = no copy', 'needs the RAM'))))]
+print(sys.argv[2], 'archive guard only' if not bad else bad)
+sys.exit(1 if bad else 0)
+PY
+done
+printf '#include "src/motion/motion_port.h"\ntypedef motion_feedback_t MotionFeedback;\ntypedef motion_output_t MotionOutput;\ntypedef motion_port_t MotionPort;\ntypedef motion_event_t MotionEvent;\n' > "$OUT/w/sdk_names.h"
+WCC="$CC -Wall -Wextra -Wno-missing-field-initializers -DLINE_CAL_MIN_SPAN=50 -DB5WP_HOST_TEST_HOOKS"
+$WCC -I "$OUT/w" -I $B "$OUT/w/test_width_estimate_near_axis.c" $E/width_estimate.c -lm -o "$OUT/w/estimator"
+(cd "$OUT/w" && run ./estimator)
+$WCC -I "$OUT/w" -I $B -include "$OUT/w/sdk_names.h" "$OUT/w/test_width_long_v02.c" $E/width_probe.c $E/width_estimate.c \
+  $E/profile/obstacle_profile.c $CORE -lm -o "$OUT/w/probe"
+(cd "$OUT/w" && run ./probe "$OUT/w/sim_rtos_frames.jsonl")
+# 2b. the unchanged SDK v0.2 decoder replays the RTOS-built simulation frames
+#     (independent rule-2 estimator, clearance policy, D5 limits)
+run python3 -B "$L/decode_width_long.py" "$OUT/w/sim_rtos_frames.jsonl" --json "$OUT/w/sim_rtos_decoded.json"
 # 3. frozen edge_probe v0.1.1 suite: exact v0.1.1 rule, then the 25 mm/v3 rule
 T=$SDK/edge_probe_v0_1_1/source/firmware/integration/buddy1_4/tests/turn_only/test_edge_probe.c
 mkdir -p "$OUT/e"; cp "$OUT/w/sdk_names.h" "$OUT/e/"; cp "$T" "$OUT/e/"

@@ -150,7 +150,7 @@ ifeq ($(APP),rtos_buddy1_4)
 EXE_FILE := robopico_buddy1_4_rtos_v0_2_12_caster_assist
 endif
 ifeq ($(APP),rtos_buddy1_5)
-EXE_FILE := robopico_buddy1_5_rtos_integration_v0_2_candidate
+EXE_FILE := robopico_buddy1_5_rtos_v0_2_12_long_width_candidate
 endif
 endif
 endif
@@ -243,7 +243,7 @@ endif
 # private Buddy5 wheel controller keeps the SDK automatic I300 limit.
 ifeq ($(APP),rtos_buddy1_5)
 CFLAGS += -DAPP_RTOS_BUDDY5=1 -DB5_PLAN_DEPTH_MM=150 -DB5_ALLOW_REVERSE=0 \
-    -DBUDDY5_DRIVE_I_MAX=300 -DMOTION_STEERED_DRIVE=1
+    -DBUDDY5_DRIVE_I_MAX=300 -DMOTION_STEERED_DRIVE=1 -DB5WP_RUN_ARCHIVE=0
 endif
 CFLAGS  += -DTM_CONSOLE_UART=$(CRASH_REPORT)
 ifeq ($(CRASH_REPORT),0)

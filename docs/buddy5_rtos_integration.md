@@ -1,21 +1,33 @@
-# Buddy 5 RTOS integration candidate (APP=rtos_buddy1_5 v0.2)
+# Buddy 5 RTOS candidate on v0.2.12 with the long width probe (APP=rtos_buddy1_5)
 
 **Status: built and host-checked; not flashed, not driven, not physically
-validated.** Base: `barr-c-cleanup` 1862e0d2ce0a5ed26687edc605a749140e1d3a4e
-(v0.2.9). `APP=rtos_buddy1_4` is byte-identical to its pre-change build.
-v0.2 changes only the mission's width policy, the line-steered approach (with
-its coordinator extension) and the E5 status; estimator, direction rules,
-bypass and every ported module are unchanged from v0.1.
+validated.** Base: `barr-c-cleanup` v0.2.12 `81a994f57e3828364492cc2806fcbea124dfa18a`
+(caster assist). It carries the Buddy 5 RTOS integration v0.2 (checkpoint
+`buddy5-rtos-integration` 573689b, on v0.2.9) and replaces its short width
+probe with the SDK `width_long_probe` v0.2 (UF2 71ae5473…). `APP=rtos_buddy1_4`
+is byte-identical to a clean v0.2.12 build with the same toolchain.
 
-Build (from `build_make/`, same toolchain/SDK as the release):
+Build (from `build_make/`; run `make … clean` first when switching APP, the
+object directory is shared):
 
 ```bash
-make -j4 APP=rtos_buddy1_5 SMP=1 CONSOLE=usb_cdc WIFI=cyw43 NET=lwip MQTT=1 CRASH_REPORT=0 TEST=0
-# -> robopico_buddy1_5_rtos_integration_v0_2_candidate.uf2
+make -j8 APP=rtos_buddy1_5 SMP=1 CONSOLE=usb_cdc WIFI=cyw43 NET=lwip MQTT=1 CRASH_REPORT=0 TEST=0
+# -> robopico_buddy1_5_rtos_v0_2_12_long_width_candidate.uf2
 ```
 
 The sequence, task ownership and adapter rules are in
 [app_program/obstacle_navigation/README.md](../app_program/obstacle_navigation/README.md).
+
+## v0.2.12 overlaps (resolved in favour of the release)
+
+| Release change (v0.2.9 → v0.2.12) | With Buddy 5 |
+|---|---|
+| Caster assist: `rl_controller_output`, `no_progress` → `BR_REASON_STALL` stop | Kept. The stall stop is in the non-Buddy-5 power branch only; Buddy 5 moves use their own signed controller and never feed the caster model. After hand-back the follower's progress check re-anchors on the first ≥ 2 mm of travel. |
+| `motor_stop_reason` in the status and the line log | Kept; Buddy 5 holds do not call `bringup_stop_from`, operator Stop/E-stop paths do (and still call `rb5_cancel()`). |
+| C2 release frame 12 → 13 bytes (`info[16]`) | Kept; no source-15 marker or length collides with E5 (54/59/61) or D1–D5. |
+| Safety task `else if (active && !rn_drive_online_record(true))` | Kept unchanged; network loss stops Buddy 5 moves as before. |
+| `connected_control.c` clock read order, `line_service.c` caster enable | Kept (auto-merged). |
+| Dashboard run ZIP (jszip), release banner | Kept; the Buddy 5 panel is additive. The Buddy 1–4 banner text in `app_main.c` is the release text; the Buddy 5 banner names this candidate. |
 
 ## Provenance of the ported algorithms
 
@@ -23,7 +35,8 @@ Folder `firmware/integration/buddy1_4/extensions/buddy5_obstacles/`.
 
 | File(s) | Source | Change |
 |---|---|---|
-| width_probe.c/.h, width_estimate.c/.h, width_probe_pack.h, b5_scan_pack.h | SDK width_calibrated_probe v0.2 (UF2 b37dd8c3…ff26) | none (byte-identical) |
+| width_estimate.c/.h, width_probe_pack.h, b5_scan_pack.h | SDK width_long_probe v0.2 (UF2 71ae5473…) | none (byte-identical) |
+| width_probe.c/.h | SDK width_long_probe v0.2 | only a `B5WP_RUN_ARCHIVE` guard (default 1 = SDK) around the write-only run-log copy `arch[]`; the RTOS profile sets 0 (no USB/flash exporter, 3,172 B RAM). The checks verify that nothing else differs and that telemetry is byte-identical with the guard on or off. |
 | edge_probe.c/.h, edge_probe_pack.h | SDK edge_probe v0.1.1 (working direction checkpoint, UF2 2f6070fa…4a89) | near allowance 25 mm (edge_scan v0.1.1 rule), BE/BF version 3; both overridable for the v0.1.1 host checks |
 | manual_bypass.c/.h, rect_route.c/.h, stripe_detect.c/.h, b5_event_pack.h | SDK automatic v0.6.1 (identical in the width v0.2 tree) | manual_bypass.h includes b5_compat.h |
 | automatic_bypass.c/.h | SDK automatic v0.6.1 (source tarball 655b8e0d…) | guard, stationary scan, profiler side selection and geometry-only variant removed; `b5_auto_start(side, actual range, heading0, lateral0)` replaces begin/scan/plan; DONE state after hand-back; every other function verbatim |
@@ -126,16 +139,41 @@ the front, margin 50 mm, side 250 mm, depth 150 mm, no reverse):
   acquisition after the probes. The width estimate does not and must not
   prove clearance.
 
+## Width in the mission (long probe)
+
+At the ~300 mm stop (clean stopped range 270–330 mm) the mission runs the SDK
+long probe unchanged: 20 mm adaptive steps, 5 mm overshoot reserve, 220 mm
+outer ceiling, 12-step limit per side, ±46° servo cap; every move is bounded
+by `b5_wp_clear_travel()` (front corner ≥ 50 mm from the modelled face plane
+25 mm nearer than measured, 5° heading reserve). An outward pass stops at the
+first all-FAR (FAR), the ceiling (CEILING), clearance (CLEARANCE), the step
+limit (STEPS) or a fault (ABORT); it then retraces, with the stationary
+retry and the return corroboration. Estimator rule 2 (basis 4
+`CORROBORATED_EDGE_ESTIMATE` for clean-FAR evidence and adjacent centre
+anchors on a corroborated side). Display: raw edge midpoint, −10 mm, limited
+to 100–200 mm; an unresolved side gives the labelled 150 mm assumption, or
+the empirical completion only after the CEILING. Width stays display-only:
+it never changes bypass clearance, authorises motion or clears a fault.
+Skip (clean range outside the window: no probe), failure (attempted probe
+held) and a completed probe with unresolved edges (labelled assumption,
+mission continues) are reported distinctly.
+
 ## Telemetry (source 15, schema header 0xF2)
 
 | Marker / length | Meaning | Version |
 |---|---|---|
-| E5 / 59 | Buddy 5 mission status (v0.2; dashboard also decodes the 54-byte v1 of v0.1) | 2 |
-| D1 / 56, D2 / 58 | width records / summary | 4 (unchanged) |
-| D3 / 58 | width display result | 1 (unchanged) |
-| D4 / 32 | rejected triplet before a retry | 1 (unchanged) |
+| E5 / 61 | Buddy 5 mission status (dashboard also decodes v2/59 and v1/54) | 3 |
+| D1 / 56, D2 / 58 | width records / summary (long probe) | 10 |
+| D3 / 58 | width display result, rule 2 | 3 |
+| D4 / 32 | rejected triplet before a retry | 3 |
+| D5 / 36 | per-side outward limits (stop reason, reach, steps, clearance allowed, min turn gap) and the policy constants, after D2 | 2 |
 | BE / 48, BF / 44 | direction records / summary | 3 = v2 layout, near 25 mm |
 | B5 / 32 | bypass/rejoin events | 1 (unchanged) |
+
+Older captures stay readable under their original rules: the dashboard and
+`tools/telemetry/b5_rtos_decode.py` decode the v0.1/v0.2 short-probe
+protocol (D1/D2 v4, D3 v1, D4 v1, E5 v1/v2) with the original basis table,
+and reject a run that mixes protocol versions. Length 36 is used elsewhere only by source 2.
 
 E5 layout (little endian; byte offsets in the payload): 0 u32 Pico ms; 4 0xE5;
 5 version 2; 6 u16 mission run; 8 stage; 9 hold/end reason; 10 module
@@ -153,11 +191,23 @@ display/raw/corrected mm×100 (0xFFFF n/a); 40 width d0; 42 trigger echo mm;
 44 bypass start range mm; 46 bypass state; 47 rejoin phase; 48/49 width
 records produced/admitted; 50/51 direction records produced/admitted;
 52 approach legs b0–3, alignment steps b4–7; 53 records of an earlier run
-discarded by the car (saturating). v2 only: 54 i8 approach steering
+discarded by the car (saturating). v2 and v3: 54 i8 approach steering
 setpoint last sent (0.1°, +left, |v| ≤ 80); 55 largest |setpoint| this run;
 56 control frames at the ±8° bound (saturating); 57 u16 range that decided
-the width policy (0 none). A skip reports basis 3, status INVALID and display
-150.00 mm without any D1–D4 frame.
+the width policy (0 none). v3 only (61 bytes): 59 width-probe state b0–3
+(IDLE CLAIM REF TURN PRE STEP OUT RETRACE RET TURN_BACK FINAL DONE HOLD TRIM
+LADDER MID) | side of the last stopped sample b4–5 (0 none, 1 left, 2 right);
+60 sample phase b0–2 (REF PRE OUT RET FINAL LAD_OUT LAD_RET MID) | stop step
+b3–7. Byte 30 may be basis 4 in v3. A skip reports basis 3, status INVALID
+and display 150.00 mm without any D1–D5 frame.
+
+Verification labels (`b5_rtos_decode.py --sdk-width-decoder …/width_long_probe_v0_2/decode_width_long.py`):
+VERIFIED BY REPLAY only when every claimed record, D2, D3 and D5 were received
+and the unchanged SDK decoder reproduces the estimate, the clearance policy and
+the limits; PICO-REPORTED when anything is missing (the car's number is shown,
+never repaired); MISMATCH; INSUFFICIENT; NO RECORDS. The dashboard never claims
+verification: it says "Pico-reported · capture complete (replay offline)" or
+"NOT independently verifiable (capture incomplete)".
 
 "Admitted" means accepted into the car's network TX queue. The bridge may
 still discard a telemetry message older than 250 ms in that queue
@@ -177,42 +227,65 @@ still rejects that run (150 mm INVALID) and the Pico value 143.85 mm stays a
 non-parity result. The RTOS candidate adds E5 produced/admitted counts and
 dashboard/offline completeness reports; it never fills or re-labels a gap.
 
+## Resources (rtos_buddy1_5)
+
+- Static RAM end `__bss_end` 0x20032538 (56,008 B below 0x20040000; v0.2
+  candidate 0x20032080; v0.2.12 Buddy 1–4 0x2002ff98).
+- Kernel pool model (`testing/rtos_migration/buddy5/kernel_pool_budget.py`):
+  every task stack and message buffer comes from one pool between
+  `__bss_end` and the 2 KB exception stack; nothing allocates after init.
+  Pool 53,960 B, boot allocations 52,912 B, **margin 1,048 B** (Buddy 1–4
+  release: 13,888 B; v0.2 candidate: 1,232 B). Without the two adjustments
+  below the long probe would have been 3,144 B short and the last tasks
+  would fail with E_NOMEM (`INIT FAILED; motors disabled`).
+  - `B5WP_RUN_ARCHIVE=0`: no 61-record run-log copy (−3,172 B).
+  - Buddy 5 task stack 3,072 B instead of 4,096 B (`RB5_TASK_STACK`,
+    `start_sized()` under `APP_RTOS_BUDDY5`). Deepest chain: rb5_task 8 +
+    rb5_service 304 + report 424 + tm_printf 800 + tm_vsprintf 104 + output
+    ≈ 1.8 KB; telemetry chain ≈ 1.0 KB.
+- Motion task (4,096 B + 128 B system): worst chain control 992 + rb5_frame
+  112 + b5_mission_tick 248 + b5_wp_tick 216 + finish 176 + b5_we_estimate
+  576 + side_onset 840 + median4 280 = 3,440 B (v0.2: ≈ 3.0–3.2 KB). The
+  64-point estimator adds ≈ 0.3 KB; no change needed.
+- Capacities: 61 records per run (static assert), 64-record send queue,
+  64 estimator points; D5 drained after D2 (`b5_wp_begin` refuses while it
+  is pending). Transmission stays nonblocking.
+- The first idle boot confirms the pool model: every `TASK … result=0`, the
+  Buddy 5 line shows `stack=3072`, and no `INIT FAILED`.
+
 ## Host checks run (logic only)
 
 Re-run with `sh testing/rtos_migration/buddy5/run_buddy5_checks.sh <bench_tools/buddy5_sdk>`.
 
-
-- Frozen width v0.2 suites against the ported files and the barr-c
-  coordinator: 337 checks (recorded-capture estimator parity incl. variants,
-  ideal-plant D3 after every end) and 200 retry/timing checks.
-- Frozen edge_probe v0.1.1 suite: 1298 checks with the exact v0.1.1 rule
-  (15 mm, v2) and 1298 with the integration rule (25 mm, v3).
-- Saved v0.2 hardware captures re-decoded: four parity OK, 117 mm MISMATCH
-  retained.
-- Mission simulation (`testing/rtos_migration/test_b5_mission.c`, ASan/UBSan,
-  built with `-DMOTION_STEERED_DRIVE`; line model = 10 mm analog spot on a
-  19 mm strip, Buddy 3 stand-in = the same `analog_demand()`): evidence
-  LEFT/RIGHT bypasses, default side, failed direction → HOLD, faults after
-  width REF → HOLD, **REF rejected then clean sonar → HOLD WIDTH_ABORT for
-  30 s with 150 mm assumption (policy failed)**, **clean 180 mm stop → skip
-  (no probe records, mission continues)**, **faulty / noisy policy range →
-  HOLD RANGE (not a skip)**, **three approach pushes (+3°/−2 mm, −1°,
-  +1.5°/+1 mm) corrected with steering, not without (edge error at the
-  direction probe 0.6/0.5/0.1 mm vs 24.9/7.7/16.1 mm), sonar stop still
-  203 mm, setpoint ≤ 8°**, guard sonar failure, line lost during approach
-  (HOLD, setpoint bounded), Stop in each of eight stages (no motion
-  afterwards). Contact-free in the geometric model.
-- Coordinator extension (`testing/rtos_migration/test_nav_steer.c`): NAV_STEER
-  codec round trip −8.0…+8.0°, exact length, > 8° refused; refused in AUTO,
-  PAUSED, during a turn, after the drive, for another owner or a stale lease,
-  NaN; 6° setpoint gives 5.8° odometric yaw with no fault; lapse returns to
-  0.2°; a new drive starts straight; Stop during a steered drive stops.
-- Dashboard: C-packed frames decoded (node test, 8 cases incl. v1/v2 E5,
-  policy and steering), headless smoke of the Buddy 5 panel text
-  (`dashboard/test/smoke_b5_panel.js`); existing dashboard tests unchanged
-  (four pre-existing failures also fail on the base: missing external
-  fixtures).
-- ARM build: zero compiler warnings; worst motion-task call chain ≈ 3.0–3.2 KB
-  of 4 KB (the steering path inlines into `b5_mission_tick`, 248 B).
+- SDK width_long_probe v0.2 suites against the ported files and the v0.2.12
+  coordinator: near-axis estimator and recorded-fixture checks; 958
+  focused integration checks (clearance, ceiling, steps, first-FAR, retrace,
+  retries, 61-record maximum, D5). The SDK v0.2 decoder replays the
+  RTOS-built simulation: 13 runs, 0 mismatch, 0 insufficient (same bases,
+  statuses and limits as the SDK simulation; widths differ by ≤ 0.35 mm
+  because the v0.2.12 executor's simulated poses differ slightly).
+- width_probe.c/.h differ from the SDK only by the archive guard; mission
+  telemetry with the guard on and off is byte-identical.
+- Frozen edge_probe v0.1.1 suite: 1298 checks (15 mm, v2) and 1298
+  (25 mm, v3); near-25 replay of nine accepted captures: no change.
+- Mission simulation (`testing/rtos_migration/test_b5_mission.c`, ASan/UBSan):
+  the v0.2 scenarios (evidence LEFT/RIGHT, default side, failed direction →
+  HOLD, faults after width REF → HOLD, REF rejected → HOLD with the labelled
+  assumption, clean skip, faulty/noisy policy range → HOLD RANGE, three
+  steered approach pushes, guard sonar failure, line lost in approach, Stop
+  in each of eight stages) plus long-probe checks: width → align → range →
+  approach → direction → bypass in one mission; D2, D5 and D3 drained;
+  every outward pass ≤ 220 mm and ≤ 12 steps with a reported stop reason;
+  modelled turn and front gaps ≥ 50 mm. Contact-free in the geometric model.
+- Offline decoder on every simulated mission: 16 VERIFIED BY REPLAY, one
+  PICO-REPORTED (the deliberately dropped D1), one INSUFFICIENT (REF
+  rejected), one NO RECORDS (Stop before REF); a corrupted D3 gives MISMATCH.
+- Coordinator extension (`testing/rtos_migration/test_nav_steer.c`): unchanged, passes.
+- Dashboard: `test_b5_rtos.js` 13/13 (long and legacy fixtures, D5, E5 v3,
+  raw/corrected/display, mixed-protocol rejection), headless panel smoke;
+  the other dashboard suites fail exactly as on the clean base (missing
+  host-build fixtures).
+- ARM: zero compiler warnings (one pre-existing linker RWX warning);
+  RoboPico C Standard mechanical and clang-format 18.1.8 checks pass.
 
 None of this is timing, sonar-physics or vehicle evidence.
