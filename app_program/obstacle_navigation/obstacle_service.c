@@ -231,15 +231,23 @@ void rb5_echo_isr (uint32_t edges, uint64_t now)
     b5_echo_edge(&g_echo, now, rise, fall);
 }
 
-/* Buddy5 task, every ~1 ms: servo slew and the TRIG transaction. Dispatch is
- * disabled from the ECHO-low check to the end of the 12 us pulse so no task
- * can delay the pulse after the transaction clock started; IRQs stay on. */
-static void hardware_tick (uint64_t now)
+/* The Buddy5 task normally advances sonar and servo every ~1 ms.
+ * During line-following watch, the motion frame also advances pending pings.
+ * Both tasks are on core1. Disable dispatch through the trigger pulse so
+ * only one task advances the transaction, while still allowing ECHO IRQs. */
+static void hardware_tick (bool watch_assist)
 {
     (void)tk_dis_dsp();
     UINT key = enter();
+    if (watch_assist && (B5E_IDLE == g_echo.phase || B5E_READY == g_echo.phase))
+    {
+        leave(key);
+        (void)tk_ena_dsp();
+        return;
+    }
+    uint64_t now = board_time_us();
     unsigned pulse = 0U;
-    if (b5_servo_slew_tick(&g_servo, now))
+    if ((!watch_assist) && b5_servo_slew_tick(&g_servo, now))
     {
         pulse = rb5_servo_pulse_us(g_servo.applied);
     }
@@ -365,6 +373,10 @@ void rb5_frame (uint64_t now, const uint16_t level[2],
     motion_status_t before = motion_get_status();
     if (g_mission.session)
     {
+        if (B5MI_GUARD == g_mission.stage)
+        {
+            hardware_tick(true);
+        }
         b5_mission_tick(&g_mission, now);
     }
     else
@@ -868,7 +880,7 @@ static void report (void)
               status.gate_reason, status.gate_echoes,
               (int)g_mission.straight.travel_mm,
               (int)g_mission.straight.heading_cdeg);
-    tm_printf((UB *)"B5_MISSION version=rtos_buddy1_5-v0.2.12-straight-0.3 "
+    tm_printf((UB *)"B5_MISSION version=rtos_buddy1_5-v0.2.12-straight-0.4 "
                     "stage=%s reason=%s "
                     "module=%u run=%u side=%u basis=%u decision=%u "
                     "states=0x%02x width_end=%u d0=%u trigger=%u start=%u\n",
@@ -917,7 +929,7 @@ static void report (void)
 /* One Buddy5 task pass (~1 ms): hardware, copied telemetry, report. */
 void rb5_service (uint64_t now)
 {
-    hardware_tick(now);
+    hardware_tick(false);
     uint32_t free_bytes = rn_tx_free();
     if ((now >= g_frame_due) && (free_bytes >= (uint32_t)RB5_RECORD_MIN_FREE))
     {

@@ -189,10 +189,15 @@ static bool watch_ping (b5_mission_t * p_mission, uint64_t now,
     return taken;
 }
 
-static bool watch_failed (const b5_mission_t * p_mission, uint64_t now)
+static unsigned watch_failure (const b5_mission_t * p_mission, uint64_t now)
 {
-    return (p_mission->fault_run >= 3U) ||
-           ((now - p_mission->last_ping) > (uint64_t)300000U);
+    if (p_mission->fault_run >= 3U)
+    {
+        return B5MI_WATCH_FAULTS;
+    }
+    return ((now - p_mission->last_ping) > (uint64_t)300000U)
+               ? B5MI_WATCH_TIMEOUT
+               : 0U;
 }
 
 static void range_begin (b5_mission_t * p_mission, b5mi_stage_t after,
@@ -503,9 +508,10 @@ static void guard_tick (b5_mission_t * p_mission, motion_status_t status,
             }
         }
     }
-    if (watch_failed(p_mission, now))
+    unsigned failure = watch_failure(p_mission, now);
+    if (failure != 0U)
     {
-        hold(p_mission, B5MI_R_SENSOR, 0U, now);
+        hold(p_mission, B5MI_R_SENSOR, failure, now);
     }
 }
 
@@ -868,7 +874,7 @@ static void approach_tick (b5_mission_t * p_mission, motion_status_t status,
         p_mission->sub = 2U;
         return;
     }
-    if (watch_failed(p_mission, now))
+    if (watch_failure(p_mission, now) != 0U)
     {
         halt_move(p_mission);
         p_mission->sub = 4U;

@@ -79,7 +79,7 @@ void bringup_help (void)
 {
 #if defined(APP_RTOS_BUDDY5)
     tm_printf((UB *)"\nROBOPICO BUDDY1-5 RTOS rtos_buddy1_5 v0.2.12 LONG-WIDTH "
-                    "STRAIGHT-GATE CANDIDATE 0.3 | "
+                    "STRAIGHT-GATE CANDIDATE 0.4 | "
                     "EXPERIMENTAL | micro T-Kernel SMP | base v0.2.12\n");
     tm_printf((UB *)"Buddy5: takeover only on a straight (else a close "
                     "obstacle holds NOT_STRAIGHT); guard<=300mm -> width "

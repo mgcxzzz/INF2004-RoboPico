@@ -90,6 +90,13 @@ typedef enum
     B5MI_DIR_HELD      /* incomplete/unknown/unhealthy: no movement      */
 } b5mi_direction_basis_t;
 
+/* E5 module reason for SENSOR holds during line-following watch. */
+enum
+{
+    B5MI_WATCH_FAULTS = 1,
+    B5MI_WATCH_TIMEOUT = 2
+};
+
 /* Configuration, fixed at build time (see README for the evidence). */
 enum
 {

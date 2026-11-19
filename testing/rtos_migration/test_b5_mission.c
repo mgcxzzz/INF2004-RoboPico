@@ -620,6 +620,20 @@ int main(int argc, char **argv) {
     if (o.basis == B5MI_DIR_DEFAULT) { CHECK(o.side == B5_SIDE_RIGHT); CHECK(o.handbacks == 1); }
     else CHECK(o.final_stage == B5MI_HOLD && o.handbacks == 0);
     CHECK(g_contacts == 0);
+    scenario_t watch_faults = {.name = "watch: three genuine sonar faults",
+                               .fault_at_stage = B5MI_GUARD, .fault_count = 3};
+    o = run(&watch_faults);
+    CHECK(o.final_stage == B5MI_HOLD && o.reason == B5MI_R_SENSOR);
+    CHECK(g_mission.module_reason == B5MI_WATCH_FAULTS);
+    CHECK(g_mission.run == 0 && !g_mission.width_attempted);
+
+    scenario_t watch_timeout = {.name = "watch: pending sonar result goes stale",
+                                .ping_latency_us = 400000};
+    o = run(&watch_timeout);
+    CHECK(o.final_stage == B5MI_HOLD && o.reason == B5MI_R_SENSOR);
+    CHECK(g_mission.module_reason == B5MI_WATCH_TIMEOUT);
+    CHECK(g_mission.run == 0 && !g_mission.width_attempted);
+
     scenario_t sf = {.name = "sonar faults in direction probe", .cx = 35, .width = 185, .face_y = 900,
                      .fault_at_stage = B5MI_DIRECTION, .fault_count = 6};
     o = run(&sf);
