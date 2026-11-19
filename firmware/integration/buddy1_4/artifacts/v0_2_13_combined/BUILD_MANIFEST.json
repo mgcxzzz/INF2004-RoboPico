@@ -1,0 +1,1621 @@
+{
+  "name": "robopico_buddy1_5_rtos_v0_2_13",
+  "version": "0.2.13",
+  "status": "Integration candidate, hardware verification pending",
+  "source_commit": "a072afbfaafce6f1a72677e2d98f3aead2638593",
+  "buddy1_4_baseline": "81a994f57e3828364492cc2806fcbea124dfa18a",
+  "buddy5_review": "89e7fc69e47d895029ca6d5151ab5ac4f4073c24",
+  "build_profile": "APP=rtos_buddy1_5 SMP=1 CONSOLE=usb_cdc WIFI=cyw43 NET=lwip MQTT=1 CRASH_REPORT=0 TEST=0",
+  "compiler": "arm-none-eabi-gcc.exe (Arm GNU Toolchain 14.2.Rel1 (Build arm-14.52)) 14.2.1 20241119",
+  "sdk_commit": "a1438dff1d38bd9c65dbd693f0e5db4b9ae91779",
+  "uf2_sha256": "6d8850edecc1a3e1905cb9d6bd373caad0e3c395dea86dbfaf460cea98ad6b19",
+  "uf2_bytes": 1143808,
+  "uf2_layout": {
+    "blocks": 2234,
+    "first_xip": "0x10000000",
+    "end_xip_exclusive": "0x1008ba00",
+    "flash_ceiling": "0x10100000"
+  },
+  "elf_sha256": "84c2dcae9457a770b91f607b83716ad6b3304b9d6d3bd6c5c619b47083ba376b",
+  "linked_checks": {
+    "flash_ram_addresses": {
+      "rl_flash_park": "0x20000278",
+      "rl_flash_write": "0x200002b0"
+    },
+    "static_ram_end": "0x20032558",
+    "ram_remaining_before_dynamic_kernel_stacks": 55976,
+    "application_stack_frames": {
+      "port_now": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "port_off": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "start": {
+        "bytes": 64,
+        "kind": "static"
+      },
+      "bringup_report_impl": {
+        "bytes": 240,
+        "kind": "static"
+      },
+      "bringup_status_task": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "bringup_help": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "bringup_report": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "usermain": {
+        "bytes": 104,
+        "kind": "static"
+      },
+      "board_gpio_isr": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "board_motion_lock": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "board_motion_unlock": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "board_time_us": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "board_kernel_ms": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "board_button_pressed": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "board_motor_off": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "board_motor_init": {
+        "bytes": 12,
+        "kind": "static"
+      },
+      "board_motor_write": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "board_gpio_init": {
+        "bytes": 56,
+        "kind": "static"
+      },
+      "board_encoder_drain": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "board_clock_registers_ok": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "board_clock_report": {
+        "bytes": 56,
+        "kind": "static"
+      },
+      "output_levels.part.0": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "apply_outputs": {
+        "bytes": 64,
+        "kind": "static"
+      },
+      "bringup_get_status": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "bringup_encoder_fault_packet": {
+        "bytes": 136,
+        "kind": "static"
+      },
+      "bringup_zero_status": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "bringup_can_start": {
+        "bytes": 48,
+        "kind": "static"
+      },
+      "bringup_clear_latch": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "bringup_stop_from": {
+        "bytes": 48,
+        "kind": "static"
+      },
+      "bringup_stop": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "bringup_imu_safety_trip": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "bringup_create_objects": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "bringup_control_task": {
+        "bytes": 1040,
+        "kind": "static"
+      },
+      "bringup_safety_task": {
+        "bytes": 104,
+        "kind": "static"
+      },
+      "bringup_nav_task": {
+        "bytes": 144,
+        "kind": "static"
+      },
+      "bringup_console_task": {
+        "bytes": 56,
+        "kind": "static"
+      },
+      "rl_flash_park": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "rl_flash_write": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "adc_failure": {
+        "bytes": 56,
+        "kind": "static"
+      },
+      "adc_once": {
+        "bytes": 56,
+        "kind": "static"
+      },
+      "board_line_adc_diagnostics": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "board_motor_levels": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "board_motor_current": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "board_line_adc_init": {
+        "bytes": 48,
+        "kind": "static"
+      },
+      "board_line_adc_read": {
+        "bytes": 64,
+        "kind": "static"
+      },
+      "board_line_flash_worker": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "board_line_save": {
+        "bytes": 136,
+        "kind": "static"
+      },
+      "line_search_target_yaw": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "side_profile_record": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "wireless_cal_update_view": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "line_search_stationary_step": {
+        "bytes": 64,
+        "kind": "static"
+      },
+      "barcode_event_packet": {
+        "bytes": 112,
+        "kind": "static"
+      },
+      "rb_attempt_begin.part.0.constprop": {
+        "bytes": 56,
+        "kind": "static"
+      },
+      "barcode_reader_edge": {
+        "bytes": 296,
+        "kind": "static"
+      },
+      "bp_window": {
+        "bytes": 248,
+        "kind": "static"
+      },
+      "continuous_drive_step_policy": {
+        "bytes": 72,
+        "kind": "static"
+      },
+      "bp_decode.constprop": {
+        "bytes": 384,
+        "kind": "static"
+      },
+      "rb_partial_reset.constprop": {
+        "bytes": 64,
+        "kind": "static"
+      },
+      "barcode_line_packet": {
+        "bytes": 64,
+        "kind": "static"
+      },
+      "junction_wheel_step": {
+        "bytes": 56,
+        "kind": "static"
+      },
+      "acquisition_failed": {
+        "bytes": 128,
+        "kind": "static"
+      },
+      "acquire_frame": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "symmetric_demand.constprop": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "j_acquire.constprop": {
+        "bytes": 104,
+        "kind": "static"
+      },
+      "junction_step.constprop": {
+        "bytes": 120,
+        "kind": "static"
+      },
+      "circuit_line_demand_motion": {
+        "bytes": 104,
+        "kind": "static"
+      },
+      "rb_sample.constprop": {
+        "bytes": 248,
+        "kind": "static"
+      },
+      "rtos_line_init": {
+        "bytes": 112,
+        "kind": "static"
+      },
+      "rtos_line_command": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "rtos_line_cancel": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "rtos_line_start_valid": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "rtos_line_side_poll": {
+        "bytes": 176,
+        "kind": "static"
+      },
+      "rtos_line_ready": {
+        "bytes": 12,
+        "kind": "static"
+      },
+      "rtos_line_pending": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "rtos_line_mode_change_allowed": {
+        "bytes": 136,
+        "kind": "static"
+      },
+      "wireless_cal_allowed": {
+        "bytes": 112,
+        "kind": "static"
+      },
+      "rtos_line_request_fresh": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "rtos_line_request_start": {
+        "bytes": 40,
+        "kind": "static"
+      },
+      "rtos_line_resume": {
+        "bytes": 56,
+        "kind": "static"
+      },
+      "rtos_line_telemetry": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "rtos_line_cal_command": {
+        "bytes": 304,
+        "kind": "static"
+      },
+      "rtos_line_cal_info": {
+        "bytes": 200,
+        "kind": "static"
+      },
+      "rtos_line_prepare": {
+        "bytes": 384,
+        "kind": "static"
+      },
+      "rtos_line_begin": {
+        "bytes": 64,
+        "kind": "static"
+      },
+      "rtos_line_follow": {
+        "bytes": 336,
+        "kind": "static"
+      },
+      "rtos_line_straight_sample": {
+        "bytes": 72,
+        "kind": "static"
+      },
+      "rtos_line_feedback": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "rtos_line_power": {
+        "bytes": 232,
+        "kind": "static"
+      },
+      "rtos_line_actual_output": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "rtos_line_record": {
+        "bytes": 240,
+        "kind": "static"
+      },
+      "rtos_line_report": {
+        "bytes": 432,
+        "kind": "static"
+      },
+      "rtos_line_dump_if_requested": {
+        "bytes": 432,
+        "kind": "static"
+      },
+      "rtos_line_drive_mode_info": {
+        "bytes": 96,
+        "kind": "static"
+      },
+      "rtos_line_flash_task": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "rtos_line_release_info": {
+        "bytes": 80,
+        "kind": "static"
+      },
+      "rtos_line_log_reply": {
+        "bytes": 424,
+        "kind": "static"
+      },
+      "rtos_line_barcode_attempt_info": {
+        "bytes": 72,
+        "kind": "static"
+      },
+      "rtos_line_junction_info": {
+        "bytes": 128,
+        "kind": "static"
+      },
+      "rtos_line_drive_info": {
+        "bytes": 72,
+        "kind": "static"
+      },
+      "pause_line": {
+        "bytes": 120,
+        "kind": "static"
+      },
+      "rn_drive_request_speed_mode": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "rn_drive_speed_mode_snapshot": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "rn_network_stop_packet": {
+        "bytes": 56,
+        "kind": "static"
+      },
+      "rn_drive_set_telemetry": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "rn_drive_telemetry_enabled": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "rn_drive_init": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "rn_drive_enqueue": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "rn_drive_online_record": {
+        "bytes": 152,
+        "kind": "static"
+      },
+      "rn_drive_online": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "rn_drive_paused": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "rn_drive_cancel": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "rn_drive_begin": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "rn_drive_process": {
+        "bytes": 464,
+        "kind": "static"
+      },
+      "rn_drive_telemetry": {
+        "bytes": 136,
+        "kind": "static"
+      },
+      "rn_app_last_ms": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "rn_service_sample": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "rn_mapping_snapshot": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "rn_next_sequence": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "rn_init": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "rn_ready": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "rn_tx_push": {
+        "bytes": 120,
+        "kind": "static"
+      },
+      "rn_tx_free": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "rn_tx_take_budget": {
+        "bytes": 136,
+        "kind": "static"
+      },
+      "rn_tx_take": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "rn_rx_push": {
+        "bytes": 88,
+        "kind": "static"
+      },
+      "rn_command_result": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "rn_barrier": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "rn_take_urgent": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "rn_take_pause": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "rn_status_update": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "rn_status": {
+        "bytes": 48,
+        "kind": "static"
+      },
+      "rn_publish_result": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "rn_report": {
+        "bytes": 184,
+        "kind": "static"
+      },
+      "rn_app_task": {
+        "bytes": 632,
+        "kind": "static"
+      },
+      "record_budget_expiry": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "budget_check": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "wait_ready": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "transfer.part.0": {
+        "bytes": 48,
+        "kind": "static"
+      },
+      "ri_acquisition_snapshot": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "ri_acquisition_record": {
+        "bytes": 48,
+        "kind": "static"
+      },
+      "ri_acquisition_fifo_begin": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "ri_acquisition_fifo_end": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "ri_acquisition_init_begin": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "ri_acquisition_init_end": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "ri_acquisition_record_reset_timeout": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "ri_acquisition_record_processor": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "ri_acquisition_record_tick": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "b4_i2c_read_reg": {
+        "bytes": 40,
+        "kind": "static"
+      },
+      "b4_i2c_write_reg": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "send_frame": {
+        "bytes": 56,
+        "kind": "static"
+      },
+      "ri_lift_guard_samples": {
+        "bytes": 304,
+        "kind": "static"
+      },
+      "ri_safety_blocked": {
+        "bytes": 40,
+        "kind": "static"
+      },
+      "ri_safety_reason": {
+        "bytes": 40,
+        "kind": "static"
+      },
+      "ri_safety_can_reset": {
+        "bytes": 40,
+        "kind": "static"
+      },
+      "ri_safety_reset_latch": {
+        "bytes": 48,
+        "kind": "static"
+      },
+      "ri_safety_packet": {
+        "bytes": 232,
+        "kind": "static"
+      },
+      "ri_safety_peak_packet": {
+        "bytes": 120,
+        "kind": "static"
+      },
+      "ri_init": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "ri_reset_request": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "ri_new_run": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "ri_observe": {
+        "bytes": 80,
+        "kind": "static"
+      },
+      "ri_tilt_snapshot": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "ri_task": {
+        "bytes": 376,
+        "kind": "static"
+      },
+      "ri_report": {
+        "bytes": 480,
+        "kind": "static"
+      },
+      "ri_release_diagnostics": {
+        "bytes": 256,
+        "kind": "static"
+      },
+      "publish": {
+        "bytes": 64,
+        "kind": "static"
+      },
+      "ramp_assist_step.constprop": {
+        "bytes": 56,
+        "kind": "static"
+      },
+      "ri_ramp_step": {
+        "bytes": 208,
+        "kind": "static"
+      },
+      "ri_ramp_halt": {
+        "bytes": 96,
+        "kind": "static"
+      },
+      "ri_ramp_report": {
+        "bytes": 96,
+        "kind": "static"
+      },
+      "imu_tlm_pack": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "imu_tlm_unpack": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "imu_state_name": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "imu_motion_name": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "imu_evt_name": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "imu_reject_name": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "emit": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "side_reject": {
+        "bytes": 40,
+        "kind": "static"
+      },
+      "update_motion": {
+        "bytes": 88,
+        "kind": "static"
+      },
+      "enter_fault.part.0": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "b4_side_geometry": {
+        "bytes": 136,
+        "kind": "static"
+      },
+      "b4_asin_dd": {
+        "bytes": 12,
+        "kind": "static"
+      },
+      "b4_isqrt": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "b4_nfr02_ok": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "b4_reset": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "b4_init_done": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "b4_mission": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "b4_tick": {
+        "bytes": 288,
+        "kind": "static"
+      },
+      "b4_fill_tlm": {
+        "bytes": 12,
+        "kind": "static"
+      },
+      "handle": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "init_sensor": {
+        "bytes": 72,
+        "kind": "static"
+      },
+      "b4v23_hump_qualification": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "b4v23_calibration": {
+        "bytes": 12,
+        "kind": "static"
+      },
+      "ri_calibration_restart": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "b4v23_init": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "b4v23_due": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "b4v23_last_tick_us": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "b4v23_max_tick_us": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "b4v23_tilt": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "b4v23_tick": {
+        "bytes": 232,
+        "kind": "static"
+      },
+      "b4_drv_init": {
+        "bytes": 48,
+        "kind": "static"
+      },
+      "b4_drv_read_fifo": {
+        "bytes": 48,
+        "kind": "static"
+      },
+      "b4_drv_read_mag": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "libtm_init": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "tm_getchar": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "tm_getline": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "tm_putchar": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "tm_putstring": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "out_buf": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "out_record": {
+        "bytes": 20,
+        "kind": "static"
+      },
+      "tm_vsprintf": {
+        "bytes": 96,
+        "kind": "static"
+      },
+      "tm_printf": {
+        "bytes": 800,
+        "kind": "static"
+      },
+      "tm_sprintf": {
+        "bytes": 28,
+        "kind": "static"
+      },
+      "usb_service_task": {
+        "bytes": 136,
+        "kind": "static"
+      },
+      "tm_usb_console_get": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "tm_usb_state": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "tm_usb_pending": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "tm_usb_diag_level": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "tm_usb_console_start": {
+        "bytes": 56,
+        "kind": "static"
+      },
+      "tm_usb_console_put": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "tm_usb_console_record": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "tm_usb_log_snapshot": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "tud_descriptor_device_cb": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "tud_descriptor_configuration_cb": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "tud_descriptor_string_cb": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "usb_irq_dispatch": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "irq_add_shared_handler": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "irq_remove_handler": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "irq_set_enabled": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "rp2040_chip_version": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "hard_assertion_failure": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "panic": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "tusb_time_millis_api": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "tm_tusb_init": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "tm_tusb_service": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "tm_tusb_event_ready": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "tm_tusb_mounted": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "tm_tusb_connected": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "tm_tusb_write_available": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "tm_tusb_write_char": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "tm_tusb_write_flush": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "tm_tusb_discard_input": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "tm_tusb_read_char": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "tm_tusb_diag_controller_en": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "tm_tusb_diag_pullup_en": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "tm_tusb_diag_bus_seen": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "tm_tusb_diag_inte": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "hold": {
+        "bytes": 64,
+        "kind": "static"
+      },
+      "follow_move": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "watch_ping": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "start_move.constprop": {
+        "bytes": 64,
+        "kind": "static"
+      },
+      "range_begin": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "b5_mission_init": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "b5_mission_begin": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "b5_mission_line": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "b5_mission_observe": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "b5_mission_active": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "b5_mission_cancel": {
+        "bytes": 64,
+        "kind": "static"
+      },
+      "b5_mission_tick": {
+        "bytes": 256,
+        "kind": "static"
+      },
+      "b5_mission_stage_name": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "b5_mission_reason_name": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "b5_straight_reset": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "b5_straight_frame_reason": {
+        "bytes": 12,
+        "kind": "static"
+      },
+      "b5_straight_step": {
+        "bytes": 48,
+        "kind": "static"
+      },
+      "b5_straight_check": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "board_obstacle_init": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "board_obstacle_echo_high": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "board_obstacle_echo_ack": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "board_obstacle_servo_us": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "board_obstacle_trigger": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "port_applied": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "port_settled": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "port_angle": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "port_cancel": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "port_take": {
+        "bytes": 48,
+        "kind": "static"
+      },
+      "port_request": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "snapshot": {
+        "bytes": 208,
+        "kind": "static"
+      },
+      "report": {
+        "bytes": 424,
+        "kind": "static"
+      },
+      "hardware_tick": {
+        "bytes": 40,
+        "kind": "static"
+      },
+      "ready_now": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "send_width": {
+        "bytes": 400,
+        "kind": "static"
+      },
+      "rb5_init": {
+        "bytes": 40,
+        "kind": "static"
+      },
+      "rb5_gpio_init": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "rb5_echo_isr": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "rb5_external": {
+        "bytes": 48,
+        "kind": "static"
+      },
+      "rb5_frame": {
+        "bytes": 120,
+        "kind": "static"
+      },
+      "rb5_held": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "rb5_owned": {
+        "bytes": 48,
+        "kind": "static"
+      },
+      "rb5_take_handback": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "rb5_power": {
+        "bytes": 104,
+        "kind": "static"
+      },
+      "rb5_power_committed": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "rb5_power_idle": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "rb5_begin": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "rb5_start_allowed": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "rb5_cancel": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "rb5_owns_session": {
+        "bytes": 48,
+        "kind": "static"
+      },
+      "rb5_report_request": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "rb5_service": {
+        "bytes": 296,
+        "kind": "static"
+      },
+      "rb5_task": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "halt": {
+        "bytes": 64,
+        "kind": "static"
+      },
+      "pivot_return.constprop": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "event": {
+        "bytes": 56,
+        "kind": "static"
+      },
+      "leg_events": {
+        "bytes": 56,
+        "kind": "static"
+      },
+      "stop": {
+        "bytes": 80,
+        "kind": "static"
+      },
+      "watch": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "follow": {
+        "bytes": 40,
+        "kind": "static"
+      },
+      "halted": {
+        "bytes": 40,
+        "kind": "static"
+      },
+      "start_move.isra": {
+        "bytes": 64,
+        "kind": "static"
+      },
+      "acquire": {
+        "bytes": 48,
+        "kind": "static"
+      },
+      "rejoin": {
+        "bytes": 96,
+        "kind": "static"
+      },
+      "b5_auto_peek_event": {
+        "bytes": 12,
+        "kind": "static"
+      },
+      "b5_auto_drop_event": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "b5_auto_init": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "b5_auto_observe": {
+        "bytes": 12,
+        "kind": "static"
+      },
+      "b5_auto_cancel": {
+        "bytes": 80,
+        "kind": "static"
+      },
+      "b5_auto_start": {
+        "bytes": 160,
+        "kind": "static"
+      },
+      "b5_auto_tick": {
+        "bytes": 144,
+        "kind": "static"
+      },
+      "b5_auto_name": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "b5_auto_reason_name": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "b5_auto_event_name": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "b5_auto_phase_name": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "set_servo": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "median_three": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "classify_triplet": {
+        "bytes": 28,
+        "kind": "static"
+      },
+      "expected_for_record": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "finish": {
+        "bytes": 168,
+        "kind": "static"
+      },
+      "b5_ep_init": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "b5_ep_ready": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "b5_ep_begin": {
+        "bytes": 64,
+        "kind": "static"
+      },
+      "b5_ep_cancel": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "b5_ep_reset": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "b5_ep_peek": {
+        "bytes": 12,
+        "kind": "static"
+      },
+      "b5_ep_drop": {
+        "bytes": 12,
+        "kind": "static"
+      },
+      "b5_ep_tick": {
+        "bytes": 192,
+        "kind": "static"
+      },
+      "b5_ep_state_name": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "b5_ep_end_name": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "note": {
+        "bytes": 40,
+        "kind": "static"
+      },
+      "close_leg": {
+        "bytes": 48,
+        "kind": "static"
+      },
+      "build_route": {
+        "bytes": 96,
+        "kind": "static"
+      },
+      "fail": {
+        "bytes": 72,
+        "kind": "static"
+      },
+      "b5_manual_mark_interrupted": {
+        "bytes": 48,
+        "kind": "static"
+      },
+      "b5_manual_leg_outcome_name": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "b5_manual_init": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "b5_manual_arm": {
+        "bytes": 80,
+        "kind": "static"
+      },
+      "b5_manual_adopt": {
+        "bytes": 88,
+        "kind": "static"
+      },
+      "b5_manual_adopt_rect": {
+        "bytes": 120,
+        "kind": "static"
+      },
+      "b5_manual_cancel": {
+        "bytes": 80,
+        "kind": "static"
+      },
+      "b5_manual_poll": {
+        "bytes": 192,
+        "kind": "static"
+      },
+      "b5_manual_resume": {
+        "bytes": 80,
+        "kind": "static"
+      },
+      "b5_manual_pause": {
+        "bytes": 80,
+        "kind": "static"
+      },
+      "b5_manual_state_name": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "point_need": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "point_clear": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "b5_rect_plan_ex": {
+        "bytes": 56,
+        "kind": "static"
+      },
+      "b5_rect_plan": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "b5_cross_init": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "b5_cross_step": {
+        "bytes": 56,
+        "kind": "static"
+      },
+      "b5_cross_evidence": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "b5_cross_name": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "b5_echo_init": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "b5_echo_request": {
+        "bytes": 12,
+        "kind": "static"
+      },
+      "b5_echo_tick": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "b5_echo_edge": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "b5_echo_take": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "b5_stripe_threshold": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "b5_stripe_init": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "b5_stripe_step": {
+        "bytes": 64,
+        "kind": "static"
+      },
+      "b5_stripe_evidence": {
+        "bytes": 12,
+        "kind": "static"
+      },
+      "b5_stripe_result_name": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "b5_stripe_reject_name": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "side_onset": {
+        "bytes": 840,
+        "kind": "static"
+      },
+      "median4.part.0": {
+        "bytes": 280,
+        "kind": "static"
+      },
+      "b5_we_point": {
+        "bytes": 56,
+        "kind": "static"
+      },
+      "b5_we_estimate": {
+        "bytes": 584,
+        "kind": "static"
+      },
+      "valid_reference.constprop": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "sample_target": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "turn_to": {
+        "bytes": 40,
+        "kind": "static"
+      },
+      "revisit_next": {
+        "bytes": 40,
+        "kind": "static"
+      },
+      "b5_wp_axis_x": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "b5_wp_front_gap": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "b5_wp_turn_front_gap": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "b5_wp_clear_travel": {
+        "bytes": 32,
+        "kind": "static"
+      },
+      "outward_sample": {
+        "bytes": 56,
+        "kind": "static"
+      },
+      "b5_wp_next_step": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "b5_wp_segment_ok": {
+        "bytes": 24,
+        "kind": "static"
+      },
+      "b5_wp_expected_mm": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "b5_wp_classify": {
+        "bytes": 28,
+        "kind": "static"
+      },
+      "b5_wp_init": {
+        "bytes": 16,
+        "kind": "static"
+      },
+      "b5_wp_ready": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "b5_wp_begin": {
+        "bytes": 64,
+        "kind": "static"
+      },
+      "b5_wp_cancel": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "b5_wp_reset": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "b5_wp_peek": {
+        "bytes": 8,
+        "kind": "static"
+      },
+      "b5_wp_drop": {
+        "bytes": 12,
+        "kind": "static"
+      },
+      "b5_wp_tick": {
+        "bytes": 224,
+        "kind": "static"
+      },
+      "b5_wp_state_name": {
+        "bytes": 0,
+        "kind": "static"
+      },
+      "b5_wp_end_name": {
+        "bytes": 0,
+        "kind": "static"
+      }
+    },
+    "note": "Static stack frames are not a measured call-chain high-water mark; hardware checks remain required."
+  },
+  "kernel_pool_estimate": "rtos_buddy1_5: __bss_end 0x20032558; static RAM left 55976 B; kernel pool 53928 B; boot allocations 52912 B; margin 1016 B",
+  "standard": "RoboPico C Standard 1.0 with frozen SDK algorithm exception CEX-08"
+}
