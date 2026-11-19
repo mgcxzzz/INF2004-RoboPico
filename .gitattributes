@@ -23,6 +23,7 @@
 /app_program/network_bridge/** text=auto eol=lf
 /app_program/barcode_navigation/** text=auto eol=lf
 /app_program/imu_navigation/** text=auto eol=lf
+/app_program/obstacle_navigation/** text=auto eol=lf
 /tools/rtos_migration/** text=auto eol=lf
 /tools/coding_standard/** text=auto eol=lf
 /.github/** text=auto eol=lf

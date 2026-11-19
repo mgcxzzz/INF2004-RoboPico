@@ -116,8 +116,7 @@ static void push (b5_straight_t * p_gate, const b5_line_sample_t * p_sample,
 
 static bool sample_stale (uint64_t now, uint64_t previous)
 {
-    return (now < previous) ||
-           ((now - previous) > (uint64_t)B5S_SAMPLE_MAX_US);
+    return (now < previous) || ((now - previous) > (uint64_t)B5S_SAMPLE_MAX_US);
 }
 
 void b5_straight_step (b5_straight_t * p_gate,
@@ -188,8 +187,7 @@ void b5_straight_step (b5_straight_t * p_gate,
 
 uint8_t b5_straight_check (b5_straight_t * p_gate, uint64_t now)
 {
-    if ((B5S_UNKNOWN != p_gate->reason) &&
-        sample_stale(now, p_gate->sample_us))
+    if ((B5S_UNKNOWN != p_gate->reason) && sample_stale(now, p_gate->sample_us))
     {
         b5_straight_reset(p_gate, B5S_STALE);
     }

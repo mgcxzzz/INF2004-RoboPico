@@ -9,7 +9,7 @@ The project owner accepted the exception-based approach on 17 November 2026.
 Application C, headers and implementation includes in:
 
 - `app_program/rtos_bringup`, `line_navigation`, `barcode_navigation`,
-  `network_bridge` and `imu_navigation`;
+  `network_bridge`, `imu_navigation` and `obstacle_navigation`;
 - `firmware/integration/buddy1_4/src`, `include` and `config`.
 
 Historical migration images, recorded evidence and generated artifacts retain
