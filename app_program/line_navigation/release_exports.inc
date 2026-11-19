@@ -50,8 +50,8 @@ void rtos_line_release_info (uint8_t seq, uint8_t out[15])
     out[1] = 12;
     out[2] = seq;
     out[3] = 0xc2;
-    out[4] = 0x20; /* v0.2.10; major low/minor high nibble */
-    out[5] = 0x3a | (calibration_valid(&character) ? 0x40 : 0);
+    out[4] = 0x20; /* v0.2.11; major low/minor high nibble */
+    out[5] = 0x3b | (calibration_valid(&character) ? 0x40 : 0);
     out[6] = RL_PROFILE | ((origin & 3U) << 2) | (recorded ? 0x10 : 0);
     uint16_t levels[4] = {character.white[0], character.white[1],
                           character.black[0], character.black[1]};

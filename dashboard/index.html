@@ -1,6 +1,6 @@
 <!doctype html>
 <!--
-  IS28 merged dashboard v0.2.10 (v0.1 simplified: Recording and the Firmware profile card removed).
+  IS28 merged dashboard v0.2.11 (v0.1 simplified: Recording and the Firmware profile card removed).
   One page for both firmware families on the same broker:
     - RTOS (micro T-Kernel) Buddy1/Buddy4 build: sources 1-8 plus release snapshots (source 15).
     - SDK v2.3 Buddy2/Buddy3 build (+ optional Buddy4 add-on): sources 1, 2, 4, 8, 9-14
@@ -15,7 +15,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>RoboPico Demo Console — v0.2.10</title>
+  <title>RoboPico Demo Console — v0.2.11</title>
 <script src="vendor/mqtt.min.js"></script>
 <script src="is28_schema.js"></script>
 <script src="calibration_ui.js"></script>
@@ -118,7 +118,7 @@
 <body>
 <header>
   <div class="brandline">
-    <h1>RoboPico <span class="ver">Demo Console · v0.2.10</span></h1>
+    <h1>RoboPico <span class="ver">Demo Console · v0.2.11</span></h1>
     <span id="profilePill" class="pill muted">firmware: unknown</span>
   </div>
   <div class="connections">
@@ -507,7 +507,7 @@
 
 <script>
 'use strict';
-const DASHBOARD_VERSION = 'v0.2.10';
+const DASHBOARD_VERSION = 'v0.2.11';
 const $ = (id) => document.getElementById(id);
 const hasWindow = typeof window !== 'undefined';
 const SRC = IS28.SRC;
@@ -913,6 +913,7 @@ $('mapApply').onclick = () => {
 
 /* ---------- firmware profile ---------- */
 let releaseInfo = null, releaseRuntime = null, releaseSeenAt = 0, releaseRuntimeSeenAt = 0;
+const RTOS_STALL_FLAG = 0x10;
 const calibrationUI = RoboPicoCalibration.create({
   send: operation => send(IS28.CMD.CONFIG, IS28.calibrationArg(operation)),
   connected: () => !!(client && client.connected), now
@@ -1295,7 +1296,9 @@ function refreshDashboardOverview() {
   $('overviewRunState').textContent = state;
   $('overviewRunState').className = 'run-state ' + ($('opstate').className.split(' ').slice(1).join(' ') || 'muted');
   const owner = $('owner').textContent;
-  $('overviewRunDetail').textContent = `${$('opstateSource').textContent}${owner && owner !== '–' ? ` · owner ${owner}` : ''}`;
+  const stalled = releaseRuntime && t - releaseRuntimeSeenAt < 3500 &&
+    (releaseRuntime.controlFlags & RTOS_STALL_FLAG);
+  $('overviewRunDetail').textContent = `${stalled ? 'No progress · ' : ''}${$('opstateSource').textContent}${owner && owner !== '–' ? ` · owner ${owner}` : ''}`;
 
   const motionAge = overviewMotion ? t - overviewMotion.at : Infinity;
   const motionFresh = motionAge <= 2000 && !motionAwaitingFresh;
@@ -1450,7 +1453,7 @@ function refreshSafety() {
     const flags=fresh?releaseRuntime.controlFlags:0, fault=flags&(2|16|32|64|128);
     $('safety').textContent=!fresh?'Runtime status stale':fault?'Latched stop':flags&1?'Running':(flags&12)===12?'Ready':'Initializing';
     $('safety').className=fault?'bad':fresh?'ok':'muted';
-    $('faults').textContent=!fresh?'unavailable':fault?`0x${fault.toString(16)}${flags&128?' (IMU safety bit; cause only named by fresh C9)':''}`:'none';
+    $('faults').textContent=!fresh?'unavailable':fault?`0x${fault.toString(16)}${flags&RTOS_STALL_FLAG?' (No progress)':''}${flags&128?' (IMU safety bit; cause only named by fresh C9)':''}`:'none';
     $('stopms').textContent='Stop latency is not measured by this runtime packet';
     return;
   }
@@ -1860,10 +1863,15 @@ function showSource15(d, f) {
     return;
   }
   if(d.kind==='runtime') {
+    if ((d.controlFlags & RTOS_STALL_FLAG) &&
+        !(releaseRuntime && (releaseRuntime.controlFlags & RTOS_STALL_FLAG))) {
+      addEvent('No progress · motor stop latched', d, 'no-progress', f);
+    }
     releaseRuntime=d; releaseRuntimeSeenAt=now(); $('rtosRuntimeCard').hidden=false;
     $('rtosRuntime').textContent=`IMU reads ${d.reads} - failed ${d.failed} - late ${d.lateGaps} - FIFO overruns ${d.fifoOverruns} - control late ${d.controlLate}`;
     $('rtosHump').textContent=`Qualification flags ${d.qualificationFlags} - holds/recovered ${d.holds}/${d.recoveries} - clears ${d.disarms} - last failure ${d.failureReason}`;
     refreshSafety();
+    refreshDashboardOverview();
     return;
   }
   if (d.kind === 'ramp-targets') {

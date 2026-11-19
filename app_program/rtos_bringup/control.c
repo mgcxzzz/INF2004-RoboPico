@@ -610,22 +610,29 @@ void bringup_control_task (INT code, void * p_exinf_value)
             for (unsigned wheel_value_value_value = 0;
                  wheel_value_value_value < 2; ++wheel_value_value_value)
             {
-                rtos_line_actual_output(wheel_value_value_value,
-                                        rl_cap(&previous_envelope,
-                                               wheel_value_value_value,
-                                               board_time_us()));
+                rtos_line_actual_output(
+                    wheel_value_value_value,
+                    rl_controller_output(&previous_envelope,
+                                         wheel_value_value_value,
+                                         board_time_us()));
             }
             envelope = rtos_line_power(&demand, &optical, delta_time);
-            bool committed =
-                motion_commit(demand.generation, apply_outputs, &envelope);
+            if (envelope.no_progress)
+            {
+                bringup_stop_from(BR_REASON_STALL, BR_STALL, MOTION_BUDDY3);
+                active = false;
+            }
+            bool committed = active && motion_commit(demand.generation,
+                                                     apply_outputs, &envelope);
             for (unsigned wheel_value_value_value_value = 0;
                  wheel_value_value_value_value < 2;
                  ++wheel_value_value_value_value)
             {
                 rtos_line_actual_output(
                     wheel_value_value_value_value,
-                    committed ? rl_cap(&envelope, wheel_value_value_value_value,
-                                       board_time_us())
+                    committed ? rl_controller_output(
+                                    &envelope, wheel_value_value_value_value,
+                                    board_time_us())
                               : 0);
             }
         }

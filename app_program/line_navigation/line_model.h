@@ -74,6 +74,7 @@ typedef struct
     double candidate_wheel[2];
     bool black;
     bool candidate;
+    bool caster_assist_enabled;
     line_junction_diagnostic_t junction;
 } line_planner_t;
 
@@ -238,6 +239,23 @@ static inline analog_demand_t rl_follow (line_planner_t * p_data,
                                  DRIVE_MODE_BASELINE_SPEED);
 }
 
+enum
+{
+    RL_CASTER_TARGET_MIN = 25,
+    RL_CASTER_PWM = 55,
+    RL_CASTER_WAIT_US = 300000,
+    RL_CASTER_BOOST_US = 250000
+};
+
+typedef struct
+{
+    float anchor_mm[2];
+    uint32_t progress_us;
+    bool monitoring;
+    bool moved;
+    bool boosting;
+} line_caster_t;
+
 typedef struct
 {
     continuous_drive_t drive[2];
@@ -248,6 +266,7 @@ typedef struct
     circuit_load_t load;
     int32_t output[2];
     unsigned assist_code;
+    line_caster_t caster;
 } line_power_t;
 
 /* A committed envelope is copied under the motion lock. The 1 ms safety
@@ -261,7 +280,52 @@ typedef struct
     unsigned reverse : 1;
     unsigned recovery : 1;
     unsigned loaded : 2;
+    unsigned caster_wheels : 2;
+    bool no_progress;
 } line_envelope_t;
+
+/* Require travel before arming so Start and re-entry from recovery cannot
+ * trigger an extra launch pulse. Use net encoder travel to ignore jitter. */
+static inline void rl_caster_step (line_caster_t * p_state,
+                                   const circuit_input_t * p_input,
+                                   bool eligible, unsigned wheels,
+                                   line_envelope_t * p_event)
+{
+    if ((!eligible) || (0U == wheels))
+    {
+        *p_state = (line_caster_t){0};
+        return;
+    }
+
+    const uint32_t now = (uint32_t)p_input->now;
+    const float left_mm = (float)p_input->wheel[0];
+    const float right_mm = (float)p_input->wheel[1];
+    const bool progress = fabsf(left_mm - p_state->anchor_mm[0]) >= 2.0f ||
+                          fabsf(right_mm - p_state->anchor_mm[1]) >= 2.0f;
+    if ((!p_state->monitoring) || progress)
+    {
+        const bool moved = p_state->monitoring && (!p_state->boosting);
+        *p_state = (line_caster_t){.anchor_mm = {left_mm, right_mm},
+                                   .progress_us = now,
+                                   .monitoring = true,
+                                   .moved = moved};
+    }
+
+    const uint32_t age = now - p_state->progress_us;
+    if ((!p_state->moved) || (age < RL_CASTER_WAIT_US))
+    {
+        return;
+    }
+    const uint32_t boost_age = age - RL_CASTER_WAIT_US;
+    if (boost_age >= RL_CASTER_BOOST_US)
+    {
+        p_event->no_progress = true;
+        return;
+    }
+    p_state->boosting = true;
+    p_event->caster_wheels = wheels;
+    p_event->until[0] = p_input->now + (RL_CASTER_BOOST_US - boost_age);
+}
 
 static inline line_envelope_t rl_power (line_power_t * p_state,
                                         const line_planner_t * p_data,
@@ -325,10 +389,13 @@ static inline line_envelope_t rl_power (line_power_t * p_state,
         .reverse =
             'U' == barcode_nav_action(&p_data->nav, p_data->nav.action) &&
             J_TURN == p_character->phase};
+    bool ramp_active = false;
 #ifdef APP_RTOS_IMU
     motion_ramp_assist_t approved =
         ri_ramp_step(delta_time, continuous && (!recovering), p_index->speed,
                      p_demand->target, p_state->drive);
+    ramp_active = (0U != approved.boost_milli) ||
+                  (0U != approved.push_pwm_x100) || (0U != approved.hold_milli);
 #endif
     for (unsigned wheel = 0; wheel < 2; ++wheel)
     {
@@ -407,19 +474,44 @@ static inline line_envelope_t rl_power (line_power_t * p_state,
                 ? p_state->wheel[wheel_value].peak_end_us
                 : 0;
     }
+    const bool caster_eligible = p_data->caster_assist_enabled && continuous &&
+                                 p_data->steering.active && (!recovering) &&
+                                 (!p_data->scan.scanning) && (!ramp_active) &&
+                                 (p_demand->target[0] >= 0) &&
+                                 (p_demand->target[1] >= 0);
+    const unsigned caster_wheels =
+        ((p_demand->target[0] >= RL_CASTER_TARGET_MIN) ? 1U : 0U) |
+        ((p_demand->target[1] >= RL_CASTER_TARGET_MIN) ? 2U : 0U);
+    rl_caster_step(&p_state->caster, p_index, caster_eligible, caster_wheels,
+                   &event);
     return event;
 }
 
 static inline int32_t rl_cap (const line_envelope_t * p_event, unsigned wheel,
                               uint64_t now)
 {
+    int32_t output = p_event->output[wheel];
+    if (((p_event->caster_wheels & (1U << wheel)) != 0U) &&
+        (now < p_event->until[0]) && (output > 0))
+    {
+        output += RL_CASTER_PWM;
+    }
     return p_event->recovery ? line_recovery_output_cap(p_event->output[wheel])
-           : p_event->continuous ? continuous_output_cap(p_event->output[wheel])
+           : p_event->continuous ? continuous_output_cap(output)
            : p_event->maneuver
                ? maneuver_output_cap(p_event->output[wheel],
                                      p_event->until[wheel], now)
                : barcode_output_cap(p_event->output[wheel], false,
                                     p_event->until[wheel], now);
+}
+
+/* Feed the unassisted duty back to the PI and slew controller. Otherwise a
+ * short boost could be carried into future control steps after expiry. */
+static inline int32_t rl_controller_output (const line_envelope_t * p_event,
+                                            unsigned wheel, uint64_t now)
+{
+    return p_event->continuous ? continuous_output_cap(p_event->output[wheel])
+                               : rl_cap(p_event, wheel, now);
 }
 
 static inline dual_levels_t rl_levels (const line_envelope_t * p_event,

@@ -751,6 +751,9 @@ analog_demand_t rtos_line_follow (float delta_time_value)
     g_input.side_black = g_planner.black;
     unsigned cruise_speed =
         drive_mode_speed(motion_get_speed_mode_status().mode);
+#ifdef APP_RTOS_RELEASE
+    g_planner.caster_assist_enabled = DRIVE_MODE_BASELINE_SPEED == cruise_speed;
+#endif
 #ifdef APP_RTOS_BARCODE
     g_planner.nav.mapping = rn_mapping_snapshot();
     return rb_follow_with_cruise(&g_planner, &g_barcode, &g_calibration_value,

@@ -207,6 +207,54 @@ static void test_envelopes(void) {
     assert(reverse.a == 0 && reverse.b == 0);
 }
 
+static void test_caster_assist(void) {
+    line_power_t power = {0};
+    line_planner_t planner = {0};
+    /* Also test elapsed-time arithmetic across the 32-bit clock rollover. */
+    uint64_t start = UINT32_MAX - 800000U;
+    circuit_input_t input = {.now = start};
+    analog_demand_t demand = {.decision = SYM_RIGHT, .target = {42, 0}};
+    rl_begin(&planner, &input, 180);
+    planner.caster_assist_enabled = true;
+    planner.steering.active = true;
+    (void)rl_power(&power, &planner, &input, &demand, C_FOLLOW, .01f);
+    input.now += 600000;
+    line_envelope_t out = rl_power(&power, &planner, &input, &demand, C_FOLLOW, .01f);
+    assert(!out.caster_wheels && !out.no_progress); /* No start-up pulse. */
+    input.wheel[0] = 3;
+    (void)rl_power(&power, &planner, &input, &demand, C_FOLLOW, .01f);
+    input.now += RL_CASTER_WAIT_US - 1;
+    out = rl_power(&power, &planner, &input, &demand, C_FOLLOW, .01f);
+    assert(!out.caster_wheels && !out.no_progress);
+    ++input.now;
+    out = rl_power(&power, &planner, &input, &demand, C_FOLLOW, .01f);
+    assert(out.caster_wheels == 1 && !out.no_progress);
+    assert(out.until[0] == input.now + RL_CASTER_BOOST_US);
+    out.output[0] = 400;
+    assert(rl_cap(&out, 0, out.until[0] - 1) == CONTINUOUS_PWM_MAX);
+    assert(rl_cap(&out, 0, out.until[0]) == 400);
+    assert(rl_controller_output(&out, 0, input.now) == 400);
+    assert(rl_cap(&out, 1, input.now) == 0);
+    input.now += 80000;
+    input.wheel[0] = 5;
+    out = rl_power(&power, &planner, &input, &demand, C_FOLLOW, .01f);
+    assert(!out.caster_wheels && !out.no_progress);
+    input.now += 600000;
+    out = rl_power(&power, &planner, &input, &demand, C_FOLLOW, .01f);
+    assert(!out.caster_wheels && !out.no_progress); /* Fresh travel to rearm. */
+    input.wheel[0] = 8;
+    (void)rl_power(&power, &planner, &input, &demand, C_FOLLOW, .01f);
+    input.now += RL_CASTER_WAIT_US;
+    out = rl_power(&power, &planner, &input, &demand, C_FOLLOW, .01f);
+    assert(out.caster_wheels == 1 && !out.no_progress);
+    input.now += RL_CASTER_BOOST_US;
+    out = rl_power(&power, &planner, &input, &demand, C_FOLLOW, .01f);
+    assert(!out.caster_wheels && out.no_progress);
+    planner.scan.scanning = true;
+    out = rl_power(&power, &planner, &input, &demand, C_FOLLOW, .01f);
+    assert(!out.caster_wheels && !out.no_progress && !power.caster.monitoring);
+}
+
 static void test_log_pack(void) {
     const char routes[] = {0, 'A', 'F', 'Z'};
     for (unsigned n = 0; n < 4; ++n)
@@ -234,6 +282,7 @@ int main(void) {
     test_cross();
     test_calibration();
     test_envelopes();
+    test_caster_assist();
     test_log_pack();
     puts(
         "PASS Step2: planner parity, cross qualification, calibration CRC/import, power envelopes, log packing.");

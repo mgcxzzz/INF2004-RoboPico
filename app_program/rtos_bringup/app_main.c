@@ -50,7 +50,7 @@ static ER start (FP p_entry, PRI priority, UW processor, const char * p_name)
 void bringup_help (void)
 {
 #if defined(APP_RTOS_RELEASE)
-    tm_printf((UB *)"\nROBOPICO BUDDY1-4 RTOS v0.2.10 NETWORK STOP | "
+    tm_printf((UB *)"\nROBOPICO BUDDY1-4 RTOS v0.2.11 CASTER ASSIST | "
                     "PROVISIONAL | micro "
                     "T-Kernel SMP | Buddy5 NOT integrated\n");
     tm_printf((UB *)"Tested Step5 v0.1.5 logic: Continuous V2 Profile1 45mm/s; "
