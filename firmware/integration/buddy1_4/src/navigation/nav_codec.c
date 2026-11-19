@@ -42,13 +42,18 @@ static unsigned payload_bits (unsigned kind)
 #else
                                     2,
 #endif
-                                    2, 18, 5,  11, 5,  39, 2};
-    return kind < 13 ? bits[kind] : UINT32_MAX;
+                                    2, 18, 5,  11, 5,  39, 2,
+#ifdef MOTION_STEERED_DRIVE
+                                    40
+#endif
+    };
+    return kind <= NAV_KIND_LAST ? bits[kind] : UINT32_MAX;
 }
 unsigned nav_packet_encode (uint8_t out[NAV_PACKET_BYTES],
                             const nav_request_t * p_result)
 {
-    if (((((!p_result) || (p_result->kind > 12)) || (p_result->owner < 1)) ||
+    if (((((!p_result) || (p_result->kind > NAV_KIND_LAST)) ||
+          (p_result->owner < 1)) ||
          (p_result->owner > 5)) ||
         (!isfinite(p_result->value)))
     {
@@ -59,7 +64,11 @@ unsigned nav_packet_encode (uint8_t out[NAV_PACKET_BYTES],
     put(out, &at_value, p_result->kind, 4);
     put(out, &at_value, p_result->owner, 3);
     if (NAV_DRIVE == p_result->kind || NAV_TURN == p_result->kind ||
-        NAV_RESUME == p_result->kind)
+        NAV_RESUME == p_result->kind
+#ifdef MOTION_STEERED_DRIVE
+        || NAV_STEER == p_result->kind
+#endif
+    )
     {
         put(out, &at_value, p_result->lease, 32);
     }
@@ -168,6 +177,19 @@ unsigned nav_packet_encode (uint8_t out[NAV_PACKET_BYTES],
         }
         put(out, &at_value, p_result->speed, 2);
         break;
+#ifdef MOTION_STEERED_DRIVE
+    case NAV_STEER:
+    {
+        long decideg = lroundf(p_result->value * 10);
+        if ((decideg < -NAV_STEER_MAX_DECIDEG) ||
+            (decideg > NAV_STEER_MAX_DECIDEG))
+        {
+            return 0;
+        }
+        put(out, &at_value, (unsigned)(decideg + 128), 8);
+        break;
+    }
+#endif
     default:
         break;
     }
@@ -184,7 +206,7 @@ bool nav_packet_decode (nav_request_t * p_result, const uint8_t * p_data,
     unsigned at_value = 0;
     p_result->kind = (unsigned)get(p_data, &at_value, 4);
     p_result->owner = (unsigned)get(p_data, &at_value, 3);
-    if (((p_result->kind > 12) || (p_result->owner < 1)) ||
+    if (((p_result->kind > NAV_KIND_LAST) || (p_result->owner < 1)) ||
         (p_result->owner > 5))
     {
         return false;
@@ -202,7 +224,11 @@ bool nav_packet_decode (nav_request_t * p_result, const uint8_t * p_data,
         }
     }
     if (NAV_DRIVE == p_result->kind || NAV_TURN == p_result->kind ||
-        NAV_RESUME == p_result->kind)
+        NAV_RESUME == p_result->kind
+#ifdef MOTION_STEERED_DRIVE
+        || NAV_STEER == p_result->kind
+#endif
+    )
     {
         p_result->lease = (uint32_t)get(p_data, &at_value, 32);
     }
@@ -254,6 +280,11 @@ bool nav_packet_decode (nav_request_t * p_result, const uint8_t * p_data,
     case NAV_SPEED_MODE:
         p_result->speed = (unsigned)get(p_data, &at_value, 2);
         break;
+#ifdef MOTION_STEERED_DRIVE
+    case NAV_STEER:
+        p_result->value = ((int)get(p_data, &at_value, 8) - 128) / 10.0f;
+        break;
+#endif
     default:
         break;
     }

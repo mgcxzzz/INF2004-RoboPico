@@ -8,6 +8,7 @@ PREFIXES = (
     "app_program/barcode_navigation",
     "app_program/network_bridge",
     "app_program/imu_navigation",
+    "app_program/obstacle_navigation",
     "firmware/integration/buddy1_4/src",
     "firmware/integration/buddy1_4/include",
     "firmware/integration/buddy1_4/config",

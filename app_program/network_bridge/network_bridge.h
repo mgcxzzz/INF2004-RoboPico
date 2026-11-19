@@ -78,6 +78,9 @@ int32_t rn_init (void);
 bool rn_ready (void);
 bool rn_tx_push (uint8_t topic, const uint8_t * p_data, uint8_t len,
                  uint32_t now);
+#ifdef APP_RTOS_BUDDY5
+uint32_t rn_tx_free (void);
+#endif
 bool rn_tx_take (uint8_t * p_topic, uint8_t data[RN_PACKET_MAX],
                  uint8_t * p_len, uint32_t now);
 bool rn_tx_take_budget (uint8_t * p_topic, uint8_t data[RN_PACKET_MAX],

@@ -137,10 +137,15 @@ motion_executor_step (motion_executor_t * p_event_value,
         {
             speed = 25;
         }
-        float correction = bound((result - l_value) * 1.2f +
-                                     .08f * (p_flags_value->speed_mm_s[1] -
-                                             p_flags_value->speed_mm_s[0]),
-                                 -8, 8);
+#ifdef MOTION_STEERED_DRIVE
+        float held = (result - l_value) - p_event_value->steer_mm;
+#else
+        float held = result - l_value;
+#endif
+        float correction =
+            bound(held * 1.2f + .08f * (p_flags_value->speed_mm_s[1] -
+                                        p_flags_value->speed_mm_s[0]),
+                  -8, 8);
         p_event_value->target[0] = (int16_t)lroundf(sign * speed + correction);
         p_event_value->target[1] = (int16_t)lroundf(sign * speed - correction);
     }

@@ -535,6 +535,215 @@
       latched: !!(flags & 0x40), saturated: !!(flags & 0x80),
       windowStartMs, eventCount };
   }
+
+  /* ---------- Buddy5 RTOS integration (rtos_buddy1_5 v0.1) ----------
+   * All are source-15 layouts dispatched by EXACT payload length AND marker
+   * byte 4 (none has length 28, so the ramp-assist rule is unaffected):
+    *  E5 mission status v1 (54) / v2 (59)   D1 width record v4 (56)  D2 width summary v4 (58)
+   *  D3 width result v1 (58)     D4 rejected triplet v1 (32)
+   *  BE direction record v2/v3 (48)  BF direction summary v2/v3 (44)
+   *  B5 bypass/rejoin event v1 (32)
+   * Width is a DISPLAY estimate only; it never authorises motion. */
+  const B5M_STAGE = ['idle', 'guard', 'halting', 'width probe', 'line alignment', 'approach',
+                     'direction probe', 'bypass', 'hold', 'cancelled', 'fresh range'];
+  const B5M_REASON = ['none', 'cancelled', 'sonar fault', 'lease lost', 'move refused/interrupted',
+    'stage timeout', 'stale observations/coordinator fault', 'no encoder progress', 'width probe aborted',
+    'width probe could not start', 'no line evidence after alignment search', 'line lost during approach',
+    'approach range not reached', 'direction probe aborted', 'direction unknown/contradictory',
+    'direction probe could not start', 'fresh range unusable', 'bypass blocked (range/clearance)',
+    'bypass/rejoin fault'];
+  const B5M_BASIS = ['none', 'probe evidence', 'DEFAULT side (healthy no preference)', 'held (no movement)'];
+  const B5M_SIDE = ['none', 'right', 'left'];
+  /* E5 v2 byte 19. "skipped" is a DELIBERATE no-attempt on a clean stopped
+   * range outside 270-330 mm; "failed" is an attempted probe that held. */
+  const B5M_WIDTH_POLICY = ['none', 'measured', 'skipped (clean range outside 270-330 mm, no probe)',
+                            'failed (attempted, HOLD)', 'probe running'];
+  const B5_MODE = ['AUTO', 'STOPPING', 'PAUSED', 'DRIVING', 'TURNING', 'SETTLING', 'FAULT', 'OFF'];
+  const B5_OWNER = ['none', 'Buddy1', 'Buddy2', 'Buddy3 (line)', 'Buddy4', 'Buddy5 (obstacle)', '?', '?'];
+  const B5WP_END = ['NONE', 'COMPLETE', 'CANCELLED', 'MOVE', 'SENSOR', 'LEASE', 'TIMEOUT', 'REFERENCE',
+                    'ALIGNMENT', 'TRAVEL', 'CLEARANCE'];
+  const B5EP_END = ['NONE', 'COMPLETE', 'CANCELLED', 'MOVE', 'SENSOR', 'LEASE', 'TIMEOUT', 'REFERENCE', 'ALIGNMENT'];
+  const B5WE_BASIS = ['NONE', 'CALIBRATED_RANGE_RISE', 'EMPIRICAL_REACH_COMPLETION', 'PROJECT_RANGE_ASSUMPTION'];
+  const B5WE_STATUS = ['NONE', 'ESTIMATE', 'REACH_LIMIT', 'INVALID'];
+  const B5WE_REASON = ['NONE', 'NO_RECORDS', 'INCONSISTENT', 'RUN_OR_REFERENCE', 'EDGES_UNRESOLVED'];
+  const B5WE_EDGE = ['NO_DATA', 'ONSET', 'HIGH_FROM_START', 'WALK_FREE'];
+  const B5EP_SIDE = ['UNKNOWN', 'OPEN', 'CROSSED', 'REMAINS'];
+  const B5EP_DECISION = ['HOLD', 'LEFT', 'RIGHT'];
+  const B5A_STATE = ['IDLE', 'GUARD', 'CONFIRM', 'HALTING', 'SCAN', 'REFINE', 'PLAN', 'BYPASS', 'REJOIN',
+                     'BLOCKED', 'FAULT', 'GEOMETRY_HOLD', 'DONE'];
+  const B5A_REASON = ['OK', 'SENSOR', 'LEASE', 'CANCELLED', 'NO_PATH', 'MOVE', 'NO_LINE', 'STALE',
+    'NO_ENCODER_PROGRESS', 'GEOMETRY_DONE', 'INSUFFICIENT_TURN_CLEARANCE', 'NO_LINE_AFTER_FALLBACK_SWEEP'];
+  const B5R_PHASE = ['START', 'RETURN', 'RETURN_STOP', 'ADVANCE', 'RESTORE', 'RESTORE_TURN', 'CONFIRM',
+                     'SEARCH', 'SEARCH_STOP', 'RESUME', 'ACQUIRE', 'ACQUIRE_STOP'];
+  const B5V_EVENT = ['NONE', 'TAKEOVER', 'PLAN', 'HOLD_CLEARANCE', 'LEG_END', 'RETURN_START', 'CANDIDATE',
+    'REJECT', 'STRIPE_FOUND', 'POSITIONED', 'RESTORED', 'SEARCH_TURN', 'CONFIRMED', 'HANDBACK', 'STOPPED',
+    'GEOMETRY_HOLD', 'ACQUIRE', 'ACQUIRED', 'RETURN_FALLBACK'];
+  const B5_NONE16 = 0xffff;
+  function b5mm100(v) { return v === B5_NONE16 ? null : v / 100; }
+  function b5mm10(v) { return v === B5_NONE16 ? null : v / 10; }
+  function b5pings(p, cls, val) {
+    const out = [];
+    for (let k = 0; k < 3; k++) {
+      const c = p[cls + k] & 3, why = (p[cls + k] >> 4) & 7, v = u16(p, val + 2 * k);
+      out.push(c === 0 ? { cls: 'echo', mm: v } : c === 1 ? { cls: 'no-return', widthUs: v }
+        : { cls: 'fault', why, widthUs: v });
+    }
+    return out;
+  }
+  function decodeB5MissionStatus(p) {
+    if (p[4] !== 0xE5 || !((p.length === 54 && p[5] === 1) || (p.length === 59 && p[5] === 2))) {
+      if ((p.length === 54 || p.length === 59) && p[4] === 0xE5)
+        return { error: 'unsupported Buddy5 status version ' + p[5] + ' for length ' + p.length };
+      return { error: 'unknown Buddy5 status layout' };
+    }
+    const v2 = p[5] === 2;
+    const flags = u16(p, 12);
+    if ((flags & 0xf000) || (!v2 && p[19] !== 0)) return { error: 'Buddy5 status reserved bits are nonzero' };
+    if (v2 && (p[19] >= B5M_WIDTH_POLICY.length || Math.abs(i8(p, 54)) > 80 || p[55] > 80))
+      return { error: 'Buddy5 status v2 field out of range' };
+    if (p[8] >= B5M_STAGE.length || p[9] >= B5M_REASON.length || p[25] > 3 || p[28] > 2 || p[24] > 2)
+      return { error: 'Buddy5 status field out of range' };
+    const co = p[11], pingMm = u16(p, 14), pingAge = u16(p, 16);
+    const policy = v2 ? p[19] : null;
+    return { kind: 'b5-status', version: p[5], uptimeMs: u32(p, 0), run: u16(p, 6),
+      widthPolicy: policy, widthPolicyName: v2 ? B5M_WIDTH_POLICY[policy] : 'n/a (v1)',
+      widthSkipped: policy === 2, widthFailed: policy === 3,
+      steerDeg: v2 ? i8(p, 54) / 10 : null, steerMaxDeg: v2 ? p[55] / 10 : null,
+      steerSaturated: v2 ? p[56] : null, widthGateMm: v2 ? (u16(p, 57) || null) : null,
+      stage: p[8], stageName: B5M_STAGE[p[8]], reason: p[9], reasonName: B5M_REASON[p[9]], moduleReason: p[10],
+      owner: co & 7, ownerName: B5_OWNER[co & 7], mode: (co >> 3) & 7, modeName: B5_MODE[(co >> 3) & 7],
+      sessionActive: !!(co & 0x40), stopped: !!(co & 0x80),
+      armed: !!(flags & 1), rearm: !!(flags & 2), pingFresh: !!(flags & 4), widthAttempted: !!(flags & 8),
+      widthResult: !!(flags & 16), directionAttempted: !!(flags & 32), defaultSide: !!(flags & 64),
+      bypassActive: !!(flags & 128), backlog: !!(flags & 256), servoSettled: !!(flags & 512),
+      hold: !!(flags & 1024), ready: !!(flags & 2048), flags,
+      pingMm: pingMm === B5_NONE16 ? null : pingMm, pingAgeMs: pingAge === B5_NONE16 ? null : pingAge,
+      pingClass: ['echo', 'no-return', 'fault', '?'][p[18] & 3], pingWhy: (p[18] >> 2) & 15,
+      servoRequestedDeg: i16(p, 20) / 10, servoAppliedDeg: i16(p, 22) / 10,
+      decision: p[24], decisionName: B5EP_DECISION[p[24]], basis: p[25], basisName: B5M_BASIS[p[25]],
+      stateL: p[26] & 15, stateR: p[26] >> 4, stateLName: B5EP_SIDE[p[26] & 15] || '?',
+      stateRName: B5EP_SIDE[p[26] >> 4] || '?', directionEnd: p[27], directionEndName: B5EP_END[p[27]] || '?',
+      side: p[28], sideName: B5M_SIDE[p[28]], widthEnd: p[29], widthEndName: B5WP_END[p[29]] || '?',
+      widthBasis: p[30], widthBasisName: B5WE_BASIS[p[30]] || '?', widthStatus: p[31],
+      widthStatusName: B5WE_STATUS[p[31]] || '?', widthReason: p[32], widthReasonName: B5WE_REASON[p[32]] || '?',
+      widthRetries: p[33], widthDisplayMm: b5mm100(u16(p, 34)), widthRawMm: b5mm100(u16(p, 36)),
+      widthCorrectedMm: b5mm100(u16(p, 38)), widthD0Mm: u16(p, 40), triggerMm: u16(p, 42),
+      bypassRangeMm: u16(p, 44), bypassState: p[46], bypassStateName: B5A_STATE[p[46]] || '?',
+      rejoinPhase: p[47], rejoinPhaseName: B5R_PHASE[p[47]] || '?',
+      widthProduced: p[48], widthAdmitted: p[49], directionProduced: p[50], directionAdmitted: p[51],
+      approachLegs: p[52] & 15, alignSteps: p[52] >> 4, discarded: p[53] };
+  }
+  function decodeB5WidthRecord(p) {
+    if (p[5] !== 4) return { error: 'unsupported D1 width record version ' + p[5] };
+    return { kind: 'b5-width-record', version: p[5], uptimeMs: u32(p, 0), run: u16(p, 6), index: u16(p, 8),
+      phase: p[10], side: p[11], step: p[12], n: p[13], headingDeg: i16(p, 14) / 100,
+      servoDeg: i16(p, 16) / 10, appliedDeg: i16(p, 18) / 10, pathMm: i16(p, 20) / 10,
+      expectedMm: u16(p, 26), anchorMm: u16(p, 28), pings: b5pings(p, 32, 36), evidence: p[35],
+      d0: u16(p, 42), lost: u16(p, 44), netXMm: i16(p, 46) / 10, netYMm: i16(p, 48) / 10,
+      axisXMm: i16(p, 52) / 10, frontGapMm: i16(p, 54) / 10 };
+  }
+  function decodeB5WidthSummary(p) {
+    if (p[5] !== 4) return { error: 'unsupported D2 width summary version ' + p[5] };
+    return { kind: 'b5-width-summary', version: p[5], uptimeMs: u32(p, 0), run: u16(p, 6), end: p[8],
+      endName: B5WP_END[p[8]] || '?', widthResult: p[9], stateL: p[10], stateR: p[11], stepsL: p[12],
+      stepsR: p[13], records: u16(p, 14), lost: u16(p, 16), d0: u16(p, 18), flags: u16(p, 38),
+      finalHeadingDeg: i16(p, 32) / 100, netXMm: i16(p, 34) / 10, netYMm: i16(p, 36) / 10,
+      corrections: u16(p, 40) };
+  }
+  function decodeB5WidthResult(p) {
+    if (p[5] !== 1) return { error: 'unsupported D3 width result version ' + p[5] };
+    if (p[9] > 3 || p[10] > 3 || p[11] > 4) return { error: 'D3 width result field out of range' };
+    const side = (o) => ({ status: p[o], statusName: B5WE_EDGE[p[o]] || '?', n: p[o + 1],
+      aMm: b5mm10(u16(p, o + 2)), bMm: b5mm10(u16(p, o + 4)), baseMm: i16(p, o + 6) / 4 });
+    return { kind: 'b5-width-result', version: p[5], uptimeMs: u32(p, 0), run: u16(p, 6), end: p[8],
+      endName: B5WP_END[p[8]] || '?', basis: p[9], basisName: B5WE_BASIS[p[9]], status: p[10],
+      statusName: B5WE_STATUS[p[10]], reason: p[11], reasonName: B5WE_REASON[p[11]],
+      displayMm: b5mm100(u16(p, 12)), rawMm: b5mm100(u16(p, 14)), correctedMm: b5mm100(u16(p, 16)),
+      sampledMm: b5mm10(u16(p, 18)), spanLoMm: b5mm10(u16(p, 20)), spanHiMm: b5mm10(u16(p, 22)),
+      flags: u16(p, 24), left: side(26), right: side(34), d0: u16(p, 42), records: u16(p, 44),
+      lost: u16(p, 46), offsetMm: u16(p, 48) / 10, rangeLoMm: u16(p, 50), rangeHiMm: u16(p, 52),
+      ruleId: p[56], widthResult: p[57], measured: p[9] === 1 || p[9] === 2, assumed: p[9] === 3 };
+  }
+  function decodeB5WidthRetry(p) {
+    if (p[5] !== 1) return { error: 'unsupported D4 retry version ' + p[5] };
+    return { kind: 'b5-width-retry', version: p[5], uptimeMs: u32(p, 0), run: u16(p, 6), phase: p[8],
+      side: p[9], step: p[10], attempt: p[11], expectedMm: u16(p, 12), headingDeg: i16(p, 14) / 100,
+      appliedDeg: i16(p, 16) / 10, pings: b5pings(p, 18, 22), dwellMs: u16(p, 28) };
+  }
+  function decodeB5DirectionRecord(p) {
+    if (p[5] !== 2 && p[5] !== 3) return { error: 'unsupported BE direction record version ' + p[5] };
+    return { kind: 'b5-direction-record', version: p[5], nearMm: p[5] === 3 ? 25 : 15, uptimeMs: u32(p, 0),
+      run: u16(p, 6), index: u16(p, 8), phase: p[10], n: p[11], headingDeg: i16(p, 12) / 100,
+      servoDeg: i16(p, 14) / 10, appliedDeg: i16(p, 16) / 10, travelMm: i16(p, 18) / 10,
+      expectedMm: u16(p, 20), anchorMm: u16(p, 22), pings: b5pings(p, 24, 28), evidence: p[27],
+      d0: u16(p, 34), lost: u16(p, 36), netXMm: i16(p, 38) / 10, netYMm: i16(p, 40) / 10 };
+  }
+  function decodeB5DirectionSummary(p) {
+    if (p[5] !== 2 && p[5] !== 3) return { error: 'unsupported BF direction summary version ' + p[5] };
+    if (p[9] > 2 || p[10] > 3 || p[11] > 3) return { error: 'BF direction field out of range' };
+    return { kind: 'b5-direction-summary', version: p[5], nearMm: p[5] === 3 ? 25 : 15, uptimeMs: u32(p, 0),
+      run: u16(p, 6), end: p[8], endName: B5EP_END[p[8]] || '?', decision: p[9], decisionName: B5EP_DECISION[p[9]],
+      stateL: p[10], stateLName: B5EP_SIDE[p[10]], stateR: p[11], stateRName: B5EP_SIDE[p[11]],
+      records: u16(p, 12), lost: u16(p, 14), d0: u16(p, 16), finalHeadingDeg: i16(p, 32) / 100,
+      netXMm: i16(p, 34) / 10, netYMm: i16(p, 36) / 10, flags: u16(p, 38), corrections: u16(p, 40) };
+  }
+  function decodeB5Event(p) {
+    if ((p[5] & 15) !== 1) return { error: 'unsupported B5 event version ' + (p[5] & 15) };
+    return { kind: 'b5-event', version: 1, uptimeMs: u32(p, 0), geometryOnly: !!(p[5] & 16), code: p[6],
+      codeName: B5V_EVENT[p[6]] || '?', state: p[7], stateName: B5A_STATE[p[7]] || '?', phase: p[8],
+      phaseName: B5R_PHASE[p[8]] || '?', reason: p[9], reasonName: B5A_REASON[p[9]] || '?', result: p[10],
+      detail: p[11], searches: p[12], rejects: p[13], a: i16(p, 14) / 10, b: i16(p, 16) / 10,
+      headingDeg: i16(p, 18) / 100, level: [u16(p, 20), u16(p, 22)], bg: [u16(p, 24), u16(p, 26)],
+      eventSeq: u16(p, 28), overwritten: u16(p, 30) };
+  }
+  function decodeB5Source15(p) {
+    if (p.length < 6) return null;
+    if ((p.length === 54 || p.length === 59) && p[4] === 0xE5) return decodeB5MissionStatus(p);
+    if (p.length === 56 && p[4] === 0xD1) return decodeB5WidthRecord(p);
+    if (p.length === 58 && p[4] === 0xD2) return decodeB5WidthSummary(p);
+    if (p.length === 58 && p[4] === 0xD3) return decodeB5WidthResult(p);
+    if (p.length === 32 && p[4] === 0xD4) return decodeB5WidthRetry(p);
+    if (p.length === 48 && p[4] === 0xBE) return decodeB5DirectionRecord(p);
+    if (p.length === 44 && p[4] === 0xBF) return decodeB5DirectionSummary(p);
+    if (p.length === 32 && p[4] === 0xB5) return decodeB5Event(p);
+    return null;
+  }
+  /* Per-run record completeness from what the dashboard actually RECEIVED.
+   * Never fills a gap: missing indices are reported, and an incomplete run is
+   * a telemetry problem, not a reason to move. */
+  function B5Tracker() {
+    const width = new Map(), direction = new Map();
+    function slot(map, run) {
+      if (!map.has(run)) map.set(run, { run, indices: new Map(), duplicates: 0, summary: null, result: null,
+                                         retries: [] });
+      return map.get(run);
+    }
+    function add(d) {
+      if (!d || !d.kind) return;
+      if (d.kind === 'b5-width-record' || d.kind === 'b5-direction-record') {
+        const r = slot(d.kind === 'b5-width-record' ? width : direction, d.run);
+        if (r.indices.has(d.index)) r.duplicates++; else r.indices.set(d.index, d);
+      } else if (d.kind === 'b5-width-summary') slot(width, d.run).summary = d;
+      else if (d.kind === 'b5-width-result') slot(width, d.run).result = d;
+      else if (d.kind === 'b5-width-retry') slot(width, d.run).retries.push(d);
+      else if (d.kind === 'b5-direction-summary') slot(direction, d.run).summary = d;
+    }
+    function report(map, run) {
+      const r = map.get(run);
+      if (!r) return null;
+      const claimed = r.summary ? r.summary.records : (r.result ? r.result.records : null);
+      const missing = [];
+      if (claimed !== null) for (let k = 0; k < claimed; k++) if (!r.indices.has(k)) missing.push(k);
+      return { run, received: r.indices.size, claimed, missing, duplicates: r.duplicates,
+               summary: !!r.summary, result: !!r.result, retries: r.retries.length,
+               complete: claimed !== null && missing.length === 0 && !!r.summary };
+    }
+    function latest(map) { let k = null; for (const run of map.keys()) k = run; return k; }
+    return { add, width: (run) => report(width, run === undefined ? latest(width) : run),
+             direction: (run) => report(direction, run === undefined ? latest(direction) : run),
+             widthRun: (run) => width.get(run === undefined ? latest(width) : run) || null,
+             directionRun: (run) => direction.get(run === undefined ? latest(direction) : run) || null };
+  }
   function decodeSource15(p) {
     if (p.length === 12 && p[0] === 0xC2) {
       if ((p[2] & 0x80) || (p[3] & 0xe0) || !(p[3] & 3)) return {error:'invalid release metadata'};
@@ -575,6 +784,8 @@
     if (p.length === 14 && p[0] === 0xcb) return decodeDriveModeStatus(p);
     if (p.length === 28) return decodeRampAssist(p);
     if (p.length === 24 && p[4] === 0xB1) return decodeBarcodePeak(p);
+    const b5 = decodeB5Source15(p);
+    if (b5) return b5;
     return { error: 'unknown source-15 layout (payload ' + p.length + ' bytes' + (p.length > 4 ? ', byte4 0x' + p[4].toString(16) : '') + ')' };
   }
   function decodeCalibrationStatus(p) {
@@ -781,7 +992,10 @@
                 decodeSummary, decodeDiagnostics, decodeLogChunk, decodeRampAssist, decodeBarcodePeak,
                 decodeEncoderFault, decodeBarcodeCapture, decodeNetworkStop, decodeImuLiftSafety, decodeImuPeakEvidence, decodeDriveModeStatus, decodeCalibrationStatus,
                 decodeSource15, decodeStoredLine, picoUptimeMs, frameRunId,
-                detectProfile, effectiveProfile };
+                detectProfile, effectiveProfile,
+                decodeB5Source15, decodeB5MissionStatus, decodeB5WidthRecord, decodeB5WidthSummary,
+                decodeB5WidthResult, decodeB5WidthRetry, decodeB5DirectionRecord, decodeB5DirectionSummary,
+                decodeB5Event, B5Tracker, B5M_STAGE, B5M_REASON, B5M_BASIS };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.IS28 = api;
 })(typeof self !== 'undefined' ? self : this);

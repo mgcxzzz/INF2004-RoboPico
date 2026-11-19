@@ -55,6 +55,12 @@ static motion_result_t submit (const nav_request_t * p_request,
         result = nav_coordinator_resume(o_value, result_value.lease,
                                         result_value.flag);
         break;
+#ifdef MOTION_STEERED_DRIVE
+    case NAV_STEER:
+        result = nav_coordinator_steer(o_value, result_value.lease,
+                                       result_value.value);
+        break;
+#endif
     case NAV_ROUTE:
 #ifdef BUDDY_RUNTIME_MAPPING
         result = nav_coordinator_route(
@@ -103,8 +109,16 @@ static motion_result_t submit (const nav_request_t * p_request,
     }
     /* Per-tick Buddy3 BUSY simply means it yielded to an avoidance lease;
      * do not flood the audit log with repeated control targets. */
+#ifdef MOTION_STEERED_DRIVE
+    /* Per-tick steering BUSY at the end of a drive is expected, not audited. */
+    bool expected_busy =
+        (NAV_WHEELS == result_value.kind || NAV_STEER == result_value.kind) &&
+        MOTION_BUSY == result;
+    if ((result != MOTION_OK) && (!expected_busy))
+#else
     if ((result != MOTION_OK) &&
         !(NAV_WHEELS == result_value.kind && MOTION_BUSY == result))
+#endif
     {
         nav_coordinator_reject(o_value, result_value.kind, result_value.value,
                                result_value.speed, result);
@@ -182,6 +196,19 @@ motion_result_t motion_resume_line (motion_owner_t o_value, uint32_t lease,
         .kind = NAV_RESUME, .owner = o_value, .lease = lease, .flag = abandon};
     return submit(&result, NULL);
 }
+#ifdef MOTION_STEERED_DRIVE
+motion_result_t motion_steer_drive (motion_owner_t o_value, uint32_t lease,
+                                    float degrees)
+{
+    if ((!valid_owner(o_value)) || (!isfinite(degrees)))
+    {
+        return reject(o_value, NAV_STEER, 0, 0, MOTION_INVALID);
+    }
+    nav_request_t result = {
+        .kind = NAV_STEER, .owner = o_value, .lease = lease, .value = degrees};
+    return submit(&result, NULL);
+}
+#endif
 motion_status_t motion_get_status (void)
 {
     return nav_coordinator_status();
