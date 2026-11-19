@@ -2,7 +2,7 @@
   "name": "robopico_buddy1_5_rtos_v0_2_13",
   "version": "0.2.13",
   "status": "Integration candidate, hardware verification pending",
-  "source_commit": "a072afbfaafce6f1a72677e2d98f3aead2638593",
+  "source_commit": "2f78b3f353ebe8fce9710d655238533382aedf81",
   "buddy1_4_baseline": "81a994f57e3828364492cc2806fcbea124dfa18a",
   "buddy5_review": "89e7fc69e47d895029ca6d5151ab5ac4f4073c24",
   "build_profile": "APP=rtos_buddy1_5 SMP=1 CONSOLE=usb_cdc WIFI=cyw43 NET=lwip MQTT=1 CRASH_REPORT=0 TEST=0",
