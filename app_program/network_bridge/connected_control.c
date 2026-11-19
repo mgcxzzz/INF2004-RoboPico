@@ -139,10 +139,12 @@ bool rn_drive_enqueue (const uint8_t message[RN_RX_BYTES])
 bool rn_drive_online_record (bool record_failure)
 {
     rn_status_t state = rn_status();
-    uint32_t now = board_kernel_ms();
     uint32_t app_last = rn_app_last_ms();
     uint32_t current_connected_since =
         __atomic_load_n(&g_connected_since, __ATOMIC_ACQUIRE);
+    /* Read the clock after taking the cross-core timestamps so a fresh
+     * publication cannot wrap the age calculation. */
+    uint32_t now = board_kernel_ms();
     bool usable = (rn_link_usable(&state, now)) && (now - app_last <= 250U);
 #ifdef APP_RTOS_RELEASE
     usable =

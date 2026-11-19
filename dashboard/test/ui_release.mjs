@@ -48,7 +48,7 @@ try {
  await page.locator('#connect').click();await page.waitForFunction(()=>window.__m.connected);
  await emit(motion);await emit(nav);await emit(metadata);await emit(runtime);
  const releaseVersion=`${metadata[4]&15}.${metadata[4]>>>4}.${metadata[5]&15}`;
- assert.equal(releaseVersion,'0.2.9','the cleanup release metadata advertises v0.2.9');
+ assert.equal(releaseVersion,'0.2.10','the cleanup release metadata advertises v0.2.10');
  assert.match(await page.locator('#profilePill').textContent(),new RegExp(`v${releaseVersion.replaceAll('.','\\.')}`));
  await page.locator('#dashboardTabs [data-view="diagnostics"]').click();
  assert.equal(await page.locator('#rtosRuntimeCard').isVisible(),true);

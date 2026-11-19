@@ -89,8 +89,13 @@ static int tk_ref_mbf(ID id, T_RMBF *out) {
     out->frbufsz = buffers[id].size - buffers[id].used;
     return 0;
 }
+static void (*after_clock_read)(void);
 static uint32_t board_kernel_ms(void) {
-    return clock_ms;
+    uint32_t sampled_ms = clock_ms;
+    if (after_clock_read) {
+        after_clock_read();
+    }
+    return sampled_ms;
 }
 static uint64_t board_time_us(void) {
     return (uint64_t)clock_ms * 1000;
@@ -201,6 +206,42 @@ static void online(void) {
     rn_status_update(&s);
     g_app_last_ms = clock_ms;
 }
+static void publish_app_update_after_clock_read(void) {
+    ++clock_ms;
+    __atomic_store_n(&g_app_last_ms, clock_ms, __ATOMIC_RELEASE);
+}
+static void test_online_guard_snapshot(void) {
+    uint32_t saved_clock = clock_ms;
+    online();
+    after_clock_read = publish_app_update_after_clock_read;
+    /* Old ordering sees app_last = sampled_ms + 1 and falsely stops. */
+    assert(rn_drive_online_record(true));
+    after_clock_read = NULL;
+    assert(!g_network_stop_snapshot.valid);
+
+    online();
+    g_app_last_ms = clock_ms - 251U;
+    assert(!rn_drive_online());
+    assert(!g_network_stop_snapshot.valid); /* Read-only readiness probe. */
+    assert(!rn_drive_online_record(true));
+    assert(g_network_stop_snapshot.valid);
+    assert(g_network_stop_snapshot.failmask == RN_STOP_FAIL_APP_STALE);
+    assert(g_network_stop_snapshot.app_age_ms == 251U);
+
+    rn_status_t lost = rn_status();
+    lost.link = 2;
+    rn_status_update(&lost);
+    assert(!rn_drive_online_record(true));
+    uint8_t packet[RN_NETWORK_STOP_PACKET_BYTES];
+    rn_network_stop_packet(7U, packet);
+    assert(packet[2] == 7U && packet[3] == 0xc6U);
+    assert(u32(packet + 14) == 251U && (packet[31] & 0x20U));
+    assert(g_network_stop_snapshot.failmask == RN_STOP_FAIL_APP_STALE);
+    rn_drive_begin();
+    assert(!g_network_stop_snapshot.valid);
+    clock_ms = saved_clock;
+    online();
+}
 static void request(unsigned code) {
     uint8_t data[4] = {(uint8_t)((code << 4) | 2), 17, 0, 0}, msg[RN_RX_BYTES];
     assert(rn_rx_push(data, 4, 4, clock_ms));
@@ -253,6 +294,7 @@ int main(void) {
     assert(!rn_live_command(true, 0x39));
     assert(!rn_live_command(false, 0x30));
     online();
+    test_online_guard_snapshot();
     assert(rn_drive_state(BR_CLOCK_OK, false, false, BR_REASON_BOOT) == 0);
     assert(rn_drive_state(BR_ACTIVE, false, false, 0) == 1);
     assert(rn_drive_state(BR_ACTIVE, true, false, 0) == 2);

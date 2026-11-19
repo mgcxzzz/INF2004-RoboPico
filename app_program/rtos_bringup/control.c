@@ -751,7 +751,7 @@ void bringup_safety_task (INT code, void * p_exinf_value)
                               MOTION_BUDDY1);
         }
 #ifdef APP_RTOS_LINE
-        if (active && (!rn_drive_online()))
+        else if (active && (!rn_drive_online_record(true)))
         {
             bringup_stop_from(BR_REASON_NETWORK, 0, MOTION_BUDDY1);
         }
