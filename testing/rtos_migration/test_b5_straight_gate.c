@@ -222,6 +222,19 @@ static void test_stale_and_misc(void) {
     CHECK(b5_straight_check(&s.gate, last + B5S_SAMPLE_MAX_US) == B5S_STRAIGHT);
     CHECK(b5_straight_check(&s.gate, last + B5S_SAMPLE_MAX_US + 1) == B5S_STALE && !s.gate.open);
     CHECK(open_on_straight(&s, 0, 1000) >= B5S_WINDOW_MM); /* stale restarts the evidence */
+    /* The production loop receives the new frame before checking the gate. */
+    b5_line_sample_t next = sample_of(&s, SYM_STRAIGHT);
+    s.now += B5S_SAMPLE_MAX_US;
+    next.now_us = s.now;
+    b5_straight_step(&s.gate, &next);
+    CHECK(b5_straight_check(&s.gate, s.now) == B5S_STRAIGHT && s.gate.open);
+    s.now += B5S_SAMPLE_MAX_US + 1U;
+    next.now_us = s.now;
+    b5_straight_step(&s.gate, &next);
+    CHECK(b5_straight_check(&s.gate, s.now) == B5S_STALE && !s.gate.open);
+    CHECK(s.gate.count == 0 && s.gate.open_us == 0);
+    CHECK(open_on_straight(&s, 0, 1000) >= B5S_WINDOW_MM);
+    printf("  a 50001 us gap discards history when the next frame is supplied first\n");
     /* dwell: a fast robot still needs B5S_DWELL_US */
     sim_t f; sim_init(&f);
     unsigned frames = 0; uint8_t r = 0;

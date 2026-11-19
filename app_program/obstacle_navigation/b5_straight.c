@@ -114,10 +114,23 @@ static void push (b5_straight_t * p_gate, const b5_line_sample_t * p_sample,
     p_gate->last_path = path;
 }
 
+static bool sample_stale (uint64_t now, uint64_t previous)
+{
+    return (now < previous) ||
+           ((now - previous) > (uint64_t)B5S_SAMPLE_MAX_US);
+}
+
 void b5_straight_step (b5_straight_t * p_gate,
                        const b5_line_sample_t * p_sample)
 {
     uint8_t reason = b5_straight_frame_reason(p_sample);
+    /* A new frame arrives before b5_straight_check() in the motion task.
+     * Check the previous timestamp before replacing it. */
+    if ((B5S_STRAIGHT == reason) && (0U != p_gate->count) &&
+        sample_stale(p_sample->now_us, p_gate->sample_us))
+    {
+        reason = B5S_STALE;
+    }
     float path = (p_sample->wheel_mm[0] + p_sample->wheel_mm[1]) * 0.5f;
     if ((B5S_STRAIGHT == reason) && (p_gate->count > 0U) &&
         (path < (p_gate->last_path - 1.0f)))
@@ -175,14 +188,10 @@ void b5_straight_step (b5_straight_t * p_gate,
 
 uint8_t b5_straight_check (b5_straight_t * p_gate, uint64_t now)
 {
-    if (B5S_UNKNOWN != p_gate->reason)
+    if ((B5S_UNKNOWN != p_gate->reason) &&
+        sample_stale(now, p_gate->sample_us))
     {
-        bool stale = (now < p_gate->sample_us) ||
-                     ((now - p_gate->sample_us) > (uint64_t)B5S_SAMPLE_MAX_US);
-        if (stale)
-        {
-            b5_straight_reset(p_gate, B5S_STALE);
-        }
+        b5_straight_reset(p_gate, B5S_STALE);
     }
     return p_gate->reason;
 }
