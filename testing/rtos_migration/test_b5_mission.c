@@ -486,7 +486,7 @@ static unsigned g_req_phase1, g_req_state;
 static float g_req_bend_end;
 static void hook_requalify(b5_line_sample_t *s, float path) {
     if (g_req_state == 0 && g_mission.confirm >= 2) { g_req_state = 1; g_req_bend_end = path + 60; }
-    if (g_req_state == 1) { if (path < g_req_bend_end) s->bend_pending = true; else g_req_state = 2; }
+    if (g_req_state == 1) { if (path < g_req_bend_end) s->bend_candidate = true; else g_req_state = 2; }
 }
 static int ping_requalify(float path) {
     if (g_req_state == 0) return (g_mission.straight.open && path >= 420 && g_req_phase1 < 2) ? (++g_req_phase1, 280) : 0;

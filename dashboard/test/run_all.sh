@@ -10,6 +10,8 @@ run() { echo "== $*"; "$@" || { echo "FAILED: $*"; fails=$((fails + 1)); }; }
 run node --test "$D/test_merged_schema.js"
 run node --test "$D/compat/v23_test_schema.js"
 run node --test "$D/test_source15.js"
+run node --test "$D/test_b5_rtos.js"
+run node "$D/smoke_b5_panel.js"
 run node --test "$D/test_imu_lift_v023.js"
 run node "$D/compat/rtos_check_speed_dashboard.mjs"
 run node "$D/compat/rtos_check_dashboard.mjs"

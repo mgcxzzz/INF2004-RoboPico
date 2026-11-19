@@ -1,6 +1,6 @@
-# Buddy 1–4 RTOS dashboard v0.2.3
+# RoboPico RTOS dashboard v0.2.13
 
-The dashboard displays the main v0.2.3 release metadata and the source-15 C9
+The dashboard displays the current firmware release metadata and the source-15 C9
 IMU lift/overturn safety snapshot. C9 is sent once per second, including when
 ordinary telemetry is off. The end-of-run panel names a lift or overturn only
 from a fresh, latched snapshot; heartbeat Fault remains a separate generic
@@ -20,17 +20,23 @@ IPv4 on MQTT TCP1883, not localhost. Car-online requires a fresh heartbeat,
 independently of the browser-to-broker connection. The A–Z map applies through
 MQTT and uses confirmed readback.
 
-This view retains the merged SDK/RTOS decoders, requested/effective ramp targets,
-and stopped data export. With the APP=rtos_buddy1_5 candidate it also shows the
-Buddy 5 panel (stage, car-confirmed owner, fresh front range, direction with
-evidence/DEFAULT/HELD basis, width with basis and assumption label, width
-policy measured/skipped/failed, approach steering setpoint, record
-completeness per run). Buddy1–4 firmware sends no Buddy 5 status and the panel
-says so; see `docs/buddy5_rtos_integration.md` and
-`tools/telemetry/b5_rtos_decode.py` for offline review. Detailed feature logic
-lives under `firmware/integration/buddy1_4/src/*/README.md`; export instructions
-are in `docs/setup.md`. Vendored MQTT.js and its license are included for offline
-use.
+The **Obstacle & avoidance** overview shows detection, width, direction and
+line handback using fresh Buddy 5 telemetry from `APP=rtos_buddy1_5`. A fallback
+width is labelled **assumed**. **Diagnostics → Buddy 5 obstacle mission** shows
+the takeover gate, motion owner, probe policy, range, direction basis and
+record completeness. Width and direction traces have independent counters.
+The latest received trace may be from a prior mission.
+
+After Stop, **Download run ZIP** includes `dashboard/obstacle.json` for Buddy 5
+firmware. `dashboard/frames.csv` and `dashboard/frames.json` retain the actual
+packets captured during the page session, including the width and direction
+traces. For offline analysis see [the integration notes](../docs/buddy5_rtos_integration.md)
+and [the trace decoder](../tools/telemetry/b5_rtos_decode.py).
+
+The dashboard also supports the Buddy 1–4 firmware, legacy SDK and RTOS
+telemetry, requested and effective ramp targets, and the stopped data export.
+Setup instructions are in [the setup guide](../docs/setup.md). Vendored MQTT.js
+and its license are included for offline use.
 
 
 ## Front IR calibration (v0.2.8 candidate)

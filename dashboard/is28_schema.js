@@ -566,7 +566,7 @@
   const B5M_SIDE = ['none', 'right', 'left'];
   /* E5 v2 byte 19. "skipped" is a DELIBERATE no-attempt on a clean stopped
    * range outside 270-330 mm; "failed" is an attempted probe that held. */
-  const B5M_WIDTH_POLICY = ['none', 'measured', 'skipped (clean range outside 270-330 mm, no probe)',
+  const B5M_WIDTH_POLICY = ['none', 'probe completed', 'skipped (clean range outside 270-330 mm, no probe)',
                             'failed (attempted, HOLD)', 'probe running'];
   const B5_MODE = ['AUTO', 'STOPPING', 'PAUSED', 'DRIVING', 'TURNING', 'SETTLING', 'FAULT', 'OFF'];
   const B5_OWNER = ['none', 'Buddy1', 'Buddy2', 'Buddy3 (line)', 'Buddy4', 'Buddy5 (obstacle)', '?', '?'];
@@ -608,6 +608,7 @@
     'REJECT', 'STRIPE_FOUND', 'POSITIONED', 'RESTORED', 'SEARCH_TURN', 'CONFIRMED', 'HANDBACK', 'STOPPED',
     'GEOMETRY_HOLD', 'ACQUIRE', 'ACQUIRED', 'RETURN_FALLBACK'];
   const B5_NONE16 = 0xffff;
+  const B5_MAX_WIDTH_RECORDS = 255, B5_DIRECTION_RECORDS = 8;
   function b5mm100(v) { return v === B5_NONE16 ? null : v / 100; }
   function b5mm10(v) { return v === B5_NONE16 ? null : v / 10; }
   function b5pings(p, cls, val) {
@@ -678,6 +679,7 @@
   function decodeB5WidthRecord(p) {
     const protocol = b5WidthProtocol(p);
     if (!protocol) return { error: 'unsupported D1 width record version ' + p[5] };
+    if (u16(p, 8) >= B5_MAX_WIDTH_RECORDS) return { error: 'D1 record index out of range' };
     return { kind: 'b5-width-record', version: p[5], protocol, phaseName: B5WP_PHASE[p[10]] || '?', uptimeMs: u32(p, 0), run: u16(p, 6), index: u16(p, 8),
       phase: p[10], side: p[11], step: p[12], n: p[13], headingDeg: i16(p, 14) / 100,
       servoDeg: i16(p, 16) / 10, appliedDeg: i16(p, 18) / 10, pathMm: i16(p, 20) / 10,
@@ -688,6 +690,7 @@
   function decodeB5WidthSummary(p) {
     const protocol = b5WidthProtocol(p);
     if (!protocol) return { error: 'unsupported D2 width summary version ' + p[5] };
+    if (u16(p, 14) > B5_MAX_WIDTH_RECORDS) return { error: 'D2 record count out of range' };
     const measured = p[9] === 1;
     return { kind: 'b5-width-summary', version: p[5], protocol, uptimeMs: u32(p, 0), run: u16(p, 6), end: p[8],
       endName: B5WP_END[p[8]] || '?', widthResult: p[9], stateL: p[10], stateR: p[11], stepsL: p[12],
@@ -704,7 +707,8 @@
   function decodeB5WidthResult(p) {
     const protocol = b5WidthProtocol(p);
     if (!protocol) return { error: 'unsupported D3 width result version ' + p[5] };
-    if (p[9] > (protocol === 'long' ? 4 : 3) || p[10] > 3 || p[11] > 4)
+    if (p[9] > (protocol === 'long' ? 4 : 3) || p[10] > 3 || p[11] > 4 ||
+        u16(p, 44) > B5_MAX_WIDTH_RECORDS)
       return { error: 'D3 width result field out of range' };
     const side = (o) => ({ status: p[o], statusName: B5WE_EDGE[p[o]] || '?', n: p[o + 1],
       aMm: b5mm10(u16(p, o + 2)), bMm: b5mm10(u16(p, o + 4)), baseMm: i16(p, o + 6) / 4 });
@@ -742,6 +746,7 @@
   }
   function decodeB5DirectionRecord(p) {
     if (p[5] !== 2 && p[5] !== 3) return { error: 'unsupported BE direction record version ' + p[5] };
+    if (u16(p, 8) >= B5_DIRECTION_RECORDS) return { error: 'BE record index out of range' };
     return { kind: 'b5-direction-record', version: p[5], nearMm: p[5] === 3 ? 25 : 15, uptimeMs: u32(p, 0),
       run: u16(p, 6), index: u16(p, 8), phase: p[10], n: p[11], headingDeg: i16(p, 12) / 100,
       servoDeg: i16(p, 14) / 10, appliedDeg: i16(p, 16) / 10, travelMm: i16(p, 18) / 10,
@@ -750,7 +755,8 @@
   }
   function decodeB5DirectionSummary(p) {
     if (p[5] !== 2 && p[5] !== 3) return { error: 'unsupported BF direction summary version ' + p[5] };
-    if (p[9] > 2 || p[10] > 3 || p[11] > 3) return { error: 'BF direction field out of range' };
+    if (p[9] > 2 || p[10] > 3 || p[11] > 3 || u16(p, 12) > B5_DIRECTION_RECORDS)
+      return { error: 'BF direction field out of range' };
     return { kind: 'b5-direction-summary', version: p[5], nearMm: p[5] === 3 ? 25 : 15, uptimeMs: u32(p, 0),
       run: u16(p, 6), end: p[8], endName: B5EP_END[p[8]] || '?', decision: p[9], decisionName: B5EP_DECISION[p[9]],
       stateL: p[10], stateLName: B5EP_SIDE[p[10]], stateR: p[11], stateRName: B5EP_SIDE[p[11]],
@@ -810,7 +816,7 @@
       const protocols = r.protocols ? [...r.protocols] : [];
       const mixed = protocols.length > 1;
       const long = protocols.length === 1 && protocols[0] === 'long';
-      const complete = claimed !== null && missing.length === 0 && !!r.summary && !mixed &&
+      const complete = claimed !== null && missing.length === 0 && r.indices.size === claimed && !!r.summary && !mixed &&
         (!long || (!!r.limits && !!r.result));
       /* The dashboard never claims independent verification: a complete long
        * run is "Pico-reported, capture complete" (replay offline); a gap means
@@ -831,14 +837,17 @@
   }
   function decodeSource15(p) {
     if ((p.length === 12 || p.length === 13) && p[0] === 0xC2) {
-      if ((p.length === 13 && p[12] > 15) || (p[2] & 0x80) || (p[3] & 0xe0) || !(p[3] & 3)) return {error:'invalid release metadata'};
+      const obstacle = !!(p[3] & 0x20);
+      const supportedFlags = p.length === 13 ? 0x3f : 0x1f;
+      if ((p.length === 13 && p[12] > 15) || (p[2] & 0x80) ||
+          (p[3] & ~supportedFlags) || !(p[3] & 3)) return {error:'invalid release metadata'};
       const levels = [];
       for (let k=0;k<4;k++) {
         let n=0; for(let b=0;b<12;b++) n |= ((p[4+Math.floor((12*k+b)/8)] >>> ((12*k+b)%8))&1)<<b;
         levels.push(n);
       }
       return {kind:'release',version:`${p[1]&15}.${p[1]>>>4}.${p[2]&15}`,
-        wireless:!!(p[2]&16),storedLogs:!!(p[2]&32),calibrationValid:!!(p[2]&64),
+        wireless:!!(p[2]&16),storedLogs:!!(p[2]&32),calibrationValid:!!(p[2]&64),obstacle,
         profile:p[3]&3,calibrationOrigin:(p[3]>>>2)&3,recordedCalibration:!!(p[3]&16), motorStopReason:p.length === 13 ? p[12] : null,
         white:levels.slice(0,2),black:levels.slice(2),runId:u16(p,10)};
     }

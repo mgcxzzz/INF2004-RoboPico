@@ -1,4 +1,4 @@
-# Buddy 5 RTOS integration (APP=rtos_buddy1_5, v0.2.12 long-width straight-gate candidate 0.2)
+# Buddy 5 RTOS integration (APP=rtos_buddy1_5, v0.2.13)
 
 Experimental candidate on the v0.2.12 release. **Not physically validated.**
 `APP=rtos_buddy1_4` is byte-identical to a clean v0.2.12 build (same
@@ -17,8 +17,10 @@ Buddy 5 adapter and mission; the obstacle algorithms are ported SDK modules in
 1. **Guard** (line following, Buddy 3 owns AUTO): servo centred, one ping per
    60 ms. **Straight-only takeover** (`b5_straight.c`): the takeover is
    requested only while Buddy 3 has been following a straight for the last
-   200 mm and 300 ms (no bend state, junction, turn, loss or recovery; ≤ 6°
-   encoder heading change), and only after three consecutive clean echoes
+   200 mm and 300 ms (no sustained bend candidate, confirmed bend, bend exit,
+   junction, turn, loss or recovery; ≤ 6° encoder heading change). Brief
+   steering corrections before bend qualification can preserve this history.
+   Takeover also requires three consecutive clean echoes
    ≤ 300 mm from pings requested after the gate opened. Losing the gate
    discards the count. Three close echoes while the gate is closed stop the
    robot and hold `NOT_STRAIGHT` (no probe, no bypass; Stop ends it). The
@@ -89,8 +91,9 @@ All Buddy 5 contexts are on core1, so DI/EI protects the echo, servo and
 telemetry queues. The Buddy 5 task cannot pre-empt the motion task; it drops a
 queued record only after the bridge accepted its copy and only if the queue
 head is still that record. Stop/E-stop/GP20/GP21/network loss go through
-`bringup_stop_from()`, which also calls `rb5_cancel()`. A network Pause while
-Buddy 5 holds the lease cancels Buddy 5; the robot stays stopped.
+`bringup_stop_from()`, which also calls `rb5_cancel()`. A network Pause during
+avoidance terminates the run through Stop. A mission HOLD is reported as Safe
+Stop and requires explicit Stop to release it.
 
 Servo requests only change the slew target (`servo_slew.h`): repeated
 requests never restart its 20 ms cadence. The reported servo angle is the
@@ -105,8 +108,9 @@ every 500 ms and on stage change; the dashboard still decodes the 54/59-byte
 v1/v2 layouts), width D1/D2 v10, D3 v3, D4 v3 and the D5 v2 per-side limits
 frame (sent after D2),
 BE/BF direction (v2 layout, version 3 = 25 mm near allowance), B5 bypass events
-(unchanged v1). One record frame per 25 ms. A refused push keeps its header
-sequence for the retry, so a sequence gap means a loss after admission. See
+(unchanged v1). One record frame per 25 ms. The MQTT consumer assigns the
+source-15 header sequence in dequeue order, so a retry cannot send an old
+sequence after a newer frame. A gap measures loss after queue admission. See
 `tools/telemetry/b5_rtos_decode.py` and the dashboard Buddy 5 panel.
 
 ## Tests

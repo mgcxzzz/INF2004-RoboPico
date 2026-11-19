@@ -33,6 +33,7 @@ enum
     BR_LATE = 32U,
     BR_ENCODER = 64U,
     BR_IMU = 128U,
+    BR_OBSTACLE_HOLD = 256U, /* Buddy5 is stopped and waits for Stop. */
     BR_LATCHED = BR_ESTOP | BR_STALL | BR_LATE | BR_ENCODER | BR_IMU
 };
 enum

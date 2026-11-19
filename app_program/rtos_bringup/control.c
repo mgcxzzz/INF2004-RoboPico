@@ -99,6 +99,9 @@ void bringup_zero_status (void)
 #ifdef APP_RTOS_LINE
     g_committed_envelope = (line_envelope_t){0};
 #endif
+#ifdef APP_RTOS_BUDDY5
+    g_committed_b5 = false;
+#endif
     status_leave(key);
     board_motion_unlock(NULL, api_key);
 }
@@ -165,7 +168,12 @@ void bringup_stop_from (uint8_t reason, uint16_t latch,
     UINT key = status_enter();
     bool active = (g_status.flags & BR_ACTIVE) != 0U;
     bool new_latch = (g_status.flags & latch) != latch;
+#ifdef APP_RTOS_BUDDY5
+    g_status.flags =
+        (uint16_t)((g_status.flags & ~(BR_ACTIVE | BR_OBSTACLE_HOLD)) | latch);
+#else
     g_status.flags = (uint16_t)((g_status.flags & ~BR_ACTIVE) | latch);
+#endif
     g_status.reason = reason;
     g_status.pwm[0] = g_status.pwm[1] = 0;
     g_status.target[0] = g_status.target[1] = 0;
@@ -521,6 +529,13 @@ void bringup_control_task (INT code, void * p_exinf_value)
         if (active && (paused || buddy5))
         {
             rtos_line_feedback(&feedback, NULL);
+#ifdef APP_RTOS_BUDDY5
+            if (buddy5)
+            {
+                optical.level[0] = feedback.line_level[0];
+                optical.level[1] = feedback.line_level[1];
+            }
+#endif
         }
         else if (active)
         {
@@ -558,8 +573,8 @@ void bringup_control_task (INT code, void * p_exinf_value)
              * kept, partial barcode/junction state is discarded. */
             rtos_line_resume();
         }
-        rb5_frame(now, feedback.line_level,
-                  straight_valid ? &straight_sample : NULL); /* after update */
+        rb5_frame(now, active ? feedback.line_level : NULL,
+                  (active && straight_valid) ? &straight_sample : NULL);
         buddy5 = (active && (!paused)) && (rb5_owned(&demand));
         if (buddy5)
         {
@@ -753,6 +768,16 @@ void bringup_control_task (INT code, void * p_exinf_value)
 #endif
 
         key = status_enter();
+#ifdef APP_RTOS_BUDDY5
+        if (((g_status.flags & BR_ACTIVE) != 0U) && rb5_held())
+        {
+            g_status.flags |= BR_OBSTACLE_HOLD;
+        }
+        else
+        {
+            g_status.flags &= (uint16_t)~BR_OBSTACLE_HOLD;
+        }
+#endif
         g_status.kernel_ms = board_kernel_ms();
         g_status.timer_us = (uint32_t)now;
         g_status.control_count++;

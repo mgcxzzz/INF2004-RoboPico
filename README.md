@@ -1,15 +1,14 @@
-# RoboPico — provisional Buddy 1–4 RTOS integration
+# RoboPico — Buddy 1–5 RTOS integration candidate
 
-**This branch is `barr-c-cleanup`: v0.2.12 caster-assist diagnostic candidate; hardware
-acceptance pending.** [New firmware and complete bundle](firmware/integration/buddy1_4/artifacts/v0_2_12_caster_assist/)
- · [Setup and test instructions](docs/caster_assist_v0_2_12.md)
+**`barr-c-combined` packages v0.2.13 on the Buddy 1–4 v0.2.12 baseline.**
+Physical obstacle approach, bypass and line reacquisition still need verification.
+[Combined firmware and dashboard bundle](firmware/integration/buddy1_4/artifacts/v0_2_13_combined/)
+ · [Setup and test instructions](docs/buddy1_5_v0_2_13.md)
  · [Application coding standard](CODING_STANDARD.md).
-The earlier [v0.2.7 cleanup candidate](docs/coding_cleanup_v0_2_7.md) remains archived.
-The tested main baseline described below remains available for rollback.
 
-**Buddy 5 integration candidate (separate branch `buddy5-rtos-integration`,
-`APP=rtos_buddy1_5`): built and host-checked only, not physically validated.**
-See [docs/buddy5_rtos_integration.md](docs/buddy5_rtos_integration.md).
+Build the combined image with `APP=rtos_buddy1_5`. The earlier
+[v0.2.12 Buddy 1–4 bundle](firmware/integration/buddy1_4/artifacts/v0_2_12_caster_assist/)
+remains available for rollback. See the [Buddy 5 integration design](app_program/obstacle_navigation/README.md).
 
 **Current main release: v0.2.6, micro T-Kernel SMP. Buddy 5 is NOT integrated.**
 

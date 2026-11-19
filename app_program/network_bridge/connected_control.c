@@ -199,12 +199,16 @@ static uint8_t pause_line (void)
         return WP_ACK_ACCEPTED;
     }
 #ifdef APP_RTOS_BUDDY5
-    if (rb5_pause_request())
+    if (rb5_held())
     {
-        /* Pause while Buddy5 holds the lease cancels Buddy5; the run stays
-         * stopped and the old lease cannot Resume it (SDK rule). */
+        return WP_ACK_ACCEPTED; /* Already stopped. Stop clears the hold. */
+    }
+    if (rb5_owns_session())
+    {
+        /* As in the SDK, Pause during avoidance ends the run. The old
+         * lease cannot resume it. */
+        bringup_stop_from(BR_REASON_NETWORK, 0U, MOTION_BUDDY1);
         g_lease = 0;
-        bringup_zero_status();
         return WP_ACK_ACCEPTED;
     }
 #endif

@@ -34,9 +34,10 @@ void rb5_service (uint64_t now_us);       /* one rb5_task pass (host tests) */
 
 /* Motion task (core1) hooks, in control.c order. */
 bool rb5_external (void);
-/* p_line: this frame's Buddy3 straight-gate sample, or NULL when Buddy3's
- * line provider did not run (paused, Buddy5 owner, inactive). */
-void rb5_frame (uint64_t now_us, const uint16_t level[2],
+/* p_level: freshly acquired front levels in an active run, or NULL when
+ * stopped. p_line: this frame's Buddy3 straight-gate sample, or NULL when
+ * Buddy3's line provider did not run (paused, Buddy5 owner, inactive). */
+void rb5_frame (uint64_t now_us, const uint16_t * p_level,
                 const b5_line_sample_t * p_line);
 bool rb5_owned (const motion_output_t * p_demand);
 bool rb5_take_handback (const motion_output_t * p_demand);
@@ -45,12 +46,12 @@ void rb5_power (const motion_output_t * p_demand, const float speed[2],
 void rb5_power_committed (const int32_t applied[2]);
 void rb5_power_idle (void);
 bool rb5_begin (uint64_t now_us);
+bool rb5_held (void); /* Motion task: stopped under Buddy5 mission hold. */
+bool rb5_owns_session (void); /* Motion task: Pause routing. */
 
 /* Any task. */
 bool rb5_start_allowed (void);
 void rb5_cancel (void);
-bool rb5_pause_request (
-    void); /* control task (network bridge): true = handled */
 void rb5_report_request (void);
 
 #endif

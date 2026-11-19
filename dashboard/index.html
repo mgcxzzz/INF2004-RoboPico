@@ -190,7 +190,7 @@
         <div class="overview-detail"><span>Obstacle width</span><span id="overviewB5Width">Unavailable</span></div>
         <div class="overview-detail"><span>Direction</span><span id="overviewB5Direction">Unavailable</span></div>
         <div class="overview-detail"><span>Bypass and line rejoin</span><span id="overviewB5Bypass">Unavailable</span></div>
-        <div id="overviewB5Note" class="overview-note">Buddy1–4 firmware sends no Buddy 5 status; all three obstacle rubric items stay visible without claiming support.</div>
+        <div id="overviewB5Note" class="overview-note">Waiting for the car to report obstacle support.</div>
       </section>
       <section class="overview-card" aria-label="Wi-Fi MQTT broker and car heartbeat">
         <div class="overview-heading"><h3>Wi-Fi &amp; MQTT</h3><span id="overviewMqttTag" class="pill neutral">Unknown</span></div>
@@ -353,7 +353,7 @@
   </div></section>
 
   <section id="buddy5Details" class="wide">
-    <h2>Buddy 5 obstacle mission (rtos_buddy1_5)</h2>
+    <h2>Buddy 5 obstacle mission</h2>
     <p id="b5Freshness" class="small muted">No Buddy 5 status (source-15 E5) received.</p>
     <dl>
       <dt>Stage / reason</dt><dd id="b5Stage">–</dd>
@@ -368,9 +368,9 @@
       <dt>Width basis / quality</dt><dd id="b5WidthBasis">–</dd>
       <dt>Raw / corrected before clamp / displayed</dt><dd id="b5WidthRaw">–</dd>
       <dt>Width probe (live)</dt><dd id="b5WidthProbe">–</dd>
-      <dt>Edge brackets / reach</dt><dd id="b5WidthBrackets">–</dd>
-      <dt>Outward stop reason / reach (D5)</dt><dd id="b5WidthLimits">–</dd>
-      <dt>Width verification</dt><dd id="b5WidthVerify">–</dd>
+      <dt>Latest width trace · edge brackets / reach</dt><dd id="b5WidthBrackets">–</dd>
+      <dt>Latest width trace · outward limits (D5)</dt><dd id="b5WidthLimits">–</dd>
+      <dt>Latest width trace · verification</dt><dd id="b5WidthVerify">–</dd>
       <dt>Retries / rejected triplets</dt><dd id="b5Retries">–</dd>
       <dt>Trigger / width d0 / bypass start</dt><dd id="b5Ranges">–</dd>
       <dt>Approach line steering</dt><dd id="b5Steer">–</dd>
@@ -379,7 +379,7 @@
       <dt>Direction records</dt><dd id="b5DirRecords">–</dd>
       <dt>Recent bypass events</dt><dd id="b5Events">–</dd>
     </dl>
-    <p class="small muted">Width is a display estimate only: it never reduces clearance, authorises motion or clears a fault. "Admitted" counts are car-side (frames accepted into the car's network queue); "received" counts are what this dashboard got. A missing record is a telemetry gap, never a reason to move.</p>
+    <p class="small muted">The displayed width is for reporting. Width and direction traces have their own run counters. The latest received trace can come from an earlier mission.</p>
   </section>
 
   <section id="subsystemsDetails">
@@ -539,7 +539,7 @@
 
 <script>
 'use strict';
-const DASHBOARD_VERSION = 'v0.2.12';
+const DASHBOARD_VERSION = 'v0.2.13';
 const $ = (id) => document.getElementById(id);
 const hasWindow = typeof window !== 'undefined';
 const SRC = IS28.SRC;
@@ -608,7 +608,7 @@ function activateDashboardTab(name) {
 function setupDashboardLayout() {
   const destinations = {
     telemetry: ['motionDetails', 'imuDetails', 'barcodeProgressDetails'],
-    diagnostics: ['stateDetails', 'networkDetails', 'barcodeDiagnosticDetails', 'rtosRuntimeSection', 'subsystemsDetails', 'mappingDetails', 'frontCalibration'],
+    diagnostics: ['stateDetails', 'networkDetails', 'barcodeDiagnosticDetails', 'rtosRuntimeSection', 'subsystemsDetails', 'buddy5Details', 'mappingDetails', 'frontCalibration'],
     logs: ['commandDetails', 'exportsDetails', 'connectivityDetails', 'messagesDetails']
   };
   for (const [name, ids] of Object.entries(destinations)) {
@@ -690,7 +690,7 @@ $('connect').onclick = () => {
 
 /* Broker link gone: nothing shown live can be trusted any more. */
 function liveActive() {
-  return hb.seen || !!lastMotionAt || !!lastImuAt || !!lastImuStop || coordinatorMode !== null ||
+  return hb.seen || !!lastMotionAt || !!lastImuAt || !!lastImuStop || !!releaseInfo || !!b5.status || coordinatorMode !== null ||
          Object.keys(fresh).some((k) => fresh[k] && !staleShown[k]);
 }
 function linkLost(reason) {
@@ -1043,7 +1043,7 @@ function receiveDriveModeStatus(d) {
 $('driveMode').addEventListener('change', (event) => requestDriveMode(Number(event.target.value)));
 
 function profileText(p) {
-  if (releaseInfo && p==='rtos-connected') return `RTOS Buddy 1–4 v${releaseInfo.version} · ${releaseInfo.wireless?'network supervised':'USB supervised'}`;
+  if (releaseInfo && p==='rtos-connected') return `RTOS ${releaseGroup()} v${releaseInfo.version} · ${releaseInfo.wireless?'network supervised':'USB supervised'}`;
   return p === 'rtos-connected' ? (connectedImuSeen ? 'RTOS connected IMU/ramp (micro T-Kernel · Step5 · experimental)' : connectedBarcodeSeen ? 'RTOS connected barcode (micro T-Kernel · Step4)' : 'RTOS connected line (micro T-Kernel · Step3B)') :
          p === 'sdk' ? 'SDK v2.3' + (seenSources.has(SRC.IMU) || seenSources.has(SRC.MOTION) ? ' + Buddy4 add-on' : '') :
          p === 'rtos' ? 'RTOS (micro T-Kernel)' : p === 'rtos-inferred' ? 'RTOS (inferred from Buddy 2/4 frames without SDK telemetry)' : p === 'mixed' ? 'MIXED (RTOS and SDK frames)' : 'unknown';
@@ -1052,6 +1052,7 @@ function noteSource(src) { const t = now(), isNew = !seenSources.has(src); seenS
 function clearSeen() {
   calibrationUI.invalidate("Waiting for calibration readback on this connection.");
   releaseInfo=releaseRuntime=null; releaseSeenAt=releaseRuntimeSeenAt=0; seenSources.clear(); firstSeen.clear();
+  clearB5(); renderB5();
   connectedDriveSeen = sdkDriveSeen = connectedBarcodeSeen = connectedImuSeen = false;
   lastImuStop=null; imuStopSeenAt=0; lastImuStopSeq=null; imuStopSignature=null; refreshImuStop();
 }
@@ -1848,7 +1849,7 @@ function actionName(action) {
 }
 function srcLabel(k) { return Number(k) === 17 ? 'Ramp targets (src 15)' : Number(k) === 15 ? 'Ramp assist (src 15)' : Number(k) === 16 ? 'Barcode peak (src 15)' : IS28.SRC_NAME[k]; }
 function showBuildId() {
-  if(releaseInfo) { $('buildId').textContent=`Buddy 1–4 RTOS v${releaseInfo.version} · ${releaseInfo.wireless?'network supervised':'USB supervised'}`; return; }
+  if(releaseInfo) { $('buildId').textContent=`${releaseGroup()} RTOS v${releaseInfo.version} · ${releaseInfo.wireless?'network supervised':'USB supervised'}`; return; }
   const parts = [];
   if (lastPeak15) parts.push(lastPeak15.combinedBuild ? 'combined Buddy1-4 + peak' : 'standalone peak (no Buddy4/ramp)',
                              `peak v0.${lastPeak15.version} ${lastPeak15.active ? 'active' : 'shadow'}`);
@@ -1873,10 +1874,18 @@ function showRetainedPeakEvidence(d, f) { showPeakEvidence(d, true, f); refreshD
 /* ---------- Buddy 5 (rtos_buddy1_5) ---------- */
 const b5 = { status: null, at: 0, seq: null, tracker: IS28.B5Tracker(), events: [], lastStage: null };
 const B5_STALE_MS = 1500;
+function releaseGroup() { return (releaseInfo?.obstacle || b5.status) ? 'Buddy 1–5' : 'Buddy 1–4'; }
+function clearB5() {
+  b5.status = null; b5.at = 0; b5.seq = null;
+  b5.tracker = IS28.B5Tracker(); b5.events = []; b5.lastStage = null;
+  document.querySelectorAll('#buddy5Details dd').forEach((value) => {
+    value.textContent = '–'; value.className = '';
+  });
+}
 function b5Fmt(v, digits = 1) { return v === null || v === undefined ? 'n/a' : Number(v).toFixed(digits); }
 function receiveB5(d, f) {
-  b5.tracker.add(d);
   if (d.kind === 'b5-status') {
+    if (b5.seq === f.seq && b5.status?.uptimeMs === d.uptimeMs) return;
     b5.status = d; b5.at = now(); b5.seq = f.seq;
     if (b5.lastStage !== d.stage) {
       if (b5.lastStage !== null) addEvent(`Buddy 5 stage: ${d.stageName}${d.reason ? ` (${d.reasonName})` : ''}`, d, 'b5-status', f);
@@ -1892,18 +1901,35 @@ function receiveB5(d, f) {
   } else if (d.kind === 'b5-direction-summary') {
     addEvent(`Buddy 5 direction probe run ${d.run} ${d.endName}: ${d.decisionName} (L ${d.stateLName} / R ${d.stateRName}, near ${d.nearMm} mm)`, d, 'b5-direction', f);
   }
+  b5.tracker.add(d);
   renderB5();
+  if (d.kind === 'b5-status' && releaseInfo) showBuildId();
 }
-function b5Completeness(rep, produced, admitted) {
-  if (!rep) return 'no records received';
+function b5Completeness(rep) {
+  if (!rep) return 'no trace received';
   const claim = rep.claimed === null ? 'summary not received' : `${rep.received}/${rep.claimed} received`;
   const miss = rep.missing.length ? ` · MISSING indices ${rep.missing.join(', ')} (telemetry gap; not filled)` : '';
-  const car = produced === undefined ? '' : ` · car produced ${produced}, admitted ${admitted}`;
-  return `run ${rep.run}: ${claim}${miss}${rep.duplicates ? ` · ${rep.duplicates} duplicate(s)` : ''}${car}${rep.complete ? ' · complete' : ''}`;
+  return `trace ${rep.run}: ${claim}${miss}${rep.duplicates ? ` · ${rep.duplicates} duplicate(s)` : ''}${rep.complete ? ' · complete' : ''}`;
+}
+function b5Overview(tag, tone, detection, width, direction, bypass, note) {
+  overviewPill('overviewB5Tag', tag, tone);
+  $('overviewB5Detect').textContent = detection;
+  $('overviewB5Width').textContent = width;
+  $('overviewB5Direction').textContent = direction;
+  $('overviewB5Bypass').textContent = bypass;
+  $('overviewB5Note').textContent = note;
 }
 function renderB5() {
   const s = b5.status;
-  if (!s) return;
+  if (!s) {
+    const awaiting = releaseInfo?.obstacle ? 'Waiting for Buddy 5 telemetry'
+      : releaseInfo ? 'Buddy 5 unavailable on this build' : 'Waiting for firmware status';
+    b5Overview(releaseInfo?.obstacle ? 'Waiting' : 'No Buddy 5 status', 'neutral',
+      awaiting, '–', '–', '–', 'Obstacle status updates from the car.');
+    $('b5Freshness').textContent = awaiting;
+    $('b5Freshness').className = 'small muted';
+    return;
+  }
   const age = now() - b5.at, stale = age > B5_STALE_MS;
   const prefix = stale ? `STALE ${(age / 1000).toFixed(1)} s · last reported: ` : '';
   $('b5Freshness').textContent = stale
@@ -1917,7 +1943,7 @@ function renderB5() {
       (s.blockedGateName ? ` · HELD: close obstacle where the manoeuvre may not start (${s.blockedGateName}); width, direction and bypass not run` : '');
   $('b5Gate').className = s.gateReason !== null && s.reason === 19 ? 'bad' : '';
   $('b5Owner').textContent = `${s.sessionActive ? 'session active' : 'no session'} · owner ${s.ownerName} · ${s.modeName}${s.stopped ? ' · stopped' : ''}`;
-  const front = s.servoAppliedDeg !== null && Math.abs(s.servoAppliedDeg) <= 2;
+  const front = s.servoSettled && Math.abs(s.servoAppliedDeg) <= 2;
   $('b5Range').textContent = s.pingAgeMs === null ? 'no ping reported yet' : s.pingMm === null
     ? `no echo (${s.pingClass}), ${s.pingAgeMs} ms old`
     : `${s.pingMm} mm ${front ? 'ahead' : `on a ${s.servoAppliedDeg}° beam`} · ${s.pingAgeMs} ms old${s.pingFresh && !stale ? '' : ' (NOT fresh)'}`;
@@ -1947,7 +1973,8 @@ function renderB5() {
     $('b5Width').textContent = s.widthAttempted ? 'width probe running' : 'not measured in this mission';
     $('b5WidthBasis').textContent = '–'; $('b5WidthRaw').textContent = '–';
   }
-  $('b5WidthProbe').textContent = s.probeState === null ? 'n/a (status v1/v2: short probe layout)'
+  $('b5WidthProbe').textContent = !s.widthAttempted ? 'No width probe in this mission'
+    : s.probeState === null ? 'n/a (status v1/v2: short probe layout)'
     : `${prefix}${s.probeStateName}${s.probeSide !== 'none' ? ` · side ${s.probeSide}` : ''} · last sample ${s.samplePhaseName}${s.sampleStep ? ` step ${s.sampleStep}` : ''}`;
   const sum = wr && wr.summary;
   $('b5WidthBrackets').textContent = res
@@ -1963,21 +1990,29 @@ function renderB5() {
   const wproto = wrep && wrep.protocol ? ` · ${wrep.protocol === 'long' ? 'long probe (D1/D2 v10, D3 v3, D5 v2)' : wrep.protocol === 'legacy' ? 'legacy short probe (original rules)' : wrep.protocol}` : '';
   $('b5WidthVerify').textContent = noProbe || (wrep ? `run ${wrep.run}: ${wrep.verification}${wproto}` : '–');
   $('b5WidthVerify').className = !noProbe && wrep && !wrep.complete ? 'bad' : '';
-  $('b5Retries').textContent = `${s.widthRetries} used (max 4) · ${wr ? wr.retries.length : 0} rejected-triplet record(s) received`;
+  $('b5Retries').textContent = s.widthAttempted ? `${s.widthRetries} used (max 4)` : 'No width probe in this mission';
   $('b5Ranges').textContent = `${s.triggerMm || '–'} / ${s.widthD0Mm || '–'} / ${s.bypassRangeMm || '–'} mm · approach legs ${s.approachLegs}, alignment search steps ${s.alignSteps}`;
-  $('b5Bypass').textContent = `${s.bypassStateName} · ${s.rejoinPhaseName}`;
-  $('b5WidthRecords').textContent = b5Completeness(b5.tracker.width(), s.widthProduced, s.widthAdmitted) + (s.backlog ? ' · car backlog pending' : '') + (s.discarded ? ` · ${s.discarded} unsent from an earlier run discarded by the car` : '');
-  $('b5DirRecords').textContent = b5Completeness(b5.tracker.direction(), s.directionProduced, s.directionAdmitted);
+  const bypass = s.bypassRangeMm ? (s.bypassStateName === 'DONE' ? 'Handed back to line' : s.bypassStateName) : 'Not attempted';
+  $('b5Bypass').textContent = s.bypassRangeMm ? `${bypass} · ${s.rejoinPhaseName}` : bypass;
+  $('b5WidthRecords').textContent = b5Completeness(wrep) + (s.widthAttempted ? ` · current mission car count ${s.widthProduced} produced / ${s.widthAdmitted} admitted` : '') + (s.backlog ? ' · car backlog pending' : '') + (s.discarded ? ` · ${s.discarded} unsent records discarded from an earlier mission` : '');
+  $('b5DirRecords').textContent = b5Completeness(b5.tracker.direction()) + (s.directionAttempted ? ` · current mission car count ${s.directionProduced} produced / ${s.directionAdmitted} admitted` : '');
   $('b5Events').textContent = b5.events.length ? b5.events.join(' → ') : '–';
-  const tag = $('overviewB5Tag');
-  tag.textContent = stale ? 'Stale' : s.hold ? 'HOLD' : s.stageName;
-  tag.className = 'pill ' + (stale ? 'neutral' : s.hold ? 'bad' : 'ok');
-  $('overviewB5Detect').textContent = stale ? 'Status stale' : s.stage === 1 ? `Guarding${s.pingMm !== null && front ? ` · ${s.pingMm} mm` : ''}${s.gateReason === null ? '' : s.gateOpen ? ' · takeover allowed' : ` · takeover blocked (${s.gateReasonName})`}` : s.stage === 0 ? 'Idle' : s.reason === 19 ? `Held: obstacle off-straight (${s.blockedGateName})` : s.stageName;
-  $('overviewB5Width').textContent = s.widthResult && s.widthDisplayMm !== null
-    ? `${s.widthDisplayMm.toFixed(1)} mm${s.widthBasis === 3 ? ' (assumed)' : s.widthBasis === 2 ? ' (assumed completion)' : ' (estimate)'}` : 'Not measured';
-  $('overviewB5Direction').textContent = s.basis === 1 ? `${s.sideName} (evidence)` : s.basis === 2 ? `${s.sideName} (default)` : s.basis === 3 ? 'Held' : '–';
-  $('overviewB5Bypass').textContent = s.bypassStateName === 'DONE' ? 'Handed back to line' : s.bypassStateName;
-  $('overviewB5Note').textContent = 'Car-reported via source-15 E5. Width is display-only; candidate firmware is not physically validated.';
+  if (stale) {
+    b5Overview('Stale', 'neutral', 'Waiting for fresh Buddy 5 status', '–', '–', '–',
+      'The last report is available in Diagnostics.');
+    return;
+  }
+  const detection = s.hold ? `Hold · ${s.reason === 19 ? s.blockedGateName : s.reasonName}`
+    : s.triggerMm && (s.widthAttempted || s.directionAttempted || s.bypassRangeMm || s.stage > 1)
+      ? `Detected · ${s.triggerMm} mm at trigger`
+      : s.stage === 1 ? `Guarding${s.pingFresh && s.pingMm !== null && front ? ` · ${s.pingMm} mm` : ''}` : s.stageName;
+  const width = (s.widthResult || s.widthSkipped) && s.widthDisplayMm !== null
+    ? `${s.widthDisplayMm.toFixed(1)} mm${s.widthBasis === 3 ? ' (assumed)' : s.widthBasis === 2 ? ' (assumed completion)' : ' (estimate)'}`
+    : s.widthAttempted ? 'Measuring' : 'Not measured';
+  const direction = s.basis === 1 ? `${s.sideName} (evidence)` : s.basis === 2 ? `${s.sideName} (default)` : s.basis === 3 ? 'Held' : '–';
+  b5Overview(s.hold ? 'Hold' : s.stageName, s.hold ? 'bad' : s.armed ? 'ok' : 'neutral',
+    detection, width, direction, bypass,
+    s.stage === 1 && s.gateOpen === false ? `Takeover blocked · ${s.gateReasonName}` : 'Width is for reporting. See Diagnostics for probe details.');
 }
 function showSource15(d, f) {
   if (d.kind && d.kind.startsWith('b5-')) { receiveB5(d, f); return; }
@@ -2035,10 +2070,10 @@ function showSource15(d, f) {
   if(d.kind==='front-calibration') { calibrationUI.update(d); return; }
   if(d.kind==='release') {
     if (runArchive && logDownload.active &&
-        (d.runId !== runArchive.runId || d.version !== runArchive.release.version))
+        (d.runId !== runArchive.runId || d.version !== runArchive.release.version || d.obstacle !== runArchive.release.obstacle))
       cancelLogDownload('Run or firmware changed during export');
     releaseInfo=d; releaseSeenAt=now(); refreshImuStop(); connectedDriveSeen=true; updateProfile(); updateLogDownloadControl();
-    $('buildId').textContent=`Buddy 1–4 RTOS v${d.version} · ${d.wireless?'network supervised':'USB supervised'}`;
+    showBuildId(); renderB5();
     $('releaseCal').textContent=`${d.recordedCalibration?'Run':'Current'} calibration: white ${d.white.join('/')} - black ${d.black.join('/')} - Profile ${d.profile}`;
     renderBarcodeCapture();
     return;
@@ -2411,7 +2446,7 @@ $('logSave').onclick = () => download(`is28_messages_${stamp()}.txt`, messagesTe
 
 function sameArchiveRun() {
   return client?.connected && coordinatorMode === 7 && releaseInfo?.runId === runArchive.runId &&
-    releaseInfo.version === runArchive.release.version;
+    releaseInfo.version === runArchive.release.version && releaseInfo.obstacle === runArchive.release.obstacle;
 }
 function startRunArchive() {
   if (runArchive || logDownload.active || $('logDownload').disabled || !releaseInfo?.storedLogs) return;
@@ -2431,6 +2466,12 @@ function startRunArchive() {
     page.file('frames.csv', framesCsv(frames));
     page.file('frames.json', framesJson());
     page.file('messages.txt', messagesText());
+    if (releaseInfo.obstacle || b5.status) {
+      const report = { status: b5.status, ageMs: b5.status ? Math.round(now() - b5.at) : null,
+        stale: b5.status ? now() - b5.at > B5_STALE_MS : null,
+        latestWidthTrace: b5.tracker.width(), latestDirectionTrace: b5.tracker.direction() };
+      page.file('obstacle.json', JSON.stringify(report, null, 2));
+    }
     if (test.start) page.file('connectivity.txt', connectivityReport());
     startLogDownload(0);
   } catch (error) {

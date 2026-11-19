@@ -806,9 +806,6 @@ void rtos_line_straight_sample (const analog_demand_t * p_demand,
         .route_turn =
             (0 != g_planner.nav.action) || (0U != g_planner.nav.uturn.stage),
         .steering = p_steering->active,
-        .bend_pending = (!p_steering->bend_candidate) &&
-                        ((p_steering->bend_demand_duration > 0.0f) ||
-                         (0U != p_steering->bend_direction_bits)),
         .bend_candidate = p_steering->bend_candidate,
         .bend_confirmed = p_steering->bend_confirmed,
         .bend_exiting = p_steering->bend_exiting};

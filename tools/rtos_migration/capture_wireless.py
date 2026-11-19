@@ -10,12 +10,14 @@ KEYS=('uptime_ms','reads','failed','late_gaps','fifo_overruns','fifo_budget','in
 def decode_release(frame):
     if len(frame)<3 or frame[0]!=0xf2 or len(frame)!=3+frame[1]:return None
     p=frame[3:]
-    if len(p) in (12,13) and (len(p)==12 or p[12]<=15) and p[0]==0xc2 and not p[2]&128 and not p[3]&224:
+    if (len(p) in (12,13) and (len(p)==12 or p[12]<=15) and p[0]==0xc2
+            and not p[2]&128 and not p[3]&(224 if len(p)==12 else 192)):
         packed=int.from_bytes(p[4:10],'little');levels=[(packed>>(12*k))&4095 for k in range(4)]
         return {'kind':'release','version':f'{p[1]&15}.{p[1]>>4}.{p[2]&15}',
           'network_supervised':bool(p[2]&16),'stored_logs':bool(p[2]&32),
           'calibration_valid':bool(p[2]&64),'profile':p[3]&3,'origin':(p[3]>>2)&3,
-          'recorded_calibration':bool(p[3]&16),'white':levels[:2],'black':levels[2:],
+          'recorded_calibration':bool(p[3]&16),'buddy5_obstacles':bool(p[3]&32),
+          'white':levels[:2],'black':levels[2:],
           'run_id':int.from_bytes(p[10:12],'little'), 'motor_stop_reason':p[12] if len(p)==13 else None}
     if len(p)==60 and p[0]==0xc3 and not p[58]&192:
         return dict(kind='runtime',**dict(zip(KEYS,struct.unpack('<14I',p[1:57]))),

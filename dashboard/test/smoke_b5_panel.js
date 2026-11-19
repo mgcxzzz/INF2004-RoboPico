@@ -48,7 +48,7 @@ for (const k of ['185 offset RIGHT 60 -> LEFT', '100 offset RIGHT 35 -> LEFT', '
   console.log(k, '\n   ', out[k].join('\n    '));
 /* long probe, 185 box: right side clearance-limited before its edge -> labelled assumption */
 const [mp, mw, , mraw, , mlim, mver] = out['185 offset RIGHT 60 -> LEFT'];
-assert.match(mp, /^measured/); assert.match(mw, /^150\.00 mm — ASSUMED project midpoint/);
+assert.match(mp, /^probe completed/); assert.match(mw, /^150\.00 mm — ASSUMED project midpoint/);
 assert.match(mraw, /^n\/a \/ n\/a \/ 150\.00 mm/);
 assert.match(mlim, /^run 1: L FAR .* \| R CLEARANCE .* ceiling 220 mm, margin 50 mm$/);
 assert.match(mver, /^run 1: Pico-reported · capture complete \(replay offline to verify\) · long probe/);

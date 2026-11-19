@@ -46,7 +46,6 @@ static b5_line_sample_t sample_of(const sim_t *s, uint8_t decision) {
     const continuous_steering_t *p = &s->steer;
     return (b5_line_sample_t){.now_us = s->now, .wheel_mm = {s->wheel[0], s->wheel[1]}, .phase = C_FOLLOW,
         .decision = decision, .valid = true, .steering = p->active,
-        .bend_pending = (!p->bend_candidate) && ((p->bend_demand_duration > 0.0f) || (0U != p->bend_direction_bits)),
         .bend_candidate = p->bend_candidate, .bend_confirmed = p->bend_confirmed, .bend_exiting = p->bend_exiting};
 }
 
@@ -99,6 +98,31 @@ static void test_straight_with_corrections(void) {
     printf("  straight, small corrections (+/-2 mm/s half differential, +/-0.10 error, decisions 25/24/SYM_LEFT/RIGHT): opens after "
            "%.0f mm, stays open over 2.7 m, worst window heading %.1f deg (limit %.1f)\n",
            at, worst, B5S_HEADING_MAX_CDEG / 100.0);
+}
+
+static void test_brief_bend_signals_on_a_straight(void) {
+    sim_t s; sim_init(&s);
+    unsigned pending_frames = 0;
+    const float dt = DT_US / 1e6f;
+    for (unsigned frame = 0; frame < 900; ++frame) {
+        int direction = (frame / 20) % 2 ? 1 : -1;
+        bool correcting = frame % 20 < 3;
+        float half = correcting ? direction * 10.0f : 0.0f;
+        float error = correcting ? direction * 0.30f : 0.0f;
+        s.now += DT_US;
+        s.path += SPEED * dt;
+        s.wheel[0] += (SPEED - half) * dt;
+        s.wheel[1] += (SPEED + half) * dt;
+        continuous_steering_update_bend(&s.steer, error, half, SPEED, half, SPEED, dt);
+        pending_frames += s.steer.bend_demand_duration > 0.0f;
+        CHECK(!s.steer.bend_candidate);
+        b5_line_sample_t sample = sample_of(&s, 25);
+        b5_straight_step(&s.gate, &sample);
+        if (s.path >= B5S_WINDOW_MM + 15.0f) {
+            CHECK(b5_straight_check(&s.gate, s.now) == B5S_STRAIGHT);
+        }
+    }
+    CHECK(pending_frames > 0);
 }
 
 /* Tight curve: the real bend monitor engages (entry, confirmed, exit). */
@@ -187,7 +211,7 @@ static void test_states(void) {
         {"follower stop", {.stop = true}, B5S_OTHER, false, false},
         {"circuit fault", {.fault = true}, B5S_OTHER, false, false},
         {"bend monitor not running", {0}, B5S_UNAVAILABLE, true, false},
-        {"bend dwell (entry pending)", {.bend_pending = true}, B5S_BEND_ENTRY, false, false},
+        {"sustained bend candidate", {.bend_candidate = true}, B5S_BEND_ENTRY, false, false},
         {"provider did not run", {0}, B5S_UNAVAILABLE, false, true},
     };
     for (unsigned i = 0; i < sizeof cases / sizeof cases[0]; ++i) {
@@ -201,7 +225,7 @@ static void test_states(void) {
             if (m->decision) ls.decision = m->decision;
             ls.route_turn |= m->route_turn; ls.busy |= m->busy; ls.junction_mark |= m->junction_mark;
             ls.line_lost |= m->line_lost; ls.searching |= m->searching; ls.stop |= m->stop; ls.fault |= m->fault;
-            ls.bend_pending |= m->bend_pending;
+            ls.bend_candidate |= m->bend_candidate;
             if (cases[i].steer_off) ls.steering = false;
             if (cases[i].invalid) ls.valid = false;
             b5_straight_step(&s.gate, &ls);
@@ -256,6 +280,7 @@ static void test_stale_and_misc(void) {
 
 int main(void) {
     test_straight_with_corrections();
+    test_brief_bend_signals_on_a_straight();
     test_tight_curve(+1);
     test_tight_curve(-1);
     test_gentle_curve(+1, 500, true);

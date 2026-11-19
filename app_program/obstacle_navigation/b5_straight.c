@@ -90,7 +90,7 @@ uint8_t b5_straight_frame_reason (const b5_line_sample_t * p_sample)
     {
         reason = B5S_BEND;
     }
-    else if ((p_sample->bend_candidate) || (p_sample->bend_pending))
+    else if (p_sample->bend_candidate)
     {
         reason = B5S_BEND_ENTRY;
     }

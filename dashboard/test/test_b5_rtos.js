@@ -29,6 +29,32 @@ const legacy = loadFixture('b5_rtos_mission_c_frames_v0_2_legacy.txt');
 const decodeAll = (name, set = scenarios) => set.get(name).map((b) => M.decodeFrame(b));
 const of = (d, kind) => d.filter((f) => f.data.kind === kind).map((f) => f.data);
 
+test('C2 release capability is explicit and other reserved bits remain zero', () => {
+  const c2 = Uint8Array.from([0xf2, 13, 9, 0xc2, 0x20, 0x7c, 1, ...Array(9).fill(0)]);
+  let f = M.decodeFrame(c2);
+  assert.equal(f.data.version, '0.2.12');
+  assert.equal(f.data.obstacle, false);
+  c2[5] = 0x7d;
+  c2[6] |= 0x20;
+  f = M.decodeFrame(c2);
+  assert.equal(f.data.version, '0.2.13');
+  assert.equal(f.data.obstacle, true);
+  const short = c2.slice(0, -1); short[1] = 12;
+  assert.match(M.decodeFrame(short).error, /invalid release metadata/);
+  c2[6] |= 0x40;
+  assert.match(M.decodeFrame(c2).error, /invalid release metadata/);
+});
+
+test('Buddy 5 records reject counts and indices outside the firmware limits', () => {
+  const frames = scenarios.get('185 offset RIGHT 60 -> LEFT');
+  for (const [marker, offset, invalid] of [[0xd1, 8, 255], [0xd2, 14, 256], [0xd3, 44, 256], [0xbe, 8, 8], [0xbf, 12, 9]]) {
+    const frame = Uint8Array.from(frames.find((b) => b[7] === marker));
+    frame[3 + offset] = invalid & 255;
+    frame[4 + offset] = invalid >> 8;
+    assert.match(M.decodeFrame(frame).error, /out of range/);
+  }
+});
+
 test('every C-packed Buddy5 frame decodes without error, with exact layouts', () => {
   let n = 0;
   for (const [name, frames] of scenarios) for (const b of frames) {

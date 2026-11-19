@@ -26,6 +26,12 @@ static inline uint8_t rn_drive_state (unsigned flags, bool paused, bool pending,
     {
         return 6;
     }
+#ifdef APP_RTOS_BUDDY5
+    if (flags & BR_OBSTACLE_HOLD)
+    {
+        return 3; /* Safe Stop, with the Buddy5 hold still latched. */
+    }
+#endif
     if (flags & BR_ACTIVE)
     {
         return paused ? 2 : 1;

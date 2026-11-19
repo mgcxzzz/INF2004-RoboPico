@@ -20,8 +20,9 @@
  *  - line seen (no white loss, no recovery search, no recovery decision);
  *  - no junction candidate or cross mark, no junction/turn phase, no
  *    barcode route turn or U-turn in progress;
- *  - continuous steering active (the bend monitor runs) and no bend
- *    entry dwell, candidate, confirmed bend or bend exit;
+ *  - continuous steering active (the bend monitor runs) and no sustained
+ *    bend candidate, confirmed bend or bend exit. Brief corrections before
+ *    candidate qualification are covered by the encoder heading check;
  *  - encoder heading change over the window <= B5S_HEADING_MAX_DEG, so a
  *    gentle curve below the bend-assist thresholds cannot qualify.
  * Any failed condition closes the gate and restarts the evidence (a curve
@@ -43,7 +44,7 @@ typedef enum
     B5S_SETTLING,    /* straight so far, window or dwell not complete   */
     B5S_STALE,       /* no fresh Buddy3 frame                           */
     B5S_UNAVAILABLE, /* Buddy3 provider not running / no bend monitor   */
-    B5S_BEND_ENTRY,  /* bend dwell or candidate                         */
+    B5S_BEND_ENTRY,  /* sustained bend candidate                        */
     B5S_BEND,        /* confirmed bend                                  */
     B5S_BEND_EXIT,   /* bend exit / blend back                          */
     B5S_CURVE,       /* encoder heading change over the window too big  */
@@ -81,7 +82,6 @@ typedef struct
     bool junction_mark; /* qualified side edge or barcode cross mark     */
     bool route_turn;    /* barcode route action executing or U-turn      */
     bool steering;      /* continuous steering (bend monitor) active     */
-    bool bend_pending;  /* bend dwell running or blend not finished      */
     bool bend_candidate;
     bool bend_confirmed;
     bool bend_exiting;

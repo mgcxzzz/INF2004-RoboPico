@@ -28,7 +28,8 @@ static motion_output_t step(void) {
     return o;
 }
 static double yaw_deg(const double origin[2]) {
-    return ((g_wheel[1] - origin[1]) - (g_wheel[0] - origin[0])) / 110.0 * 180.0 / M_PI;
+    const double pi = 3.14159265358979323846;
+    return ((g_wheel[1] - origin[1]) - (g_wheel[0] - origin[0])) / 110.0 * 180.0 / pi;
 }
 
 int main(void) {

@@ -124,6 +124,13 @@ uint32_t rn_mapping_snapshot (void)
 }
 uint8_t rn_next_sequence (unsigned source)
 {
+#ifdef APP_RTOS_BUDDY5
+    /* The single MQTT consumer numbers source 15 in queue order. */
+    if (15U == source)
+    {
+        return 0U;
+    }
+#endif
     if (source >= 16)
     {
         return 0;
@@ -277,6 +284,15 @@ bool rn_tx_take_budget (uint8_t * p_topic_value, uint8_t data[RN_PACKET_MAX],
         {
             break;
         }
+#ifdef APP_RTOS_BUDDY5
+        /* Several tasks enqueue source 15 independently. Number admitted
+         * frames in dequeue order, including frames that expired in the
+         * queue. A retry cannot publish an older sequence after a newer one. */
+        if ((count >= 9) && (RN_TLM == message[4]) && (0xf2U == message[6]))
+        {
+            message[8] = g_source_sequence[15]++;
+        }
+#endif
         if ((((count < 7) || (message[5] > RN_PACKET_MAX)) ||
              (count != message[5] + 6)) ||
             now - get32(message) > (RN_TLM == message[4] ? 250U : 2000U))

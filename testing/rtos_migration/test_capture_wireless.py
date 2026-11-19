@@ -43,6 +43,13 @@ class WirelessTests(unittest.TestCase):
         self.assertEqual(decode_release(p.read_bytes()[:-1]+bytes([8]))['motor_stop_reason'],8)
         self.assertEqual(d['white'],[122,138]);self.assertEqual(d['black'],[246,267])
         self.assertTrue(d['network_supervised'] and d['stored_logs'])
+    def test_combined_release_capability(self):
+        baseline = bytes([0xf2,13,0,0xc2,0x20,0x7c,1] + [0]*9)
+        combined = bytes([0xf2,13,0,0xc2,0x20,0x7d,0x21] + [0]*9)
+        self.assertFalse(decode_release(baseline)['buddy5_obstacles'])
+        self.assertTrue(decode_release(combined)['buddy5_obstacles'])
+        self.assertEqual(decode_release(combined)['version'],'0.2.13')
+        self.assertIsNone(decode_release(combined[:6] + bytes([0x61]) + combined[7:]))
     def test_drive_and_junction_c_fixtures(self):
         base=Path(__file__).parent/'build-host'
         j=decode_release((base/'junction_decision.bin').read_bytes())

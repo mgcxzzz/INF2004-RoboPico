@@ -15,8 +15,9 @@ ART = CHECKPOINT / "firmware"
 common.ART = ART
 
 
-def linked_checks(elf: Path, network: bool = False, barcode: bool = False, imu: bool = False, release: bool = False) -> dict:
-    expected='rtos_buddy1_4' if release else 'rtos_imu_wifi' if imu else 'rtos_barcode_wifi' if barcode else 'rtos_line_wifi' if network else 'rtos_line'
+def linked_checks(elf: Path, network: bool = False, barcode: bool = False, imu: bool = False,
+                  release: bool = False, buddy5: bool = False) -> dict:
+    expected='rtos_buddy1_5' if buddy5 else 'rtos_buddy1_4' if release else 'rtos_imu_wifi' if imu else 'rtos_barcode_wifi' if barcode else 'rtos_line_wifi' if network else 'rtos_line'
     assert (ROOT/'build_make/.build_profile').read_text(encoding='utf-8').strip().startswith(expected+'-'), \
         'Rebuild the requested profile before packaging so stack-usage files match its ELF.'
     tool = ROOT.parent / ".buddy2-tools/arm-gcc/bin/arm-none-eabi-nm.exe"
@@ -54,6 +55,10 @@ def linked_checks(elf: Path, network: bool = False, barcode: bool = False, imu: 
                      'bringup_encoder_fault_packet','rtos_line_barcode_attempt_info',
                      'rn_network_stop_packet','rn_drive_online_record'):
             assert name in symbols, 'Release feature missing from image: ' + name
+    if buddy5:
+        for name in ("rb5_task", "rb5_echo_isr", "b5_mission_tick", "b5_wp_tick",
+                     "b5_ep_tick", "b5_auto_tick", "nav_steer_drive", "nav_resume_line"):
+            assert name in symbols, 'Buddy 5 feature missing from image: ' + name
     for name in ((() if network else ("cyw43_utk_task", "mqtt_client_connect")) + ("subsystem5_start", "dev_init_adc",
                  "dev_init_ser") + (() if barcode else ("barcode_analog_sample", "barcode_peak_sample"))):
         assert name not in symbols, name
@@ -64,7 +69,10 @@ def linked_checks(elf: Path, network: bool = False, barcode: bool = False, imu: 
     # a direct BL/BLX target in XIP would fetch code while flash is unavailable.
     for line in assembly.splitlines():
         assert not re.search(r"\bblx?\s+10[0-9a-f]{6}\b", line), line
-    assert symbols["__end"] <= 0x20030000, "Insufficient RAM left for kernel/task allocations"
+    # The combined image has more static state. Its boot allocator budget is
+    # checked against __bss_end by kernel_pool_budget.py before packaging.
+    if not buddy5:
+        assert symbols["__end"] <= 0x20030000, "Insufficient RAM left for kernel/task allocations"
     usage = {}
     for directory in (ROOT / "build_make/mtkernel_3/app_program/rtos_bringup",
                       ROOT / "build_make/mtkernel_3/app_program/line_navigation",
@@ -72,7 +80,10 @@ def linked_checks(elf: Path, network: bool = False, barcode: bool = False, imu: 
                       *([ROOT / "build_make/mtkernel_3/app_program/imu_navigation",
                          ROOT / "build_make/mtkernel_3/firmware/integration/buddy1_4/src/imu",
                          ROOT / "build_make/mtkernel_3/lib/libtm",
-                         ROOT / "build_make/mtkernel_3/lib/libtm/sysdepend/pico_rp2040/usb"] if imu else [])):
+                         ROOT / "build_make/mtkernel_3/lib/libtm/sysdepend/pico_rp2040/usb"] if imu else []),
+                      *([ROOT / "build_make/mtkernel_3/app_program/obstacle_navigation",
+                         ROOT / "build_make/mtkernel_3/firmware/integration/buddy1_4/extensions/buddy5_obstacles"]
+                        if buddy5 else [])):
         for path in directory.glob("*.su"):
             for line in path.read_text(encoding="utf-8").splitlines():
                 label, size, kind = line.rsplit("\t", 2)

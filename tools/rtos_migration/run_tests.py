@@ -16,6 +16,12 @@ cc = shlex.split(os.environ.get("CC", "gcc"))
 host_float = ["-msse2", "-mfpmath=sse"] if os.name == "nt" else []
 sources = [CORE / "src/navigation" / (n + ".c") for n in ("motion_api", "nav_coordinator", "nav_codec")]
 sources.append(CORE / "src/motion/motion_executor.c")
+obstacle = ROOT / "app_program/obstacle_navigation"
+obstacle_algorithms = CORE / "extensions/buddy5_obstacles"
+b5_mission = [obstacle / "b5_mission.c", obstacle / "b5_straight.c"] + [
+    obstacle_algorithms / name for name in (
+        "width_probe.c", "width_estimate.c", "edge_probe.c", "automatic_bypass.c",
+        "manual_bypass.c", "rect_route.c", "stripe_detect.c", "profile/obstacle_profile.c")]
 
 checks = [(ROOT / "testing/rtos_migration/test_wireless_calibration.c", []),
           (ROOT / "testing/rtos_migration/test_compact_signed.c", []),
@@ -62,6 +68,9 @@ checks.extend([
     (ROOT / "testing/rtos_migration/test_reference_peak.c", [CORE / "src/network/wifi_protocol.c"]),
     (CORE / "tests/barcode/test_barcode_peak.c", []),
     (ROOT / "testing/rtos_migration/test_connected_bridge.c", sources + [CORE / "src/network/wifi_protocol.c", CORE / "src/network/wifi_packets.c"]),
+    (ROOT / "testing/rtos_migration/test_b5_mission.c", sources + b5_mission),
+    (ROOT / "testing/rtos_migration/test_b5_straight_gate.c", [obstacle / "b5_straight.c"]),
+    (ROOT / "testing/rtos_migration/test_nav_steer.c", sources),
     (ROOT / "testing/rtos_migration/test_network_bench.c", [CORE / "src/network/wifi_protocol.c"]),
     (CORE / "tests/unit/test_wifi_packets.c", [CORE / "src/network/wifi_packets.c"]),
     (CORE / "tests/unit/test_wifi_protocol.c", [CORE / "src/network/wifi_protocol.c"]),
@@ -84,6 +93,15 @@ for source, extra in checks:
         profile_flags += ["-I" + str(ROOT / "testing/rtos_migration/printf_stubs")]
     if source.stem == "test_line_stationary_search":
         profile_flags += ["-DCONTINUOUS_BEND_ASSIST=1"]
+    if source.stem == "test_connected_bridge":
+        profile_flags += ["-DAPP_RTOS_BUDDY5=1"]
+    if source.stem in ("test_b5_mission", "test_b5_straight_gate", "test_nav_steer"):
+        profile_flags += ["-I" + str(obstacle), "-DLINE_CAL_MIN_SPAN=50",
+                          "-DBUDDY_RUNTIME_MAPPING=1", "-DBUDDY_COORDINATED_BARCODE=1"]
+    if source.stem in ("test_b5_mission", "test_nav_steer"):
+        profile_flags += ["-DMOTION_STEERED_DRIVE=1", "-DB5WP_RUN_ARCHIVE=0"]
+    if source.stem == "test_b5_straight_gate":
+        profile_flags += ["-DCONTINUOUS_BEND_ASSIST=1", "-DCIRCUIT_STATIONARY_SEARCH=1"]
     subprocess.run([*cc, *host_float, *profile_flags, "-std=c11", "-Wall", "-Wextra", "-Werror", "-O2", "-UNDEBUG",
                     "-DCIRCUIT_SWEEP_SEARCH=1", "-I" + str(ROOT), "-I" + str(CORE), "-I" + str(CORE / "config"),
                     source, *extra, "-lm", "-o", exe], check=True)
@@ -91,6 +109,6 @@ for source, extra in checks:
 if not args.skip_python:
     for name in ('test_capture_bringup', 'test_export_line_log', 'test_capture_adc_readiness',
                  'test_provision_network', 'test_capture_network_bench', 'test_capture_connected_line',
-                 'test_export_barcode_log', 'test_tcp_allocation'):
+                 'test_export_barcode_log', 'test_tcp_allocation', 'test_capture_wireless'):
         subprocess.run([sys.executable, ROOT / 'testing/rtos_migration' / (name + '.py')], check=True)
 print(f"PASS: {len(checks)} production-C regression programs; Python checks {'run' if not args.skip_python else 'selected separately'}. Hardware test is still required.")

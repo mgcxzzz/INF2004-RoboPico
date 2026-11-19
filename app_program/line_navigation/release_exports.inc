@@ -58,8 +58,15 @@ void rtos_line_release_info (uint8_t seq, uint8_t out[16])
     out[2] = seq;
     out[3] = 0xc2;
     out[4] = 0x20; /* v0.2.12; major low/minor high nibble */
+#ifdef APP_RTOS_BUDDY5
+    out[5] = 0x3d | (calibration_valid(&character) ? 0x40 : 0);
+#else
     out[5] = 0x3c | (calibration_valid(&character) ? 0x40 : 0);
+#endif
     out[6] = RL_PROFILE | ((origin & 3U) << 2) | (recorded ? 0x10 : 0);
+#ifdef APP_RTOS_BUDDY5
+    out[6] |= 0x20U; /* Buddy 5 capability. */
+#endif
     uint16_t levels[4] = {character.white[0], character.white[1],
                           character.black[0], character.black[1]};
     for (unsigned item_index = 0; item_index < 4; ++item_index)

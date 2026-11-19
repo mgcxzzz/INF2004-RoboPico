@@ -262,8 +262,9 @@ verification: it says "Pico-reported · capture complete (replay offline)" or
 "Admitted" means accepted into the car's network TX queue. The bridge may
 still discard a telemetry message older than 250 ms in that queue
 (`rn_tx_take_budget`, counted in its tx_dropped); that and Wi-Fi/MQTT loss are
-the remaining loss paths. A refused push keeps its header sequence for the
-retry, so source-15 sequence gaps reflect loss after admission.
+the remaining loss paths. In v0.2.13 the MQTT consumer assigns source-15
+sequence numbers in dequeue order. Expired queued frames consume a sequence.
+Refused admissions are counted separately and can be retried.
 
 ## Missing-record audit (117 mm capture, width v0.2)
 

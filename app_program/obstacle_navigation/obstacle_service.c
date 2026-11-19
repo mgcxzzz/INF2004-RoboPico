@@ -31,7 +31,6 @@
 enum
 {
     RB5_PING_HISTORY = 8,
-    RB5_SOURCE15 = 15,
     RB5_STAGE_MIN_US = 100000 /* stage-change status no faster than this */
 };
 
@@ -101,8 +100,6 @@ static uint16_t g_width_run_seen;
 static uint16_t g_edge_run_seen;
 static uint8_t g_width_admitted;
 static uint8_t g_edge_admitted;
-static uint8_t g_spare_sequence;
-static bool g_spare_valid;
 static uint8_t g_stage_sent = 0xffU;
 static uint64_t g_status_due;
 static uint64_t g_stage_sent_us;
@@ -355,7 +352,7 @@ bool rb5_external (void)
     return rb5_external_frame(&status, g_handback);
 }
 
-void rb5_frame (uint64_t now, const uint16_t level[2],
+void rb5_frame (uint64_t now, const uint16_t * p_level,
                 const b5_line_sample_t * p_line)
 {
     if (!__atomic_load_n(&g_hardware_ready, __ATOMIC_ACQUIRE))
@@ -367,17 +364,24 @@ void rb5_frame (uint64_t now, const uint16_t level[2],
      * inside this step, and its own copy/drop sections are DI-protected, so
      * it never observes a half-updated queue. Keeping the step outside DI
      * leaves the encoder and ECHO interrupts unaffected. */
-    b5_mission_observe(&g_mission, now, level[0], level[1]);
-    b5_line_sample_t none = {.now_us = now, .valid = false};
-    b5_mission_line(&g_mission, (NULL != p_line) ? p_line : &none);
     motion_status_t before = motion_get_status();
     if (g_mission.session)
     {
-        if (B5MI_GUARD == g_mission.stage)
+        if ((NULL == p_level) || (!before.session_active))
         {
-            hardware_tick(true);
+            b5_mission_cancel(&g_mission, now);
         }
-        b5_mission_tick(&g_mission, now);
+        else
+        {
+            b5_mission_observe(&g_mission, now, p_level[0], p_level[1]);
+            b5_line_sample_t none = {.now_us = now, .valid = false};
+            b5_mission_line(&g_mission, (NULL != p_line) ? p_line : &none);
+            if (B5MI_GUARD == g_mission.stage)
+            {
+                hardware_tick(true);
+            }
+            b5_mission_tick(&g_mission, now);
+        }
     }
     else
     {
@@ -390,6 +394,11 @@ void rb5_frame (uint64_t now, const uint16_t level[2],
         g_handback = true; /* nav_resume_line() accepted; AUTO next update */
     }
     publish_ready(now);
+}
+
+bool rb5_held (void)
+{
+    return B5MI_HOLD == g_mission.stage;
 }
 
 bool rb5_owned (const motion_output_t * p_demand)
@@ -473,17 +482,10 @@ void rb5_cancel (void)
 }
 
 /* Control (motion) task only: network Pause while Buddy5 holds the lease. */
-bool rb5_pause_request (void)
+bool rb5_owns_session (void)
 {
     motion_status_t status = motion_get_status();
-    if (!rb5_pause_cancels(&status))
-    {
-        return false;
-    }
-    rb5_cancel();
-    (void)motion_stop(MOTION_BUDDY1);
-    consume_cancel(board_time_us());
-    return true;
+    return rb5_pause_cancels(&status);
 }
 
 void rb5_report_request (void)
@@ -496,18 +498,7 @@ void rb5_report_request (void)
 
 /* ---- Buddy5 task: telemetry ------------------------------------------- */
 
-static uint8_t next_sequence (void)
-{
-    if (g_spare_valid)
-    {
-        g_spare_valid = false;
-        return g_spare_sequence;
-    }
-    return rn_next_sequence(RB5_SOURCE15);
-}
-
-/* A refused push keeps its sequence for the next attempt, so source-15
- * sequence gaps on the dashboard only mean frames lost after admission. */
+/* The MQTT consumer assigns the source-15 header sequence in queue order. */
 static bool push (const uint8_t * p_frame, uint8_t length)
 {
     if (rn_tx_push(RN_TLM, p_frame, length, board_kernel_ms()))
@@ -515,8 +506,6 @@ static bool push (const uint8_t * p_frame, uint8_t length)
         g_diag.frames++;
         return true;
     }
-    g_spare_sequence = p_frame[2];
-    g_spare_valid = true;
     g_diag.refused++;
     return false;
 }
@@ -544,7 +533,7 @@ static bool send_width (void)
     if (have_record)
     {
         uint8_t record_frame[B5_WP_REC_FRAME];
-        b5_wp_rec_pack(&record, d0, lost, next_sequence(), record_frame);
+        b5_wp_rec_pack(&record, d0, lost, 0U, record_frame);
         if (push(record_frame, sizeof(record_frame)))
         {
             B5WPRec head;
@@ -573,7 +562,7 @@ static bool send_width (void)
     if (summary)
     {
         uint8_t summary_frame[B5_WP_SUM_FRAME];
-        b5_wp_sum_pack(&summary_copy, next_sequence(), summary_frame);
+        b5_wp_sum_pack(&summary_copy, 0U, summary_frame);
         if (push(summary_frame, sizeof(summary_frame)))
         {
             key = enter();
@@ -598,7 +587,6 @@ static bool send_width (void)
     leave(key);
     if (limits)
     {
-        limits_frame[2] = next_sequence(); /* outside the lock */
         if (push(limits_frame, sizeof(limits_frame)))
         {
             key = enter();
@@ -613,7 +601,7 @@ static bool send_width (void)
     if (retry)
     {
         uint8_t retry_frame[B5_WP_RETRY_FRAME];
-        b5_wp_retry_pack(&retry_copy, next_sequence(), retry_frame);
+        b5_wp_retry_pack(&retry_copy, 0U, retry_frame);
         if (push(retry_frame, sizeof(retry_frame)))
         {
             key = enter();
@@ -630,7 +618,7 @@ static bool send_width (void)
         b5_wp_result_pack(&result_copy, result_ms, summary_copy.run,
                           summary_copy.end, summary_copy.d0,
                           summary_copy.records, summary_copy.lost,
-                          summary_copy.width_result, next_sequence(), frame);
+                          summary_copy.width_result, 0U, frame);
         if (push(frame, sizeof(frame)))
         {
             key = enter();
@@ -665,7 +653,7 @@ static bool send_edge (void)
     if (have_record)
     {
         uint8_t frame[B5_EP_REC_FRAME];
-        b5_ep_rec_pack(&record, run, d0, lost, next_sequence(), frame);
+        b5_ep_rec_pack(&record, run, d0, lost, 0U, frame);
         if (push(frame, sizeof(frame)))
         {
             B5EPRec head;
@@ -683,7 +671,7 @@ static bool send_edge (void)
     if (summary)
     {
         uint8_t frame[B5_EP_SUM_FRAME];
-        b5_ep_sum_pack(&summary_copy, next_sequence(), frame);
+        b5_ep_sum_pack(&summary_copy, 0U, frame);
         if (push(frame, sizeof(frame)))
         {
             key = enter();
@@ -710,7 +698,7 @@ static bool send_event (void)
         return false;
     }
     uint8_t frame[B5_EVENT_FRAME];
-    (void)b5_event_pack(&event, false, overwritten, next_sequence(), frame);
+    (void)b5_event_pack(&event, false, overwritten, 0U, frame);
     if (push(frame, sizeof(frame)))
     {
         B5Event head;
@@ -857,7 +845,7 @@ static void send_status (uint64_t now)
     b5_mission_status_t status;
     uint8_t frame[B5MP_FRAME];
     snapshot(now, &status);
-    b5mp_pack(&status, next_sequence(), frame);
+    b5mp_pack(&status, 0U, frame);
     if (push(frame, sizeof(frame)))
     {
         g_diag.status_frames++;
@@ -880,7 +868,7 @@ static void report (void)
               status.gate_reason, status.gate_echoes,
               (int)g_mission.straight.travel_mm,
               (int)g_mission.straight.heading_cdeg);
-    tm_printf((UB *)"B5_MISSION version=rtos_buddy1_5-v0.2.12-straight-0.4 "
+    tm_printf((UB *)"B5_MISSION version=rtos_buddy1_5-v0.2.13 "
                     "stage=%s reason=%s "
                     "module=%u run=%u side=%u basis=%u decision=%u "
                     "states=0x%02x width_end=%u d0=%u trigger=%u start=%u\n",

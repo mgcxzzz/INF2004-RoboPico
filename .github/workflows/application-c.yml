@@ -2,7 +2,7 @@ name: Application C standard
 
 on:
   push:
-    branches: [main, barr-c-cleanup]
+    branches: [main, barr-c-cleanup, barr-c-combined]
   pull_request:
 
 jobs:
@@ -22,4 +22,5 @@ jobs:
           --only test_compact_signed test_imu_lift_guard test_imu_lift_packet
           test_drive_diagnostics test_network_stop test_line_search
           test_line_stationary_search test_release_imu test_rtos_ramp_bridge
+          test_connected_bridge test_b5_mission test_b5_straight_gate test_nav_steer
           --skip-python

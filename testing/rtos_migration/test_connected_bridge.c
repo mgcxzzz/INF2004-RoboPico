@@ -160,6 +160,16 @@ static void rtos_line_telemetry(wifi_motion_packet_t *p) {
     *p = (wifi_motion_packet_t){0};
 }
 static void bringup_stop_from(uint8_t reason, uint16_t latch, motion_owner_t who);
+#ifdef APP_RTOS_BUDDY5
+#include "app_program/obstacle_navigation/obstacle_policy.h"
+bool rb5_held(void) {
+    return (hardware.flags & BR_OBSTACLE_HOLD) != 0U;
+}
+bool rb5_owns_session(void) {
+    motion_status_t status = motion_get_status();
+    return rb5_pause_cancels(&status);
+}
+#endif
 #ifdef APP_RTOS_RELEASE
 #include "src/network/wifi_protocol.h"
 #include "app_program/line_navigation/wireless_calibration.h"
@@ -186,7 +196,7 @@ static uint8_t rtos_line_log_reply(const wifi_command_t *cmd) { (void)cmd;return
 #include "app_program/network_bridge/connected_control.c"
 #include "app_program/network_bridge/delivery_policy.h"
 static void bringup_stop_from(uint8_t reason, uint16_t latch, motion_owner_t who) {
-    hardware.flags = (hardware.flags & ~BR_ACTIVE) | latch;
+    hardware.flags = (hardware.flags & ~(BR_ACTIVE | BR_OBSTACLE_HOLD)) | latch;
     hardware.reason = reason;
     rtos_line_cancel();
     rn_drive_cancel();
@@ -265,6 +275,43 @@ static uint8_t last_ack_result(void) {
             result = payload[2];
     return result;
 }
+#ifdef APP_RTOS_BUDDY5
+static void test_buddy5_pause(motion_feedback_t *feedback) {
+    uint32_t lease = 0U;
+    hardware.flags = BR_ACTIVE | BR_READY | BR_CLOCK_OK;
+    motion_session_begin(board_time_us());
+    assert(nav_request_takeover(MOTION_BUDDY5, &lease) == MOTION_OK);
+    hardware.flags |= BR_OBSTACLE_HOLD;
+    request(WP_CMD_PAUSE);
+    rn_drive_process(feedback);
+    assert(last_ack_result() == WP_ACK_ACCEPTED);
+    assert(motion_get_status().session_active && rb5_held());
+    request(WP_CMD_RESUME);
+    rn_drive_process(feedback);
+    assert(last_ack_result() == WP_ACK_BUSY);
+    assert(motion_get_status().session_active && rb5_held());
+    bringup_stop_from(BR_REASON_NETWORK, 0U, MOTION_BUDDY1);
+    assert(!motion_get_status().session_active && !rb5_held());
+
+    ++clock_ms;
+    online();
+    hardware.flags = BR_ACTIVE | BR_READY | BR_CLOCK_OK;
+    motion_session_begin(board_time_us());
+    assert(nav_request_takeover(MOTION_BUDDY5, &lease) == MOTION_OK);
+    unsigned before_offs = offs;
+    request(WP_CMD_PAUSE);
+    rn_drive_process(feedback);
+    assert(last_ack_result() == WP_ACK_ACCEPTED);
+    assert(offs > before_offs && !(hardware.flags & BR_ACTIVE));
+    assert(!motion_get_status().session_active && !rn_drive_paused());
+    ++clock_ms;
+    online();
+    request(WP_CMD_RESUME);
+    rn_drive_process(feedback);
+    assert(last_ack_result() == WP_ACK_BUSY);
+    assert(!motion_get_status().session_active);
+}
+#endif
 static void drive_mode_packet_fixture(void) {
     const rn_drive_mode_telemetry_t info = {.uptime_ms = 0x01020304U,
                                        .revision = 0x11223344U,
@@ -298,6 +345,10 @@ int main(void) {
     assert(rn_drive_state(BR_CLOCK_OK, false, false, BR_REASON_BOOT) == 0);
     assert(rn_drive_state(BR_ACTIVE, false, false, 0) == 1);
     assert(rn_drive_state(BR_ACTIVE, true, false, 0) == 2);
+#ifdef APP_RTOS_BUDDY5
+    assert(rn_drive_state(BR_ACTIVE | BR_OBSTACLE_HOLD, false, false, 0) == 3);
+    assert(rn_drive_state(BR_ENCODER | BR_OBSTACLE_HOLD, false, false, 0) == 6);
+#endif
     assert(rn_drive_state(BR_ESTOP, false, false, 0) == 5);
     assert(rn_drive_state(BR_ESTOP, false, false, BR_REASON_ADC) == 6);
     assert(rn_drive_state(BR_ENCODER, false, false, 0) == 6);
@@ -363,6 +414,20 @@ int main(void) {
     assert(rn_tx_take(&topic, payload, &len, clock_ms) && payload[7] == WPK_EVENT_DISPATCH);
     assert(rn_tx_push(RN_TLM, live_motion, 2, clock_ms));
     assert(!rn_tx_take(&topic, payload, &len, clock_ms + 251));
+#ifdef APP_RTOS_BUDDY5
+    uint8_t first_source15[] = {0xf2, 1, 40, 0xe5};
+    uint8_t second_source15[] = {0xf2, 1, 39, 0xc2};
+    assert(rn_tx_push(RN_TLM, first_source15, sizeof(first_source15), clock_ms));
+    assert(rn_tx_push(RN_TLM, second_source15, sizeof(second_source15), clock_ms));
+    assert(rn_tx_take(&topic, payload, &len, clock_ms));
+    assert(payload[2] == 0 && payload[3] == 0xe5);
+    assert(rn_tx_take(&topic, payload, &len, clock_ms));
+    assert(payload[2] == 1 && payload[3] == 0xc2);
+    assert(rn_tx_push(RN_TLM, first_source15, sizeof(first_source15), clock_ms));
+    assert(rn_tx_push(RN_TLM, second_source15, sizeof(second_source15), clock_ms + 251));
+    assert(rn_tx_take(&topic, payload, &len, clock_ms + 251));
+    assert(payload[2] == 3 && payload[3] == 0xc2);
+#endif
     assert(!rn_telemetry_room(2, 1024, 11680));
     assert(!rn_telemetry_room(16, 203, 11680));
     assert(!rn_telemetry_room(16, 1024, 203));
@@ -470,6 +535,9 @@ int main(void) {
         }
     }
     assert(motions == 20 && navs == 4); /* No artificial gaps between sources. */
+#ifdef APP_RTOS_BUDDY5
+    test_buddy5_pause(&f);
+#endif
     puts(
         "PASS connected bridge: state/epochs/stale/flood STOP/priority/speed-mode CONFIG gating+readback/real coordinator Pause+Resume/late Reset/independent telemetry sequences");
     return 0;
