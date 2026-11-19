@@ -587,7 +587,7 @@ void rn_app_task (int32_t code, void * p_exinf_value)
             uint8_t calibration[RL_CAL_FRAME_BYTES];
             rtos_line_cal_info(rn_next_sequence(15), calibration);
             (void)rn_tx_push(RN_TLM, calibration, sizeof(calibration), now);
-            uint8_t info[15];
+            uint8_t info[16];
             rtos_line_release_info(rn_next_sequence(15), info);
             (void)rn_tx_push(RN_TLM, info, sizeof(info), now);
             /* Always retain fault visibility, including ordinary telemetry-off.

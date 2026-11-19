@@ -14,7 +14,7 @@ const mock=prior.split('const mock = `')[1].split('`;')[0];
 const server=createServer(async(req,res)=>{
  const file=req.url==='/'?'index.html':req.url.slice(1);
  if(file==='favicon.ico'){res.writeHead(204).end();return;}
- if(!['index.html','is28_schema.js','calibration_ui.js','vendor/mqtt.min.js'].includes(file)){res.writeHead(404).end();return;}
+ if(!['index.html','is28_schema.js','calibration_ui.js','vendor/mqtt.min.js','vendor/jszip.min.js'].includes(file)){res.writeHead(404).end();return;}
  res.writeHead(200,{'Content-Type':file.endsWith('.html')?'text/html; charset=utf-8':'text/javascript; charset=utf-8'});
  res.end(await readFile(join(root,file)));
 });
@@ -48,7 +48,7 @@ try {
  await page.locator('#connect').click();await page.waitForFunction(()=>window.__m.connected);
  await emit(motion);await emit(nav);await emit(metadata);await emit(runtime);
  const releaseVersion=`${metadata[4]&15}.${metadata[4]>>>4}.${metadata[5]&15}`;
- assert.equal(releaseVersion,'0.2.11','the cleanup release metadata advertises v0.2.11');
+ assert.equal(releaseVersion,'0.2.12','the cleanup release metadata advertises v0.2.12');
  assert.match(await page.locator('#profilePill').textContent(),new RegExp(`v${releaseVersion.replaceAll('.','\\.')}`));
  await page.locator('#dashboardTabs [data-view="diagnostics"]').click();
  assert.equal(await page.locator('#rtosRuntimeCard').isVisible(),true);
@@ -113,7 +113,7 @@ try {
  assert.deepEqual(got.bin,row);
  /* Raw export freezes the latest C5 metadata at request time, even if a new
     attempt is reported while the row chunks are still arriving. */
- const release021=Buffer.from(metadata);release021[4]=0x20;release021[5]=(release021[5]&0xf0)|1;
+ const release021=Buffer.from(metadata.subarray(0,15));release021[1]=12;release021[4]=0x20;release021[5]=(release021[5]&0xf0)|1;
  await emit(release021);
  await page.locator('button[data-cmd="START"]').click();
  const rejectedStart=await page.evaluate(()=>window.__m.sent.filter(x=>(x.bytes[0]>>4)===1).at(-1).bytes);
@@ -152,7 +152,29 @@ try {
  assert.match(await page.locator('#junctionDecision').textContent(),/10\.40 mm.*white confirmed/);
  assert.match(await page.locator('#driveState').textContent(),/bend confirmed/);
  assert.match(await page.locator('#driveStateDetails').textContent(),/-35\/35/);
+ const stopped=Buffer.from(metadata);stopped[2]++;stopped[15]=8;
+ await emit(stopped);const later=Buffer.from(upside);later[2]+=3;later.writeUInt16LE(7,28);await emit(later);
+ await page.waitForFunction(()=>document.getElementById('overviewRunDetail').textContent.includes('Run 7 ended · No progress'));
+ assert.match(await page.locator('#imuStop').textContent(),/motors already stopped/);
+ downloads.length=0;
+ await page.locator('#runExport').click();
+ for(let ds=0;ds<4;ds++) {
+   const id=await page.evaluate(()=>logDownload.requestId);
+   await emit(frame(13,[ds,id,0,0,0,0,0,1,3,0,0,0],100+ds));
+ }
+ await page.waitForFunction(()=>document.getElementById('runZipStatus').textContent==='Run ZIP downloaded.');
+ assert.equal(downloads.length,1);
+ const zipFile=join(out,downloads[0].suggestedFilename());await downloads[0].saveAs(zipFile);
+ const JSZip=require('../vendor/jszip.min.js');
+ const zipped=await JSZip.loadAsync(await readFile(zipFile),{checkCRC32:true});
+ const manifest=JSON.parse(await zipped.file('manifest.json').async('string'));
+ assert(manifest.complete && manifest.runId===7 && manifest.stored.length===4);
+ assert(zipped.file('dashboard/frames.csv') && zipped.file('dashboard/messages.txt'));
+ assert.equal(zipped.file(/^stored\/.*\.bin$/).length,4);
+ downloads.length=0;await page.locator('#runExport').click();
  await page.evaluate(()=>invalidateLive('simulated stale telemetry'));
+ await page.waitForFunction(()=>document.getElementById('runZipStatus').textContent.startsWith('Partial ZIP downloaded'));
+ assert.match(downloads[0].suggestedFilename(),/_PARTIAL\.zip$/);
  assert.match(await page.locator('#encoderFault').textContent(),/latched/);
  assert.match(await page.locator('#networkStop').textContent(),/latched/);
  assert.match(await page.locator('#driveState').textContent(),/Waiting for fresh/);

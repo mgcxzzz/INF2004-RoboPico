@@ -46,6 +46,7 @@ typedef struct
     unsigned flags : 8;
     unsigned clock_good : 2;
     unsigned reason : 4;
+    unsigned motor_stop_reason : 4;
     unsigned encoder_kind : 2;
     unsigned encoder_wheel : 2;
 } bringup_status_t;

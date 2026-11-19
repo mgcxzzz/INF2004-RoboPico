@@ -153,6 +153,7 @@ void bringup_stop_from (uint8_t reason, uint16_t latch,
     g_status.target[0] = g_status.target[1] = 0;
     if (active)
     {
+        g_status.motor_stop_reason = reason;
         g_stopped_us = (uint32_t)board_time_us();
     }
     status_leave(key);
@@ -886,6 +887,7 @@ static void start_pulse (unsigned selected)
 #endif
         g_bench_target[0] = left;
         g_bench_target[1] = right;
+        g_status.motor_stop_reason = 0U;
         g_status.flags |= BR_ACTIVE;
         br_encoder_fault_clear(&g_encoder_fault_snapshot);
     }

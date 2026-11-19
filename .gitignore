@@ -65,3 +65,4 @@ dashboard_session/
 !/firmware/integration/buddy1_4/artifacts/v0_2_9_calibration_reporting/robopico_buddy1_4_rtos_v0_2_9_calibration_reporting.uf2
 !/firmware/integration/buddy1_4/artifacts/v0_2_10_network_stop/robopico_buddy1_4_rtos_v0_2_10_network_stop.uf2
 !/firmware/integration/buddy1_4/artifacts/v0_2_11_caster_assist/robopico_buddy1_4_rtos_v0_2_11_caster_assist.uf2
+!/firmware/integration/buddy1_4/artifacts/v0_2_12_caster_assist/robopico_buddy1_4_rtos_v0_2_12_caster_assist.uf2

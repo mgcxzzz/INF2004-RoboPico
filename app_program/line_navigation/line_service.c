@@ -865,7 +865,10 @@ void rtos_line_record (const bringup_status_t * p_state_value,
         (rl_route_bits(planner.nav.pending) << 16) |
         (rl_route_bits(planner.nav.action) << 18) |
 #endif
-        ((p_state_value->reason & 15U) << 20) |
+        (((p_state_value->motor_stop_reason ? p_state_value->motor_stop_reason
+                                            : p_state_value->reason) &
+          15U)
+         << 20) |
         ((p_state_value->flags & 127U) << 24);
 #ifdef APP_RTOS_RELEASE
     const continuous_steering_t * p_steering = &g_planner.steering;

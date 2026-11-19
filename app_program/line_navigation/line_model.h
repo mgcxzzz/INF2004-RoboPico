@@ -251,9 +251,13 @@ typedef struct
 {
     float anchor_mm[2];
     uint32_t progress_us;
+    uint32_t boost_start_us;
+    unsigned slow_samples : 2;
+    unsigned rolling_wheel : 2;
     bool monitoring;
     bool moved;
     bool boosting;
+    bool early_pulse;
 } line_caster_t;
 
 typedef struct
@@ -289,6 +293,7 @@ typedef struct
 static inline void rl_caster_step (line_caster_t * p_state,
                                    const circuit_input_t * p_input,
                                    bool eligible, unsigned wheels,
+                                   const analog_demand_t * p_demand,
                                    line_envelope_t * p_event)
 {
     if ((!eligible) || (0U == wheels))
@@ -302,27 +307,79 @@ static inline void rl_caster_step (line_caster_t * p_state,
     const float right_mm = (float)p_input->wheel[1];
     const bool progress = fabsf(left_mm - p_state->anchor_mm[0]) >= 2.0f ||
                           fabsf(right_mm - p_state->anchor_mm[1]) >= 2.0f;
-    if ((!p_state->monitoring) || progress)
+    if (!p_state->monitoring || progress)
     {
-        const bool moved = p_state->monitoring && (!p_state->boosting);
-        *p_state = (line_caster_t){.anchor_mm = {left_mm, right_mm},
-                                   .progress_us = now,
-                                   .monitoring = true,
-                                   .moved = moved};
+        p_state->anchor_mm[0] = left_mm;
+        p_state->anchor_mm[1] = right_mm;
+        p_state->progress_us = now;
+        p_state->moved = p_state->monitoring &&
+                         ((!p_state->boosting) || p_state->early_pulse);
+        if (p_state->boosting)
+        {
+            p_state->rolling_wheel = 0U;
+            p_state->slow_samples = 0U;
+        }
+        p_state->boosting = false;
+        p_state->early_pulse = false;
+        p_state->monitoring = true;
+    }
+
+    /* Arm the early pulse only after the outside wheel was rolling in this
+     * correction. Three consecutive slow samples reject isolated jitter. */
+    const unsigned side = (2U == wheels) ? 1U : 0U;
+    const bool correction = ((1U == wheels) || (2U == wheels)) &&
+                            (p_demand->target[1U - side] <= 10);
+    if (p_state->early_pulse &&
+        ((!correction) || (p_state->rolling_wheel != wheels)))
+    {
+        /* A change of steering direction ends the early pulse. */
+        *p_state = (line_caster_t){0};
+        return;
+    }
+    if (!correction || (p_state->rolling_wheel != wheels))
+    {
+        p_state->slow_samples = 0U;
+        p_state->rolling_wheel = 0U;
+    }
+    if (correction && (p_input->speed[side] >= 0.75f * p_demand->target[side]))
+    {
+        p_state->rolling_wheel = wheels;
+    }
+    if (p_state->moved && (wheels == p_state->rolling_wheel) &&
+        (p_input->speed[side] <= 0.5f * p_demand->target[side]))
+    {
+        if (p_state->slow_samples < 3U)
+        {
+            ++p_state->slow_samples;
+        }
+    }
+    else
+    {
+        p_state->slow_samples = 0U;
     }
 
     const uint32_t age = now - p_state->progress_us;
-    if ((!p_state->moved) || (age < RL_CASTER_WAIT_US))
+    if ((!p_state->boosting) && p_state->moved &&
+        ((age >= RL_CASTER_WAIT_US) || (3U == p_state->slow_samples)))
+    {
+        p_state->boosting = true;
+        p_state->early_pulse = age < RL_CASTER_WAIT_US;
+        p_state->boost_start_us = (age >= RL_CASTER_WAIT_US)
+                                      ? p_state->progress_us + RL_CASTER_WAIT_US
+                                      : now;
+        p_state->anchor_mm[0] = left_mm;
+        p_state->anchor_mm[1] = right_mm;
+    }
+    if (!p_state->boosting)
     {
         return;
     }
-    const uint32_t boost_age = age - RL_CASTER_WAIT_US;
+    const uint32_t boost_age = now - p_state->boost_start_us;
     if (boost_age >= RL_CASTER_BOOST_US)
     {
         p_event->no_progress = true;
         return;
     }
-    p_state->boosting = true;
     p_event->caster_wheels = wheels;
     p_event->until[0] = p_input->now + (RL_CASTER_BOOST_US - boost_age);
 }
@@ -483,7 +540,7 @@ static inline line_envelope_t rl_power (line_power_t * p_state,
         ((p_demand->target[0] >= RL_CASTER_TARGET_MIN) ? 1U : 0U) |
         ((p_demand->target[1] >= RL_CASTER_TARGET_MIN) ? 2U : 0U);
     rl_caster_step(&p_state->caster, p_index, caster_eligible, caster_wheels,
-                   &event);
+                   p_demand, &event);
     return event;
 }
 

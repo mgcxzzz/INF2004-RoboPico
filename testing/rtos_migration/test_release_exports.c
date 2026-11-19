@@ -63,8 +63,10 @@ int main(void) {
         .aux={111U|(222U<<12)|(188U<<24),2U|(500U<<2)|(1U<<14)|(1U<<17)|(8190U<<18)},
         .optical_target={43,44}};
     g_rows[1]=g_rows[0];g_rows[1].ms=133;g_rows[1].sequence=43;
-    uint8_t info[15],line[56];rtos_line_release_info(9,info);save("release_metadata.bin",info,15);
-    assert(info[0]==0xf2 && info[1]==12 && info[3]==0xc2 && info[5]==0x7b);
+    uint8_t info[16],line[56];rtos_line_release_info(9,info);save("release_metadata.bin",info,16);
+    assert(info[0]==0xf2 && info[1]==13 && info[3]==0xc2 && info[5]==0x7c && !info[15]);
+    g_rows[1].meta=BR_REASON_STALL<<20;
+    rtos_line_release_info(10,info);assert(info[15]==BR_REASON_STALL);
     assert(reply(1,0)==WP_ACK_ACCEPTED && pushes==2 && rl_export_busy(&g_wireless_export,now_us));
     assert(lengths[0]==64 && lengths[1]==22 && packets[0][10]==2);
     memcpy(line,packets[0]+15,49);memcpy(line+49,packets[1]+15,7);

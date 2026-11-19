@@ -255,6 +255,33 @@ static void test_caster_assist(void) {
     assert(!out.caster_wheels && !out.no_progress && !power.caster.monitoring);
 }
 
+static void test_caster_slowdown(void) {
+    for (unsigned side=0; side<2; ++side) {
+        line_caster_t state={0};
+        circuit_input_t in={.now=UINT32_MAX-25000U};
+        analog_demand_t demand={0};
+        demand.target[side]=40;
+        line_envelope_t event={0};
+        in.speed[side]=38;
+        rl_caster_step(&state,&in,true,1U<<side,&demand,&event);
+        in.now+=50000; in.wheel[side]=3;
+        rl_caster_step(&state,&in,true,1U<<side,&demand,&event);
+        for (unsigned tick=1;tick<=3;tick++) {
+            in.now+=10000; in.speed[side]=15;
+            rl_caster_step(&state,&in,true,1U<<side,&demand,&event);
+            assert(event.caster_wheels==(tick==3 ? 1U<<side : 0U));
+        }
+        line_caster_t switched=state;
+        analog_demand_t straight={.target={45,45}};
+        line_envelope_t canceled={0};
+        rl_caster_step(&switched,&in,true,3U,&straight,&canceled);
+        assert(!canceled.caster_wheels && !canceled.no_progress);
+        in.now+=RL_CASTER_BOOST_US; event=(line_envelope_t){0};
+        rl_caster_step(&state,&in,true,1U<<side,&demand,&event);
+        assert(event.no_progress && !event.caster_wheels);
+    }
+}
+
 static void test_log_pack(void) {
     const char routes[] = {0, 'A', 'F', 'Z'};
     for (unsigned n = 0; n < 4; ++n)
@@ -283,6 +310,7 @@ int main(void) {
     test_calibration();
     test_envelopes();
     test_caster_assist();
+    test_caster_slowdown();
     test_log_pack();
     puts(
         "PASS Step2: planner parity, cross qualification, calibration CRC/import, power envelopes, log packing.");

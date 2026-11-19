@@ -536,8 +536,8 @@
       windowStartMs, eventCount };
   }
   function decodeSource15(p) {
-    if (p.length === 12 && p[0] === 0xC2) {
-      if ((p[2] & 0x80) || (p[3] & 0xe0) || !(p[3] & 3)) return {error:'invalid release metadata'};
+    if ((p.length === 12 || p.length === 13) && p[0] === 0xC2) {
+      if ((p.length === 13 && p[12] > 15) || (p[2] & 0x80) || (p[3] & 0xe0) || !(p[3] & 3)) return {error:'invalid release metadata'};
       const levels = [];
       for (let k=0;k<4;k++) {
         let n=0; for(let b=0;b<12;b++) n |= ((p[4+Math.floor((12*k+b)/8)] >>> ((12*k+b)%8))&1)<<b;
@@ -545,7 +545,7 @@
       }
       return {kind:'release',version:`${p[1]&15}.${p[1]>>>4}.${p[2]&15}`,
         wireless:!!(p[2]&16),storedLogs:!!(p[2]&32),calibrationValid:!!(p[2]&64),
-        profile:p[3]&3,calibrationOrigin:(p[3]>>>2)&3,recordedCalibration:!!(p[3]&16),
+        profile:p[3]&3,calibrationOrigin:(p[3]>>>2)&3,recordedCalibration:!!(p[3]&16), motorStopReason:p.length === 13 ? p[12] : null,
         white:levels.slice(0,2),black:levels.slice(2),runId:u16(p,10)};
     }
     if (p.length === 60 && p[0] === 0xC3) {

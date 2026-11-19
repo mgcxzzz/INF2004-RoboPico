@@ -37,21 +37,28 @@ static void release_line_bytes (const line_log_row_t * p_result,
     rl_put32(out + 36, p_result->meta);
     rl_put32(out + 40, p_result->sequence);
 }
-void rtos_line_release_info (uint8_t seq, uint8_t out[15])
+void rtos_line_release_info (uint8_t seq, uint8_t out[16])
 {
     UINT key = enter();
     line_calibration_t character = g_row_count ? g_run_calibration : g_view.cal;
     unsigned origin = g_row_count ? g_run_cal_origin : g_view.cal_origin;
     uint16_t run = g_telemetry.run_id;
     bool recorded = g_row_count != 0;
+    uint32_t last_meta =
+        recorded ? g_rows[(g_row_head + RL_LOG_ROWS - 1U) % RL_LOG_ROWS].meta
+                 : 0U;
+    uint8_t motor_stop =
+        (recorded && !(last_meta & ((uint32_t)BR_ACTIVE << 24U)))
+            ? (uint8_t)((last_meta >> 20U) & 15U)
+            : 0U;
     leave(key);
-    memset(out, 0, 15);
+    memset(out, 0, 16);
     out[0] = 0xf2;
-    out[1] = 12;
+    out[1] = 13;
     out[2] = seq;
     out[3] = 0xc2;
-    out[4] = 0x20; /* v0.2.11; major low/minor high nibble */
-    out[5] = 0x3b | (calibration_valid(&character) ? 0x40 : 0);
+    out[4] = 0x20; /* v0.2.12; major low/minor high nibble */
+    out[5] = 0x3c | (calibration_valid(&character) ? 0x40 : 0);
     out[6] = RL_PROFILE | ((origin & 3U) << 2) | (recorded ? 0x10 : 0);
     uint16_t levels[4] = {character.white[0], character.white[1],
                           character.black[0], character.black[1]};
@@ -65,6 +72,7 @@ void rtos_line_release_info (uint8_t seq, uint8_t out[15])
         }
     }
     rl_put16(out + 13, run);
+    out[15] = motor_stop;
 }
 uint8_t rtos_line_log_reply (const wifi_command_t * p_cmd)
 {

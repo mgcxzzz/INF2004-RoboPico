@@ -1,6 +1,6 @@
 <!doctype html>
 <!--
-  IS28 merged dashboard v0.2.11 (v0.1 simplified: Recording and the Firmware profile card removed).
+  IS28 merged dashboard v0.2.12 (v0.1 simplified: Recording and the Firmware profile card removed).
   One page for both firmware families on the same broker:
     - RTOS (micro T-Kernel) Buddy1/Buddy4 build: sources 1-8 plus release snapshots (source 15).
     - SDK v2.3 Buddy2/Buddy3 build (+ optional Buddy4 add-on): sources 1, 2, 4, 8, 9-14
@@ -15,8 +15,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>RoboPico Demo Console — v0.2.11</title>
+  <title>RoboPico Demo Console — v0.2.12</title>
 <script src="vendor/mqtt.min.js"></script>
+<script src="vendor/jszip.min.js"></script>
 <script src="is28_schema.js"></script>
 <script src="calibration_ui.js"></script>
 <style>
@@ -118,7 +119,7 @@
 <body>
 <header>
   <div class="brandline">
-    <h1>RoboPico <span class="ver">Demo Console · v0.2.11</span></h1>
+    <h1>RoboPico <span class="ver">Demo Console · v0.2.12</span></h1>
     <span id="profilePill" class="pill muted">firmware: unknown</span>
   </div>
   <div class="connections">
@@ -151,7 +152,7 @@
           </select>
           <span id="driveModeStatus" class="muted small overview-tools-note" role="status">Waiting for a supported car readback.</span>
         </label>
-        <button id="runExport" disabled>Export run</button>
+        <button id="runExport" disabled>Download run ZIP</button> <span class="muted" id="runZipStatus" role="status"></span>
       </div>
     </div>
     <div class="overview-grid">
@@ -507,7 +508,7 @@
 
 <script>
 'use strict';
-const DASHBOARD_VERSION = 'v0.2.11';
+const DASHBOARD_VERSION = 'v0.2.12';
 const $ = (id) => document.getElementById(id);
 const hasWindow = typeof window !== 'undefined';
 const SRC = IS28.SRC;
@@ -552,6 +553,7 @@ let eventRows = [], eventDropped = 0, lastLineStatusKey = null, lastNavStatusKey
 let frames = [], framesDropped = 0, b4Rows = [], b4Dropped = 0;
 let imuChartHeight = [], imuChartPitch = [];
 let latestSdkRunId = null;
+let runArchive = null;
 const logDownload = { active:false, dataset:0, requestId:null, rowIndex:0, totalRows:null,
   parts:null, partCount:0, retries:0, timer:null, rows:[], status:'idle' };
 const test = { running: false, start: 0, end: 0, seq: new IS28.SeqTracker(), gaps: [],
@@ -603,11 +605,7 @@ function setupDashboardLayout() {
     activateDashboardTab('diagnostics');
     document.getElementById('mappingDetails').scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
-  document.getElementById('runExport').addEventListener('click', () => {
-    if (releaseInfo && releaseInfo.storedLogs) document.getElementById('logDataset').value = '1';
-    else document.getElementById('logDataset').value = '0';
-    document.getElementById('logDownload').click();
-  });
+  document.getElementById('runExport').addEventListener('click', startRunArchive);
   activateDashboardTab('telemetry');
 }
 setupDashboardLayout();
@@ -729,12 +727,12 @@ function rawCaptureNote(release, capture) {
     return 'Firmware v0.2.0 keeps only its first automatic raw barcode snapshot and sends no per-attempt metadata.';
   return 'No per-attempt metadata was received before this download; the raw rows’ attempt association is unknown.';
 }
-function startLogDownload() {
+function startLogDownload(dataset = Number($('logDataset').value)) {
   if (coordinatorMode !== 7 || coordinatorOffSince === null || now()-coordinatorOffSince<5000) { $('logDownloadStatus').textContent = 'Manual stop is required. Wait 5 s after coordinator reports Off before requesting stored logs.'; return; }
   if (!client || !client.connected) { $('logDownloadStatus').textContent = 'Connect to the broker before downloading.'; return; }
   const releaseSnapshot = releaseInfo ? JSON.parse(JSON.stringify(releaseInfo)) : null;
   const captureSnapshot = lastBarcodeCapture ? JSON.parse(JSON.stringify(lastBarcodeCapture)) : null;
-  Object.assign(logDownload, { active:true, dataset:Number($('logDataset').value), requestId:null,
+  Object.assign(logDownload, { active:true, dataset, requestId:null,
     release:releaseSnapshot, barcodeCapture:captureSnapshot,
     junctionDecision:lastJunctionDecision?JSON.parse(JSON.stringify(lastJunctionDecision)):null,
     driveState:lastDriveState?JSON.parse(JSON.stringify(lastDriveState)):null,
@@ -753,6 +751,10 @@ function requestNextLogRow() {
 }
 function publishLogRowRequest() {
   if (!logDownload.active || !client || !client.connected) { finishLogDownload(false, 'Broker disconnected before the row completed.'); return; }
+  if (runArchive) {
+    if (!sameArchiveRun()) { finishLogDownload(false, 'Run or connection changed during export'); return; }
+    $('runZipStatus').textContent = `Reading ${logDatasetInfo(logDownload.dataset).name} · dataset ${logDownload.dataset+1}/4 · row ${logDownload.rowIndex+1}${logDownload.totalRows===null?'':' / '+logDownload.totalRows}`;
+  }
   const arg = IS28.getLogArg(logDownload.dataset, logDownload.rowIndex);
   const bytes = IS28.encodeCommand(IS28.CMD.GET_LOG, logDownload.requestId, arg);
   pending[logDownload.requestId] = { time:now(), code:IS28.CMD.GET_LOG, log:true };
@@ -795,7 +797,22 @@ function onLogChunk(d) {
 }
 function finishLogDownload(ok, message) {
   clearTimeout(logDownload.timer); logDownload.active=false; logDownload.status=ok?'complete':'incomplete';
-  if (ok) exportLogDownload();
+  if (runArchive) {
+    if (ok) {
+      ok = exportLogDownload((name, data) => runArchive.zip.file('stored/' + name, data));
+      if (!ok) message = 'Invalid stored diagnostics row';
+    }
+    const completed = logDownload.dataset;
+    runArchive.datasets.push({dataset: completed, complete: ok, rowsReceived: logDownload.rows.length, message});
+    if (ok && completed < 3 && sameArchiveRun()) {
+      startLogDownload(completed + 1);
+    } else {
+      finishRunArchive(ok && completed === 3 && sameArchiveRun(), message);
+    }
+    return;
+  }
+  if (ok) ok = exportLogDownload();
+  if (!ok && !message) message = 'Invalid stored diagnostics row';
   $('logDownloadStatus').textContent = ok ? `Complete: received all ${logDownload.rows.length} ${logDatasetInfo(logDownload.dataset).name} rows; binary and CSV exports downloaded.` : message;
   addEvent(ok ? `Stored-data download complete: ${logDatasetInfo(logDownload.dataset).label}, ${logDownload.rows.length} rows` : `Stored-data download incomplete: ${message}`, null, 'download');
   updateLogDownloadControl();
@@ -811,10 +828,10 @@ function barcodeCaptureMatchesRows(capture, release, rows) {
     IS28.u32(rows[0],0) === capture.firstRawMs &&
     IS28.u32(rows[rows.length-1],0) === capture.lastRawMs);
 }
-function exportLogDownload() {
+function exportLogDownload(save = download) {
   const ds=logDatasetInfo(logDownload.dataset), filename=`is28_${ds.name}_${stamp()}`;
   const raw=joinRows(logDownload.rows);
-  download(`${filename}.bin`,raw,'application/octet-stream');
+  save(`${filename}.bin`,raw,'application/octet-stream');
   let header=['row_index','byte_length','bytes_hex'], rows=logDownload.rows.map((r,i)=>[i,r.length,hexRow(r)]), format='raw-row-hex';
   if (logDownload.dataset===0) {
     header=['row_index','uptime_basis','uptime_ms','run_id','elapsed_ms','phase','profile','recovery_state','motion_active','calibration_valid','automatic','emergency_stop','speed_left_mm_s','speed_right_mm_s','target_left_mm_s','target_right_mm_s','pwm_left','pwm_right','adc_left','adc_right','adc_barcode','level_left','level_right','barcode_level','line_mask','distance_mm','heading_cdeg'];
@@ -823,7 +840,7 @@ function exportLogDownload() {
   }
   if(logDownload.release && logDownload.dataset===1 && logDownload.rows.length) {
     const decoded=logDownload.rows.map(r=>IS28.decodeStoredLine(r));
-    if(decoded.some(r=>r.error)) { $('logDownloadStatus').textContent='Invalid controller row; inspect binary export.'; return; }
+    if(decoded.some(r=>r.error)) { $('logDownloadStatus').textContent='Invalid controller row; inspect binary export.'; return false; }
     header=['row_index',...Object.keys(decoded[0])];
     rows=decoded.map((r,i)=>[i,...Object.values(r)]); format='rtos-controller-v1';
   } else if(logDownload.release && logDownload.dataset===2) {
@@ -832,7 +849,7 @@ function exportLogDownload() {
     format='rtos-barcode-raw-v1';
   }
   const csv=[header,...rows].map((r)=>r.map(csvCell).join(',')).join('\r\n')+'\r\n';
-  download(`${filename}.csv`,csv,'text/csv');
+  save(`${filename}.csv`,csv,'text/csv');
   const metadata={dataset:logDownload.dataset,name:ds.name,rowCount:logDownload.rows.length,rowBytes:ds.rowBytes,format,release:logDownload.release,
     uptimeBasis:logDownload.dataset===0?'per-row flags bit 7 (run-relative when set)':'not interpreted',exportedAt:new Date().toISOString(),dashboard:DASHBOARD_VERSION,
     rawFile:`${filename}.bin`,csvFile:`${filename}.csv`,
@@ -845,7 +862,8 @@ function exportLogDownload() {
     if (logDownload.barcodeCapture && !metadata.barcodeCaptureMatchesRows)
       metadata.barcodeCaptureNote+=' Metadata does not match the downloaded run/count/time range; attempt association is unverified.';
   }
-  download(`${filename}.json`,JSON.stringify(metadata,null,2)+'\n','application/json');
+  save(`${filename}.json`,JSON.stringify(metadata,null,2)+'\n','application/json');
+  return true;
 }
 function handleLogAck(ack) {
   if (!logDownload.active || ack.id!==logDownload.requestId || ack.code!==IS28.CMD.GET_LOG) return;
@@ -856,7 +874,7 @@ function cancelLogDownload(reason) { if(logDownload.active) finishLogDownload(fa
 function updateLogDownloadControl() {
   const offReady = coordinatorMode === 7 && coordinatorOffSince !== null && now() - coordinatorOffSince >= 5000;
   const rtos = currentProfile() === 'rtos' && !(releaseInfo && releaseInfo.storedLogs && now()-releaseSeenAt<3500);
-  $('logDownload').disabled = rtos || !offReady || logDownload.active || !client || !client.connected;
+  $('logDownload').disabled = rtos || !offReady || !!runArchive || logDownload.active || !client || !client.connected;
   if (!logDownload.active && logDownload.status === 'idle') {
     $('logDownloadStatus').textContent = rtos ? 'This migration checkpoint needs USB for stored exports. Main RTOS releases advertise wireless download support.' :
       coordinatorMode === null && staleShown.sdkNav ? 'Coordinator status is stale (telemetry off?). Switch Telemetry on and wait for coordinator Off.' :
@@ -865,7 +883,7 @@ function updateLogDownloadControl() {
       'Stopped state confirmed for 5 s. Select a dataset to request it.';
   }
 }
-$('logDownload').onclick = startLogDownload;
+$('logDownload').onclick = () => startLogDownload();
 document.querySelectorAll('button[data-cmd]').forEach((b) => {
   b.onclick = () => send(IS28.CMD[b.dataset.cmd]);
 });
@@ -1291,6 +1309,13 @@ function refreshOpState() {
 function overviewPill(id, text, kind) {
   const element = $(id); element.textContent = text; element.className = `pill ${kind || 'neutral'}`;
 }
+const motorStopNames = ['', 'Motion completed', 'Stop command', 'GP20 E-stop', 'GP21 Stop', 'USB supervision',
+  'Clock fault', 'Late control cycle', 'No progress', 'Encoder fault', 'Motor API fault', 'ADC fault',
+  'Network supervision', 'IMU lift', 'IMU overturn', 'IMU unavailable'];
+function separateImuEvent(d) {
+  return releaseInfo && now()-releaseSeenAt < 3500 && releaseInfo.runId === d.runId &&
+    releaseInfo.motorStopReason > 0 && releaseInfo.motorStopReason < 13;
+}
 function refreshDashboardOverview() {
   const t = now(), state = $('opstate').textContent || 'unknown';
   $('overviewRunState').textContent = state;
@@ -1298,7 +1323,7 @@ function refreshDashboardOverview() {
   const owner = $('owner').textContent;
   const stalled = releaseRuntime && t - releaseRuntimeSeenAt < 3500 &&
     (releaseRuntime.controlFlags & RTOS_STALL_FLAG);
-  $('overviewRunDetail').textContent = `${stalled ? 'No progress · ' : ''}${$('opstateSource').textContent}${owner && owner !== '–' ? ` · owner ${owner}` : ''}`;
+  $('overviewRunDetail').textContent = `${releaseInfo?.motorStopReason && t-releaseSeenAt<3500 ? 'Run '+releaseInfo.runId+' ended · '+motorStopNames[releaseInfo.motorStopReason]+' · ' : stalled ? 'No progress · ' : ''}${$('opstateSource').textContent}${owner && owner !== '–' ? ` · owner ${owner}` : ''}`;
 
   const motionAge = overviewMotion ? t - overviewMotion.at : Infinity;
   const motionFresh = motionAge <= 2000 && !motionAwaitingFresh;
@@ -1416,7 +1441,7 @@ function refreshDashboardOverview() {
   const c9Fresh = !!(lastImuStop && c9Age <= 2500);
   if (c9Fresh) {
     $('overviewImuArmed').textContent = lastImuStop.armed ? 'Armed · fresh C9' : 'Not armed · fresh C9';
-    $('overviewImuTrip').textContent = lastImuStop.latched ? lastImuStop.reason > 0 ? `${lastImuStop.reasonName} trip latched${lastImuStop.fresh ? '' : ' · sample freshness unconfirmed'}` : 'Stop latched · reason unavailable' : 'No actual trip latched';
+    $('overviewImuTrip').textContent = lastImuStop.latched ? lastImuStop.reason > 0 ? `${lastImuStop.reasonName} trip latched${separateImuEvent(lastImuStop) ? " · motors already stopped" : ""}${lastImuStop.fresh ? '' : ' · sample freshness unconfirmed'}` : 'Stop latched · reason unavailable' : 'No actual trip latched';
     overviewPill('overviewImuTag', lastImuStop.latched ? 'Trip latched' : lastImuStop.armed ? 'Armed · no trip' : 'Not ready', lastImuStop.latched ? 'bad' : lastImuStop.armed ? 'ok' : 'warn');
     if (!lastImuStop.latched) $('overviewMotorOutput').textContent = 'No trip · zero-output confirmation not applicable';
     else if (lastImuStop.fresh && imuTripEvidence && latestSdkMotion && t - latestSdkMotion.receivedAt <= 2000 && latestSdkMotion.runId === lastImuStop.runId && latestSdkMotion.receivedAt > imuTripReceivedAt) {
@@ -1445,7 +1470,7 @@ function refreshDashboardOverview() {
     `Forward ${activeMapping.letters[0]} · U-turn ${activeMapping.letters[1]} · Left ${activeMapping.letters[2]} · Right ${activeMapping.letters[3]}` :
     activeMapping && !activeMapping.configured ? 'Car reports no mapping' : 'No confirmed mapping';
   refreshDriveModeControl();
-  $('runExport').disabled = $('logDownload').disabled;
+  $('runExport').disabled = $('logDownload').disabled || !releaseInfo?.storedLogs;
 }
 function refreshSafety() {
   if(releaseInfo) {
@@ -1515,6 +1540,8 @@ function refreshImuStop() {
     status.textContent = 'No IMU safety stop latched'; status.className = 'ok';
   } else if (!d.fresh) {
     status.textContent = 'IMU stop latched — sample freshness not confirmed'; status.className = 'bad';
+  } else if (separateImuEvent(d)) {
+    status.textContent = `IMU ${d.reasonName} latched · motors already stopped`; status.className = 'bad';
   } else if (d.reason === 1) {
     status.textContent = 'Run ended — lifted'; status.className = 'bad';
   } else if (d.reason === 2) {
@@ -1825,7 +1852,7 @@ function showSource15(d, f) {
     const signature=`${d.runId}:${d.eventCount}:${d.reason}:${d.tripMs}`;
     if(d.latched&&d.reason!==0&&signature!==imuStopSignature) {
       imuStopSignature=signature;
-      const label=d.reason===1?'Run ended — lifted':d.reason===2?'Overturn stop':'IMU safety stop — reason unavailable';
+      const label=separateImuEvent(d) ? `IMU ${d.reasonName} latched after motor stop` : `IMU ${d.reasonName} latched`;
       addEvent(`${label} · run ${d.runId} · trigger ${d.eventCount} · trip uptime ${d.tripMs} ms · ${d.fresh?'IMU sample fresh':'IMU sample freshness not confirmed'}`,
         lastImuStop,'imu-lift-safety',f);
     }
@@ -1856,7 +1883,10 @@ function showSource15(d, f) {
   }
   if(d.kind==='front-calibration') { calibrationUI.update(d); return; }
   if(d.kind==='release') {
-    releaseInfo=d; releaseSeenAt=now(); connectedDriveSeen=true; updateProfile(); updateLogDownloadControl();
+    if (runArchive && logDownload.active &&
+        (d.runId !== runArchive.runId || d.version !== runArchive.release.version))
+      cancelLogDownload('Run or firmware changed during export');
+    releaseInfo=d; releaseSeenAt=now(); refreshImuStop(); connectedDriveSeen=true; updateProfile(); updateLogDownloadControl();
     $('buildId').textContent=`Buddy 1–4 RTOS v${d.version} · ${d.wireless?'network supervised':'USB supervised'}`;
     $('releaseCal').textContent=`${d.recordedCalibration?'Run':'Current'} calibration: white ${d.white.join('/')} - black ${d.black.join('/')} - Profile ${d.profile}`;
     renderBarcodeCapture();
@@ -2228,6 +2258,58 @@ function download(name, content, mime = 'text/plain') {
 const stamp = () => new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
 $('logSave').onclick = () => download(`is28_messages_${stamp()}.txt`, messagesText());
 
+function sameArchiveRun() {
+  return client?.connected && coordinatorMode === 7 && releaseInfo?.runId === runArchive.runId &&
+    releaseInfo.version === runArchive.release.version;
+}
+function startRunArchive() {
+  if (runArchive || logDownload.active || $('logDownload').disabled || !releaseInfo?.storedLogs) return;
+  const zip = new JSZip();
+  const archive = {zip, stamp:stamp(), runId:releaseInfo.runId, release:{...releaseInfo}, datasets:[], capture:captureInfo()};
+  runArchive = archive;
+  updateLogDownloadControl();
+  $('runExport').disabled = true;
+  try {
+    // Freeze laptop history before GET_LOG traffic can evict frames from it.
+    const page = zip.folder('dashboard');
+    page.file('motion.csv', motionCsv(motionHistory));
+    page.file('buddy4.csv', b4Csv(b4Rows));
+    page.file('events.csv', eventsCsv(eventRows));
+    page.file('telemetry.json', telemetryJson());
+    page.file('events.json', eventsJson());
+    page.file('frames.csv', framesCsv(frames));
+    page.file('frames.json', framesJson());
+    page.file('messages.txt', messagesText());
+    if (test.start) page.file('connectivity.txt', connectivityReport());
+    startLogDownload(0);
+  } catch (error) {
+    finishRunArchive(false, String(error));
+  }
+}
+async function finishRunArchive(complete, message) {
+  const archive = runArchive;
+  const status = $('runZipStatus');
+  status.textContent = 'Compressing run ZIP…';
+  try {
+    const manifest = {complete, dashboard:DASHBOARD_VERSION, release:archive.release, runId:archive.runId,
+      snapshotUtc:archive.stamp, pageCapture:archive.capture, stored:archive.datasets,
+      note:complete ? 'Four stored datasets received. Dashboard history spans this page session.' :
+        (message || 'Collection interrupted before all four datasets completed')};
+    archive.zip.file('manifest.json', JSON.stringify(manifest,null,2));
+    const blob = await archive.zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:1}});
+    const name = `robopico_run_${archive.runId}_${archive.stamp}${complete?'':'_PARTIAL'}.zip`;
+    download(name, blob, 'application/zip');
+    status.textContent = complete ? 'Run ZIP downloaded.' : 'Partial ZIP downloaded · ' + manifest.note;
+  } catch (error) {
+    status.textContent = 'ZIP export failed · ' + error.message;
+  } finally {
+    runArchive = null;
+    $('logDownloadStatus').textContent = status.textContent;
+    updateLogDownloadControl();
+    refreshDashboardOverview();
+  }
+}
+
 /* ---------- 5-minute connectivity test ---------- */
 const TEST_S = 300;
 $('testStart').onclick = () => {
@@ -2274,7 +2356,7 @@ function updateTest() {
     `NFR-WIFI-01 <b class="${d ? 'ok' : 'warn'}">${label(d)}</b>, NFR-WIFI-02 <b class="${h ? 'ok' : 'warn'}">${label(h)}</b>`;
   if (test.running && left <= 0) finishTest('finished');
 }
-$('testSave').onclick = () => {
+function connectivityReport() {
   const st = testStats();
   const lines = [`IS28 connectivity test (merged dashboard ${DASHBOARD_VERSION}, profile ${currentProfile()}), ${new Date().toString()}`,
     `duration_s=${(((test.end || now()) - test.start) / 1000).toFixed(1)}`,
@@ -2287,8 +2369,9 @@ $('testSave').onclick = () => {
     const t = test.seq.per[k]; lines.push(`${srcLabel(k)},${t.received},${t.missing},${t.dup}`);
   }
   lines.push('heartbeat_gaps_s=' + test.gaps.map((x) => x.toFixed(3)).join(' '));
-  download(`is28_connectivity_${stamp()}.txt`, lines.join('\n') + '\n');
-};
+  return lines.join('\n') + '\n';
+}
+$('testSave').onclick = () => download(`is28_connectivity_${stamp()}.txt`, connectivityReport());
 updateProfile(); updateLogDownloadControl(); updateBufferStatus();
 </script>
 </body>

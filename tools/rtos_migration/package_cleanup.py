@@ -1,4 +1,4 @@
-"""Package the reviewed v0.2.11 caster-assist candidate; never access a robot."""
+"""Package the reviewed v0.2.12 caster-assist candidate; never access a robot."""
 import hashlib
 import json
 import shutil
@@ -13,8 +13,8 @@ from package_release import collect_sources
 
 ROOT = common.ROOT
 CORE = ROOT / "firmware/integration/buddy1_4"
-ART = CORE / "artifacts/v0_2_11_caster_assist"
-NAME = "robopico_buddy1_4_rtos_v0_2_11_caster_assist"
+ART = CORE / "artifacts/v0_2_12_caster_assist"
+NAME = "robopico_buddy1_4_rtos_v0_2_12_caster_assist"
 BASELINE = "7b18596675e6198837851305500f6541b81774b6"
 common.ART = ART
 
@@ -47,7 +47,7 @@ def main():
     shutil.copyfile(built, firmware)
     baseline = json.loads((CORE / "artifacts/v0_2_6_rtos/BUILD_MANIFEST.json").read_text())
     manifest = {
-        "name": NAME, "version": "0.2.11", "branch": common.command("git", "branch", "--show-current"),
+        "name": NAME, "version": "0.2.12", "branch": common.command("git", "branch", "--show-current"),
         "status": "CASTER ASSIST CANDIDATE; hardware smoke test pending; Buddy5 NOT integrated",
         "source_commit": common.command("git", "rev-parse", "HEAD"),
         "tested_main_baseline": BASELINE, "build_profile": baseline["build_profile"],
@@ -62,19 +62,20 @@ def main():
                             "Encode calibration status when sent using a protected snapshot",
                             "Dispatch dashboard calibration packets by length and subtype",
                             "Sample the guard clock after cross-core timestamps and preserve C6 from both supervision paths",
-                            "Baseline 45 caster assist with bounded PWM and existing no-progress latch"],
+                            "Baseline 45 early slowdown assist with bounded PWM and existing no-progress latch",
+                            "C2 terminal motor-stop reason and stopped wireless run ZIP"],
         "preserved": ["micro T-Kernel SMP topology/priorities, deadlines, locks and copied communication",
                       "45 default, stopped-only 60/75 modes, both barcode decoders, 7mm junction gate",
                       "Bend/recovery, ramp assistance/acceptance, pickup latch and explicit eligible Reset",
                       "Powerbank operation, network supervision, optional captures and stopped wireless exports",
-                      "Existing wire schemas preserved; new CC/28 status and CONFIG key3; saved formats unchanged"],
+                      "C2 adds a terminal stop byte; dashboard also reads legacy C2. Calibration storage unchanged"],
         "calibration_priority": baseline["calibration_priority"],
         "expected_tested_car_calibration": baseline["expected_tested_car_calibration"],
         "native_layouts": "Seven baseline size/alignment assertions compiled on host and Arm; no width expansion",
         "static_ram_delta_vs_v026": int(linked["static_ram_end"], 16) - 0x2002fe48,
         "linked_checks": linked,
-        "software_validation": "docs/caster_assist_v0_2_11.md records targeted checks and limitations",
-        "hardware_validation": "Pending docs/caster_assist_v0_2_11.md smoke test; main not promoted",
+        "software_validation": "docs/caster_assist_v0_2_12.md records targeted checks and limitations",
+        "hardware_validation": "Pending docs/caster_assist_v0_2_12.md smoke test; main not promoted",
         "standard": "RoboPico C Standard 1.0, based on Barr-C:2018 with documented exceptions",
         "compliance_scope": "Mechanical gates and targeted semantic review; not exhaustive Barr/MISRA certification"}
     for name, value in (("BUILD_MANIFEST.json", manifest), ("SOURCE_SHA256.json", hashes)):
@@ -86,7 +87,7 @@ def main():
         for path in (firmware, ART / "BUILD_MANIFEST.json", ART / "SOURCE_SHA256.json"):
             archive.write(path, path.relative_to(ROOT).as_posix())
         archive.write(firmware, "firmware/" + firmware.name)
-        guide = (ROOT / "docs/caster_assist_v0_2_11.md").read_text(encoding="utf-8")
+        guide = (ROOT / "docs/caster_assist_v0_2_12.md").read_text(encoding="utf-8")
         archive.writestr("START_HERE.md", guide)
         archive.writestr("TEST_CHANGES.md", guide)
         for title, script, arguments in (

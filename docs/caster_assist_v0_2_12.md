@@ -1,0 +1,15 @@
+# Test v0.2.12 on the mat
+
+1. Extract the complete bundle into a new folder. Close the older dashboard server. Hold BOOTSEL while connecting the Pico W by USB and copy the UF2 from the firmware folder to RPI-RP2. Once it reboots, power the car as usual.
+2. Launch **Start dashboard.cmd** from this bundle. On macOS, run `python3 tools/dashboard/run_dashboard.py` from the extracted folder. Confirm both the dashboard and the car report v0.2.12. Keep the robot flat through IMU calibration. Confirm **Baseline 45 mm/s**, telemetry on, and your barcode mapping. Use the existing Wi-Fi settings if the car is online.
+3. Start one run through an ordinary bend and the troublesome mat seam. Watch whether it tracks the bend, slows, gets over the seam unaided, or stops. If it crosses, press Stop on clear mat. If it stops itself on flat ground, leave it powered, flat and untouched for another 20 seconds. Note the run time when it stopped and any later IMU indication.
+4. Keep the dashboard tab open. Before Reset, reboot or a new Start, wait for coordinator Off for five seconds. Press **Download run ZIP** beside the drive mode. Keep the car powered and connected through all four transfers. The dashboard displays the current dataset and row, then downloads a single file. The ZIP contains the previously captured page history and the stopped car's motion, diagnostics, raw barcode and navigation rows. A connectivity report is included if a connectivity test ran. The manifest records received row counts. A filename ending in **_PARTIAL.zip** indicates interrupted collection. Keep that file and retry with the same stopped car once the connection is stable.
+5. Send the ZIP and one sentence giving the location, whether it crossed unaided, and whether anyone touched or tilted it. A second export is only needed if a separate run shows a different failure. USB capture and video are optional.
+
+## Firmware behavior
+
+During Baseline tracking, the driven wheel must first show travel and reach 75% of its commanded speed in a sharp correction. Three consecutive slow readings at or below half target then qualify an early assist. The other wheel must have a target of 10 mm/s or less. The assist adds up to 55 PWM counts to the driven wheel, with the existing 420 total cap and 250 ms limit. Renewed encoder travel or leaving that correction ends the early pulse. A persistent jam still triggers the no-progress stop. The normal 300 ms fallback remains available.
+
+The runtime records the first motor-stop reason on the active-to-stopped transition. The periodic C2 release frame carries that terminal reason for the recorded run. The matched dashboard can show a later IMU latch alongside the original stop. IMU classification thresholds and the reset procedure are unchanged. The wireless capture helper and the dashboard accept the previous 12-byte C2 payload as well as the new 13-byte payload.
+
+Host checks cover the bounded pulse on both wheels, changes of steering direction, the stored row and wire format, and simulated browser downloads of complete and interrupted ZIPs. Physical seam crossing and pickup behavior require the car.

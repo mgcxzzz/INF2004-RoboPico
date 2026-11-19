@@ -172,7 +172,7 @@ static void rtos_line_cal_info(uint8_t seq, uint8_t out[RL_CAL_FRAME_BYTES]) {
     memset(out,0,RL_CAL_FRAME_BYTES);out[2]=seq;
 }
 
-static void rtos_line_release_info(uint8_t seq, uint8_t out[15]) { (void)seq;memset(out,0,15); }
+static void rtos_line_release_info(uint8_t seq, uint8_t out[16]) { (void)seq;memset(out,0,16); }
 #include "app_program/rtos_bringup/encoder_fault.h"
 static void bringup_encoder_fault_packet(uint8_t seq, uint8_t out[BR_ENCODER_FAULT_PACKET_BYTES]) { (void)seq;memset(out,0,BR_ENCODER_FAULT_PACKET_BYTES); }
 static void rtos_line_barcode_attempt_info(uint8_t seq, uint32_t now_ms, uint8_t out[30]) { (void)seq;(void)now_ms;memset(out,0,30); }

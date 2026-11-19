@@ -38,7 +38,9 @@ class WirelessTests(unittest.TestCase):
     def test_actual_c_metadata_when_available(self):
         p=Path(__file__).parent/'build-host/release_metadata.bin'
         if not p.exists():self.skipTest('Run test_release_exports first for C fixture')
-        d=decode_release(p.read_bytes());self.assertEqual(d['version'],'0.2.2')
+        d=decode_release(p.read_bytes());self.assertEqual(d['version'],'0.2.12')
+        self.assertEqual(d['motor_stop_reason'],0)
+        self.assertEqual(decode_release(p.read_bytes()[:-1]+bytes([8]))['motor_stop_reason'],8)
         self.assertEqual(d['white'],[122,138]);self.assertEqual(d['black'],[246,267])
         self.assertTrue(d['network_supervised'] and d['stored_logs'])
     def test_drive_and_junction_c_fixtures(self):

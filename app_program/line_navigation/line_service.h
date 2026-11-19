@@ -21,7 +21,7 @@ void rtos_line_resume (void);
 #include "wireless_calibration.h"
 uint8_t rtos_line_cal_command (unsigned operation, uint8_t request_id);
 void rtos_line_cal_info (uint8_t sequence, uint8_t out[RL_CAL_FRAME_BYTES]);
-void rtos_line_release_info (uint8_t seq, uint8_t out[15]);
+void rtos_line_release_info (uint8_t seq, uint8_t out[16]);
 void rtos_line_barcode_attempt_info (uint8_t seq, uint32_t now_ms,
                                      uint8_t out[30]);
 void rtos_line_junction_info (uint8_t seq, uint32_t now_ms, uint8_t out[20]);

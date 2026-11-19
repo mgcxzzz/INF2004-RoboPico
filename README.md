@@ -1,8 +1,8 @@
 # RoboPico — provisional Buddy 1–4 RTOS integration
 
-**This branch is `barr-c-cleanup`: v0.2.11 caster-assist diagnostic candidate; hardware
-acceptance pending.** [New firmware and complete bundle](firmware/integration/buddy1_4/artifacts/v0_2_11_caster_assist/)
- · [Setup and test instructions](docs/caster_assist_v0_2_11.md)
+**This branch is `barr-c-cleanup`: v0.2.12 caster-assist diagnostic candidate; hardware
+acceptance pending.** [New firmware and complete bundle](firmware/integration/buddy1_4/artifacts/v0_2_12_caster_assist/)
+ · [Setup and test instructions](docs/caster_assist_v0_2_12.md)
  · [Application coding standard](CODING_STANDARD.md).
 The earlier [v0.2.7 cleanup candidate](docs/coding_cleanup_v0_2_7.md) remains archived.
 The tested main baseline described below remains available for rollback.
