@@ -57,7 +57,7 @@ def linked_checks(elf: Path, network: bool = False, barcode: bool = False, imu: 
             assert name in symbols, 'Release feature missing from image: ' + name
     if buddy5:
         for name in ("rb5_task", "rb5_echo_isr", "b5_mission_tick", "b5_wp_tick",
-                     "b5_ep_tick", "b5_auto_tick", "nav_steer_drive", "nav_resume_line"):
+                     "b5_ep_tick", "b5_auto_tick", "motion_steer_drive", "motion_resume_line"):
             assert name in symbols, 'Buddy 5 feature missing from image: ' + name
     for name in ((() if network else ("cyw43_utk_task", "mqtt_client_connect")) + ("subsystem5_start", "dev_init_adc",
                  "dev_init_ser") + (() if barcode else ("barcode_analog_sample", "barcode_peak_sample"))):
