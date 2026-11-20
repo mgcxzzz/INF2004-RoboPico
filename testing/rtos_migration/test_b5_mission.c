@@ -17,6 +17,7 @@
 #include "extensions/buddy5_obstacles/edge_probe_pack.h"
 #include "extensions/buddy5_obstacles/b5_event_pack.h"
 #include "b5_mission_pack.h"
+#include "width_retry_policy.h"
 #include "src/line_following/circuit_logic.h"
 #include "src/line_following/symmetric_logic.h"
 
@@ -44,6 +45,9 @@ static unsigned g_noise_pings; /* inject: next N echoes alternate +40 mm */
 static const uint16_t *g_ref_script;
 static unsigned g_ref_count;
 static unsigned g_ref_index;
+static unsigned g_out_script_triplets;
+static unsigned g_out_script_pings;
+static double g_out_pose[2];
 static bool g_line_present = true;
 static unsigned g_contacts;
 static float g_min_clear = 1e9f;
@@ -86,6 +90,23 @@ static void check_contact(void) {
 static int (*g_ping_hook_fwd)(float path);
 static b5_ping_t measure(void) {
     b5_ping_t p = {0};
+    const B5WidthProbe *probe = &g_mission.width;
+    if (g_out_script_triplets != 0 && g_mission.stage == B5MI_WIDTH &&
+        probe->state == B5WP_OUT && probe->sample_step == 1 && probe->cur == 0) {
+        if (g_out_script_pings == 0) {
+            g_out_pose[0] = g_wheel[0];
+            g_out_pose[1] = g_wheel[1];
+        }
+        assert(g_wheel[0] == g_out_pose[0] && g_wheel[1] == g_out_pose[1]);
+        if (g_out_script_pings < 3 * g_out_script_triplets) {
+            int expected = b5_wp_expected_mm(probe->d0, (int16_t)lroundf(probe->heading_deg * 100),
+                                            (int16_t)lroundf(probe->net_y_mm * 10));
+            int range = (probe->npings == 2) ? expected - B5WP_NEAR_MM - 5 : expected;
+            ++g_out_script_pings;
+            return (b5_ping_t){.cls = B5_PING_ECHO, .range_mm = (uint32_t)range,
+                               .width_us = (uint32_t)(range * 2000 / 343)};
+        }
+    }
     if (g_ping_hook_fwd) {
         int r = g_ping_hook_fwd((float)((g_wheel[0] + g_wheel[1]) / 2));
         if (r >= 0) {
@@ -343,6 +364,7 @@ typedef struct {
     bool noise_in_width_gate; /* clean but inconsistent echoes in that range */
     const uint16_t *ref_script;
     unsigned ref_count;
+    unsigned out_script_triplets;
     float disturb_deg, disturb_mm; /* physical heading (+LEFT)/lateral (+RIGHT)
                                       error injected at the first approach leg */
     bool steering_off;     /* comparison only: mission steering disabled */
@@ -373,6 +395,7 @@ static outcome_t run(const scenario_t *sc) {
     g_x = 0; g_y = 0; g_heading = 0; g_busy = g_ready = false; g_next_ping = 0;
     g_fault_pings = 0; g_noise_pings = 0; g_line_present = true; g_b3 = (analog_tracker_t){0}; g_contacts = 0; g_min_clear = 1e9f;
     g_ref_script = sc->ref_script; g_ref_count = sc->ref_count; g_ref_index = 0;
+    g_out_script_triplets = sc->out_script_triplets; g_out_script_pings = 0;
     g_stage_mask = 0;
     g_box = (box_t){.cx = sc->cx, .face_y = sc->face_y, .width = sc->width, .depth = 150,
                     .present = sc->width > 0 && !sc->appear_when_open};
@@ -727,6 +750,35 @@ int main(int argc, char **argv) {
     o = run(&ref);
     CHECK(g_ref_index == 3 && g_mission.width.retry_count == 0);
     CHECK(o.final_stage == B5MI_HOLD && g_mission.width.end == B5WP_END_REFERENCE);
+    /* Replay both captured outward triplets against the normal acceptance
+     * rule and the new retry rule. The original triplets remain UNKNOWN. */
+    b5_ping_t run3[3] = {
+        {.cls = B5_PING_FAULT, .why = B5_PING_WHY_NO_RISE},
+        {.cls = B5_PING_ECHO, .range_mm = 239},
+        {.cls = B5_PING_ECHO, .range_mm = 279}};
+    b5_ping_t run4[3] = {
+        {.cls = B5_PING_ECHO, .range_mm = 264},
+        {.cls = B5_PING_ECHO, .range_mm = 268},
+        {.cls = B5_PING_ECHO, .range_mm = 236}};
+    CHECK(b5_wp_classify(run3, 268) == B5WP_UNKNOWN && width_out_retry_plausible(run3, 268));
+    CHECK(b5_wp_classify(run4, 266) == B5WP_UNKNOWN && width_out_retry_plausible(run4, 266));
+    run3[0].why = B5_PING_WHY_SHORT;
+    CHECK(!width_out_retry_plausible(run3, 268));
+    run4[2].range_mm = 235;
+    CHECK(!width_out_retry_plausible(run4, 266));
+
+    scenario_t outward = {.name = "OUT marginal echo, clean replacement",
+        .cx = 60, .width = 185, .face_y = 900, .out_script_triplets = 1};
+    o = run(&outward);
+    CHECK(g_out_script_pings == 3 && g_mission.width.retry_count == 1);
+    CHECK(g_mission.width.retries[0].phase == B5WP_PH_OUT);
+    CHECK(g_mission.width.end == B5WP_END_COMPLETE && o.handbacks == 1 && g_contacts == 0);
+    outward.name = "OUT repeated marginal echo holds";
+    outward.out_script_triplets = 2;
+    o = run(&outward);
+    CHECK(g_out_script_pings == 6 && g_mission.width.retry_count == 1);
+    CHECK(o.final_stage == B5MI_HOLD && g_mission.width.end == B5WP_END_SENSOR);
+    CHECK(!g_mission.direction_attempted && !g_mission.bypass.session);
     /* A deliberate clean out-of-window stop is a labelled SKIP: no probe
      * attempt, no motion for it, mission continues. Distinct from FAILED. */
     /* v0.2.12 straight gate: the gate needs 200 mm of straight travel first,

@@ -1,16 +1,17 @@
 # RoboPico Buddy 1–5 RTOS integration
 
-`halt-testing` contains the **v0.3.0 stopping-distance candidate** for Buddy 5.
-It confirms an obstacle from 330 mm on a qualified straight and requests a
-stop at 295 mm. The 300 mm close-obstacle hold still applies on bends.
-The staged stop passed host simulation. The stopped range and first angled
-width scan still need a run on the robot.
+`halt-testing` contains the **v0.3.1 obstacle-probe candidate** for Buddy 5.
+It retains the staged stop from v0.3.0 and allows one stationary retry when
+an angled outward sonar scan contains the marginal echoes seen in testing.
+The new scan must pass the original distance checks. The retry passed host
+simulation and is ready for a run on the robot.
 
-- [v0.3.0 UF2, test steps, and source pointers](firmware/integration/buddy1_4/artifacts/v0_3_0_halt_testing/)
+- [v0.3.1 UF2, test steps, and source pointers](firmware/integration/buddy1_4/artifacts/v0_3_1_halt_testing/)
+- [v0.3.0 stopping-distance candidate](firmware/integration/buddy1_4/artifacts/v0_3_0_halt_testing/)
 - [Compatible v0.2.13 dashboard bundle](firmware/integration/buddy1_4/artifacts/v0_2_13_combined/)
 - [Dashboard setup, powerbank operation and logs](docs/setup.md)
 - [Dashboard overview](dashboard/README.md)
-- [Build profile and focused checks](firmware/integration/buddy1_4/artifacts/v0_3_0_halt_testing/README.md#build-and-check)
+- [Build profile and focused checks](firmware/integration/buddy1_4/artifacts/v0_3_1_halt_testing/README.md#build-and-check)
 
 ## What the combined firmware does
 

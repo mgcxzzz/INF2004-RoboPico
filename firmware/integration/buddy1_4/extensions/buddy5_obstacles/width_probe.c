@@ -1,6 +1,6 @@
 #include "extensions/buddy5_obstacles/width_probe.h"
 #ifdef APP_RTOS_BUDDY5
-#include "app_program/obstacle_navigation/width_ref_retry.h"
+#include "app_program/obstacle_navigation/width_retry_policy.h"
 #endif
 
 #include <math.h>
@@ -748,6 +748,8 @@ static bool retry_sample(B5WidthProbe *t, uint16_t expected, uint64_t now) {
     bool reference = t->sample_phase == B5WP_PH_REF;
 #ifdef APP_RTOS_BUDDY5
     bool retry_outlier = reference && width_ref_retry_outlier(t->ping);
+    bool retry_outward = (B5WP_PH_OUT == t->sample_phase) &&
+        width_out_retry_plausible(t->ping, expected);
 #endif
     B5WPSide *sd = &t->side[t->cur];
     bool returning = t->sample_phase == B5WP_PH_RET || t->sample_phase == B5WP_PH_LAD_RET;
@@ -755,7 +757,11 @@ static bool retry_sample(B5WidthProbe *t, uint16_t expected, uint64_t now) {
         sd->ret_k == (unsigned)sd->in_stop &&
         b5_wp_classify(t->ping, expected) == B5WP_TRANSITION;
     bool short_fault = false, clean_in_window = true;
+#ifdef APP_RTOS_BUDDY5
+    if ((!boundary_transition) && (!retry_outward)) {
+#else
     if (!boundary_transition) {
+#endif
         for (unsigned i = 0; i < 3u; ++i) {
             b5_ping_t p = t->ping[i];
             if (p.cls == B5_PING_FAULT && p.why == B5_PING_WHY_SHORT) {

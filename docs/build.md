@@ -1,7 +1,7 @@
 # Build RoboPico RTOS
 
-For the v0.3.0 candidate on `halt-testing`, follow its
-[build and check instructions](../firmware/integration/buddy1_4/artifacts/v0_3_0_halt_testing/README.md#build-and-check).
+For the v0.3.1 candidate on `halt-testing`, follow its
+[build and check instructions](../firmware/integration/buddy1_4/artifacts/v0_3_1_halt_testing/README.md#build-and-check).
 
 ## Archived v0.2.13 release
 

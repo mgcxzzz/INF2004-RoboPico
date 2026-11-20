@@ -78,7 +78,7 @@ static ER start (FP p_entry, PRI priority, UW processor, const char * p_name)
 void bringup_help (void)
 {
 #if defined(APP_RTOS_BUDDY5)
-    tm_printf((UB *)"\nROBOPICO BUDDY1-5 RTOS v0.3.0 | "
+    tm_printf((UB *)"\nROBOPICO BUDDY1-5 RTOS v0.3.1 | "
                     "integration candidate | micro T-Kernel SMP\n");
     tm_printf((UB *)"Buddy5: takeover only on a straight (else a close "
                     "obstacle holds NOT_STRAIGHT at <=300mm). Straight "

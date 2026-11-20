@@ -37,7 +37,7 @@ Folder `firmware/integration/buddy1_4/extensions/buddy5_obstacles/`.
 | File(s) | Source | Change |
 |---|---|---|
 | width_estimate.c/.h, width_probe_pack.h, b5_scan_pack.h | SDK width_long_probe v0.2 (UF2 71ae5473…) | none (byte-identical) |
-| width_probe.c/.h | SDK width_long_probe v0.2 | `B5WP_RUN_ARCHIVE` guards the write-only run-log copy `arch[]`. The RTOS profile omits that copy to save 3,172 B RAM. v0.2.15 adds an `APP_RTOS_BUDDY5` hook for one stationary REF resample. The hook uses the existing retry budget and original reference acceptance rule. |
+| width_probe.c/.h | SDK width_long_probe v0.2 | `B5WP_RUN_ARCHIVE` guards the write-only run-log copy `arch[]`. The RTOS profile omits that copy to save 3,172 B RAM. RTOS hooks permit one stationary resample at eligible REF (v0.2.15) and outward scan poses (v0.3.1) through the existing retry budget and original acceptance rules. |
 | edge_probe.c/.h, edge_probe_pack.h | SDK edge_probe v0.1.1 (working direction checkpoint, UF2 2f6070fa…4a89) | near allowance 25 mm (edge_scan v0.1.1 rule), BE/BF version 3; both overridable for the v0.1.1 host checks |
 | manual_bypass.c/.h, rect_route.c/.h, stripe_detect.c/.h, b5_event_pack.h | SDK automatic v0.6.1 (identical in the width v0.2 tree) | manual_bypass.h includes b5_compat.h |
 | automatic_bypass.c/.h | SDK automatic v0.6.1 (source tarball 655b8e0d…) | guard, stationary scan, profiler side selection and geometry-only variant removed; `b5_auto_start(side, actual range, heading0, lateral0)` replaces begin/scan/plan; DONE state after hand-back; every other function verbatim |

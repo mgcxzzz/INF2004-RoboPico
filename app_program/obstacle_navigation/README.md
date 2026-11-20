@@ -31,8 +31,8 @@ Buddy 5 adapter and mission; the obstacle algorithms are ported SDK modules in
    the front must read clear (> 330 mm or no return) for 1 s before the
    guard re-arms, and the gate needs fresh
    straight evidence again.
-2. **Width policy, then width probe** (SDK width_long_probe v0.2,
-   unchanged). Once stopped, a fresh stationary triplet (three clean echoes
+2. **Width policy, then width probe** (SDK width_long_probe v0.2
+   with RTOS retry hooks). Once stopped, a fresh stationary triplet (three clean echoes
    within 15 mm, two attempts) decides the policy (E5 byte 19):
    - inside the probe's own REF window 270–330 mm → the probe is attempted.
      Its REF rule, clearance-limited diagonal per side (20 mm steps, 220 mm
@@ -41,7 +41,11 @@ Buddy 5 adapter and mission; the obstacle algorithms are ported SDK modules in
      still apply. The RTOS candidate can use the existing single stationary
      retry if two in-window reference echoes agree within 15 mm and the third
      clean echo is within 15 mm of the reference window. The replacement must
-     pass the original REF limits. A complete run with an unresolved edge shows its labelled
+     pass the original REF limits. v0.3.1 also permits one stationary resample
+     at an outward pose with a corroborating in-window echo, at most one
+     missed rise, and at most one clean echo up to 5 mm below the normal
+     near limit. The fresh triplet goes through the original classifier
+     and the first triplet is recorded in D4. A complete run with an unresolved edge shows its labelled
      fallback and the mission continues. **Any
      non-COMPLETE end holds (`WIDTH_ABORT`, module reason = end code),
      `REFERENCE` included**: END_REFERENCE alone is not evidence of a clean
