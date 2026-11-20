@@ -34,7 +34,7 @@ typedef enum
     B5MI_WIDTH,     /* width probe v0.2 running (stopped at ~300 mm)   */
     B5MI_ALIGN,     /* bounded alignment on fresh line evidence        */
     B5MI_APPROACH,  /* owned straight approach to ~200 mm              */
-    B5MI_DIRECTION, /* direction probe (edge probe) running            */
+    B5MI_DIRECTION, /* reserved for older telemetry                      */
     B5MI_BYPASS,    /* compact bypass, return and fourth-turn rejoin   */
     B5MI_HOLD,      /* stopped, lease kept; operator Stop ends it      */
     B5MI_CANCELLED, /* Stop/Pause/session end while Buddy5 was active  */
@@ -86,7 +86,7 @@ typedef enum
 {
     B5MI_DIR_NONE = 0, /* no direction result in this mission            */
     B5MI_DIR_EVIDENCE, /* probe decision LEFT/RIGHT                      */
-    B5MI_DIR_DEFAULT,  /* complete, healthy, equal sides: default side   */
+    B5MI_DIR_DEFAULT,  /* both corroborated edges indicate centred     */
     B5MI_DIR_HELD      /* incomplete/unknown/unhealthy: no movement      */
 } b5mi_direction_basis_t;
 
@@ -115,7 +115,12 @@ enum
     B5MI_STEER_MAX_DECIDEG = 80,     /* +/-8 deg setpoint (coordinator cap) */
     B5MI_ALIGN_TRIM_MAX_CDEG = 1200, /* larger width residual: hold       */
     B5MI_ALIGN_SPEED = 20,
-    B5MI_ALIGN_STEPS = 6,           /* -4,+4,-8,+8,-12,+12 deg            */
+    B5MI_ALIGN_STEPS = 4,           /* -4,+4,-6,+6 relative to entry      */
+    B5MI_ALIGN_HEADING_DEG = 6,      /* accepted heading relative to entry  */
+    B5MI_ALIGN_DRIFT_MM = 6,         /* start recentering above this drift  */
+    B5MI_ALIGN_RECENTER_MM = 30,     /* cap on the corrective drive        */
+    B5MI_DIRECTION_MARGIN_MM = 5,   /* bracket must clear this uncertainty */
+    B5MI_DIRECTION_CENTRE_MM = 15,  /* bounds for a centred default        */
     B5MI_LINE_LEVEL = 400,          /* coordinator hand-back level         */
     B5MI_EVIDENCE_US = 150000,      /* stationary line evidence            */
     B5MI_EVIDENCE_WAIT_US = 400000, /* per pose before the next search    */
@@ -145,7 +150,6 @@ typedef struct
 {
     /* Modules stepped by the mission (frozen algorithms). */
     B5WidthProbe width;
-    B5EdgeProbe edge;
     B5Automatic bypass;
     B5SensorPort sensor;
     /* Mission state. */
@@ -184,7 +188,10 @@ typedef struct
     bool evidence_timing;
     uint64_t evidence_since;
     /* Alignment and approach. */
-    float align_heading_deg; /* encoder rotation since the width end */
+    float align_heading_deg; /* pose relative to the initial width reference */
+    float route_lateral_mm;  /* +LEFT, encoder model */
+    float route_forward_mm;
+    float recenter_mm;
     unsigned align_steps;
     float approach_last_line_mm;
     unsigned approach_legs;
@@ -215,6 +222,7 @@ typedef struct
     uint8_t direction_basis;    /* b5mi_direction_basis_t                  */
     uint8_t direction_decision; /* probe decision (B5EP_DECISION_*)        */
     uint8_t direction_end;
+    uint8_t direction_states; /* E5 side-status packing */
     bool direction_attempted;
     uint16_t bypass_range_mm;
     uint16_t stale_dropped; /* unsent records of a previous run discarded */

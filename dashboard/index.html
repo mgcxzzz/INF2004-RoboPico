@@ -1948,8 +1948,11 @@ function renderB5() {
     ? `no echo (${s.pingClass}), ${s.pingAgeMs} ms old`
     : `${s.pingMm} mm ${front ? 'ahead' : `on a ${s.servoAppliedDeg}° beam`} · ${s.pingAgeMs} ms old${s.pingFresh && !stale ? '' : ' (NOT fresh)'}`;
   $('b5Servo').textContent = `${s.servoRequestedDeg}° / ${s.servoAppliedDeg}°${s.servoSettled ? ' settled' : ' moving'} (applied PWM command, not a measured horn angle)`;
-  $('b5Direction').textContent = !s.directionAttempted ? 'not probed in this mission'
-    : `${prefix}${s.basis === 1 ? `${s.sideName.toUpperCase()} from probe evidence` : s.basis === 2 ? `${s.sideName.toUpperCase()} — DEFAULT side (healthy probe, no preference)` : s.basis === 3 ? `HELD — no side (${s.directionEndName})` : 'pending'} · probe ${s.decisionName}`;
+  const directionFromWidth = s.directionAttempted && s.directionEnd === 1 &&
+    s.widthEnd === 1 && s.directionProduced === 0;
+  $('b5Direction').textContent = !s.directionAttempted
+    ? (s.basis === 3 ? 'HELD · no side available' : 'not probed in this mission')
+    : `${prefix}${s.basis === 1 ? `${s.sideName.toUpperCase()} from ${directionFromWidth ? 'width scan' : 'probe evidence'}` : s.basis === 2 ? `${s.sideName.toUpperCase()} — DEFAULT side (${directionFromWidth ? 'centred width scan' : 'healthy probe, no preference'})` : s.basis === 3 ? (directionFromWidth ? 'HELD · width scan did not establish a side' : `HELD — no side (${s.directionEndName})`) : 'pending'} · ${s.decisionName}`;
   $('b5Sides').textContent = s.directionAttempted ? `${s.stateLName} / ${s.stateRName} · end ${s.directionEndName}` : '–';
   const wr = b5.tracker.widthRun(), res = wr && wr.result;
   $('b5WidthPolicy').textContent = s.widthPolicy === null ? 'n/a (v0.1 status layout)'
@@ -1995,7 +1998,7 @@ function renderB5() {
   const bypass = s.bypassRangeMm ? (s.bypassStateName === 'DONE' ? 'Handed back to line' : s.bypassStateName) : 'Not attempted';
   $('b5Bypass').textContent = s.bypassRangeMm ? `${bypass} · ${s.rejoinPhaseName}` : bypass;
   $('b5WidthRecords').textContent = b5Completeness(wrep) + (s.widthAttempted ? ` · current mission car count ${s.widthProduced} produced / ${s.widthAdmitted} admitted` : '') + (s.backlog ? ' · car backlog pending' : '') + (s.discarded ? ` · ${s.discarded} unsent records discarded from an earlier mission` : '');
-  $('b5DirRecords').textContent = b5Completeness(b5.tracker.direction()) + (s.directionAttempted ? ` · current mission car count ${s.directionProduced} produced / ${s.directionAdmitted} admitted` : '');
+  $('b5DirRecords').textContent = directionFromWidth ? 'Uses the width records above' : b5Completeness(b5.tracker.direction()) + (s.directionAttempted ? ` · current mission car count ${s.directionProduced} produced / ${s.directionAdmitted} admitted` : '');
   $('b5Events').textContent = b5.events.length ? b5.events.join(' → ') : '–';
   if (stale) {
     b5Overview('Stale', 'neutral', 'Waiting for fresh Buddy 5 status', '–', '–', '–',

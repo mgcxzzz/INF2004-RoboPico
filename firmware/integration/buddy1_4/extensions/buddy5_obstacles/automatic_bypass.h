@@ -120,6 +120,7 @@ typedef struct {
     bool fallback;
     uint8_t armed_mask;
     uint8_t line_mask;
+    uint8_t handback_sensor_mask; /* 0 accepts either sensor as before */
     uint64_t sensor_clear_since[2];
     bool sensor_clear_timing[2];
     /* rtos_buddy1_5 inputs, recorded for telemetry */

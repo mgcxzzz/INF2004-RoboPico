@@ -25,7 +25,6 @@
 #include "extensions/buddy5_obstacles/servo_slew.h"
 #include "extensions/buddy5_obstacles/signed_continuous.h"
 #include "extensions/buddy5_obstacles/width_probe_pack.h"
-#include "extensions/buddy5_obstacles/edge_probe_pack.h"
 #include "extensions/buddy5_obstacles/b5_event_pack.h"
 
 enum
@@ -97,9 +96,7 @@ static signed_wheel_t g_legacy[2];
 static int32_t g_previous_output[2];
 /* Telemetry bookkeeping (Buddy5 task only). */
 static uint16_t g_width_run_seen;
-static uint16_t g_edge_run_seen;
 static uint8_t g_width_admitted;
-static uint8_t g_edge_admitted;
 static uint8_t g_stage_sent = 0xffU;
 static uint64_t g_status_due;
 static uint64_t g_stage_sent_us;
@@ -633,59 +630,6 @@ static bool send_width (void)
     return false;
 }
 
-static bool send_edge (void)
-{
-    B5EdgeProbe * p_edge = &g_mission.edge;
-    B5EPRec record;
-    UINT key = enter();
-    if (p_edge->run != g_edge_run_seen)
-    {
-        g_edge_run_seen = p_edge->run;
-        g_edge_admitted = 0U;
-    }
-    bool have_record = b5_ep_peek(p_edge, &record);
-    uint16_t run = p_edge->run;
-    uint16_t d0 = p_edge->d0;
-    uint16_t lost = p_edge->lost;
-    bool summary = p_edge->summary_pending;
-    B5EPSummary summary_copy = p_edge->summary;
-    leave(key);
-    if (have_record)
-    {
-        uint8_t frame[B5_EP_REC_FRAME];
-        b5_ep_rec_pack(&record, run, d0, lost, 0U, frame);
-        if (push(frame, sizeof(frame)))
-        {
-            B5EPRec head;
-            key = enter();
-            if ((b5_ep_peek(p_edge, &head)) && (p_edge->run == run) &&
-                (head.index == record.index))
-            {
-                b5_ep_drop(p_edge);
-                g_edge_admitted = saturate_u8(g_edge_admitted + 1U);
-            }
-            leave(key);
-        }
-        return true;
-    }
-    if (summary)
-    {
-        uint8_t frame[B5_EP_SUM_FRAME];
-        b5_ep_sum_pack(&summary_copy, 0U, frame);
-        if (push(frame, sizeof(frame)))
-        {
-            key = enter();
-            if (p_edge->summary.run == summary_copy.run)
-            {
-                p_edge->summary_pending = false;
-            }
-            leave(key);
-        }
-        return true;
-    }
-    return false;
-}
-
 static bool send_event (void)
 {
     B5Event event;
@@ -724,13 +668,11 @@ static void snapshot (uint64_t now, b5_mission_status_t * p_out)
     UINT key = enter();
     const b5_mission_t * p_mission = &g_mission;
     const B5WidthProbe * p_width = &p_mission->width;
-    const B5EdgeProbe * p_edge = &p_mission->edge;
     bool width_result = (p_mission->width_attempted) && (b5_wp_ready(p_width));
     bool width_skipped = B5MI_WIDTH_SKIPPED == p_mission->width_policy;
     bool backlog = (p_width->rec_count != 0U) || (p_width->summary_pending) ||
                    (p_width->result_pending) || (p_width->limits_pending) ||
                    (p_width->retry_sent < p_width->retry_count) ||
-                   (p_edge->rec_count != 0U) || (p_edge->summary_pending) ||
                    (p_mission->bypass.ev_count != 0U);
     uint16_t flags = 0U;
     flags |= p_mission->session ? (uint16_t)B5MP_F_ARMED : 0U;
@@ -780,10 +722,7 @@ static void snapshot (uint64_t now, b5_mission_status_t * p_out)
         .servo_applied_dd = (int16_t)g_servo.applied,
         .decision = p_mission->direction_decision,
         .basis = p_mission->direction_basis,
-        .states = p_mission->direction_attempted
-                      ? (uint8_t)((p_edge->summary.state_l & 15U) |
-                                  ((p_edge->summary.state_r & 15U) << 4))
-                      : 0U,
+        .states = p_mission->direction_states,
         .direction_end = p_mission->direction_end,
         .side = p_mission->direction_side,
         .width_end = p_mission->width_end,
@@ -813,8 +752,6 @@ static void snapshot (uint64_t now, b5_mission_status_t * p_out)
         .rejoin_phase = (uint8_t)p_mission->bypass.phase,
         .width_produced = saturate_u8(p_width->rec_index),
         .width_admitted = g_width_admitted,
-        .direction_produced = saturate_u8(p_edge->rec_index),
-        .direction_admitted = g_edge_admitted,
         .approach = (uint8_t)((p_mission->approach_legs & 15U) |
                               ((p_mission->align_steps & 15U) << 4)),
         .discarded = saturate_u8(p_mission->stale_dropped),
@@ -868,7 +805,7 @@ static void report (void)
               status.gate_reason, status.gate_echoes,
               (int)g_mission.straight.travel_mm,
               (int)g_mission.straight.heading_cdeg);
-    tm_printf((UB *)"B5_MISSION version=rtos_buddy1_5-v0.3.1 "
+    tm_printf((UB *)"B5_MISSION version=rtos_buddy1_5-v0.3.2 "
                     "stage=%s reason=%s "
                     "module=%u run=%u side=%u basis=%u decision=%u "
                     "states=0x%02x width_end=%u d0=%u trigger=%u start=%u\n",
@@ -922,10 +859,6 @@ void rb5_service (uint64_t now)
     if ((now >= g_frame_due) && (free_bytes >= (uint32_t)RB5_RECORD_MIN_FREE))
     {
         bool sent = send_width();
-        if (!sent)
-        {
-            sent = send_edge();
-        }
         if (!sent)
         {
             sent = send_event();

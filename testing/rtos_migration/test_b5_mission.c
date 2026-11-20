@@ -14,7 +14,6 @@
 #include "src/motion/motion_port.h"
 #include "extensions/buddy5_obstacles/servo_slew.h"
 #include "extensions/buddy5_obstacles/width_probe_pack.h"
-#include "extensions/buddy5_obstacles/edge_probe_pack.h"
 #include "extensions/buddy5_obstacles/b5_event_pack.h"
 #include "b5_mission_pack.h"
 #include "width_retry_policy.h"
@@ -206,7 +205,7 @@ static void hexline(const uint8_t *b, unsigned n) {
     fputc('\n', g_frames);
 }
 static void drain(void) {
-    B5WPRec r; B5EPRec e; B5Event ev;
+    B5WPRec r; B5Event ev;
     while (b5_wp_peek(&g_mission.width, &r)) {
         uint8_t f[B5_WP_REC_FRAME];
         b5_wp_rec_pack(&r, g_mission.width.d0, g_mission.width.lost, g_seq++, f);
@@ -232,15 +231,6 @@ static void drain(void) {
                           m->records, m->lost, m->width_result, g_seq++, f);
         hexline(f, sizeof f);
         g_mission.width.result_pending = false;
-    }
-    while (b5_ep_peek(&g_mission.edge, &e)) {
-        uint8_t f[B5_EP_REC_FRAME];
-        b5_ep_rec_pack(&e, g_mission.edge.run, g_mission.edge.d0, g_mission.edge.lost, g_seq++, f);
-        hexline(f, sizeof f); b5_ep_drop(&g_mission.edge);
-    }
-    if (g_mission.edge.summary_pending) {
-        uint8_t f[B5_EP_SUM_FRAME]; b5_ep_sum_pack(&g_mission.edge.summary, g_seq++, f); hexline(f, sizeof f);
-        g_mission.edge.summary_pending = false;
     }
     while (b5_auto_peek_event(&g_mission.bypass, &ev)) {
         uint8_t f[B5_EVENT_FRAME];
@@ -278,9 +268,9 @@ static void dump_status(void) {
         .width_corrected_mm100 = wr ? m->width.result.corrected_mm100 : B5MP_NONE,
         .width_d0_mm = m->width_d0, .trigger_mm = m->trigger_mm, .bypass_range_mm = m->bypass_range_mm,
         .bypass_state = (uint8_t)m->bypass.state, .rejoin_phase = (uint8_t)m->bypass.phase,
-        .width_produced = (uint8_t)m->width.rec_index, .direction_produced = (uint8_t)m->edge.rec_index,
+        .width_produced = (uint8_t)m->width.rec_index,
         .direction_end = m->direction_end,
-        .states = (uint8_t)(m->edge.summary.state_l | (m->edge.summary.state_r << 4))};
+        .states = m->direction_states};
     uint8_t f[B5MP_FRAME];
     b5mp_pack(&st, g_seq++, f);
     hexline(f, sizeof f);
@@ -359,17 +349,20 @@ typedef struct {
     const char *name;
     float cx, width, face_y;
     unsigned fault_at_stage, fault_count;
+    bool contradict_left_width_edge;
     bool fault_after_ref; /* width stage: inject only after the REF sample */
     bool fault_in_width_gate; /* faults in the fresh range deciding the width policy */
     bool noise_in_width_gate; /* clean but inconsistent echoes in that range */
     const uint16_t *ref_script;
     unsigned ref_count;
     unsigned out_script_triplets;
+    float width_return_drift_mm; /* modelled and simulated lateral return drift */
+    float width_return_yaw_deg;
     float disturb_deg, disturb_mm; /* physical heading (+LEFT)/lateral (+RIGHT)
                                       error injected at the first approach leg */
     bool steering_off;     /* comparison only: mission steering disabled */
     unsigned hold_frames;  /* extra frames to observe a HOLD (default 100) */
-    bool lose_line_in_approach, cancel;
+    bool lose_line_in_approach, cancel, cancel_recenter_drive;
     unsigned cancel_stage;
     line_hook_t line_hook;   /* Buddy3 state injected into the gate frames */
     ping_hook_t ping_hook;   /* scripted guard pings (>=0) or geometric (<0) */
@@ -384,8 +377,8 @@ typedef struct {
     unsigned final_stage, reason, side, basis, width_basis, handbacks;
     uint16_t display_mm100, d0, bypass_range;
     float end_x, end_y, end_heading_deg;
-    float dir_edge_err_mm, dir_heading_deg; /* at direction-probe start */
-    bool reached_direction;
+    float bypass_edge_err_mm, bypass_heading_deg; /* at bypass start */
+    bool reached_bypass;
 } outcome_t;
 
 static outcome_t run(const scenario_t *sc) {
@@ -416,6 +409,10 @@ static outcome_t run(const scenario_t *sc) {
     bool faulted = false, lost = false, disturbed = false;
     unsigned prev_stage = g_mission.stage;
     for (unsigned k = 0; k < 120000; ++k) { /* <= 1200 s simulated */
+        if (sc->contradict_left_width_edge && g_mission.stage == B5MI_WIDTH &&
+            g_mission.width.sample_phase == B5WP_PH_MID) {
+            g_mission.width.side[0].contradictory = true;
+        }
         frame();
         unsigned st = g_mission.stage;
         if (sc->fault_count && !faulted && st == sc->fault_at_stage &&
@@ -431,14 +428,22 @@ static outcome_t run(const scenario_t *sc) {
             g_mission.sub == 1) { /* a push just after the leg starts */
             g_heading += sc->disturb_deg * PI_F / 180; g_x += sc->disturb_mm; disturbed = true;
         }
-        if (st == B5MI_DIRECTION && !out.reached_direction) {
-            out.reached_direction = true;
-            out.dir_edge_err_mm = sensor_x(-8) + 8; out.dir_heading_deg = g_heading * 180 / PI_F;
+        if (st == B5MI_ALIGN && prev_stage != B5MI_ALIGN) {
+            g_x += sc->width_return_drift_mm;
+            g_heading += sc->width_return_yaw_deg * PI_F / 180;
+            g_mission.route_lateral_mm -= sc->width_return_drift_mm;
+            g_mission.align_heading_deg += sc->width_return_yaw_deg;
+        }
+        if (st == B5MI_BYPASS && !out.reached_bypass) {
+            out.reached_bypass = true;
+            out.bypass_edge_err_mm = sensor_x(-8) + 8; out.bypass_heading_deg = g_heading * 180 / PI_F;
         }
         if (sc->lose_line_in_approach && !lost && st == B5MI_APPROACH && g_mission.sub == 1) {
             g_line_present = false; lost = true;
         }
-        if (sc->cancel && st == sc->cancel_stage) {
+        if ((sc->cancel && st == sc->cancel_stage) ||
+            (sc->cancel_recenter_drive && st == B5MI_ALIGN &&
+             nav_get_status().mode == MOTION_DRIVING)) {
             /* Operator Stop: control.c bringup_stop_from() order. */
             b5_mission_cancel(&g_mission, g_now);
             (void)motion_stop(MOTION_BUDDY1);
@@ -472,14 +477,13 @@ static outcome_t run(const scenario_t *sc) {
     out.display_mm100 = g_mission.width.result.display_mm100;
     out.d0 = g_mission.width_d0; out.bypass_range = g_mission.bypass_range_mm;
     out.end_x = g_x; out.end_y = g_y; out.end_heading_deg = g_heading * 180 / PI_F;
-    printf("  width policy=%u gate=%u attempted=%u | steer last=%d max=%u sat=%u | dir edge_err=%.1f hdg=%.2f\n",
+    printf("  width policy=%u gate=%u attempted=%u | steer last=%d max=%u sat=%u | bypass edge_err=%.1f hdg=%.2f\n",
            g_mission.width_policy, g_mission.width_gate_mm, g_mission.width_attempted,
            g_mission.steer_decideg, g_mission.steer_max_decideg, g_mission.steer_saturated,
-           out.dir_edge_err_mm, out.dir_heading_deg);
-    printf("  edge end=%u decision=%u states=%u/%u records=%u flags=0x%x | width end=%u\n",
-           g_mission.edge.summary.end, g_mission.edge.summary.decision,
-           g_mission.edge.summary.state_l, g_mission.edge.summary.state_r,
-           g_mission.edge.summary.records, g_mission.edge.summary.flags, g_mission.width.end);
+           out.bypass_edge_err_mm, out.bypass_heading_deg);
+    printf("  direction=%u states=0x%x | width end=%u | recenter=%.1f mm\n",
+           g_mission.direction_decision, g_mission.direction_states,
+           g_mission.width.end, g_mission.recenter_mm);
     printf("%-34s stage=%-9s reason=%-17s side=%u basis=%u width=%u.%02u(b%u) d0=%u "
            "start=%u contacts=%u min_clear=%.0f end=(%.0f,%.0f,%.1fdeg) stages=0x%x\n",
            sc->name, b5_mission_stage_name(out.final_stage), b5_mission_reason_name(out.reason),
@@ -564,7 +568,7 @@ static void gate_scenarios(unsigned *p_failures) {
         motion_status_t st = nav_get_status();
         GCHECK(o.final_stage == B5MI_HOLD && o.reason == B5MI_R_NOT_STRAIGHT);
         GCHECK(g_mission.module_reason == blocked[i].reason);
-        GCHECK((g_stage_mask & probing) == 0 && g_mission.width.rec_index == 0 && g_mission.edge.rec_index == 0);
+        GCHECK((g_stage_mask & probing) == 0 && g_mission.width.rec_index == 0);
         GCHECK(!g_mission.width_attempted && !g_mission.direction_attempted && !g_mission.bypass.session);
         GCHECK(st.owner == MOTION_BUDDY5 && st.mode != MOTION_AUTO && g_contacts == 0);
         GCHECK(o.handbacks == 0 && 900 - g_y > 300 && 900 - g_y < 400); /* stopped near the trigger (sonar 62 mm ahead of the axle) */
@@ -654,13 +658,14 @@ int main(int argc, char **argv) {
     CHECK(g_mission.width_policy == B5MI_WIDTH_MEASURED);
     CHECK(g_mission.steer_max_decideg <= B5MI_STEER_MAX_DECIDEG);
     /* Long probe (SDK width_long_probe v0.2): the whole chain width -> align ->
-     * approach -> direction -> bypass ran in one mission; every outward pass is
+     * approach -> bypass ran in one mission; every outward pass is
      * bounded by clearance and the 220 mm ceiling and reports a stop reason;
      * D2, D5 and D3 were all drained; width stays display-only. */
     {
         const unsigned need = (1u << B5MI_WIDTH) | (1u << B5MI_ALIGN) | (1u << B5MI_RANGE) |
-                              (1u << B5MI_APPROACH) | (1u << B5MI_DIRECTION) | (1u << B5MI_BYPASS);
+                              (1u << B5MI_APPROACH) | (1u << B5MI_BYPASS);
         CHECK((g_stage_mask & need) == need);
+        CHECK(!(g_stage_mask & (1u << B5MI_DIRECTION)));
         CHECK(g_mission.width.end == B5WP_END_COMPLETE);
         CHECK(!g_mission.width.summary_pending && !g_mission.width.limits_pending &&
               !g_mission.width.result_pending);
@@ -681,6 +686,30 @@ int main(int argc, char **argv) {
     scenario_t s100 = {.name = "100 offset RIGHT 35 -> LEFT", .cx = 35, .width = 100, .face_y = 900};
     o = run(&s100);
     CHECK(o.handbacks == 1); CHECK(o.side == B5_SIDE_LEFT); CHECK(g_contacts == 0);
+    scenario_t return_drift = sr;
+    return_drift.name = "width return 14.5 mm off line, recenter";
+    return_drift.width_return_drift_mm = -14.5f;
+    o = run(&return_drift);
+    CHECK(g_mission.recenter_mm > 18.0f && g_mission.recenter_mm < 24.0f);
+    CHECK(o.reached_bypass && o.handbacks == 1 && g_contacts == 0);
+    CHECK(fabsf(o.bypass_edge_err_mm) < 6.0f);
+    return_drift.name = "Stop during alignment recenter drive";
+    return_drift.cancel_recenter_drive = true;
+    o = run(&return_drift);
+    CHECK(o.final_stage == B5MI_CANCELLED && !o.reached_bypass);
+    CHECK(!(g_stage_mask & (1u << B5MI_APPROACH)));
+    return_drift.cancel_recenter_drive = false;
+    return_drift.name = "too much width return drift: hold before approach";
+    return_drift.width_return_drift_mm = -26.0f;
+    o = run(&return_drift);
+    CHECK(o.final_stage == B5MI_HOLD && o.reason == B5MI_R_NO_LINE_ALIGN);
+    CHECK(!(g_stage_mask & (1u << B5MI_APPROACH)) && !o.reached_bypass);
+    return_drift.name = "width return yaw outside safe window: hold";
+    return_drift.width_return_drift_mm = 0.0f;
+    return_drift.width_return_yaw_deg = 13.0f;
+    o = run(&return_drift);
+    CHECK(o.final_stage == B5MI_HOLD && !o.reached_bypass);
+    CHECK(!(g_stage_mask & (1u << B5MI_APPROACH)));
     scenario_t sc = {.name = "185 centred -> default (labelled)", .cx = 0, .width = 185, .face_y = 900};
     g_drop_d1 = 5; /* telemetry fixture: one D1 never reaches the dashboard */
     o = run(&sc);
@@ -703,11 +732,14 @@ int main(int argc, char **argv) {
     CHECK(g_mission.module_reason == B5MI_WATCH_TIMEOUT);
     CHECK(g_mission.run == 0 && !g_mission.width_attempted);
 
-    scenario_t sf = {.name = "sonar faults in direction probe", .cx = 35, .width = 185, .face_y = 900,
-                     .fault_at_stage = B5MI_DIRECTION, .fault_count = 6};
-    o = run(&sf);
-    CHECK(o.final_stage == B5MI_HOLD); CHECK(o.reason == B5MI_R_DIRECTION_ABORT);
-    CHECK(o.basis == B5MI_DIR_HELD); CHECK(o.side == B5_SIDE_NONE); CHECK(o.handbacks == 0);
+    scenario_t uncertain_side = sr;
+    uncertain_side.name = "completed width with contradictory edge: hold";
+    uncertain_side.contradict_left_width_edge = true;
+    o = run(&uncertain_side);
+    CHECK(g_mission.width.end == B5WP_END_COMPLETE);
+    CHECK(o.final_stage == B5MI_HOLD && o.reason == B5MI_R_DIRECTION_UNKNOWN);
+    CHECK(o.basis == B5MI_DIR_HELD && !o.reached_bypass);
+    CHECK(!(g_stage_mask & ((1u << B5MI_APPROACH) | (1u << B5MI_DIRECTION))));
     scenario_t sw = {.name = "sonar faults after width REF", .cx = 35, .width = 185, .face_y = 900,
                      .fault_at_stage = B5MI_WIDTH, .fault_count = 12, .fault_after_ref = true};
     o = run(&sw);
@@ -780,7 +812,7 @@ int main(int argc, char **argv) {
     CHECK(o.final_stage == B5MI_HOLD && g_mission.width.end == B5WP_END_SENSOR);
     CHECK(!g_mission.direction_attempted && !g_mission.bypass.session);
     /* A deliberate clean out-of-window stop is a labelled SKIP: no probe
-     * attempt, no motion for it, mission continues. Distinct from FAILED. */
+     * attempt, no direction evidence, and a hold. Distinct from FAILED. */
     /* v0.2.12 straight gate: the gate needs 200 mm of straight travel first,
      * so the 250 mm box is placed in front once the gate has opened (a
      * sudden obstacle), as a fixed 250 mm start would now hold NOT_STRAIGHT. */
@@ -789,8 +821,9 @@ int main(int argc, char **argv) {
     o = run(&snear);
     CHECK(g_mission.width_policy == B5MI_WIDTH_SKIPPED); CHECK(!g_mission.width_attempted);
     CHECK(g_mission.width_gate_mm < 270 || g_mission.width_gate_mm > 330);
-    CHECK(g_mission.width.rec_index == 0); /* frozen probe never ran */
-    CHECK(o.handbacks == 1); CHECK(g_contacts == 0);
+    CHECK(g_mission.width.rec_index == 0); /* probe never ran */
+    CHECK(o.final_stage == B5MI_HOLD && o.reason == B5MI_R_DIRECTION_UNKNOWN);
+    CHECK(!o.reached_bypass && o.handbacks == 0 && g_contacts == 0);
     /* A faulty or inconsistent policy range is never a skip: HOLD RANGE. */
     scenario_t sgf = {.name = "faults in width-policy range", .cx = 35, .width = 185, .face_y = 900,
                       .fault_in_width_gate = true};
@@ -815,17 +848,17 @@ int main(int argc, char **argv) {
         scenario_t s_off = s_on; s_off.name = n_off; s_off.steering_off = true;
         outcome_t on = run(&s_on);
         unsigned sat = g_mission.steer_saturated, peak = g_mission.steer_max_decideg;
-        CHECK(on.reached_direction); CHECK(on.handbacks == 1); CHECK(g_contacts == 0);
+        CHECK(on.reached_bypass); CHECK(on.handbacks == 1); CHECK(g_contacts == 0);
         CHECK(on.bypass_range >= 195 && on.bypass_range <= 215); /* sonar stop unchanged */
         CHECK(peak > 0 && peak <= B5MI_STEER_MAX_DECIDEG); (void)sat;
         outcome_t off = run(&s_off);
         CHECK(g_mission.steer_max_decideg == 0);
-        float e_on = fabsf(on.dir_edge_err_mm), e_off = fabsf(off.dir_edge_err_mm);
-        float h_on = fabsf(on.dir_heading_deg), h_off = fabsf(off.dir_heading_deg);
+        float e_on = fabsf(on.bypass_edge_err_mm), e_off = fabsf(off.bypass_edge_err_mm);
+        float h_on = fabsf(on.bypass_heading_deg), h_off = fabsf(off.bypass_heading_deg);
         printf("  push %u: edge err %.1f (steered) vs %.1f (straight)%s; heading %.2f vs %.2f\n", i, e_on,
-               e_off, off.reached_direction ? "" : " [straight: no direction]", h_on, h_off);
+               e_off, off.reached_bypass ? "" : " [straight: no bypass]", h_on, h_off);
         CHECK(e_on < 3.5f); CHECK(h_on < fabsf(pushes[i][0]));
-        if (off.reached_direction) CHECK(e_on < e_off && h_on < h_off);
+        if (off.reached_bypass) CHECK(e_on < e_off && h_on < h_off);
         else CHECK(off.final_stage == B5MI_HOLD && off.reason == B5MI_R_NO_LINE_APPROACH);
     }
     scenario_t sg = {.name = "sonar faults in guard", .cx = 35, .width = 185, .face_y = 900,
@@ -839,7 +872,7 @@ int main(int argc, char **argv) {
     CHECK(o.handbacks == 0); CHECK(g_mission.steer_max_decideg <= B5MI_STEER_MAX_DECIDEG);
     CHECK(o.final_stage != B5MI_HOLD || g_mission.module_reason == 0); /* not an executor fault */
     const unsigned stages[] = {B5MI_GUARD, B5MI_HALTING, B5MI_WIDTH, B5MI_ALIGN, B5MI_RANGE,
-                               B5MI_APPROACH, B5MI_DIRECTION, B5MI_BYPASS};
+                               B5MI_APPROACH, B5MI_BYPASS};
     for (unsigned i = 0; i < sizeof(stages) / sizeof(stages[0]); ++i) {
         char name[64];
         snprintf(name, sizeof(name), "Stop during %s", b5_mission_stage_name(stages[i]));
@@ -848,7 +881,7 @@ int main(int argc, char **argv) {
         o = run(&ss);
         CHECK(o.final_stage == B5MI_CANCELLED || o.final_stage == B5MI_IDLE);
         CHECK(o.handbacks == 0);
-        CHECK(b5_wp_ready(&g_mission.width) && b5_ep_ready(&g_mission.edge));
+        CHECK(b5_wp_ready(&g_mission.width));
         CHECK(!g_mission.bypass.session);
     }
     gate_scenarios(&failures);

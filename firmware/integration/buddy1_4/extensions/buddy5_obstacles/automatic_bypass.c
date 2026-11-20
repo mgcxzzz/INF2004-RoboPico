@@ -152,6 +152,7 @@ bool b5_auto_start(B5Automatic *a, uint32_t lease, unsigned side, unsigned range
     a->acq_samples = 0;
     a->pivot_return_mm = 0; a->fallback = false;
     a->armed_mask = 0; a->line_mask = 3;
+    a->handback_sensor_mask = 0;
     a->phase = B5R_START;
     a->stripe_result = B5S_PENDING;
     a->seen_rejects = 0; a->seen_phase = 0; a->legs_reported = 0; a->last_handback = 0;
@@ -320,6 +321,7 @@ __attribute__((noinline)) static void rejoin(B5Automatic *a, uint64_t now, Motio
     if (now - a->search_since > 30000000) { stop(a, B5A_NO_LINE, now); return; }
     bool obs = fresh(a);
     unsigned above = level_mask(a);
+    if (a->handback_sensor_mask) above &= a->handback_sensor_mask;
     /* Confirmation/search evidence: only sensors proven clear during the
      * sweep (v0.6.1), so a sensor resting on a dark floor cannot confirm. */
     bool evidence = (above & a->line_mask) != 0;

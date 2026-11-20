@@ -3,10 +3,9 @@
  * @brief Buddy5 obstacle mission sequencing (see b5_mission.h).
  * @details Owner: the core1 motion task, one step per 10 ms frame right
  * after motion_update(). No blocking, no sensor or motor register access:
- * sonar/servo go through the B5SensorPort, motion through nav_api.h with the
- * one Buddy5 lease taken at the obstacle. The ported width/direction/bypass
- * modules are stepped unchanged; this file only sequences them and applies
- * the documented gates between them.
+ * sonar/servo go through the B5SensorPort, motion through nav_api.h with one
+ * Buddy5 lease. The mission uses the long width probe's edge evidence to
+ * choose a side, restores the line pose, and runs the rectangular bypass.
  * @see app_program/obstacle_navigation/README.md
  */
 #include "b5_mission.h"
@@ -14,8 +13,7 @@
 #include <string.h>
 
 /* Alignment search about the trimmed heading (v0.6 rejoin search table). */
-static const float g_align_deg[B5MI_ALIGN_STEPS] = {-4.0f, 4.0f,   -8.0f,
-                                                    8.0f,  -12.0f, 12.0f};
+static const float g_align_deg[B5MI_ALIGN_STEPS] = {-4.0f, 4.0f, -6.0f, 6.0f};
 /* Identity calibration: observed levels are already normalised 0..1000, so
  * line_level(level, 0, 1000) == level and analog_demand() sees exactly the
  * levels Buddy3's follower would. */
@@ -135,21 +133,6 @@ static void drain_width (b5_mission_t * p_mission)
     if (p_mission->width.limits_pending) /* long probe D5 */
     {
         p_mission->width.limits_pending = false;
-        p_mission->stale_dropped++;
-    }
-}
-
-static void drain_edge (b5_mission_t * p_mission)
-{
-    B5EPRec record;
-    while (b5_ep_peek(&p_mission->edge, &record))
-    {
-        b5_ep_drop(&p_mission->edge);
-        p_mission->stale_dropped++;
-    }
-    if (p_mission->edge.summary_pending)
-    {
-        p_mission->edge.summary_pending = false;
         p_mission->stale_dropped++;
     }
 }
@@ -357,6 +340,18 @@ static int follow_move (b5_mission_t * p_mission, motion_status_t status,
     return 1;
 }
 
+/* Track completed movement in the initial width-reference frame. */
+static void update_route_pose (b5_mission_t * p_mission,
+                               const motion_command_status_t * p_command)
+{
+    float midpoint =
+        (p_mission->align_heading_deg + 0.5f * p_command->rotation_deg) *
+        (3.14159265358979323846f / 180.0f);
+    p_mission->route_lateral_mm += p_command->progress_mm * sinf(midpoint);
+    p_mission->route_forward_mm += p_command->progress_mm * cosf(midpoint);
+    p_mission->align_heading_deg += p_command->rotation_deg;
+}
+
 static void halt_move (b5_mission_t * p_mission)
 {
     if (!p_mission->halting_move)
@@ -405,6 +400,7 @@ static void reset_results (b5_mission_t * p_mission)
     p_mission->direction_basis = B5MI_DIR_NONE;
     p_mission->direction_decision = B5EP_DECISION_HOLD;
     p_mission->direction_end = 0U;
+    p_mission->direction_states = 0U;
     p_mission->direction_attempted = false;
     p_mission->bypass_range_mm = 0U;
     p_mission->approach_legs = 0U;
@@ -418,6 +414,9 @@ static void reset_results (b5_mission_t * p_mission)
     p_mission->steer_saturated = 0U;
     p_mission->align_steps = 0U;
     p_mission->align_heading_deg = 0.0f;
+    p_mission->route_lateral_mm = 0.0f;
+    p_mission->route_forward_mm = 0.0f;
+    p_mission->recenter_mm = 0.0f;
     p_mission->reason = B5MI_R_NONE;
     p_mission->module_reason = 0U;
 }
@@ -562,7 +561,112 @@ static void width_decide (b5_mission_t * p_mission, uint64_t now)
     }
     p_mission->width_policy = B5MI_WIDTH_SKIPPED;
     p_mission->width_started = true;
-    enter(p_mission, B5MI_APPROACH, now); /* nothing moved since the halt */
+    p_mission->direction_basis = B5MI_DIR_HELD;
+    hold(p_mission, B5MI_R_DIRECTION_UNKNOWN, 0U, now);
+}
+
+/* The outermost stop is not revisited. Use the adjacent stop only when
+ * the probe still saw the obstacle at the outermost stop and at the adjacent
+ * stop in both directions. Return lateral reach outward from the axis. */
+static float corroborated_reach (const B5WPSide * p_side, float sign)
+{
+    if ((B5WP_ST_NOT_REACHED != p_side->state) || (!p_side->return_ok) ||
+        (p_side->last <= B5WP_STOP_PRE))
+    {
+        return 0.0f;
+    }
+    const B5WPStop * p_far = &p_side->stop[p_side->last];
+    const B5WPStop * p_revisit = &p_side->stop[p_side->last - 1U];
+    if ((!p_far->visited) || (B5WP_IN != p_far->out_cls) ||
+        (!p_revisit->visited) || (!p_revisit->revisited) ||
+        (B5WP_IN != p_revisit->out_cls) || (B5WP_IN != p_revisit->ret_cls))
+    {
+        return 0.0f;
+    }
+    return fminf(sign * p_revisit->out_axis, sign * p_revisit->ret_axis);
+}
+
+/* Decide using scan evidence independently of the calibrated display number.
+ * Two corroborated edges bound the centre. An unresolved far edge only
+ * suffices if the return pass confirms it extends well beyond the near edge. */
+static bool choose_width_direction (b5_mission_t * p_mission)
+{
+    const B5WPSummary * p_scan = &p_mission->width.summary;
+    const B5WPSide * p_left = &p_mission->width.side[0];
+    const B5WPSide * p_right = &p_mission->width.side[1];
+    float left_reach = corroborated_reach(p_left, -1.0f);
+    float right_reach = corroborated_reach(p_right, 1.0f);
+    const uint8_t left_state = B5WP_ST_BOUNDARY == p_scan->state_l
+                                  ? B5EP_SIDE_CROSSED
+                                  : left_reach > 0.0f ? B5EP_SIDE_REMAINS
+                                                      : B5EP_SIDE_UNKNOWN;
+    const uint8_t right_state = B5WP_ST_BOUNDARY == p_scan->state_r
+                                   ? B5EP_SIDE_CROSSED
+                                   : right_reach > 0.0f ? B5EP_SIDE_REMAINS
+                                                        : B5EP_SIDE_UNKNOWN;
+    p_mission->direction_attempted = true;
+    p_mission->direction_end = B5EP_END_COMPLETE;
+    p_mission->direction_states = (uint8_t)(left_state | (right_state << 4));
+    const uint16_t required =
+        B5WP_FLAG_REF_OK | B5WP_FLAG_MID_OK | B5WP_FLAG_FINAL_REF_OK |
+        B5WP_FLAG_L_RETURN_OK | B5WP_FLAG_R_RETURN_OK | B5WP_FLAG_SERVO_IN_RANGE;
+    if ((p_scan->lost != 0U) || ((p_scan->flags & required) != required))
+    {
+        return false;
+    }
+
+    unsigned side = B5_SIDE_NONE;
+    unsigned basis = B5MI_DIR_EVIDENCE;
+    if ((B5WP_WIDTH_MEASURED == p_scan->width_result) &&
+        (p_scan->l_in_mm10 <= 0) && (p_scan->r_in_mm10 >= 0))
+    {
+        /* Edge coordinates are +RIGHT, in tenths of a millimetre.
+         * The sum is twice the centre; multiply the mm thresholds by 20. */
+        int centre_lower = (int)p_scan->l_far_mm10 + (int)p_scan->r_in_mm10;
+        int centre_upper = (int)p_scan->l_in_mm10 + (int)p_scan->r_far_mm10;
+        if (centre_lower > 20 * B5MI_DIRECTION_MARGIN_MM)
+        {
+            side = B5_SIDE_LEFT;
+        }
+        else if (centre_upper < -20 * B5MI_DIRECTION_MARGIN_MM)
+        {
+            side = B5_SIDE_RIGHT;
+        }
+        else if ((centre_lower >= -20 * B5MI_DIRECTION_CENTRE_MM) &&
+                 (centre_upper <= 20 * B5MI_DIRECTION_CENTRE_MM))
+        {
+            side = B5MI_DEFAULT_SIDE;
+            basis = B5MI_DIR_DEFAULT;
+        }
+    }
+    else if ((B5EP_SIDE_CROSSED == left_state) && (p_left->far_x < 0.0f) &&
+             (p_left->far_x < fmaxf(p_left->in_x, p_left->ret_in_x)) &&
+             (fmaxf(p_left->in_x, p_left->ret_in_x) <= 0.0f) &&
+             (right_reach + p_left->far_x > 2.0f * B5MI_DIRECTION_MARGIN_MM))
+    {
+        side = B5_SIDE_LEFT;
+    }
+    else if ((B5EP_SIDE_CROSSED == right_state) && (p_right->far_x > 0.0f) &&
+             (p_right->far_x > fminf(p_right->in_x, p_right->ret_in_x)) &&
+             (fminf(p_right->in_x, p_right->ret_in_x) >= 0.0f) &&
+             (left_reach - p_right->far_x > 2.0f * B5MI_DIRECTION_MARGIN_MM))
+    {
+        side = B5_SIDE_RIGHT;
+    }
+    if (B5_SIDE_NONE == side)
+    {
+        return false;
+    }
+
+    p_mission->direction_side = (uint8_t)side;
+    p_mission->direction_basis = (uint8_t)basis;
+    if (B5MI_DIR_EVIDENCE == basis)
+    {
+        p_mission->direction_decision = (B5_SIDE_LEFT == side)
+                                            ? B5EP_DECISION_LEFT
+                                            : B5EP_DECISION_RIGHT;
+    }
+    return true;
 }
 
 static void width_tick (b5_mission_t * p_mission, uint64_t now)
@@ -584,12 +688,31 @@ static void width_tick (b5_mission_t * p_mission, uint64_t now)
         return;
     }
     p_mission->width_policy = B5MI_WIDTH_MEASURED;
+    if (!choose_width_direction(p_mission))
+    {
+        p_mission->direction_basis = B5MI_DIR_HELD;
+        hold(p_mission, B5MI_R_DIRECTION_UNKNOWN, 0U, now);
+        return;
+    }
     p_mission->align_heading_deg = p_mission->width.heading_deg;
+    p_mission->route_lateral_mm = -p_mission->width.net_x_mm;
+    p_mission->route_forward_mm = p_mission->width.net_y_mm;
     servo_front(p_mission, now);
     enter(p_mission, B5MI_ALIGN, now);
 }
 
-/* sub 0 trim decision, 1 trim turn, 2 stationary evidence, 3 search turn. */
+enum
+{
+    ALIGN_START, ALIGN_HEADING, ALIGN_EVIDENCE, ALIGN_SEARCH,
+    ALIGN_RECENTER_TURN, ALIGN_RECENTER_DRIVE
+};
+
+/* The stopped IR pattern is only usable near the original line heading. */
+static bool aligned_on_line (const b5_mission_t * p_mission)
+{
+    return (fabsf(p_mission->align_heading_deg) <=
+            (float)B5MI_ALIGN_HEADING_DEG) && line_evidence(p_mission);
+}
 static void align_tick (b5_mission_t * p_mission, motion_status_t status,
                         uint64_t now)
 {
@@ -602,7 +725,7 @@ static void align_tick (b5_mission_t * p_mission, motion_status_t status,
     }
     switch (p_mission->sub)
     {
-    case 0U:
+    case ALIGN_START:
     {
         if (!still(status))
         {
@@ -614,28 +737,91 @@ static void align_tick (b5_mission_t * p_mission, motion_status_t status,
             hold(p_mission, B5MI_R_MOVE, 0U, now);
             return;
         }
+        float drift = p_mission->route_lateral_mm;
+        if (fabsf(drift) > (float)B5MI_ALIGN_DRIFT_MM)
+        {
+            /* A single short diagonal restores lateral position. Check the
+             * worst turn footprint through the move plus overshoot. */
+            p_mission->recenter_mm = fabsf(drift) * 1.41421356f;
+            if ((p_mission->recenter_mm > (float)B5MI_ALIGN_RECENTER_MM) ||
+                (b5_wp_turn_front_gap((float)p_mission->width_d0,
+                    p_mission->route_forward_mm + p_mission->recenter_mm +
+                    B5WP_OVERSHOOT_MM) < B5WP_FRONT_MARGIN_MM))
+            {
+                hold(p_mission, B5MI_R_NO_LINE_ALIGN, 0U, now);
+                return;
+            }
+            float heading = (drift > 0.0f) ? -45.0f : 45.0f;
+            if (start_move(p_mission, true, heading - residual,
+                           B5MI_ALIGN_SPEED, now))
+            {
+                p_mission->sub = ALIGN_RECENTER_TURN;
+            }
+            return;
+        }
         if (fabsf(residual) < 1.0f)
         {
-            p_mission->sub = 2U;
+            p_mission->sub = ALIGN_EVIDENCE;
             p_mission->sub_since = now;
             return;
         }
         if (start_move(p_mission, true, -residual, B5MI_ALIGN_SPEED, now))
         {
-            p_mission->sub = 1U;
+            p_mission->sub = ALIGN_HEADING;
         }
         return;
     }
-    case 1U:
-    case 3U:
+    case ALIGN_HEADING:
+    case ALIGN_SEARCH:
+    case ALIGN_RECENTER_TURN:
+    case ALIGN_RECENTER_DRIVE:
     {
+        if (!progress_ok(p_mission, status, now))
+        {
+            return;
+        }
         int done = follow_move(p_mission, status, now, &command);
         if (done <= 0)
         {
             return;
         }
-        p_mission->align_heading_deg += command.rotation_deg;
-        p_mission->sub = 2U;
+        update_route_pose(p_mission, &command);
+        if (ALIGN_RECENTER_TURN == p_mission->sub)
+        {
+            if ((fabsf(fabsf(p_mission->align_heading_deg) - 45.0f) > 3.0f) ||
+                (p_mission->align_heading_deg * p_mission->route_lateral_mm >=
+                 0.0f) ||
+                (b5_wp_turn_front_gap((float)p_mission->width_d0,
+                    p_mission->route_forward_mm + p_mission->recenter_mm +
+                    B5WP_OVERSHOOT_MM) < B5WP_FRONT_MARGIN_MM))
+            {
+                hold(p_mission, B5MI_R_NO_LINE_ALIGN, 0U, now);
+                return;
+            }
+            if (start_move(p_mission, false, p_mission->recenter_mm,
+                           B5MI_ALIGN_SPEED, now))
+            {
+                p_mission->sub = ALIGN_RECENTER_DRIVE;
+            }
+            return;
+        }
+        if (ALIGN_RECENTER_DRIVE == p_mission->sub)
+        {
+            if ((!b5_wp_segment_ok(p_mission->recenter_mm, command.progress_mm)) ||
+                (b5_wp_turn_front_gap((float)p_mission->width_d0,
+                    p_mission->route_forward_mm) < B5WP_FRONT_MARGIN_MM))
+            {
+                hold(p_mission, B5MI_R_NO_LINE_ALIGN, 0U, now);
+                return;
+            }
+            if (start_move(p_mission, true, -p_mission->align_heading_deg,
+                           B5MI_ALIGN_SPEED, now))
+            {
+                p_mission->sub = ALIGN_HEADING;
+            }
+            return;
+        }
+        p_mission->sub = ALIGN_EVIDENCE;
         p_mission->sub_since = now;
         p_mission->evidence_timing = false;
         return;
@@ -650,7 +836,7 @@ static void align_tick (b5_mission_t * p_mission, motion_status_t status,
     }
     if (observation)
     {
-        if (!line_evidence(p_mission))
+        if (!aligned_on_line(p_mission))
         {
             p_mission->evidence_timing = false;
         }
@@ -684,26 +870,8 @@ static void align_tick (b5_mission_t * p_mission, motion_status_t status,
     }
     if (start_move(p_mission, true, goal, B5MI_ALIGN_SPEED, now))
     {
-        p_mission->sub = 3U;
+        p_mission->sub = ALIGN_SEARCH;
     }
-}
-
-static void direction_begin (b5_mission_t * p_mission, uint64_t now)
-{
-    drain_edge(p_mission);
-    if (!b5_ep_begin(&p_mission->edge, now))
-    {
-        hold(p_mission, B5MI_R_DIRECTION_BUSY, 0U, now);
-        return;
-    }
-    if (p_mission->edge.lease != p_mission->lease)
-    {
-        b5_ep_cancel(&p_mission->edge, now);
-        hold(p_mission, B5MI_R_LEASE, 0U, now);
-        return;
-    }
-    p_mission->direction_attempted = true;
-    enter(p_mission, B5MI_DIRECTION, now);
 }
 
 /* Bounded line steering during the owned approach. Buddy3's own edge law
@@ -782,6 +950,8 @@ static bool steer_step (b5_mission_t * p_mission, motion_status_t status,
 
 /* Entered with a fresh stationary range. sub 0 decide, 1 driving, 2 halting
  * on range, 3 halting on lost line, 4 halting on sonar failure. */
+static void bypass_begin (b5_mission_t * p_mission, uint64_t now);
+
 static void approach_tick (b5_mission_t * p_mission, motion_status_t status,
                            uint64_t now)
 {
@@ -794,13 +964,18 @@ static void approach_tick (b5_mission_t * p_mission, motion_status_t status,
     if (0U == p_mission->sub)
     {
         uint16_t range = p_mission->range.range_mm;
+        if (!aligned_on_line(p_mission))
+        {
+            hold(p_mission, B5MI_R_NO_LINE_APPROACH, 0U, now);
+            return;
+        }
         if (0U == p_mission->approach_start_mm)
         {
             p_mission->approach_start_mm = range;
         }
         if (range <= (uint16_t)B5MI_APPROACH_ACCEPT_MM)
         {
-            direction_begin(p_mission, now);
+            bypass_begin(p_mission, now);
             return;
         }
         if (p_mission->approach_legs >= (unsigned)B5MI_APPROACH_MAX_LEGS)
@@ -838,6 +1013,7 @@ static void approach_tick (b5_mission_t * p_mission, motion_status_t status,
     }
     if (done > 0)
     {
+        update_route_pose(p_mission, &command);
         if (3U == p_mission->sub)
         {
             hold(p_mission, B5MI_R_NO_LINE_APPROACH, 0U, now);
@@ -891,72 +1067,12 @@ static void approach_tick (b5_mission_t * p_mission, motion_status_t status,
     }
 }
 
-/* Complete, healthy probe whose two sides are equal (OPEN/OPEN, CROSSED/
- * CROSSED or REMAINS/REMAINS): every gate of edge_probe.c decide() passed and
- * only the preference is absent. */
-static bool direction_no_preference (const B5EdgeProbe * p_edge)
-{
-    const B5EPSummary * p_summary = &p_edge->summary;
-    uint16_t flags = B5EP_FLAG_REF_OK | B5EP_FLAG_FINAL_REF_OK |
-                     B5EP_FLAG_LEFT_BACK_OK | B5EP_FLAG_RIGHT_BACK_OK |
-                     B5EP_FLAG_SERVO_IN_RANGE;
-    int final_heading = p_summary->final_heading_cdeg;
-    return (B5EP_END_COMPLETE == p_summary->end) &&
-           (B5EP_RECORD_COUNT == p_summary->records) &&
-           (0U == p_summary->lost) && (flags == (p_summary->flags & flags)) &&
-           (final_heading <= 300) && (final_heading >= -300) &&
-           (B5EP_SIDE_UNKNOWN != p_summary->state_l) &&
-           (p_summary->state_l == p_summary->state_r);
-}
-
-static void direction_tick (b5_mission_t * p_mission, uint64_t now)
-{
-    b5_ep_tick(&p_mission->edge, now);
-    if (!b5_ep_ready(&p_mission->edge))
-    {
-        return;
-    }
-    const B5EPSummary * p_summary = &p_mission->edge.summary;
-    p_mission->direction_end = (uint8_t)p_mission->edge.end;
-    p_mission->direction_decision = p_summary->decision;
-    if (B5EP_END_COMPLETE != p_mission->edge.end)
-    {
-        p_mission->direction_basis = B5MI_DIR_HELD;
-        hold(p_mission, B5MI_R_DIRECTION_ABORT, p_mission->edge.end, now);
-        return;
-    }
-    if (B5EP_DECISION_LEFT == p_summary->decision)
-    {
-        p_mission->direction_side = B5_SIDE_LEFT;
-        p_mission->direction_basis = B5MI_DIR_EVIDENCE;
-    }
-    else if (B5EP_DECISION_RIGHT == p_summary->decision)
-    {
-        p_mission->direction_side = B5_SIDE_RIGHT;
-        p_mission->direction_basis = B5MI_DIR_EVIDENCE;
-    }
-    else if (direction_no_preference(&p_mission->edge))
-    {
-        p_mission->direction_side = (uint8_t)B5MI_DEFAULT_SIDE;
-        p_mission->direction_basis = B5MI_DIR_DEFAULT;
-    }
-    else
-    {
-        p_mission->direction_basis = B5MI_DIR_HELD;
-        hold(p_mission, B5MI_R_DIRECTION_UNKNOWN, 0U, now);
-        return;
-    }
-    range_begin(p_mission, B5MI_BYPASS, now);
-}
-
 static void bypass_begin (b5_mission_t * p_mission, uint64_t now)
 {
     uint16_t range = p_mission->range.range_mm;
     p_mission->bypass_range_mm = range;
-    /* Edge-probe encoder pose (x right, + rotation left) -> route frame
-     * (+LEFT). Model values, not physical pose feedback. */
-    float heading0 = p_mission->edge.heading_deg;
-    float lateral0 = -p_mission->edge.net_x_mm;
+    float heading0 = p_mission->align_heading_deg;
+    float lateral0 = p_mission->route_lateral_mm;
     if (!b5_auto_start(&p_mission->bypass, p_mission->lease,
                        p_mission->direction_side, range, heading0, lateral0,
                        now))
@@ -967,7 +1083,10 @@ static void bypass_begin (b5_mission_t * p_mission, uint64_t now)
              p_mission->bypass.reason, now);
         return;
     }
-    p_mission->stage = B5MI_BYPASS; /* range_tick already entered BYPASS */
+    /* Accept hand-back evidence on the sensor that tracked the tape before
+     * takeover, so swinging the opposite sensor over it cannot end the turn. */
+    p_mission->bypass.handback_sensor_mask = p_mission->takeover_mask;
+    enter(p_mission, B5MI_BYPASS, now);
 }
 
 static void bypass_tick (b5_mission_t * p_mission, uint64_t now)
@@ -1006,8 +1125,6 @@ void b5_mission_init (b5_mission_t * p_mission, const B5SensorPort * p_port,
     p_mission->sensor = *p_port;
     b5_wp_init(&p_mission->width, p_port);
     p_mission->width.applied = p_applied;
-    b5_ep_init(&p_mission->edge, p_port);
-    p_mission->edge.applied = p_applied;
     b5_auto_init(&p_mission->bypass, p_port);
     p_mission->stage = B5MI_IDLE;
     p_mission->steering = true;
@@ -1022,10 +1139,6 @@ bool b5_mission_begin (b5_mission_t * p_mission, uint64_t now)
     if (!b5_wp_ready(&p_mission->width))
     {
         b5_wp_cancel(&p_mission->width, now);
-    }
-    if (!b5_ep_ready(&p_mission->edge))
-    {
-        b5_ep_cancel(&p_mission->edge, now);
     }
     p_mission->session = true;
     p_mission->rearm = false;
@@ -1068,7 +1181,6 @@ bool b5_mission_active (const b5_mission_t * p_mission)
     case B5MI_ALIGN:
     case B5MI_APPROACH:
     case B5MI_RANGE:
-    case B5MI_DIRECTION:
     case B5MI_BYPASS:
     case B5MI_HOLD:
         return true;
@@ -1083,10 +1195,6 @@ void b5_mission_cancel (b5_mission_t * p_mission, uint64_t now)
     if (!b5_wp_ready(&p_mission->width))
     {
         b5_wp_cancel(&p_mission->width, now);
-    }
-    if (!b5_ep_ready(&p_mission->edge))
-    {
-        b5_ep_cancel(&p_mission->edge, now);
     }
     if (p_mission->bypass.session)
     {
@@ -1129,9 +1237,6 @@ void b5_mission_tick (b5_mission_t * p_mission, uint64_t now)
         return;
     case B5MI_WIDTH:
         width_tick(p_mission, now);
-        return;
-    case B5MI_DIRECTION:
-        direction_tick(p_mission, now);
         return;
     case B5MI_BYPASS:
         bypass_tick(p_mission, now);
@@ -1184,10 +1289,6 @@ void b5_mission_tick (b5_mission_t * p_mission, uint64_t now)
     if ((B5MI_WIDTH == p_mission->stage) && (!p_mission->width_started))
     {
         width_decide(p_mission, now);
-    }
-    else if ((B5MI_BYPASS == p_mission->stage) && (!p_mission->bypass.session))
-    {
-        bypass_begin(p_mission, now);
     }
 }
 

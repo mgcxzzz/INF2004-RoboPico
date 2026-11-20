@@ -45,21 +45,27 @@ Buddy 5 adapter and mission; the obstacle algorithms are ported SDK modules in
      at an outward pose with a corroborating in-window echo, at most one
      missed rise, and at most one clean echo up to 5 mm below the normal
      near limit. The fresh triplet goes through the original classifier
-     and the first triplet is recorded in D4. A complete run with an unresolved edge shows its labelled
-     fallback and the mission continues. **Any
+     and the first triplet is recorded in D4. A complete run with an unresolved edge may show a labelled
+     width assumption. **Any
      non-COMPLETE end holds (`WIDTH_ABORT`, module reason = end code),
      `REFERENCE` included**: END_REFERENCE alone is not evidence of a clean
      skip. The probe's D3 (150 mm `PROJECT_RANGE_ASSUMPTION`) stays the
      displayed number — policy `failed`.
    - clean but outside 270–330 mm → deliberate **skip**: the probe is not
      started, nothing moves for it, the readout is the labelled 150 mm
-     assumption (basis 3, status INVALID) and the mission continues to the
-     approach — policy `skipped`, with the deciding range in E5 57–58.
+     assumption (basis 3, status INVALID), and Buddy 5 holds because there is no
+     scan evidence for a side. E5 bytes 57–58 give the deciding range.
    - faulty or inconsistent triplet → HOLD `RANGE` (never a skip).
-3. **Alignment**: trim the probe's encoder heading residual (≤ 12°), then
-   require stationary line evidence for 150 ms on a sensor that saw the line at
-   the takeover. Otherwise up to six slow turns (−4, +4, −8, +8, −12, +12°
-   about the trimmed heading), 400 ms per pose. No evidence → HOLD.
+3. **Direction and alignment.** Choose the side with the shorter obstacle
+   extent from the long scan. Two corroborated edge brackets can establish
+   the offset or a centred default of RIGHT. If one edge is beyond reach,
+   the near edge must be corroborated and the return pass must confirm that
+   the obstacle extends farther on the other side. Ambiguous or contradictory
+   evidence holds before the approach. After choosing, correct lateral drift
+   above 6 mm with one clearance-checked forward diagonal of up to 30 mm,
+   then restore the original heading. Require the original tape sensor to
+   see the tape for 150 ms within 6° of the initial heading. The bounded
+   search checks −4°, +4°, −6° and +6°. Failure holds.
 4. **Approach** (sonar-controlled, line-steered): fresh stationary range
    (three clean echoes within 15 mm). If > 215 mm, a Buddy 5 finite drive at
    20 mm/s by at most `range − 200` (≤ 150 mm), pinging every 60 ms; stop on a
@@ -72,19 +78,17 @@ Buddy 5 adapter and mission; the obstacle algorithms are ported SDK modules in
    timeout, settle and 12° fault; ownership never returns to Buddy 3. More
    than 40 mm with no line evidence, or sonar faults → HOLD (unchanged); the
    follower's own both-black/white stop timers are not used.
-5. **Direction probe** (edge_probe v0.1.1 motion and rules, near allowance
-   25 mm as in edge_scan v0.1.1, BE/BF version 3). LEFT/RIGHT from evidence;
-   a complete healthy run with equal sides uses the **default side RIGHT**
-   (v0.6.x deterministic fallback), reported as DEFAULT; anything else holds.
-6. **Bypass** (automatic v0.6.1 route, return, sensor-guided fourth turn,
-   stationary confirmation, bounded search, hand-back): planned from a fresh
-   stationary range (80–220 mm) and the probe's encoder heading/lateral
-   offsets. Depth 150 mm, no reverse, 50 mm margin, side 250 mm (unchanged).
-7. **Hand-back** only through `nav_resume_line(…, false)`; the pending route is
+5. **Bypass.** Use the existing rectangular route and a fresh stopped range
+   within the 80–220 mm planning window. Modelled heading and lateral pose
+   come from the scan plus the completed
+   alignment and approach moves. Depth allowance remains 150 mm and the
+   lateral leg stays 250 mm. Require confirmation on the same tape sensor
+   before handing back to Buddy 3.
+6. **Hand-back** only through `nav_resume_line(…, false)`; the pending route is
    kept and an interrupted junction is refused (existing rule).
 
-Width is a display estimate. It never sets clearance, authorises motion or
-clears a hold. The display is the raw edge midpoint − 10 mm, limited to
+The calibrated width is display-only. Navigation uses the scan's corroborated
+edge observations and the fixed route margins. The display is the raw edge midpoint − 10 mm, limited to
 100–200 mm; E5/D3 carry all three values.
 
 ## Ownership
