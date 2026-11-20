@@ -42,7 +42,7 @@ static bool junction_phase (unsigned phase)
     return (phase >= (unsigned)J_APPROACH) && (phase <= (unsigned)J_ACQUIRE);
 }
 
-uint8_t b5_straight_frame_reason (const b5_line_sample_t * p_sample)
+static uint8_t frame_reason (const b5_line_sample_t * p_sample)
 {
     unsigned phase = p_sample->phase;
     unsigned decision = p_sample->decision;
@@ -82,18 +82,6 @@ uint8_t b5_straight_frame_reason (const b5_line_sample_t * p_sample)
     {
         reason = B5S_UNAVAILABLE;
     }
-    else if (p_sample->bend_exiting)
-    {
-        reason = B5S_BEND_EXIT;
-    }
-    else if (p_sample->bend_confirmed)
-    {
-        reason = B5S_BEND;
-    }
-    else if (p_sample->bend_candidate)
-    {
-        reason = B5S_BEND_ENTRY;
-    }
     else if (!ordinary)
     {
         reason = B5S_OTHER;
@@ -119,10 +107,17 @@ static bool sample_stale (uint64_t now, uint64_t previous)
     return (now < previous) || ((now - previous) > (uint64_t)B5S_SAMPLE_MAX_US);
 }
 
+static float heading_change (const b5_straight_t * p_gate, unsigned index,
+                             float wheel_difference)
+{
+    float origin = p_gate->right[index] - p_gate->left[index];
+    return fabsf(wheel_difference - origin) / B5S_TRACK_MM * B5S_CDEG_PER_RAD;
+}
+
 void b5_straight_step (b5_straight_t * p_gate,
                        const b5_line_sample_t * p_sample)
 {
-    uint8_t reason = b5_straight_frame_reason(p_sample);
+    uint8_t reason = frame_reason(p_sample);
     /* A new frame arrives before b5_straight_check() in the motion task.
      * Check the previous timestamp before replacing it. */
     if ((B5S_STRAIGHT == reason) && (0U != p_gate->count) &&
@@ -136,7 +131,7 @@ void b5_straight_step (b5_straight_t * p_gate,
     {
         reason = B5S_OTHER; /* travel went backwards: not following */
     }
-    if (reason != B5S_STRAIGHT)
+    if (B5S_STRAIGHT != reason)
     {
         b5_straight_reset(p_gate, reason);
         p_gate->sample_us = p_sample->now_us;
@@ -155,13 +150,19 @@ void b5_straight_step (b5_straight_t * p_gate,
     unsigned oldest =
         ((unsigned)p_gate->head + (unsigned)B5S_POINTS - p_gate->count) %
         (unsigned)B5S_POINTS;
-    float differential = (p_sample->wheel_mm[1] - p_sample->wheel_mm[0]) -
-                         (p_gate->right[oldest] - p_gate->left[oldest]);
-    p_gate->heading_cdeg =
-        fabsf(differential) / B5S_TRACK_MM * B5S_CDEG_PER_RAD;
+    float wheel_difference = p_sample->wheel_mm[1] - p_sample->wheel_mm[0];
+    p_gate->heading_cdeg = heading_change(p_gate, oldest, wheel_difference);
     p_gate->travel_mm =
         path - ((p_gate->left[oldest] + p_gate->right[oldest]) * 0.5f);
-    if (p_gate->heading_cdeg > (float)B5S_HEADING_MAX_CDEG)
+    /* The recent window catches entry into a tight curve when corrections
+     * earlier in the long window happen to oppose the current turn. */
+    unsigned recent = ((unsigned)p_gate->head + (unsigned)B5S_POINTS - 1U -
+                       (unsigned)B5S_RECENT_STEPS) %
+                      (unsigned)B5S_POINTS;
+    bool recent_curve = (p_gate->count > (uint8_t)B5S_RECENT_STEPS) &&
+                        (heading_change(p_gate, recent, wheel_difference) >
+                         (float)B5S_RECENT_MAX_CDEG);
+    if ((p_gate->heading_cdeg > (float)B5S_HEADING_MAX_CDEG) || (recent_curve))
     {
         /* Keep sliding the window: a straight after a curve needs a full
          * window of straight travel; the dwell restarts too. */

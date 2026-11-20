@@ -868,7 +868,7 @@ static void report (void)
               status.gate_reason, status.gate_echoes,
               (int)g_mission.straight.travel_mm,
               (int)g_mission.straight.heading_cdeg);
-    tm_printf((UB *)"B5_MISSION version=rtos_buddy1_5-v0.2.13 "
+    tm_printf((UB *)"B5_MISSION version=rtos_buddy1_5-v0.3.0 "
                     "stage=%s reason=%s "
                     "module=%u run=%u side=%u basis=%u decision=%u "
                     "states=0x%02x width_end=%u d0=%u trigger=%u start=%u\n",

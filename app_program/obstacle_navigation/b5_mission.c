@@ -446,12 +446,14 @@ static void guard_tick (b5_mission_t * p_mission, motion_status_t status,
     }
     if (taken)
     {
-        bool near = (B5_PING_ECHO == ping.cls) &&
-                    (ping.range_mm <= (uint32_t)B5MI_TRIGGER_MM);
+        bool echo = (B5_PING_ECHO == ping.cls);
+        bool close = (echo) && (ping.range_mm <= (uint32_t)B5MI_CLOSE_HOLD_MM);
+        bool in_range =
+            (echo) && (ping.range_mm <= (uint32_t)B5MI_CONFIRM_RANGE_MM);
         if (p_mission->rearm)
         {
             bool clear = (B5_PING_FAULT != ping.cls) &&
-                         ((B5_PING_NO_RETURN == ping.cls) || (!near));
+                         ((B5_PING_NO_RETURN == ping.cls) || (!in_range));
             if (!clear)
             {
                 p_mission->clear_timing = false;
@@ -466,7 +468,7 @@ static void guard_tick (b5_mission_t * p_mission, motion_status_t status,
             {
                 p_mission->rearm = false;
             }
-            if (near)
+            if (close)
             {
                 /* v0.6.1 rule: an obstacle inside the threshold while
                  * re-arming stops the robot rather than starting a probe. */
@@ -480,8 +482,15 @@ static void guard_tick (b5_mission_t * p_mission, motion_status_t status,
              * echo from before (or across) a curve never carries over. */
             bool fresh = (eligible) && (p_mission->taken_requested >=
                                         p_mission->straight.open_us);
-            p_mission->close_count = near ? p_mission->close_count + 1U : 0U;
-            p_mission->confirm = (near && fresh) ? p_mission->confirm + 1U : 0U;
+            p_mission->close_count = close ? p_mission->close_count + 1U : 0U;
+            if ((!in_range) || (!fresh))
+            {
+                p_mission->confirm = 0U;
+            }
+            else if (p_mission->confirm < (unsigned)B5MI_TRIGGER_CONFIRM)
+            {
+                p_mission->confirm++;
+            }
             if ((!eligible) &&
                 (p_mission->close_count >= (unsigned)B5MI_TRIGGER_CONFIRM))
             {
@@ -490,7 +499,8 @@ static void guard_tick (b5_mission_t * p_mission, motion_status_t status,
                 hold(p_mission, B5MI_R_NOT_STRAIGHT, gate, now);
                 return;
             }
-            if (p_mission->confirm >= (unsigned)B5MI_TRIGGER_CONFIRM)
+            if ((p_mission->confirm >= (unsigned)B5MI_TRIGGER_CONFIRM) &&
+                (ping.range_mm <= (uint32_t)B5MI_STRAIGHT_STOP_MM))
             {
                 uint32_t lease = 0U;
                 if (nav_request_takeover(MOTION_BUDDY5, &lease) != MOTION_OK)

@@ -805,10 +805,7 @@ void rtos_line_straight_sample (const analog_demand_t * p_demand,
             (g_planner.nav.cross_ready),
         .route_turn =
             (0 != g_planner.nav.action) || (0U != g_planner.nav.uturn.stage),
-        .steering = p_steering->active,
-        .bend_candidate = p_steering->bend_candidate,
-        .bend_confirmed = p_steering->bend_confirmed,
-        .bend_exiting = p_steering->bend_exiting};
+        .steering = p_steering->active};
 }
 #endif
 

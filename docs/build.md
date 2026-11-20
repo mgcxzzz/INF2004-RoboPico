@@ -1,4 +1,9 @@
-# Build RoboPico RTOS v0.2.13
+# Build RoboPico RTOS
+
+For the v0.3.0 candidate on `halt-testing`, follow its
+[build and check instructions](../firmware/integration/buddy1_4/artifacts/v0_3_0_halt_testing/README.md#build-and-check).
+
+## Archived v0.2.13 release
 
 If you are flashing the robot, start with the
 [verified UF2 and dashboard bundle](../firmware/integration/buddy1_4/artifacts/v0_2_13_combined/).

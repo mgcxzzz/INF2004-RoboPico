@@ -78,11 +78,11 @@ static ER start (FP p_entry, PRI priority, UW processor, const char * p_name)
 void bringup_help (void)
 {
 #if defined(APP_RTOS_BUDDY5)
-    tm_printf((UB *)"\nROBOPICO BUDDY1-5 RTOS v0.2.13 | "
+    tm_printf((UB *)"\nROBOPICO BUDDY1-5 RTOS v0.3.0 | "
                     "integration candidate | micro T-Kernel SMP\n");
     tm_printf((UB *)"Buddy5: takeover only on a straight (else a close "
-                    "obstacle holds NOT_STRAIGHT); guard<=300mm -> width "
-                    "probe (display only) -> "
+                    "obstacle holds NOT_STRAIGHT at <=300mm). Straight "
+                    "confirm<=330mm, stop<=295mm -> width probe -> "
                     "line align -> approach ~200mm -> direction probe -> "
                     "compact bypass -> 4th-turn line acquisition.\n");
     tm_printf((UB *)"Sonar GP16/GP17, servo GP12 +/-46deg. HOLD keeps the "

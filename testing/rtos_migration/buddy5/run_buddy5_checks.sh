@@ -20,11 +20,11 @@ MSRC="testing/rtos_migration/test_b5_mission.c app_program/obstacle_navigation/b
   $E/profile/obstacle_profile.c $CORE"
 # APP profile: no SDK run-log copy (B5WP_RUN_ARCHIVE=0); the archive-on build
 # must produce byte-identical telemetry (the copy is write-only).
-$CC $STEER -DB5WP_RUN_ARCHIVE=0 -Wall -Wextra -I $B -I app_program/obstacle_navigation $MSRC -lm -o "$OUT/test_b5_mission"
-$CC $STEER -DB5WP_RUN_ARCHIVE=1 -Wall -Wextra -I $B -I app_program/obstacle_navigation $MSRC -lm -o "$OUT/test_b5_mission_arch"
-run "$OUT/test_b5_mission" "$ROOT/dashboard/test/fixtures/b5_rtos_mission_c_frames.txt"
+$CC $STEER -DAPP_RTOS_BUDDY5=1 -DB5WP_RUN_ARCHIVE=0 -Wall -Wextra -I . -I $B -I app_program/obstacle_navigation $MSRC -lm -o "$OUT/test_b5_mission"
+$CC $STEER -DAPP_RTOS_BUDDY5=1 -DB5WP_RUN_ARCHIVE=1 -Wall -Wextra -I . -I $B -I app_program/obstacle_navigation $MSRC -lm -o "$OUT/test_b5_mission_arch"
+run "$OUT/test_b5_mission" "$OUT/mission_frames.txt"
 run "$OUT/test_b5_mission_arch" "$OUT/mission_frames_archive_on.txt" > "$OUT/mission_archive_on.log"
-run cmp "$ROOT/dashboard/test/fixtures/b5_rtos_mission_c_frames.txt" "$OUT/mission_frames_archive_on.txt"
+run cmp "$OUT/mission_frames.txt" "$OUT/mission_frames_archive_on.txt"
 # 1c. straight-only takeover gate with the real Buddy3 bend monitor
 $CC -Wall -Wextra -DCONTINUOUS_BEND_ASSIST=1 -DCIRCUIT_SWEEP_SEARCH=1 -DCIRCUIT_STATIONARY_SEARCH=1 -DLINE_CAL_MIN_SPAN=50 \
   -I $B -I app_program/obstacle_navigation testing/rtos_migration/test_b5_straight_gate.c \
@@ -32,7 +32,7 @@ $CC -Wall -Wextra -DCONTINUOUS_BEND_ASSIST=1 -DCIRCUIT_SWEEP_SEARCH=1 -DCIRCUIT_
 run "$OUT/test_b5_straight_gate"
 # 1a. offline decoder: every mission run, replayed by the unchanged SDK v0.2 decoder
 mkdir -p "$OUT/mission_runs"
-python3 -B - "$ROOT/dashboard/test/fixtures/b5_rtos_mission_c_frames.txt" "$OUT/mission_runs" <<'PY'
+python3 -B - "$OUT/mission_frames.txt" "$OUT/mission_runs" <<'PY'
 import re, sys
 out, n = None, 0
 for line in open(sys.argv[1]):
@@ -63,11 +63,16 @@ cp "$L/source/firmware/integration/buddy1_4/extensions/buddy5_obstacles/width_pr
 for f in width_estimate.c width_estimate.h width_probe_pack.h; do
   run cmp "$L/source/firmware/integration/buddy1_4/extensions/buddy5_obstacles/$f" "$E/$f"
 done
-# width_probe.c/.h: SDK text plus ONLY the B5WP_RUN_ARCHIVE guard (no line removed or changed)
+# width_probe.c/.h: compare the SDK path with the RTOS-only retry hook removed.
 for f in width_probe.c width_probe.h; do
   run python3 -B - "$L/source/firmware/integration/buddy1_4/extensions/buddy5_obstacles/$f" "$E/$f" <<'PY'
-import difflib, sys
+import difflib, re, sys
 a, b = (open(x).read().splitlines() for x in sys.argv[1:3])
+block = r'^#ifdef APP_RTOS_BUDDY5\n.*?^#endif\n'
+def sdk_branch(match):
+    lines = match[0].splitlines(keepends=True)
+    return ''.join(lines[lines.index('#else\n') + 1:-1]) if '#else\n' in lines else ''
+b = re.sub(block, sdk_branch, '\n'.join(b) + '\n', flags=re.M | re.S).splitlines()
 ok = {'#if B5WP_RUN_ARCHIVE', '#endif', '#define B5WP_RUN_ARCHIVE      1'}
 bad = [l for l in difflib.ndiff(a, b) if l[:2] in ('- ', '+ ') and not (l.startswith('+ ') and (
        l[2:].strip() in ok or l[2:].startswith('#ifndef B5WP_RUN_ARCHIVE') or l[2:].lstrip().startswith(('0 = no copy', 'needs the RAM'))))]

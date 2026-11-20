@@ -11,8 +11,8 @@
  * including a person's leg, still counts as a possible obstacle; the gate
  * only decides whether the manoeuvre may START here.
  *
- * Open (B5S_STRAIGHT) only when ALL hold for every frame of the last
- * B5S_WINDOW_MM of travel and at least B5S_DWELL_US:
+ * Establish straight evidence across B5S_WINDOW_MM of travel and at least
+ * B5S_DWELL_US:
  *  - Buddy3's provider ran this frame (fresh, <= B5S_SAMPLE_MAX_US old);
  *  - circuit phase C_FOLLOW, not busy, no fault, no stop;
  *  - ordinary decision: the continuous steering output (24 scanning,
@@ -20,14 +20,12 @@
  *  - line seen (no white loss, no recovery search, no recovery decision);
  *  - no junction candidate or cross mark, no junction/turn phase, no
  *    barcode route turn or U-turn in progress;
- *  - continuous steering active (the bend monitor runs) and no sustained
- *    bend candidate, confirmed bend or bend exit. Brief corrections before
- *    candidate qualification are covered by the encoder heading check;
- *  - encoder heading change over the window <= B5S_HEADING_MAX_DEG, so a
- *    gentle curve below the bend-assist thresholds cannot qualify.
- * Any failed condition closes the gate and restarts the evidence (a curve
- * keeps sliding the heading window, so a straight after a curve needs a full
- * window of straight travel first).
+ *  - continuous steering active;
+ *  - encoder heading change at most 6 degrees over the full window and
+ *    3 degrees across the four most recent sample intervals. The shorter
+ *    window catches tight curve entry. Optical bend-assist state is for
+ *    steering, while this gate relies on measured heading and line state.
+ * A curve keeps sliding the window and restarts the dwell.
  * @see app_program/obstacle_navigation/README.md
  */
 #ifndef B5_STRAIGHT_H
@@ -44,9 +42,9 @@ typedef enum
     B5S_SETTLING,    /* straight so far, window or dwell not complete   */
     B5S_STALE,       /* no fresh Buddy3 frame                           */
     B5S_UNAVAILABLE, /* Buddy3 provider not running / no bend monitor   */
-    B5S_BEND_ENTRY,  /* sustained bend candidate                        */
-    B5S_BEND,        /* confirmed bend                                  */
-    B5S_BEND_EXIT,   /* bend exit / blend back                          */
+    B5S_BEND_ENTRY,  /* legacy wire reason                               */
+    B5S_BEND,        /* legacy wire reason                               */
+    B5S_BEND_EXIT,   /* legacy wire reason                               */
     B5S_CURVE,       /* encoder heading change over the window too big  */
     B5S_JUNCTION,    /* junction phase, candidate edge or cross mark    */
     B5S_TURN,        /* junction turn, acquisition, route turn, U-turn  */
@@ -60,9 +58,11 @@ enum
     B5S_WINDOW_MM = 200, /* straight travel needed before opening */
     B5S_STEP_MM = 10,    /* heading window sample spacing          */
     B5S_POINTS = (B5S_WINDOW_MM / B5S_STEP_MM) + 1,
-    B5S_DWELL_US = 300000,     /* and at least this long                 */
-    B5S_SAMPLE_MAX_US = 50000, /* = B5MI_OBSERVATION_MAX_US              */
-    B5S_HEADING_MAX_CDEG = 600 /* 6.0 deg over the window: radius >= ~1.9 m */
+    B5S_DWELL_US = 300000,      /* and at least this long                 */
+    B5S_SAMPLE_MAX_US = 50000,  /* = B5MI_OBSERVATION_MAX_US              */
+    B5S_HEADING_MAX_CDEG = 600, /* 6.0 deg over the full window */
+    B5S_RECENT_STEPS = 4,       /* 40 mm plus sample spacing */
+    B5S_RECENT_MAX_CDEG = 300   /* 3.0 deg over the recent window */
 };
 #define B5S_TRACK_MM 110.0f /* wheel track, = TRACK_MM (dual_logic.h) */
 
@@ -82,9 +82,6 @@ typedef struct
     bool junction_mark; /* qualified side edge or barcode cross mark     */
     bool route_turn;    /* barcode route action executing or U-turn      */
     bool steering;      /* continuous steering (bend monitor) active     */
-    bool bend_candidate;
-    bool bend_confirmed;
-    bool bend_exiting;
 } b5_line_sample_t;
 
 typedef struct
@@ -105,9 +102,6 @@ typedef struct
 
 /* Closed, no evidence; reason given (normally B5S_UNKNOWN). */
 void b5_straight_reset (b5_straight_t * p_gate, uint8_t reason);
-/* Classify one Buddy3 frame (no state): B5S_STRAIGHT when the frame itself
- * is straight-following, otherwise the blocking reason. */
-uint8_t b5_straight_frame_reason (const b5_line_sample_t * p_sample);
 /* One motion frame. An invalid sample closes the gate (UNAVAILABLE). */
 void b5_straight_step (b5_straight_t * p_gate,
                        const b5_line_sample_t * p_sample);

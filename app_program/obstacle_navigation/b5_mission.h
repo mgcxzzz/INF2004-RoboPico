@@ -100,7 +100,9 @@ enum
 /* Configuration, fixed at build time (see README for the evidence). */
 enum
 {
-    B5MI_TRIGGER_MM = 300,         /* guard: three clean echoes <= this       */
+    B5MI_CONFIRM_RANGE_MM = 330,   /* start qualifying ahead of the stop    */
+    B5MI_STRAIGHT_STOP_MM = 295,   /* take over after the qualified approach */
+    B5MI_CLOSE_HOLD_MM = 300,      /* gate closed or re-arming              */
     B5MI_TRIGGER_CONFIRM = 3,      /* v0.6.1 guard confirmation count         */
     B5MI_REARM_CLEAR_US = 1000000, /* clear this long before re-arming    */
     B5MI_APPROACH_TARGET_MM = 200, /* direction probe validated distance  */

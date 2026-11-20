@@ -100,6 +100,8 @@ for source, extra in checks:
                           "-DBUDDY_RUNTIME_MAPPING=1", "-DBUDDY_COORDINATED_BARCODE=1"]
     if source.stem in ("test_b5_mission", "test_nav_steer"):
         profile_flags += ["-DMOTION_STEERED_DRIVE=1", "-DB5WP_RUN_ARCHIVE=0"]
+    if source.stem == "test_b5_mission":
+        profile_flags += ["-DAPP_RTOS_BUDDY5=1"]
     if source.stem == "test_b5_straight_gate":
         profile_flags += ["-DCONTINUOUS_BEND_ASSIST=1", "-DCIRCUIT_STATIONARY_SEARCH=1"]
     subprocess.run([*cc, *host_float, *profile_flags, "-std=c11", "-Wall", "-Wextra", "-Werror", "-O2", "-UNDEBUG",

@@ -1,0 +1,1 @@
+48ef84cf4fc565b214e524cf7bc9478b205d129d159c2bf6c49ced2b528baacf  robopico_buddy1_5_rtos_v0_3_0.uf2

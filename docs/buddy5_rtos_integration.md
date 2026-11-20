@@ -37,7 +37,7 @@ Folder `firmware/integration/buddy1_4/extensions/buddy5_obstacles/`.
 | File(s) | Source | Change |
 |---|---|---|
 | width_estimate.c/.h, width_probe_pack.h, b5_scan_pack.h | SDK width_long_probe v0.2 (UF2 71ae5473…) | none (byte-identical) |
-| width_probe.c/.h | SDK width_long_probe v0.2 | only a `B5WP_RUN_ARCHIVE` guard (default 1 = SDK) around the write-only run-log copy `arch[]`; the RTOS profile sets 0 (no USB/flash exporter, 3,172 B RAM). The checks verify that nothing else differs and that telemetry is byte-identical with the guard on or off. |
+| width_probe.c/.h | SDK width_long_probe v0.2 | `B5WP_RUN_ARCHIVE` guards the write-only run-log copy `arch[]`. The RTOS profile omits that copy to save 3,172 B RAM. v0.2.15 adds an `APP_RTOS_BUDDY5` hook for one stationary REF resample. The hook uses the existing retry budget and original reference acceptance rule. |
 | edge_probe.c/.h, edge_probe_pack.h | SDK edge_probe v0.1.1 (working direction checkpoint, UF2 2f6070fa…4a89) | near allowance 25 mm (edge_scan v0.1.1 rule), BE/BF version 3; both overridable for the v0.1.1 host checks |
 | manual_bypass.c/.h, rect_route.c/.h, stripe_detect.c/.h, b5_event_pack.h | SDK automatic v0.6.1 (identical in the width v0.2 tree) | manual_bypass.h includes b5_compat.h |
 | automatic_bypass.c/.h | SDK automatic v0.6.1 (source tarball 655b8e0d…) | guard, stationary scan, profiler side selection and geometry-only variant removed; `b5_auto_start(side, actual range, heading0, lateral0)` replaces begin/scan/plan; DONE state after hand-back; every other function verbatim |
@@ -339,7 +339,8 @@ Re-run with `sh testing/rtos_migration/buddy5/run_buddy5_checks.sh <bench_tools/
   RTOS-built simulation: 13 runs, 0 mismatch, 0 insufficient (same bases,
   statuses and limits as the SDK simulation; widths differ by ≤ 0.35 mm
   because the v0.2.12 executor's simulated poses differ slightly).
-- width_probe.c/.h differ from the SDK only by the archive guard; mission
+- With the RTOS reference retry hook disabled, width_probe.c/.h differ from
+  the SDK only by the archive guard. The mission
   telemetry with the guard on and off is byte-identical.
 - Frozen edge_probe v0.1.1 suite: 1298 checks (15 mm, v2) and 1298
   (25 mm, v3); near-25 replay of nine accepted captures: no change.

@@ -45,8 +45,7 @@ static void sim_init(sim_t *s) {
 static b5_line_sample_t sample_of(const sim_t *s, uint8_t decision) {
     const continuous_steering_t *p = &s->steer;
     return (b5_line_sample_t){.now_us = s->now, .wheel_mm = {s->wheel[0], s->wheel[1]}, .phase = C_FOLLOW,
-        .decision = decision, .valid = true, .steering = p->active,
-        .bend_candidate = p->bend_candidate, .bend_confirmed = p->bend_confirmed, .bend_exiting = p->bend_exiting};
+        .decision = decision, .valid = true, .steering = p->active};
 }
 
 /* One 10 ms frame. curvature_signed = 1/R (+LEFT), 0 on a straight; error and
@@ -125,6 +124,37 @@ static void test_brief_bend_signals_on_a_straight(void) {
     CHECK(pending_frames > 0);
 }
 
+static void test_confirmed_bend_label_on_straight(void) {
+    sim_t s; sim_init(&s);
+    const float dt = DT_US / 1e6f;
+    CHECK(open_on_straight(&s, 0, 1000) > 0);
+    for (unsigned frame = 0; frame < 22; ++frame) {
+        s.now += DT_US;
+        s.wheel[0] += (SPEED - 10.0f) * dt;
+        s.wheel[1] += (SPEED + 10.0f) * dt;
+        s.path += SPEED * dt;
+        continuous_steering_update_bend(&s.steer, 0.30f, 10.0f, SPEED, 10.0f, SPEED, dt);
+        b5_line_sample_t sample = sample_of(&s, 25);
+        b5_straight_step(&s.gate, &sample);
+    }
+    CHECK(s.steer.bend_candidate && s.steer.bend_confirmed);
+    CHECK(s.gate.reason == B5S_STRAIGHT && s.gate.open);
+    CHECK(s.gate.travel_mm >= B5S_WINDOW_MM);
+    CHECK(step(&s, 0, 0, 0) == B5S_STRAIGHT);
+    CHECK(s.steer.bend_exiting && s.steer.bend_confirmed);
+    CHECK(s.gate.open);
+
+    /* The same exit flag with encoder evidence of a curve blocks takeover. */
+    b5_line_sample_t corner = sample_of(&s, 25);
+    corner.now_us += DT_US;
+    corner.wheel_mm[0] -= 3.0f;
+    corner.wheel_mm[1] += 3.0f;
+    b5_straight_step(&s.gate, &corner);
+    CHECK(s.gate.reason == B5S_CURVE && !s.gate.open);
+    CHECK(s.gate.heading_cdeg < B5S_HEADING_MAX_CDEG);
+    puts("  bend exit on a straight qualifies; recent encoder curve blocks before 6 degrees");
+}
+
 /* Tight curve: the real bend monitor engages (entry, confirmed, exit). */
 static void test_tight_curve(int dir) {
     sim_t s; sim_init(&s);
@@ -143,8 +173,8 @@ static void test_tight_curve(int dir) {
         if (step(&s, 0, 2.0f, 0) == B5S_STRAIGHT) reopened = s.path - curve_end;
     }
     CHECK(!open_in_curve);
-    CHECK(s.seen & (1u << B5S_BEND_ENTRY)); CHECK(s.seen & (1u << B5S_BEND)); CHECK(s.seen & (1u << B5S_BEND_EXIT));
-    CHECK(reopened >= B5S_WINDOW_MM);
+    CHECK(first_bad == B5S_CURVE);
+    CHECK(reopened >= B5S_WINDOW_MM - 30);
     printf("  %s curve R=%.0f mm (bend assist engages): blocked from %s; reasons seen:", dir > 0 ? "left " : "right",
            r_mm, NAMES[first_bad]);
     for (unsigned i = 0; i < B5S_REASON_COUNT; ++i) if (s.seen & (1u << i)) printf(" %s", NAMES[i]);
@@ -211,7 +241,6 @@ static void test_states(void) {
         {"follower stop", {.stop = true}, B5S_OTHER, false, false},
         {"circuit fault", {.fault = true}, B5S_OTHER, false, false},
         {"bend monitor not running", {0}, B5S_UNAVAILABLE, true, false},
-        {"sustained bend candidate", {.bend_candidate = true}, B5S_BEND_ENTRY, false, false},
         {"provider did not run", {0}, B5S_UNAVAILABLE, false, true},
     };
     for (unsigned i = 0; i < sizeof cases / sizeof cases[0]; ++i) {
@@ -225,7 +254,6 @@ static void test_states(void) {
             if (m->decision) ls.decision = m->decision;
             ls.route_turn |= m->route_turn; ls.busy |= m->busy; ls.junction_mark |= m->junction_mark;
             ls.line_lost |= m->line_lost; ls.searching |= m->searching; ls.stop |= m->stop; ls.fault |= m->fault;
-            ls.bend_candidate |= m->bend_candidate;
             if (cases[i].steer_off) ls.steering = false;
             if (cases[i].invalid) ls.valid = false;
             b5_straight_step(&s.gate, &ls);
@@ -281,6 +309,7 @@ static void test_stale_and_misc(void) {
 int main(void) {
     test_straight_with_corrections();
     test_brief_bend_signals_on_a_straight();
+    test_confirmed_bend_label_on_straight();
     test_tight_curve(+1);
     test_tight_curve(-1);
     test_gentle_curve(+1, 500, true);

@@ -1,4 +1,7 @@
 #include "extensions/buddy5_obstacles/width_probe.h"
+#ifdef APP_RTOS_BUDDY5
+#include "app_program/obstacle_navigation/width_ref_retry.h"
+#endif
 
 #include <math.h>
 #include <stdlib.h>
@@ -743,6 +746,9 @@ static bool collect_triplet(B5WidthProbe *t, uint64_t now) {
 static bool retry_sample(B5WidthProbe *t, uint16_t expected, uint64_t now) {
     if (t->pose_retried || t->retry_count >= B5WP_RETRIES_PER_RUN) return false;
     bool reference = t->sample_phase == B5WP_PH_REF;
+#ifdef APP_RTOS_BUDDY5
+    bool retry_outlier = reference && width_ref_retry_outlier(t->ping);
+#endif
     B5WPSide *sd = &t->side[t->cur];
     bool returning = t->sample_phase == B5WP_PH_RET || t->sample_phase == B5WP_PH_LAD_RET;
     bool boundary_transition = returning && sd->boundary && sd->in_stop >= 0 &&
@@ -758,7 +764,16 @@ static bool retry_sample(B5WidthProbe *t, uint16_t expected, uint64_t now) {
             } else if (p.cls != B5_PING_ECHO || p.why != B5_PING_WHY_OK) {
                 return false; /* faults and arbitrary mixed observations are not edge evidence */
             } else if (reference) {
+#ifdef APP_RTOS_BUDDY5
+                if ((!retry_outlier) &&
+                    ((p.range_mm < B5WP_D0_MIN_MM) ||
+                     (p.range_mm > B5WP_D0_MAX_MM)))
+                {
+                    return false;
+                }
+#else
                 if (p.range_mm < B5WP_D0_MIN_MM || p.range_mm > B5WP_D0_MAX_MM) return false;
+#endif
             } else if ((long)p.range_mm < (long)expected - WP_GATE_NEAR_MM) {
                 return false;
             }

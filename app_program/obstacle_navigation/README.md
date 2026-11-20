@@ -1,4 +1,4 @@
-# Buddy 5 RTOS integration (APP=rtos_buddy1_5, v0.2.13)
+# Buddy 5 RTOS integration (APP=rtos_buddy1_5)
 
 Experimental candidate on the v0.2.12 release. **Not physically validated.**
 `APP=rtos_buddy1_4` is byte-identical to a clean v0.2.12 build (same
@@ -17,17 +17,19 @@ Buddy 5 adapter and mission; the obstacle algorithms are ported SDK modules in
 1. **Guard** (line following, Buddy 3 owns AUTO): servo centred, one ping per
    60 ms. **Straight-only takeover** (`b5_straight.c`): the takeover is
    requested only while Buddy 3 has been following a straight for the last
-   200 mm and 300 ms (no sustained bend candidate, confirmed bend, bend exit,
-   junction, turn, loss or recovery; ≤ 6° encoder heading change). Brief
-   steering corrections before bend qualification can preserve this history.
+   200 mm and 300 ms with fresh line tracking and no junction, turn, loss or
+   recovery. The v0.2.15 candidate limits encoder heading change to 6° across
+   the full window and 3° across roughly 40 mm of recent travel. The optical
+   bend-assistance labels remain visible in the line telemetry.
    Takeover also requires three consecutive clean echoes
-   ≤ 300 mm from pings requested after the gate opened. Losing the gate
-   discards the count. Three close echoes while the gate is closed stop the
-   robot and hold `NOT_STRAIGHT` (no probe, no bypass; Stop ends it). The
+   ≤ 330 mm from pings requested after the gate opened. The v0.3.0 candidate
+   counts those echoes early, then requests the stop on a qualifying echo
+   ≤ 295 mm. Losing the gate discards the count. Three echoes ≤ 300 mm while the
+   gate is closed stop the robot and hold `NOT_STRAIGHT`. Stop ends the hold. The
    gate decides where the manoeuvre may start; sonar still treats any close
-   reflector, including a person's leg, as an obstacle. Nothing beyond 300 mm
-   triggers. After a hand-back the front must read clear (> 300 mm or no
-   return) for 1 s before the guard re-arms, and the gate needs fresh
+   reflector, including a person's leg, as an obstacle. After a hand-back
+   the front must read clear (> 330 mm or no return) for 1 s before the
+   guard re-arms, and the gate needs fresh
    straight evidence again.
 2. **Width policy, then width probe** (SDK width_long_probe v0.2,
    unchanged). Once stopped, a fresh stationary triplet (three clean echoes
@@ -36,7 +38,10 @@ Buddy 5 adapter and mission; the obstacle algorithms are ported SDK modules in
      Its REF rule, clearance-limited diagonal per side (20 mm steps, 220 mm
      ceiling, 12 steps, ±46° servo, first-FAR stop, retrace, stationary retry,
      return corroboration), D1–D5 telemetry and the rule-2 on-Pico estimate
-     are unchanged. A complete run with an unresolved edge shows its labelled
+     still apply. The RTOS candidate can use the existing single stationary
+     retry if two in-window reference echoes agree within 15 mm and the third
+     clean echo is within 15 mm of the reference window. The replacement must
+     pass the original REF limits. A complete run with an unresolved edge shows its labelled
      fallback and the mission continues. **Any
      non-COMPLETE end holds (`WIDTH_ABORT`, module reason = end code),
      `REFERENCE` included**: END_REFERENCE alone is not evidence of a clean

@@ -41,6 +41,9 @@ static uint64_t g_ready_at, g_next_ping;
 static b5_ping_t g_result;
 static unsigned g_fault_pings; /* inject: next N pings are faults */
 static unsigned g_noise_pings; /* inject: next N echoes alternate +40 mm */
+static const uint16_t *g_ref_script;
+static unsigned g_ref_count;
+static unsigned g_ref_index;
 static bool g_line_present = true;
 static unsigned g_contacts;
 static float g_min_clear = 1e9f;
@@ -112,6 +115,10 @@ static b5_ping_t measure(void) {
                 if (c >= cosf(7.5f * PI_F / 180.0f) && d < best) best = d;
             }
         }
+    }
+    if (g_ref_index < g_ref_count && g_mission.stage == B5MI_WIDTH &&
+        g_mission.width.state == B5WP_REF) {
+        best = g_ref_script[g_ref_index++];
     }
     if (g_noise_pings && best < 3900) { /* clean but inconsistent echoes */
         best += (g_noise_pings % 2) ? 40.0f : 0.0f;
@@ -334,6 +341,8 @@ typedef struct {
     bool fault_after_ref; /* width stage: inject only after the REF sample */
     bool fault_in_width_gate; /* faults in the fresh range deciding the width policy */
     bool noise_in_width_gate; /* clean but inconsistent echoes in that range */
+    const uint16_t *ref_script;
+    unsigned ref_count;
     float disturb_deg, disturb_mm; /* physical heading (+LEFT)/lateral (+RIGHT)
                                       error injected at the first approach leg */
     bool steering_off;     /* comparison only: mission steering disabled */
@@ -344,6 +353,7 @@ typedef struct {
     ping_hook_t ping_hook;   /* scripted guard pings (>=0) or geometric (<0) */
     bool no_line_samples;    /* Buddy3 frames stop arriving: stale */
     bool appear_when_open;   /* box placed only once the gate first opens */
+    bool start_rearming;     /* start the guard in its state after hand-back */
     bool stop_at_takeover;   /* end the run once HALTING is entered */
     unsigned ping_latency_us; /* request -> result (default 3 ms) */
 } scenario_t;
@@ -362,6 +372,7 @@ static outcome_t run(const scenario_t *sc) {
     g_now = 1000000; g_wheel[0] = g_wheel[1] = 0; g_speed[0] = g_speed[1] = 0;
     g_x = 0; g_y = 0; g_heading = 0; g_busy = g_ready = false; g_next_ping = 0;
     g_fault_pings = 0; g_noise_pings = 0; g_line_present = true; g_b3 = (analog_tracker_t){0}; g_contacts = 0; g_min_clear = 1e9f;
+    g_ref_script = sc->ref_script; g_ref_count = sc->ref_count; g_ref_index = 0;
     g_stage_mask = 0;
     g_box = (box_t){.cx = sc->cx, .face_y = sc->face_y, .width = sc->width, .depth = 150,
                     .present = sc->width > 0 && !sc->appear_when_open};
@@ -377,6 +388,7 @@ static outcome_t run(const scenario_t *sc) {
     if (sc->steering_off) g_mission.steering = false; /* comparison only */
     motion_session_begin(g_now);
     assert(b5_mission_begin(&g_mission, g_now));
+    g_mission.rearm = sc->start_rearming;
     outcome_t out = {0};
     bool faulted = false, lost = false, disturbed = false;
     unsigned prev_stage = g_mission.stage;
@@ -455,16 +467,32 @@ static outcome_t run(const scenario_t *sc) {
 }
 
 /* ---- straight-only takeover gate scenarios ---- */
-static void hook_bend(b5_line_sample_t *s, float path) { (void)path; s->bend_candidate = s->bend_confirmed = true; }
-static void hook_bend_exit(b5_line_sample_t *s, float path) { (void)path; s->bend_candidate = s->bend_exiting = true; }
+static void hook_curve(b5_line_sample_t *s, float path) {
+    /* Present encoder travel for a 250 mm-radius bend while the sonar plant
+     * sees the close reflector. The curve has ordinary tracking state. */
+    float differential = fmaxf(0, path - 400.0f) * (110.0f / 250.0f) / 2;
+    s->wheel_mm[0] -= differential;
+    s->wheel_mm[1] += differential;
+}
+static int ping_straight_lead(float path) {
+    if (path < 300.0f) return B5MI_CONFIRM_RANGE_MM + 1;
+    return path < 320.0f ? B5MI_CONFIRM_RANGE_MM : B5MI_STRAIGHT_STOP_MM;
+}
+static int ping_curve_lead(float path) {
+    if (path < 440.0f) return B5MI_CONFIRM_RANGE_MM + 1;
+    return path < 530.0f ? B5MI_CONFIRM_RANGE_MM : B5MI_CLOSE_HOLD_MM;
+}
+static int ping_rearm_lead(float path) {
+    return path < 330.0f ? B5MI_CLOSE_HOLD_MM + 1 : B5MI_STRAIGHT_STOP_MM;
+}
 static void hook_junction(b5_line_sample_t *s, float path) { (void)path; s->junction_mark = true; }
 static void hook_recovery(b5_line_sample_t *s, float path) { (void)path; s->searching = true; s->decision = SYM_RECOVER_LEFT; }
 static void hook_invalid(b5_line_sample_t *s, float path) { (void)path; s->valid = false; }
-/* Carry-over: a bend until 300 mm with two close echoes inside it, then a
+/* Carry-over: a junction until 300 mm with two close echoes inside it, then a
  * straight; the gate opens after 200 mm of straight travel. Close echoes
  * start one or two pings BEFORE the gate opens (requested while closed). */
 static void hook_carry(b5_line_sample_t *s, float path) {
-    if (path < 300) { s->bend_candidate = s->bend_confirmed = true; }
+    if (path < 300) { s->junction_mark = true; }
     /* a close echo IN FLIGHT across the opening (requested while closed) */
     if (g_mission.straight.open && g_busy && g_req_at < g_mission.straight.open_us) {
         g_result.cls = B5_PING_ECHO; g_result.range_mm = 280;
@@ -480,13 +508,13 @@ static int ping_carry(float path) {
     return 0;
 }
 /* Re-qualify: straight; two qualifying close echoes after the gate opens,
- * then (before any far echo is taken) a bend entry for 60 mm with far pings,
+ * then (before any far echo is taken) a junction for 60 mm with far pings,
  * then the straight again: three fresh echoes after the gate re-opens. */
 static unsigned g_req_phase1, g_req_state;
 static float g_req_bend_end;
 static void hook_requalify(b5_line_sample_t *s, float path) {
     if (g_req_state == 0 && g_mission.confirm >= 2) { g_req_state = 1; g_req_bend_end = path + 60; }
-    if (g_req_state == 1) { if (path < g_req_bend_end) s->bend_candidate = true; else g_req_state = 2; }
+    if (g_req_state == 1) { if (path < g_req_bend_end) s->junction_mark = true; else g_req_state = 2; }
 }
 static int ping_requalify(float path) {
     if (g_req_state == 0) return (g_mission.straight.open && path >= 420 && g_req_phase1 < 2) ? (++g_req_phase1, 280) : 0;
@@ -501,8 +529,7 @@ static void gate_scenarios(unsigned *p_failures) {
      * with the gate reason; no probe, no bypass; Buddy5 keeps the stopped
      * robot until an operator Stop. */
     struct { const char *name; line_hook_t hook; bool no_samples; uint8_t reason; } blocked[] = {
-        {"blocked: confirmed bend", hook_bend, false, B5S_BEND},
-        {"blocked: bend exit", hook_bend_exit, false, B5S_BEND_EXIT},
+        {"blocked: close echo on encoder curve", hook_curve, false, B5S_CURVE},
         {"blocked: junction mark", hook_junction, false, B5S_JUNCTION},
         {"blocked: recovery search", hook_recovery, false, B5S_LINE_LOST},
         {"blocked: Buddy3 state unavailable", hook_invalid, false, B5S_UNAVAILABLE},
@@ -525,11 +552,30 @@ static void gate_scenarios(unsigned *p_failures) {
         printf("  %-34s -> HOLD %s module(gate)=%u, axle %.0f mm from the face\n", blocked[i].name,
                b5_mission_reason_name(o.reason), g_mission.module_reason, 900 - g_y);
     }
+    scenario_t straight_lead = {.name = "early echoes confirm before first stop echo",
+        .ping_hook = ping_straight_lead, .stop_at_takeover = true};
+    outcome_t o = run(&straight_lead);
+    GCHECK(o.final_stage == B5MI_HALTING && g_y >= 319.0f && g_y < 325.0f);
+    GCHECK(g_mission.trigger_mm == B5MI_STRAIGHT_STOP_MM);
+    b5_mission_cancel(&g_mission, g_now); (void)motion_stop(MOTION_BUDDY1); motion_session_end(1);
+    scenario_t curve_lead = {.name = "early echo on curve, HOLD at 300 mm",
+        .line_hook = hook_curve, .ping_hook = ping_curve_lead};
+    o = run(&curve_lead);
+    GCHECK(o.final_stage == B5MI_HOLD && o.reason == B5MI_R_NOT_STRAIGHT);
+    GCHECK(g_mission.module_reason == B5S_CURVE && g_y >= 529.0f);
+    GCHECK(g_mission.run == 0 && (g_stage_mask & probing) == 0);
+    b5_mission_cancel(&g_mission, g_now); (void)motion_stop(MOTION_BUDDY1); motion_session_end(1);
+    scenario_t rearm_lead = {.name = "rearming requires the full confirmation zone to clear",
+        .ping_hook = ping_rearm_lead, .start_rearming = true};
+    o = run(&rearm_lead);
+    GCHECK(o.final_stage == B5MI_HOLD && o.reason == B5MI_R_SENSOR);
+    GCHECK(g_y >= 329.0f && g_mission.run == 0 && (g_stage_mask & probing) == 0);
+    b5_mission_cancel(&g_mission, g_now); (void)motion_stop(MOTION_BUDDY1); motion_session_end(1);
     /* 2. Old close echoes never carry over into a new straight. */
     g_script_near = 0;
-    scenario_t sc = {.name = "carry-over: echoes in bend, then straight", .line_hook = hook_carry,
+    scenario_t sc = {.name = "carry-over: echoes in junction, then straight", .line_hook = hook_carry,
                      .ping_hook = ping_carry, .stop_at_takeover = true, .ping_latency_us = 55000};
-    outcome_t o = run(&sc);
+    o = run(&sc);
     GCHECK(g_mission.stage == B5MI_HALTING);
     unsigned near_closed = 0, pre_open_after = 0, fresh = 0, at_takeover = 0;
     for (unsigned k = 0; k < g_ntakes; ++k) {
@@ -542,14 +588,14 @@ static void gate_scenarios(unsigned *p_failures) {
         if (t->stage == B5MI_HALTING) at_takeover = k;
     }
     GCHECK(near_closed >= 2 && pre_open_after >= 1 && fresh == 3 && at_takeover == g_ntakes - 1);
-    printf("  carry-over: %u close echoes while closed (bend/settling) and %u in-flight echo(es) requested before "
+    printf("  carry-over: %u close echoes while closed (junction/settling) and %u in-flight echo(es) requested before "
            "opening never counted; takeover on the 3rd fresh echo (%u)\n", near_closed, pre_open_after, fresh);
     (void)o;
     b5_mission_cancel(&g_mission, g_now); (void)motion_stop(MOTION_BUDDY1); motion_session_end(1);
-    /* 3. Losing the gate resets the count: 2 qualifying echoes, bend entry,
+    /* 3. Losing the gate resets the count: 2 qualifying echoes, junction entry,
      * then three fresh echoes after the gate re-opens. */
     g_req_phase1 = 0; g_req_state = 0;
-    scenario_t sr = {.name = "re-qualify: 2 echoes, bend entry, 3 fresh", .line_hook = hook_requalify,
+    scenario_t sr = {.name = "re-qualify: 2 echoes, junction entry, 3 fresh", .line_hook = hook_requalify,
                      .ping_hook = ping_requalify, .stop_at_takeover = true};
     o = run(&sr);
     GCHECK(g_mission.stage == B5MI_HALTING);
@@ -561,11 +607,11 @@ static void gate_scenarios(unsigned *p_failures) {
         if (t->gate == B5S_STRAIGHT && t->open_us != first_open && t->near) {
             ++after; GCHECK(t->stage == B5MI_HALTING ? after == 3 : t->confirm == after);
         }
-        if (t->gate == B5S_BEND_ENTRY) GCHECK(t->confirm == 0);
+        if (t->gate == B5S_JUNCTION) GCHECK(t->confirm == 0);
     }
     GCHECK(max_before == 2 && after == 3);
     GCHECK(g_drop_seen && g_drop_before == 2 && g_drop_after == 0); /* reset by the gate, not by a far echo */
-    printf("  re-qualify: %u qualifying echoes discarded at bend entry; takeover after %u fresh echoes on the "
+    printf("  re-qualify: %u qualifying echoes discarded at junction entry; takeover after %u fresh echoes on the "
            "re-opened straight\n", max_before, after);
     b5_mission_cancel(&g_mission, g_now); (void)motion_stop(MOTION_BUDDY1); motion_session_end(1);
 #undef GCHECK
@@ -657,6 +703,30 @@ int main(int argc, char **argv) {
     CHECK(g_mission.width_attempted && g_mission.width_policy == B5MI_WIDTH_FAILED);
     CHECK(o.handbacks == 0 && !g_mission.direction_attempted);
     CHECK(g_mission.width_gate_mm >= 270 && g_mission.width_gate_mm <= 330);
+    /* Real stopped capture: first triplet is 289/265/290 mm. Retry the pose
+     * once and apply the original REF test to the replacement triplet. */
+    static const uint16_t ref_recovered[] = {289, 265, 290, 292, 293, 294};
+    static const uint16_t ref_rejected[] = {289, 265, 290, 289, 265, 290};
+    static const uint16_t ref_too_near[] = {289, 240, 290};
+    scenario_t ref = {.name = "REF capture outlier, clean replacement",
+        .cx = 60, .width = 185, .face_y = 900,
+        .ref_script = ref_recovered, .ref_count = 6};
+    o = run(&ref);
+    CHECK(g_ref_index == 6 && g_mission.width.retries[0].value[1] == 265);
+    CHECK(o.d0 == 293 && g_mission.width.end == B5WP_END_COMPLETE);
+    CHECK(o.handbacks == 1 && g_contacts == 0);
+    ref.name = "REF repeat outlier holds";
+    ref.ref_script = ref_rejected;
+    o = run(&ref);
+    CHECK(g_ref_index == 6 && g_mission.width.retry_count == 1);
+    CHECK(o.final_stage == B5MI_HOLD && g_mission.width.end == B5WP_END_REFERENCE);
+    CHECK(!g_mission.direction_attempted && !g_mission.bypass.session);
+    ref.name = "REF too-near echo holds without retry";
+    ref.ref_script = ref_too_near;
+    ref.ref_count = 3;
+    o = run(&ref);
+    CHECK(g_ref_index == 3 && g_mission.width.retry_count == 0);
+    CHECK(o.final_stage == B5MI_HOLD && g_mission.width.end == B5WP_END_REFERENCE);
     /* A deliberate clean out-of-window stop is a labelled SKIP: no probe
      * attempt, no motion for it, mission continues. Distinct from FAILED. */
     /* v0.2.12 straight gate: the gate needs 200 mm of straight travel first,

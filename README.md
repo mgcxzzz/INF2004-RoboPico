@@ -1,15 +1,16 @@
 # RoboPico Buddy 1–5 RTOS integration
 
-`barr-c-combined` contains the **v0.2.13 integration candidate**. It pairs the
-tested Buddy 1–4 v0.2.12 baseline with the Buddy 5 obstacle mission on
-micro T-Kernel SMP. The combined build passed software validation. A complete
-obstacle run on the robot is still pending.
+`halt-testing` contains the **v0.3.0 stopping-distance candidate** for Buddy 5.
+It confirms an obstacle from 330 mm on a qualified straight and requests a
+stop at 295 mm. The 300 mm close-obstacle hold still applies on bends.
+The staged stop passed host simulation. The stopped range and first angled
+width scan still need a run on the robot.
 
-- [Firmware and dashboard downloads](firmware/integration/buddy1_4/artifacts/v0_2_13_combined/)
-- [Setup, powerbank operation and logs](docs/setup.md)
-- [First hardware tests and expected results](docs/buddy1_5_v0_2_13.md)
+- [v0.3.0 UF2, test steps, and source pointers](firmware/integration/buddy1_4/artifacts/v0_3_0_halt_testing/)
+- [Compatible v0.2.13 dashboard bundle](firmware/integration/buddy1_4/artifacts/v0_2_13_combined/)
+- [Dashboard setup, powerbank operation and logs](docs/setup.md)
 - [Dashboard overview](dashboard/README.md)
-- [Build and offline checks](docs/build.md)
+- [Build profile and focused checks](firmware/integration/buddy1_4/artifacts/v0_3_0_halt_testing/README.md#build-and-check)
 
 ## What the combined firmware does
 
