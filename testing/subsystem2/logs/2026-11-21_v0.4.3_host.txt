@@ -1,0 +1,6 @@
+RoboPico v0.4.3 | source 8aa5f2cd876dea356fa6829caf8969a0232c40ec
+21 November 2026 | selected test output
+
+PASS encoder quality: sparse/repeated errors, boundary bursts, density, Pause, wrap and saturation
+PASS encoder fault snapshot latch, compact C4 codec, saturation and clear frame
+PASS: clock disagreement/freeze, start gates, urgent-stop output gates, wraparound and encoder decoding

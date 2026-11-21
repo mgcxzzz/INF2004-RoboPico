@@ -7,7 +7,7 @@ the line. List **every** video in the table at the bottom of this page.
 ## What to record
 
 - **Short:** 15–60 seconds. One test or one feature per video.
-- **Say what it is.** Show or say the test ID (e.g. `S2-U03`, `INT-01`) or
+- **Say what it is.** Show or say the test ID (e.g. `SYS-14`) or
   the demo name at the start.
 - **Show the commit.** Before recording, run `git rev-parse --short HEAD` and
   keep the terminal in shot for a moment, or put it in the table below.
@@ -34,13 +34,13 @@ put its link in the *Log / evidence* column of that test's row in
 
 ## Video index
 
-The [21 November team circuit run](../testing/evidence/tribunal2/run-4/README.md)
+The [21 November team circuit run](../testing/system/logs/2026-11-21_run_4/README.md)
 contains the source timestamps and matching log events. The clips below use
 v0.4.2 and are ready for the team to share as unlisted videos.
 
 | Clip | Test cases | Unlisted link |
 | --- | --- | --- |
-| `01-line-follow-and-barcode.mp4` | T2-02, T2-03 | Pending |
-| `02-hump-crossing.mp4` | T2-05 | Pending |
-| `03-obstacle-bypass-and-rejoin.mp4` | T2-06, T2-07 | Pending |
-| `04-barcode-junction-actions.mp4` | T2-04 | Pending |
+| `01-line-follow-and-barcode.mp4` | SYS-12, SYS-13 | Pending |
+| `02-hump-crossing.mp4` | SYS-16 | Pending |
+| `03-obstacle-bypass-and-rejoin.mp4` | SYS-17, SYS-18, SYS-19 | Pending |
+| `04-barcode-junction-actions.mp4` | SYS-14 | Pending |

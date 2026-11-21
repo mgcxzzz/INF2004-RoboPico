@@ -1,11 +1,12 @@
 # RoboPico Buddy 1–5 RTOS
 
-The team selected **v0.4.3** for Tribunal 2. It runs on the Pico W under
+The selected RoboPico release is **v0.4.3**. It runs on the Pico W under
 micro T-Kernel SMP with Demo Console v0.2.15. The release applies a warning
 and continues for a corroborated borderline obstacle range after a turn.
 
 - [v0.4.3 firmware and full dashboard bundle](firmware/integration/buddy1_4/artifacts/v0_4_3/)
-- [Tribunal 2 requirements, cases and results](testing/)
+- [Test cases, results and logs](testing/)
+- [Project requirements](docs/requirements.md)
 - [Build instructions](docs/build.md)
 - [Dashboard setup, powerbank operation and logs](docs/setup.md)
 - [Dashboard overview](dashboard/README.md)
@@ -34,7 +35,6 @@ the dashboard capture and stored rows.
 
 - [System architecture](docs/architecture.md) and [shared APIs](docs/interfaces.md)
 - [Buddy 5 mission stages and telemetry](app_program/obstacle_navigation/README.md)
-- [Release verification and hardware evidence](testing/)
 - [RoboPico C Standard](CODING_STANDARD.md) and [documented exceptions](docs/coding_exceptions.md)
 - [Release archive and rollback image](firmware/integration/buddy1_4/artifacts/README.md)
 - [Historical SDK reference](firmware/integration/buddy1_4/SDK_REFERENCE.md)

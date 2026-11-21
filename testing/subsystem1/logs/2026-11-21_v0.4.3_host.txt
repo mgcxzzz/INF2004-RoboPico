@@ -1,0 +1,6 @@
+RoboPico v0.4.3 | source 8aa5f2cd876dea356fa6829caf8969a0232c40ec
+21 November 2026 | selected test output
+
+PASS production MQTT owner: reserved headroom, wrapped ring, Nagle off, QoS0 ACK activity, ERR_MEM priority, expiry and disconnect cancellation
+PASS network stop snapshot: guard boundaries, failure mask, latch, C6 codec and clear
+PASS release exports: stopped gate, frozen lease, row formats, chunk bounds, navigation generation, empty data and timer wrap.

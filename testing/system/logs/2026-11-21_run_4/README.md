@@ -7,21 +7,21 @@ A left and Z right. The demo evidence ends with the completed left turn.
 Run 4 serves as the final circuit verification for the behaviours listed below.
 The submission firmware, v0.4.3, adds a small adjustment to the stopped sonar
 range check and its warning. The change was verified by firmware replay and
-dashboard decoding. See the [release verification](../v0.4.3/README.md).
+dashboard decoding. See the [release verification](../../../integration/logs/2026-11-21_v0.4.3/README.md).
 
-[Selected dashboard events](events.csv) · [Source archive identity](capture.json) ·
-[Tribunal 2 test cases](../../../TRIBUNAL_2.md)
+[Selected dashboard events](events.csv) · [MQTT receipt summary](mqtt.txt) · [Source archive identity](capture.json) ·
+[System test cases](../../TEST_LOG.md)
 
 ## Observed results
 
 | Cases | Result in this run |
 | --- | --- |
-| T2-01, T2-02 | Start ID 54 was accepted and the car followed the straight and bends. The video shows the early tracking section. |
-| T2-03, T2-04 | The coordinator accepted Z, Q and A and recorded the associated right, U-turn and left as completed. The footage shows each outgoing path. |
-| T2-05 | Buddy 4 accepted 12 mm and later 16 mm, with zero recorded rejections in run 4. The first crossing is visible. A reference height measurement is needed for an accuracy result. |
-| T2-06 | Buddy 5 detected the box at 284 mm and reported a 138.7 mm width estimate. The width trace lacked one record. Ground-truth width was not recorded. |
-| T2-07 | The footage shows the robot go around the box and resume travel on its original line. The coordinator logged `HANDBACK` to line following. |
-| T2-09, T2-10 | The dashboard received live MQTT and the run ZIP contains all four stored datasets. The retained live history spans the demo. The ZIP includes earlier dashboard activity and reports overwritten older live rows. |
+| SYS-10, SYS-12 | Start ID 54 was accepted and the car followed the straight and bends. The video shows the early tracking section. |
+| SYS-13, SYS-14 | The coordinator accepted Z, Q and A and recorded the associated right, U-turn and left as completed. The footage shows each outgoing path. |
+| SYS-16 | Buddy 4 accepted 12 mm and later 16 mm, with zero recorded rejections in run 4. The first crossing is visible. A reference height measurement is needed for an accuracy result. |
+| SYS-17, SYS-18 | Buddy 5 detected the box at 284 mm and reported a 138.7 mm width estimate. The width trace lacked one record. Ground-truth width was not recorded. |
+| SYS-19 | The footage shows the robot go around the box and resume travel on its original line. The coordinator logged `HANDBACK` to line following. |
+| SYS-20, SYS-22 | The dashboard received live MQTT and the run ZIP contains all four stored datasets. The retained live history spans the demo. The ZIP includes earlier dashboard activity and reports overwritten older live rows. |
 
 These are functional observations from one circuit run. The formal repeatability,
 accuracy and timing targets have their own cases. Straight-through barcode

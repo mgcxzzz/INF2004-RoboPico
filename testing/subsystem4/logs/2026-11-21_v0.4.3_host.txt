@@ -1,0 +1,6 @@
+RoboPico v0.4.3 | source 8aa5f2cd876dea356fa6829caf8969a0232c40ec
+21 November 2026 | selected test output
+
+PASS actual IMU task/service: stationary calibration, fresh stopped Reset calibration epoch, lifetime counters, deadline waits and unlocked I/O.
+PASS release IMU guard: stopped acquisition, lift latch, raw-reset bypass refusal, fresh/upright recheck and blocked recalibration handoff
+PASS RTOS hump odometry grace: flat/clean hump, prearm continuity, bounded hold, zero uncertain travel, 25% and 8s rejection, reverse/turn/stop safety, 200ms heading rebase.

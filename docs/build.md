@@ -1,6 +1,6 @@
 # Build RoboPico RTOS
 
-## Tribunal 2 v0.4.3
+## Current release — v0.4.3
 
 Use the [download and build manifest](../firmware/integration/buddy1_4/artifacts/v0_4_3/).
 Check out the manifest's source commit. Use Arm GNU GCC 14.2.1 and the pinned
@@ -14,7 +14,7 @@ make -j8 APP=rtos_buddy1_5 SMP=1 CONSOLE=usb_cdc WIFI=cyw43 NET=lwip MQTT=1 CRAS
 On the project Windows host, run
 `bash tools/rtos_migration/build_release.sh APP=rtos_buddy1_5` from the root.
 Compare the resulting `robopico_buddy1_5_rtos_v0_4_3.uf2` with the published
-SHA-256. See [release verification](../testing/evidence/tribunal2/v0.4.3/README.md)
+SHA-256. See [release verification](../testing/integration/logs/2026-11-21_v0.4.3/README.md)
 and the [test index](../testing/README.md).
 
 ## Archived v0.2.13 release

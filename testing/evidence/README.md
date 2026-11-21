@@ -1,9 +1,13 @@
 # Evidence index
 
-For Tribunal 2, see the [team circuit run](tribunal2/run-4/README.md) and
-[v0.4.3 release verification](tribunal2/v0.4.3/README.md).
+Current results are in the [system ledger](../system/TEST_LOG.md) and
+[integration ledger](../integration/TEST_LOG.md). This folder preserves
+earlier recorded runs. See [selected historical circuit events](historical_circuit_events.csv)
+for a compact extract of earlier full and partial wireless captures.
 
-Historical evidence is copied byte-for-byte from the pinned commits below. It is not hardware acceptance of the newly restructured build. `current/` is reserved for this build’s own checks and later robot runs.
+The evidence from earlier repository revisions is preserved byte for byte.
+The `current/` directory name dates from the provisional Buddy 1–4 integration
+and contains that build's host checks.
 
 | File | Evidence | Why retained |
 |---|---|---|

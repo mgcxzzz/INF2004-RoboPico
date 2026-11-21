@@ -1,0 +1,5 @@
+RoboPico v0.4.3 | source 8aa5f2cd876dea356fa6829caf8969a0232c40ec
+21 November 2026 | selected test output
+
+PASS: straight gate, 2588 checks, 0 failure(s)
+captured borderline batch: probe and bypass stage=GUARD     reason=NONE              side=1 basis=2 width=196.15(b1) d0=271 start=205 contacts=0 min_clear=70 end=(-1,817,0.0deg) stages=0x4be

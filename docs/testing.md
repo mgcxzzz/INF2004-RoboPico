@@ -1,4 +1,8 @@
-# v0.2.13 combined integration checks
+# Historical test procedures
+
+Start with the [current test cases and results](../testing/README.md) for v0.4.3.
+
+## v0.2.13 combined integration checks
 
 Run from the repository root with a host C compiler and Node.js:
 

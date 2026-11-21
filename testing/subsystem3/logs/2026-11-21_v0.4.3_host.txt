@@ -1,0 +1,6 @@
+RoboPico v0.4.3 | source 8aa5f2cd876dea356fa6829caf8969a0232c40ec
+21 November 2026 | selected test output
+
+PASS RTOS barcode: real failed Z/Y captures, synthetic A-Z both directions, coordinator approval, mapping freeze, unmapped letters, partial Resume and raw ring
+PASS independent junction: 7..30mm boundaries, exact signed/saturated width diagnostics, frozen white outcomes, relative contrast, stop/narrow bar rejection, short-gap cancellation, reset, gate preservation, C7 LE codec
+PASS: bounded stationary sweep, still/reverse gates, credible reacquisition, recovery PWM envelope, and signed coordinator targets

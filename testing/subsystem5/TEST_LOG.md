@@ -1,10 +1,18 @@
-# Buddy 5 — obstacle detection, width and bypass
+# Subsystem 5 — Obstacle detection, width and bypass
 
-- `test_b5_straight_gate` checks heading qualification and route-turn handling.
-  `test_b5_mission` checks detection, stopped ranging, lease ownership, width
-  probing, bypass and rejoin. It includes the v0.4.3 borderline range replay.
-- Hardware procedures are T2-06 and T2-07 in the [case table](../TRIBUNAL_2.md).
-  The [team circuit run](../evidence/tribunal2/run-4/README.md) captures
-  detection, a width estimate and return to the original line. The
-  [v0.4.3 verification record](../evidence/tribunal2/v0.4.3/README.md) pairs
-  that physical result with the replay of the stopped-range tweak.
+[Buddy 5 mission code](../../app_program/obstacle_navigation/) and [physical obstacle tests](../system/TEST_LOG.md).
+Run the named programs using the [test runner](../README.md#run-the-tests).
+
+## Test cases
+
+| ID | What is tested | Requirement / interface | Method | Steps / how | Expected result |
+| --- | --- | --- | --- | --- | --- |
+| S5-U20 | Straight qualification and junction protection | FR11, FR12 | auto | `test_b5_straight_gate` | Stale and turning states block normal takeover; a qualified fresh straight permits it. |
+| S5-U21 | Borderline echo replay | FR11, FR12 | auto | `test_b5_mission`, captured borderline batch | The corroborated short echo yields an accepted warning; the simulated bypass rejoins. |
+
+## Results
+
+| Date | Test ID | Commit | Tester | Result | Log / evidence | Notes |
+| --- | --- | --- | --- | --- | --- | --- |
+| 2026-11-21 | S5-U20 | `8aa5f2c` | Release verification | PASS (host) | [Saved output](logs/2026-11-21_v0.4.3_host.txt) | 2,588 gate checks, including completion and fresh-straight evidence. |
+| 2026-11-21 | S5-U21 | `8aa5f2c` | Release verification | PASS (host) | [Saved output](logs/2026-11-21_v0.4.3_host.txt) | Exact batch completed simulated bypass and handback with zero simulated contacts. |

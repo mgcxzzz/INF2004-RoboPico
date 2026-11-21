@@ -1,0 +1,6 @@
+Dashboard MQTT receipt, Run 4
+Window UTC: 2026-11-21T09:39:09.949Z to 2026-11-21T09:45:22.221Z
+Telemetry frames received: 16749
+Heartbeats received: 370
+Largest observed heartbeat gap: 1.218 s
+Delivery percentage requires a separate sequence-counted test.

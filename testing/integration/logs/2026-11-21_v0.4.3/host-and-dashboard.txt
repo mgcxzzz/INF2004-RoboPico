@@ -1,0 +1,81 @@
+RoboPico v0.4.3 | source 8aa5f2cd876dea356fa6829caf8969a0232c40ec
+21 November 2026 | selected test output
+
+PASS wireless calibration: staged capture, quality, safety, idempotence, verified commit and codec
+PASS compact signed ranges and seven native layouts: 20/32/8/28/112 bytes
+PASS: clock disagreement/freeze, start gates, urgent-stop output gates, wraparound and encoder decoding
+PASS IMU lift guard: 30 degree ramp excluded, 45 degree/100 ms tilt and 30 ms upward dwell, reset readiness, saturation
+PASS: actual C9 0x25 and CA 0x01 frame fixtures, peak metrics, signed values and reserved bits
+PASS IMU transport: phase timeout/rescue, 8 ms FIFO budget, 20 ms init budget, reset-ready timeout, no post-deadline commands, counters and fixed-rate schedule.
+PASS actual USB printf: no formatting lock, nested producer integrity, CRLF, wrap,768-byte limit and whole-record full/oversize drops.
+PASS encoder quality: sparse/repeated errors, boundary bursts, density, Pause, wrap and saturation
+PASS production MQTT owner: reserved headroom, wrapped ring, Nagle off, QoS0 ACK activity, ERR_MEM priority, expiry and disconnect cancellation
+PASS Step2: planner parity, cross qualification, calibration CRC/import, power envelopes, log packing.
+PASS Step2: planner parity, cross qualification, calibration CRC/import, power envelopes, log packing.
+PASS ADC: normal/preempted conversions, true timeout, ERR including after preemption, unchanged failed output, timer wrap, stopped-only retry and three-frame qualification.
+PASS junction policy=angle_only: L/R/U windows, two dwells, faults and diagnostic packing.
+PASS junction policy=reference_white: L/R/U windows, two dwells, faults and diagnostic packing.
+PASS shared coordinator ownership, stop atomicity, finite reverse/turn completion, route/terrain/fault APIs, interrupted junction resume, stale commands/leases, rejection/timeout, compact binary roundtrips and bounded audit.
+PASS real clock ordering:1..5000us newer requests remain AUTO for14000 ticks; stale100ms heartbeat and2s settling still fault; delayed takeover/resume never underflow.
+PASS coordinator assist: wire bounds, owner preserved, expiry, search/stop/takeover clearing, barcode approval and audit
+PASS: five widening stages/both directions; zero-tick timeout/travel bound; brief gap/flash handling; opposite-sensor acquisition; visible-line parity; invalid-cal rejection; maneuver60%/bounded75% effort; off-wheel zero; pending command preserved/no junction while lost.
+PASS: bounded stationary sweep, still/reverse gates, credible reacquisition, recovery PWM envelope, and signed coordinator targets
+PASS: complete analogue Z both sizes/directions; queued crossing; 90deg arm ignored; reverse quarter and settled forward rejoin; original-line geometry; missing-return/time/drift rejection; signed PWM; next junction after reverse; V1..V12 record integrity.
+PASS drive diagnostics packed bounds/reserved bits/C fixture
+PASS encoder fault snapshot latch, compact C4 codec, saturation and clear frame
+PASS network stop snapshot: guard boundaries, failure mask, latch, C6 codec and clear
+PASS barcode attempt raw: bounded 5ms pre-roll, pinned failed/successful attempts, original-only success, truncation, C5 packing, Resume and run reset.
+PASS actual IMU task/service: stationary calibration, fresh stopped Reset calibration epoch, lifetime counters, deadline waits and unlocked I/O.
+PASS release IMU guard: stopped acquisition, lift latch, raw-reset bypass refusal, fresh/upright recheck and blocked recalibration handoff
+PASS powerbank policy: no USB requirement; clock, buttons, latches and fresh network/command guards retained.
+PASS release exports: stopped gate, frozen lease, row formats, chunk bounds, navigation generation, empty data and timer wrap.
+PASS connected bridge: state/epochs/stale/flood STOP/priority/speed-mode CONFIG gating+readback/real coordinator Pause+Resume/late Reset/independent telemetry sequences
+PASS RTOS hump odometry grace: flat/clean hump, prearm continuity, bounded hold, zero uncertain travel, 25% and 8s rejection, reverse/turn/stop safety, 200ms heading rebase.
+PASS real IMU calibration diagnostics: read interruption,100-period success, exact axis/speed restarts,10s timeout evidence retained, fresh reset recovery.
+PASS actual IMU task/service: stationary calibration, fresh stopped Reset calibration epoch, lifetime counters, deadline waits and unlocked I/O.
+PASS actual RTOS ramp bridge/controller/coordinator: newer-sample race, genuine stale budgets, 64-bit clock boundary, approved profile, caps, shared-source packets, no I/O under copy lock, junction/halt removal
+PASS RTOS ramp model: detector6 -> Buddy4 NAV approval; Buddy3 owner retained; bounded profile; TTL/stale; STOP/Pause/junction/search removal; unboosted handover
+PASS buddy4 v2.3 service: calibrate, start/stop/resume/reset mapping, 10 mm ramp accepted, unclean odometry gated, fault+reset recovery, frames unpack
+PASS ramp-assist v0.6 host tests: 360906 checks (boost-0 identity vs 8d7f3aa, logic, captured-climb replay, v0.3 ACCEL/SPREAD hold, v0.4 stall push, v0.6 speed hold, controller limits/residual, telemetry)
+PASS barcode gate policy=confirmation: all actions, stale leading veto, low speed/no dwell, clearance, visibility/search/lost reason bits, decode-alone rejection
+PASS barcode gate policy=legacy: all actions, stale leading veto, low speed/no dwell, clearance, visibility/search/lost reason bits, decode-alone rejection
+PASS captured Y: decoder=212 junction=1181 hysteresis=94 width=13.78mm confirmed=1 offset=110mm
+PASS independent junction: 7..30mm boundaries, exact signed/saturated width diagnostics, frozen white outcomes, relative contrast, stop/narrow bar rejection, short-gap cancellation, reset, gate preservation, C7 LE codec
+PASS RTOS barcode: real failed Z/Y captures, synthetic A-Z both directions, coordinator approval, mapping freeze, unmapped letters, partial Resume and raw ring
+PASS combined peak integration (BARCODE_PEAK_ACTIVE=1): 28 checks (real original decoder + runtime mapping + peak harness: apply, duplicate, both conflict orders, unmapped, junction, no-barcode identity, busy reset, mixed source-15)
+PASS barcode peak decoder v0.1 host tests: 47 checks (4 captured car failures, synthetic A-Z/0-9 both directions, harsh no-misread, negatives, telemetry)
+PASS connected bridge: state/epochs/stale/flood STOP/priority/speed-mode CONFIG gating+readback/real coordinator Pause+Resume/late Reset/independent telemetry sequences
+PASS: 0 failure(s)
+PASS: straight gate, 2588 checks, 0 failure(s)
+PASS: 0 failure(s)
+PASS network bench: Start/Resume/manual drive prohibited, stop plan, mapping/CRC, stale commands/wrap and independent heartbeat deadline.
+PASS runtime settings CRC, bounds, IPv4 validation and open-network password
+Ran 16 tests in 0.002s
+OK
+Ran 13 tests in 0.001s
+OK
+Ran 10 tests in 0.003s
+OK
+Ran 4 tests in 0.013s
+OK
+Ran 5 tests in 0.001s
+OK
+Ran 8 tests in 0.000s
+OK
+Ran 4 tests in 0.001s
+OK
+PASS pinned lwIP allocation: single=1 oversize=1460 payload60 reserved=1460 bytes/packet,14 packets=20440 bytes
+PASS pinned lwIP allocation: single=0 oversize=0 payload60 reserved=60 bytes/packet,14 packets=840 bytes
+PASS new options match the source; CYW43 upstream path supports pbuf chains via pbuf_copy_partial.
+Ran 6 tests in 0.002s
+OK
+PASS: 55 production-C regression programs; Python checks run. Hardware test is still required.
+
+Dashboard runner TAP summary:
+# tests 28
+# suites 0
+# pass 28
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0

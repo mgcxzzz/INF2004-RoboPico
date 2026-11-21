@@ -3,7 +3,7 @@
 Verified on 21 November 2026. Firmware source commit
 `8aa5f2cd876dea356fa6829caf8969a0232c40ec`.
 
-[Run 4](../run-4/README.md), recorded on v0.4.2, is the final physical
+[Run 4](../../../system/logs/2026-11-21_run_4/README.md), recorded on v0.4.2, is the final physical
 circuit evidence for the functions shown in the recording. v0.4.3 makes
 a small change to acceptance of a corroborated borderline stopped sonar
 reading and shows a warning. The change was exercised by replay on v0.4.3.
@@ -20,6 +20,7 @@ reading and shows a warning. The change was exercised by replay on v0.4.3.
 The memory result is a static budget. Physical timing and stop latency are
 separate measurements.
 
+[Saved host and dashboard output](host-and-dashboard.txt) ·
 [Application C standard](../../../../CODING_STANDARD.md) ·
 [Coding exceptions](../../../../docs/coding_exceptions.md) ·
-[Build and test procedures](../../../TRIBUNAL_2.md)
+[Build and test procedures](../../../README.md)

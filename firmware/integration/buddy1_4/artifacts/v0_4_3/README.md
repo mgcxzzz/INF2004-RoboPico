@@ -1,4 +1,4 @@
-# RoboPico v0.4.3 for Tribunal 2
+# RoboPico v0.4.3
 
 - [Firmware UF2](robopico_buddy1_5_rtos_v0_4_3.uf2)
 - [Full firmware and Demo Console v0.2.15 bundle](robopico_buddy1_5_rtos_v0_4_3_test_bundle.zip)

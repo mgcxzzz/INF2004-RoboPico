@@ -2,7 +2,7 @@
 
 | Release | Use |
 | --- | --- |
-| [v0.4.3 Buddy 1–5](v0_4_3/) | Tribunal 2 firmware and matching Demo Console v0.2.15 bundle. |
+| [v0.4.3 Buddy 1–5](v0_4_3/) | Current firmware and matching Demo Console v0.2.15 bundle. |
 | [v0.2.13 Buddy 1–5 combined](v0_2_13_combined/) | Earlier integration candidate. [First hardware tests](../../../../docs/buddy1_5_v0_2_13.md) |
 | [v0.2.12 Buddy 1–4](v0_2_12_caster_assist/) | Tested integration baseline and rollback image. [Test guide](../../../../docs/caster_assist_v0_2_12.md) |
 | [v0.2.11 caster assist](v0_2_11_caster_assist/) | Earlier load compensation candidate |
