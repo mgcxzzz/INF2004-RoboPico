@@ -8,8 +8,8 @@ The current release is [RoboPico Buddy 1–5 v0.4.3](firmware/releases/v0.4.3/),
 | --- | --- | --- | --- | --- | --- |
 | 1 | Wi-Fi, MQTT and dashboard | 2500399, 2500339 | [mgcxzzz](https://github.com/mgcxzzz), [N1sh0](https://github.com/N1sh0) | [Network bridge](app_program/network_bridge/) · [Dashboard](dashboard/) | [Subsystem 1](testing/subsystem1/TEST_LOG.md) |
 | 2 | Motor control, encoders and odometry | 2500399 | [mgcxzzz](https://github.com/mgcxzzz) | [Motor and safety tasks](app_program/rtos_bringup/) · [Shared motion](firmware/integration/buddy1_4/src/motion/) | [Subsystem 2](testing/subsystem2/TEST_LOG.md) |
-| 3 | Line following, barcode decoding and junction routing | 2500399 | [mgcxzzz](https://github.com/mgcxzzz) | [Line navigation](app_program/line_navigation/) · [Barcode navigation](app_program/barcode_navigation/) | [Subsystem 3](testing/subsystem3/TEST_LOG.md) |
-| 4 | IMU, hump measurement, ramp help and pickup stop | 2500399 | [mgcxzzz](https://github.com/mgcxzzz) | [IMU navigation](app_program/imu_navigation/) | [Subsystem 4](testing/subsystem4/TEST_LOG.md) |
+| 3 | Line following, barcode decoding and junction routing | 2500399, 2500339 | [mgcxzzz](https://github.com/mgcxzzz), [N1sh0](https://github.com/N1sh0) | [Line navigation](app_program/line_navigation/) · [Barcode navigation](app_program/barcode_navigation/) | [Subsystem 3](testing/subsystem3/TEST_LOG.md) |
+| 4 | IMU, hump measurement, ramp help and pickup stop | 2500399, 2500339 | [mgcxzzz](https://github.com/mgcxzzz), [N1sh0](https://github.com/N1sh0) | [IMU navigation](app_program/imu_navigation/) | [Subsystem 4](testing/subsystem4/TEST_LOG.md) |
 | 5 | Obstacle detection, width estimate, bypass and line rejoin | 2500339 | [N1sh0](https://github.com/N1sh0) | [Obstacle navigation](app_program/obstacle_navigation/) | [Subsystem 5](testing/subsystem5/TEST_LOG.md) |
 
 ## 2. Pins
