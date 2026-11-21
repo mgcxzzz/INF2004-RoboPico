@@ -101,6 +101,7 @@ static uint8_t g_stage_sent = 0xffU;
 static uint64_t g_status_due;
 static uint64_t g_stage_sent_us;
 static uint64_t g_frame_due;
+static uint64_t g_terminal_width_due;
 
 static UINT enter (void)
 {
@@ -396,6 +397,11 @@ void rb5_frame (uint64_t now, const uint16_t * p_level,
 bool rb5_held (void)
 {
     return B5MI_HOLD == g_mission.stage;
+}
+
+void rb5_guard_limit (int16_t target[2])
+{
+    b5_mission_guard_limit(&g_mission, target);
 }
 
 bool rb5_owned (const motion_output_t * p_demand)
@@ -805,7 +811,7 @@ static void report (void)
               status.gate_reason, status.gate_echoes,
               (int)g_mission.straight.travel_mm,
               (int)g_mission.straight.heading_cdeg);
-    tm_printf((UB *)"B5_MISSION version=rtos_buddy1_5-v0.3.2 "
+    tm_printf((UB *)"B5_MISSION version=rtos_buddy1_5-v0.4.3 "
                     "stage=%s reason=%s "
                     "module=%u run=%u side=%u basis=%u decision=%u "
                     "states=0x%02x width_end=%u d0=%u trigger=%u start=%u\n",
@@ -851,6 +857,32 @@ static void report (void)
     tm_printf((UB *)"B5_END\n");
 }
 
+/* Republish the last rejected triplet after the normal FIFO is drained.
+ * D1 keeps the original run, index and timestamp. */
+static bool send_terminal_width (uint64_t now)
+{
+    if (now < g_terminal_width_due)
+    {
+        return false;
+    }
+    const uint64_t repeat_us = 2000000U;
+    g_terminal_width_due = now + repeat_us;
+    UINT key = enter();
+    const B5WidthProbe * p_width = &g_mission.width;
+    bool available = p_width->terminal_record_valid;
+    B5WPRec record = p_width->terminal_record;
+    uint16_t d0 = p_width->d0;
+    uint16_t lost = p_width->lost;
+    leave(key);
+    if (!available)
+    {
+        return false;
+    }
+    uint8_t frame[B5_WP_REC_FRAME];
+    b5_wp_rec_pack(&record, d0, lost, 0U, frame);
+    return push(frame, sizeof(frame));
+}
+
 /* One Buddy5 task pass (~1 ms): hardware, copied telemetry, report. */
 void rb5_service (uint64_t now)
 {
@@ -862,6 +894,10 @@ void rb5_service (uint64_t now)
         if (!sent)
         {
             sent = send_event();
+        }
+        if (!sent)
+        {
+            sent = send_terminal_width(now);
         }
         if (sent)
         {

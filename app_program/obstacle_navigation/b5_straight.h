@@ -22,7 +22,7 @@
  *    barcode route turn or U-turn in progress;
  *  - continuous steering active;
  *  - encoder heading change at most 6 degrees over the full window and
- *    3 degrees across the four most recent sample intervals. The shorter
+ *    3 degrees across the three most recent sample intervals. The shorter
  *    window catches tight curve entry. Optical bend-assist state is for
  *    steering, while this gate relies on measured heading and line state.
  * A curve keeps sliding the window and restarts the dwell.
@@ -55,13 +55,13 @@ typedef enum
 
 enum
 {
-    B5S_WINDOW_MM = 200, /* straight travel needed before opening */
-    B5S_STEP_MM = 10,    /* heading window sample spacing          */
+    B5S_WINDOW_MM = 60, /* straight travel needed before opening */
+    B5S_STEP_MM = 10,   /* heading window sample spacing          */
     B5S_POINTS = (B5S_WINDOW_MM / B5S_STEP_MM) + 1,
     B5S_DWELL_US = 300000,      /* and at least this long                 */
     B5S_SAMPLE_MAX_US = 50000,  /* = B5MI_OBSERVATION_MAX_US              */
-    B5S_HEADING_MAX_CDEG = 600, /* 6.0 deg over the full window */
-    B5S_RECENT_STEPS = 4,       /* 40 mm plus sample spacing */
+    B5S_HEADING_MAX_CDEG = 600, /* allows ordinary corrections over 60 mm */
+    B5S_RECENT_STEPS = 3,       /* 30 mm plus sample spacing */
     B5S_RECENT_MAX_CDEG = 300   /* 3.0 deg over the recent window */
 };
 #define B5S_TRACK_MM 110.0f /* wheel track, = TRACK_MM (dual_logic.h) */

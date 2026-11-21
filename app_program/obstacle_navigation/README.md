@@ -17,15 +17,30 @@ Buddy 5 adapter and mission; the obstacle algorithms are ported SDK modules in
 1. **Guard** (line following, Buddy 3 owns AUTO): servo centred, one ping per
    60 ms. **Straight-only takeover** (`b5_straight.c`): the takeover is
    requested only while Buddy 3 has been following a straight for the last
-   200 mm and 300 ms with fresh line tracking and no junction, turn, loss or
-   recovery. The v0.2.15 candidate limits encoder heading change to 6° across
-   the full window and 3° across roughly 40 mm of recent travel. The optical
+   60 mm and 300 ms with fresh line tracking and no junction, turn, loss or
+   recovery. v0.4.0 allows up to 6° of encoder heading change across
+   the full window and 3° across roughly 30 mm of recent travel. The optical
    bend-assistance labels remain visible in the line telemetry.
    Takeover also requires three consecutive clean echoes
    ≤ 330 mm from pings requested after the gate opened. The v0.3.0 candidate
    counts those echoes early, then requests the stop on a qualifying echo
    ≤ 295 mm. Losing the gate discards the count. Three echoes ≤ 300 mm while the
-   gate is closed stop the robot and hold `NOT_STRAIGHT`. Stop ends the hold. The
+   gate is closed normally stop the robot and hold `NOT_STRAIGHT`. During an
+   active left, right or U-turn, including line reacquisition, v0.4.1 suspends
+   Buddy 5 guard pings and clears prior echoes. Guarding resumes with fresh
+   pings after the turn. A straight-through junction uses ordinary guarding.
+   During straight settling at 286–300 mm, v0.3.12 can give the follower another
+   200 ms at a 25 mm/s target limit to qualify the straight. If it still sees
+   the obstacle when settling runs out or reaches 285 mm, it stops and checks
+   three fresh echoes. It resumes line following if all three show clear space
+   and tape evidence permits hand-back. As of v0.4.2, a stationary batch of
+   three echoes within 270–330 mm and no more than 15 mm apart starts the
+   normal width probe if the tape evidence from the stop is still present.
+   v0.4.3 also accepts one echo down to 260 mm with a range warning when the
+   other two are in the nominal window, the group still agrees within 15 mm,
+   and the nearest echo passes the turn clearance check. For that mission,
+   the probe can use the same rule when it acquires its own fresh reference.
+   A mixed batch gets one stationary retry. Stop ends a HOLD. The
    gate decides where the manoeuvre may start; sonar still treats any close
    reflector, including a person's leg, as an obstacle. After a hand-back
    the front must read clear (> 330 mm or no return) for 1 s before the
@@ -41,51 +56,81 @@ Buddy 5 adapter and mission; the obstacle algorithms are ported SDK modules in
      still apply. The RTOS candidate can use the existing single stationary
      retry if two in-window reference echoes agree within 15 mm and the third
      clean echo is within 15 mm of the reference window. The replacement must
-     pass the original REF limits. v0.3.1 also permits one stationary resample
-     at an outward pose with a corroborating in-window echo, at most one
-     missed rise, and at most one clean echo up to 5 mm below the normal
-     near limit. The fresh triplet goes through the original classifier
-     and the first triplet is recorded in D4. A complete run with an unresolved edge may show a labelled
+     pass the original REF limits. At each remaining scan pose, v0.3.6
+     allows one stationary recheck when at least one echo is in-window
+     and another is short or misses its rise. The shortest echo reduces the
+     modelled clearance by the full range deficit, and the existing
+     front clearance margin must still fit. The fresh triplet goes through
+     the original classifier. D4 records the first triplet. The final
+     rejected D1 is retained in RAM and periodically republished until the
+     next width scan. A complete run with an unresolved edge may show a labelled
      width assumption. **Any
      non-COMPLETE end holds (`WIDTH_ABORT`, module reason = end code),
      `REFERENCE` included**: END_REFERENCE alone is not evidence of a clean
      skip. The probe's D3 (150 mm `PROJECT_RANGE_ASSUMPTION`) stays the
      displayed number — policy `failed`.
-   - clean but outside 270–330 mm → deliberate **skip**: the probe is not
-     started, nothing moves for it, the readout is the labelled 150 mm
-     assumption (basis 3, status INVALID), and Buddy 5 holds because there is no
-     scan evidence for a side. E5 bytes 57–58 give the deciding range.
+   - A clean range up to 15 mm outside 270–330 mm gets one stopped recheck
+     after 120 ms. The probe starts if that batch passes the normal window.
+     If the range stays outside or starts farther beyond the window, the width
+     policy shows **skipped**, displays the labelled 150 mm assumption and
+     holds. E5 bytes 57–58 give the deciding range.
    - faulty or inconsistent triplet → HOLD `RANGE` (never a skip).
 3. **Direction and alignment.** Choose the side with the shorter obstacle
-   extent from the long scan. Two corroborated edge brackets can establish
-   the offset or a centred default of RIGHT. If one edge is beyond reach,
-   the near edge must be corroborated and the return pass must confirm that
-   the obstacle extends farther on the other side. Ambiguous or contradictory
-   evidence holds before the approach. After choosing, correct lateral drift
-   above 6 mm with one clearance-checked forward diagonal of up to 30 mm,
-   then restore the original heading. Require the original tape sensor to
-   see the tape for 150 ms within 6° of the initial heading. The bounded
-   search checks −4°, +4°, −6° and +6°. Failure holds.
-4. **Approach** (sonar-controlled, line-steered): fresh stationary range
-   (three clean echoes within 15 mm). If > 215 mm, a Buddy 5 finite drive at
-   20 mm/s by at most `range − 200` (≤ 150 mm), pinging every 60 ms; stop on a
-   clean echo ≤ 205 mm; re-measure; ≤ 3 legs. During each leg the mission
-   runs Buddy 3's own edge law (`analog_demand()`, identity calibration on the
-   already-normalised levels) each fresh observation and turns its wheel
+   extent from the long scan. If one edge is beyond reach, the near edge must
+   be corroborated and the return pass must confirm that the obstacle extends
+   farther on the other side to support a specific choice. Starting with
+   v0.3.10, a completed scan with valid reference, return and servo checks
+   defaults to RIGHT whenever its edge readings give no clear preference.
+   The dashboard labels the selection as a default. After choosing, correct
+   lateral drift above 6 mm with one clearance-checked forward diagonal of up to 30 mm,
+   then restore the original heading. Require Buddy 3's strong tape
+   evidence (at least one IR level of 400 or more) for 150 ms within 6° of
+   the original heading. The bounded search checks −2°, +2°, −4°, +4°,
+   −6° and +6°.
+4. **Approach** (sonar-controlled, line-steered): v0.3.11 uses the average
+   of three valid stopped forward echoes. If the average is above 215 mm,
+   the nearest echo limits the 20 mm/s approach leg. A reading at or below
+   205 mm with an average above 215 mm requests a fresh stopped batch.
+   v0.3.12 allows up to three stopped batches, 120 ms apart after rejections.
+   Each leg is limited to 150 mm, with a live sonar stop at 205 mm or below.
+   The mission rechecks range after each leg and allows up to three legs. During each leg the mission
+   uses Buddy 3's symmetric steering (`symmetric_targets()`) on each
+   fresh pair of calibrated IR levels and turns the wheel
    differential, scaled to 20 mm/s (same turn per distance), into a heading
    setpoint for the drive (`nav_steer_drive`, ±8°, 0.1° steps, lapses after
    100 ms without refresh). The executor keeps its own heading hold, goal,
-   timeout, settle and 12° fault; ownership never returns to Buddy 3. More
-   than 40 mm with no line evidence, or sonar faults → HOLD (unchanged); the
-   follower's own both-black/white stop timers are not used.
-5. **Bypass.** Use the existing rectangular route and a fresh stopped range
-   within the 80–220 mm planning window. Modelled heading and lateral pose
+   timeout, settle and 12° fault. During the first 12 mm of each leg, more
+   than 4 mm without tape evidence requests a stop. Once stopped, Buddy 5
+   measures the range again and can try one clearance-checked realignment for
+   the mission, using in-place turns only. That recovery applies to startup
+   loss and to loss after verified tracking. Repeat loss and failed
+   clearance checks cause HOLD.
+5. **Bypass.** Recheck the original tape sensor pattern and heading while
+   stopped. Use the existing
+   rectangular route and the averaged stopped range within the 80–220 mm
+   planning window. The nearest echo must satisfy first-turn clearance.
+   The farthest echo sets how far to pass the obstacle before turning back.
+   Modelled heading and lateral pose
    come from the scan plus the completed
    alignment and approach moves. Depth allowance remains 150 mm and the
-   lateral leg stays 250 mm. Require confirmation on the same tape sensor
-   before handing back to Buddy 3.
-6. **Hand-back** only through `nav_resume_line(…, false)`; the pending route is
+   lateral leg stays 250 mm.
+6. **Return and rejoin.** v0.3.8 keeps the lineward heading at 20 mm/s
+   until both sensors verify a stripe or the 300 mm search limit is reached.
+   The encoder estimate only sets the earliest plausible scan position.
+   The measured stripe centre and sensor lead determine where to turn.
+   The robot then checks for fresh tape evidence near the original heading.
+   If it cannot confirm the line, v0.3.9 pivots in place toward the stronger
+   sensor contrast, or toward the route if neither sensor gives a clue.
+   It sweeps up to 28° either side and can confirm the tape with either
+   sensor. It stops if the sweep ends without stable tape evidence.
+7. **Hand-back** only through `nav_resume_line(…, false)`; the pending route is
    kept and an interrupted junction is refused (existing rule).
+
+The firmware reports `MISSION_RETRY` outcomes and `RANGE_BATCH` entries
+with the three echoes in the run ZIP, plus `RETURN_START`, `STRIPE_FOUND`, `POSITIONED`,
+`RESTORED`, `CONFIRMED` and `HANDBACK`. A missing stripe or failed alignment
+ends the maneuver with `NO_LINE`. The forward sonar stop applies throughout
+the return and any advance to the measured stripe centre.
 
 The calibrated width is display-only. Navigation uses the scan's corroborated
 edge observations and the fixed route margins. The display is the raw edge midpoint − 10 mm, limited to

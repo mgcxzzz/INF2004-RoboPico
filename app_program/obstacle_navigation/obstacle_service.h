@@ -47,6 +47,7 @@ void rb5_power_committed (const int32_t applied[2]);
 void rb5_power_idle (void);
 bool rb5_begin (uint64_t now_us);
 bool rb5_held (void); /* Motion task: stopped under Buddy5 mission hold. */
+void rb5_guard_limit (int16_t target[2]);
 bool rb5_owns_session (void); /* Motion task: Pause routing. */
 
 /* Any task. */

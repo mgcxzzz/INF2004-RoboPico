@@ -4,8 +4,8 @@
 #include <math.h>
 
 /* rtos_buddy1_5 port of SDK automatic v0.6.1 automatic_bypass.c. Functions are
- * copied verbatim except where marked "rtos_buddy1_5"; the guard, stationary
- * scan, profiler side selection and geometry-only variant were removed. */
+ * adapted to the RTOS coordinator, direction probe and perpendicular tape
+ * rejoin. The guard, stationary scan and geometry-only variant are omitted. */
 static void angle(B5Automatic *a, int dd, uint64_t now) {
     a->sensor.cancel();
     a->angle_dd = dd;
@@ -20,23 +20,27 @@ static float heading_now(const B5Automatic *a) {
 }
 /* Bounded event ring for the MQTT queue: O(1), no I/O here. The oldest entry
  * is overwritten (and counted) if the transport is down or slow. */
-static void event(B5Automatic *a, unsigned code, float va, float vb, unsigned detail,
-                  unsigned result, uint64_t now) {
+void b5_auto_queue_event(B5Automatic *a, B5Event *p_event) {
     if (a->ev_count == B5_EVENT_RING) {
         a->ev_head = (uint8_t)((a->ev_head + 1) % B5_EVENT_RING);
         --a->ev_count;
         ++a->ev_dropped;
     }
-    B5Event *e = &a->events[(a->ev_head + a->ev_count) % B5_EVENT_RING];
+    p_event->seq = ++a->ev_seq;
+    a->events[(a->ev_head + a->ev_count) % B5_EVENT_RING] = *p_event;
     ++a->ev_count;
+}
+static void event(B5Automatic *a, unsigned code, float va, float vb, unsigned detail,
+                  unsigned result, uint64_t now) {
     float h = heading_now(a) * 100.0f;
-    *e = (B5Event){.ms = (uint32_t)(now / 1000), .a = tenth(va), .b = tenth(vb),
+    B5Event entry = {.ms = (uint32_t)(now / 1000), .a = tenth(va), .b = tenth(vb),
         .heading_cdeg = (int16_t)(h > 32767 ? 32767 : h < -32768 ? -32768 : lroundf(h)),
         .level = {a->line[0], a->line[1]}, .bg = {a->stripe.bg[0], a->stripe.bg[1]},
-        .seq = ++a->ev_seq, .code = (uint8_t)code, .state = (uint8_t)a->state,
+        .code = (uint8_t)code, .state = (uint8_t)a->state,
         .phase = (uint8_t)a->phase, .reason = (uint8_t)a->reason, .result = (uint8_t)result,
         .detail = (uint8_t)detail, .search = (uint8_t)a->searches,
         .rejects = (uint8_t)(a->stripe.rejects > 255 ? 255 : a->stripe.rejects)};
+    b5_auto_queue_event(a, &entry);
 }
 bool b5_auto_peek_event(const B5Automatic *a, B5Event *out) {
     if (!a->ev_count) return false;
@@ -131,13 +135,12 @@ static bool progress_ok(B5Automatic *a, MotionStatus s, uint64_t now) {
     }
     return true;
 }
-/* rtos_buddy1_5 replacement for v0.6.1 begin()+scan()+plan(): the side and
- * the ACTUAL stopped range come from the mission; the plan, its 80-220 mm
- * range gate, the clearance hold and the route adoption are the v0.6.1 code.
- * No safety scan is available, so only the forward echo enters the
- * first-turn clearance check (see README: unverified clearance). */
+/* The mission supplies the side and averaged stopped forward range. The
+ * nearest echo limits first-turn clearance. The farthest sets a conservative
+ * pass distance before turning back. The range gate uses the mean. */
 bool b5_auto_start(B5Automatic *a, uint32_t lease, unsigned side, unsigned range_mm,
-                   float heading0_deg, float lateral0_mm, uint64_t now) {
+                   unsigned nearest_mm, unsigned farthest_mm, float heading0_deg,
+                   float lateral0_mm, uint64_t now) {
     a->session = true;
     a->state = B5A_PLAN;
     a->reason = a->fault_run = a->searches = 0;
@@ -147,12 +150,7 @@ bool b5_auto_start(B5Automatic *a, uint32_t lease, unsigned side, unsigned range
     a->progress_id = 0;
     a->rect = (B5RectPlan){0};
     b5_stripe_init(&a->stripe, 0);
-    a->stop_progress = a->advance_mm = a->last_rotation = 0;
-    a->acq_onset = a->search_centre = 0;
-    a->acq_samples = 0;
-    a->pivot_return_mm = 0; a->fallback = false;
-    a->armed_mask = 0; a->line_mask = 3;
-    a->handback_sensor_mask = 0;
+    a->stop_progress = a->return_scan_start_mm = 0.0f;
     a->phase = B5R_START;
     a->stripe_result = B5S_PENDING;
     a->seen_rejects = 0; a->seen_phase = 0; a->legs_reported = 0; a->last_handback = 0;
@@ -172,7 +170,8 @@ bool b5_auto_start(B5Automatic *a, uint32_t lease, unsigned side, unsigned range
     if ((side != B5_SIDE_LEFT && side != B5_SIDE_RIGHT) || !isfinite(heading0_deg) ||
         !isfinite(lateral0_mm) || fabsf(heading0_deg) > 15.0f ||
         range_mm < B5_PLAN_RANGE_MIN_MM || range_mm > B5_PLAN_RANGE_MAX_MM ||
-        !b5_rect_plan_ex(NULL, range_mm, a->depth_mm, false, &a->rect)) {
+        !b5_rect_plan_ex(NULL, range_mm, a->depth_mm, false, &a->rect) ||
+        !b5_rect_apply_range_bounds(&a->rect, nearest_mm, farthest_mm)) {
         stop(a, B5A_NO_PATH, now); return false;
     }
     event(a, B5V_PLAN, a->rect.forward_mm, (float)range_mm, side,
@@ -210,7 +209,6 @@ static void watch(B5Automatic *a, uint64_t now) {
  * Only the generic coordinator API is used (drive/turn/stop/resume); no PWM,
  * second follower or calibration write. Heading is the summed ENCODER
  * rotation of every completed/cancelled Buddy5 command since adoption. */
-static const float search_deg[B5R_SEARCH_STEPS] = {-4, 4, -8, 8, -12, 12}; /* v0.6 */
 static bool fresh(B5Automatic *a) {
     if (a->used_observation == a->observed) return false;
     a->used_observation = a->observed;
@@ -240,7 +238,6 @@ static int follow(B5Automatic *a, MotionStatus s, uint64_t now) {
         if (s.generation != a->generation + 1U) { stop(a, B5A_CANCELLED, now); return -1; }
         if (s.mode != MOTION_PAUSED || !s.stopped) return 0;
         a->heading_deg += cmd.rotation_deg;
-        a->last_rotation = cmd.rotation_deg;
         a->generation = s.generation;
         return 1;
     }
@@ -266,26 +263,11 @@ __attribute__((noinline)) static int halted(B5Automatic *a, MotionStatus s, uint
         stop(a, B5A_MOVE, now); return -1;
     }
     a->heading_deg += cmd.rotation_deg;
-    a->last_rotation = cmd.rotation_deg;
     a->stop_progress = cmd.progress_mm;
     return 1;
 }
-/* v0.6.1: sensors at or above their line level (bit0 left, bit1 right). With
- * a valid crossing this is the stripe's own per-sensor rise level (v0.6
- * evidence); without one, the fixed detector/hand-back level. */
-static unsigned level_mask(const B5Automatic *a) {
-    unsigned m = 0;
-    for (unsigned w = 0; w < 2; ++w) {
-        uint16_t v = a->line[w] > 1000 ? 1000 : a->line[w];
-        uint16_t t = a->stripe.result == B5S_FOUND ? b5_stripe_threshold(&a->stripe, w)
-                                                   : (uint16_t)B5R_FALLBACK_LEVEL;
-        if (v >= t) m |= 1u << w;
-    }
-    return m;
-}
-/* v0.6.1: estimated return distance at which the AXLE meets the original
- * path, from the encoder record of the completed bypass legs (chord heading of
- * each straight). 0 = no plausible estimate (fallback not allowed). */
+/* Estimate where the axle would meet the line using the completed drive legs.
+ * Used only to set the earliest scan point. Tape determines where to turn. */
 __attribute__((noinline)) static float pivot_return(const B5Automatic *a) {
     const float rad = 3.14159265358979323846f / 180.0f;
     /* rtos_buddy1_5: start from the probes' encoder offsets (+LEFT) so the
@@ -299,74 +281,67 @@ __attribute__((noinline)) static float pivot_return(const B5Automatic *a) {
         h += l->measured_deg;
     }
     float sn = sinf(a->heading_deg * rad);
-    if (!isfinite(sn) || fabsf(sn) < B5R_FALLBACK_MIN_SIN) return 0;
+    if (!isfinite(sn) || fabsf(sn) < B5R_RETURN_MIN_SIN) return 0;
     float d = -lateral / sn;
-    if (!isfinite(d) || fabsf(d - a->rect.side_mm) > B5R_FALLBACK_TOL_MM ||
+    if (!isfinite(d) || fabsf(d - a->rect.side_mm) > B5R_RETURN_ESTIMATE_TOL_MM ||
         d > a->rect.return_max_mm || d < 1.0f)
         return 0;
     return d;
 }
-/* v0.6: start the slow sensor-guided sweep through the approach heading. */
-__attribute__((noinline)) static void acquire(B5Automatic *a, float sign, uint64_t now) {
-    float goal = sign * B5R_ACQ_PAST_DEG - a->heading_deg;
-    if (!(sign * goal >= 1.0f) || fabsf(goal) > 180.0f) { stop(a, B5A_MOVE, now); return; }
-    a->armed_mask = 0;
-    a->sensor_clear_timing[0] = a->sensor_clear_timing[1] = false;
-    a->acq_samples = 0;
-    event(a, B5V_ACQUIRE, a->heading_deg, goal, a->fallback, 0, now);
-    (void)start_move(a, true, goal, B5M_SLOW_SPEED, B5R_ACQUIRE, now);
-}
 __attribute__((noinline)) static void rejoin(B5Automatic *a, uint64_t now, MotionStatus s) {
     /* Bounded: never hands back because a distance or this timer ran out. */
-    if (now - a->search_since > 30000000) { stop(a, B5A_NO_LINE, now); return; }
+    if (now - a->search_since > B5R_REJOIN_LIMIT_US) { stop(a, B5A_NO_LINE, now); return; }
     bool obs = fresh(a);
-    unsigned above = level_mask(a);
-    if (a->handback_sensor_mask) above &= a->handback_sensor_mask;
-    /* Confirmation/search evidence: only sensors proven clear during the
-     * sweep (v0.6.1), so a sensor resting on a dark floor cannot confirm. */
-    bool evidence = (above & a->line_mask) != 0;
-    unsigned no_line = a->fallback ? B5A_FALLBACK_NO_LINE : B5A_NO_LINE;
-    float sign = a->side == B5_SIDE_LEFT ? 1.0f : -1.0f; /* rtos_buddy1_5: injected side */
+    float heading = a->heading_deg;
+    if (B5R_SEARCH == a->phase)
+    {
+        heading += s.rotation_deg;
+    }
+    /* A paired return crossing is required first. Either sensor can then
+     * confirm the tape at the new pose. */
+    bool evidence = (fabsf(heading) <= B5R_CONFIRM_HEADING_DEG) &&
+                    b5_stripe_evidence(&a->stripe, a->line[0], a->line[1]);
     int r;
     switch (a->phase) {
     case B5R_START:
+    {
         if (s.generation != a->generation) { stop(a, B5A_CANCELLED, now); return; }
         if (s.mode != MOTION_PAUSED || !s.stopped) return;
-        b5_stripe_init(&a->stripe, a->rect.return_search_mm);
+        b5_stripe_init(&a->stripe, a->rect.return_max_mm);
         a->stripe_result = B5S_PENDING;
-        a->seen_rejects = 0; a->seen_phase = 0;
+        a->seen_rejects = 0;
+        a->seen_phase = 0;
         a->last_ping = now;
         a->fault_run = 0;
-        a->fallback = false;
-        a->armed_mask = 0; a->line_mask = 3;
-        /* v0.6.1: drive to the estimated axle alignment (bounded), or the v0.6
-         * 300 mm cap when no plausible estimate exists. */
-        a->pivot_return_mm = pivot_return(a);
-        {
-            float goal = a->pivot_return_mm > 0 ? a->pivot_return_mm : a->rect.return_max_mm;
-            event(a, B5V_RETURN_START, goal, a->rect.return_search_mm, a->pivot_return_mm > 0, 0, now);
-            (void)start_move(a, false, goal, B5M_SPEED, B5R_RETURN, now);
-        }
+
+        /* The front sensors reach the line before the axle. Allow room to
+         * learn the floor before the earliest plausible tape crossing. */
+        float axle_mm = pivot_return(a);
+        float expected_mm = (axle_mm > 0.0f) ? axle_mm - B5R_LINE_AHEAD_MM
+                                              : a->rect.return_expect_mm;
+        a->return_scan_start_mm =
+            fmaxf(0.0f, expected_mm - B5R_RETURN_WINDOW_MM - B5S_QUIET_MM);
+        event(a, B5V_RETURN_START, a->rect.return_max_mm, a->stripe.search_mm,
+              axle_mm > 0.0f, 0U, now);
+        (void)start_move(a, false, a->rect.return_max_mm, B5M_SLOW_SPEED,
+                         B5R_RETURN, now);
         return;
+    }
     case B5R_RETURN:
         r = follow(a, s, now);
         if (r < 0) return;
-        if (r > 0) {
-            /* Goal reached without a valid crossing. Without an estimate this is
-             * the v0.6 cap (NO_LINE). With one, the axle is at the estimated
-             * original path: run the bounded sweep. NOT a line detection. */
-            if (a->pivot_return_mm <= 0) { stop(a, B5A_NO_LINE, now); return; }
-            a->fallback = true;
-            a->sensor.cancel();
-            event(a, B5V_FALLBACK, a->pivot_return_mm, s.progress_mm, a->stripe_result,
-                  a->stripe.last_reject, now);
-            enter(a, B5R_RESTORE, now);
+        if (r > 0)
+        {
+            a->stripe_result = B5S_NO_LINE;
+            stop(a, B5A_NO_LINE, now);
             return;
         }
         watch(a, now);
-        if (a->state != B5A_REJOIN || !obs) return;
-        /* v0.6.1: after a detector NO_LINE the drive continues to the estimate */
-        if (a->stripe_result != B5S_PENDING) return;
+        if ((B5A_REJOIN != a->state) || (!obs) ||
+            (s.progress_mm < a->return_scan_start_mm))
+        {
+            return;
+        }
         /* (1) detection only: no motion decision until the stripe is complete */
         a->stripe_result = b5_stripe_step(&a->stripe, s.progress_mm, a->line[0], a->line[1]);
         if (a->stripe.rejects != a->seen_rejects) {
@@ -380,24 +355,25 @@ __attribute__((noinline)) static void rejoin(B5Automatic *a, uint64_t now, Motio
             event(a, B5V_STRIPE_FOUND, a->stripe.centre, s.progress_mm,
                   (unsigned)lroundf(a->stripe.width[0]), (unsigned)lroundf(a->stripe.width[1]), now);
             halt(a, B5R_RETURN_STOP, now);
-        } else if (a->stripe_result != B5S_PENDING && a->pivot_return_mm <= 0)
-            stop(a, B5A_NO_LINE, now);
+        }
         return;
     case B5R_RETURN_STOP:
+    {
         if (halted(a, s, now) <= 0) return;
         /* (2) Pivot over the stripe centre: sensors are LINE_AHEAD in front.
          * v0.6: stop_progress now includes the coast until the wheels were
          * still (coordinator keeps the cancelled record updated). */
-        a->advance_mm = B5R_LINE_AHEAD_MM - (a->stop_progress - a->stripe.centre);
-        event(a, B5V_POSITIONED, a->stop_progress, a->advance_mm, 0, 0, now);
-        if (!isfinite(a->advance_mm) || a->advance_mm > B5R_ADVANCE_MAX_MM) {
+        float advance_mm = B5R_LINE_AHEAD_MM - (a->stop_progress - a->stripe.centre);
+        event(a, B5V_POSITIONED, a->stop_progress, advance_mm, 0, 0, now);
+        if (!isfinite(advance_mm) || advance_mm > B5R_ADVANCE_MAX_MM) {
             stop(a, B5A_MOVE, now); return;
         }
-        if (a->advance_mm < 1.0f) { enter(a, B5R_RESTORE, now); return; }
+        if (advance_mm < 1.0f) { enter(a, B5R_RESTORE, now); return; }
         a->last_ping = now;
         a->fault_run = 0;
-        (void)start_move(a, false, a->advance_mm, B5M_SPEED, B5R_ADVANCE, now);
+        (void)start_move(a, false, advance_mm, B5M_SLOW_SPEED, B5R_ADVANCE, now);
         return;
+    }
     case B5R_ADVANCE:
         r = follow(a, s, now);
         if (r < 0) return;
@@ -405,63 +381,29 @@ __attribute__((noinline)) static void rejoin(B5Automatic *a, uint64_t now, Motio
         a->sensor.cancel();
         enter(a, B5R_RESTORE, now);
         return;
-    case B5R_RESTORE: {
-        /* v0.6: angle-controlled part of the final turn, ending ACQ_OPEN deg
-         * short of the approach heading (0). Line evidence is ignored here. */
-        float coarse = -sign * B5R_ACQ_OPEN_DEG - a->heading_deg;
-        if (sign * coarse < 1.0f) { acquire(a, sign, now); return; }
-        if (fabsf(coarse) > 180.0f) { stop(a, B5A_MOVE, now); return; }
-        (void)start_move(a, true, coarse, B5M_SPEED, B5R_RESTORE_TURN, now);
+    case B5R_RESTORE:
+    {
+        /* Turn on the measured stripe centre and confirm in the new pose. */
+        float goal_deg = -a->heading_deg;
+        if (fabsf(goal_deg) > 180.0f)
+        {
+            stop(a, B5A_MOVE, now);
+        }
+        else if (fabsf(goal_deg) < 1.0f)
+        {
+            enter(a, B5R_CONFIRM, now);
+        }
+        else
+        {
+            (void)start_move(a, true, goal_deg, B5M_SLOW_SPEED,
+                             B5R_RESTORE_TURN, now);
+        }
         return;
     }
     case B5R_RESTORE_TURN:
         r = follow(a, s, now);
         if (r <= 0) return;
         event(a, B5V_RESTORED, a->heading_deg, 0, 0, 0, now);
-        acquire(a, sign, now);
-        return;
-    case B5R_ACQUIRE: {
-        r = follow(a, s, now);
-        if (r < 0) return;
-        if (r > 0) {
-            /* Sweep reached +ACQ_PAST. Evidence still being timed at the end
-             * goes to the stationary confirmation; otherwise stop. */
-            if (!a->evidence_timing) { stop(a, no_line, now); return; }
-            a->search_centre = a->acq_onset;
-            a->line_mask = a->armed_mask;
-            event(a, B5V_ACQUIRED, a->acq_onset, a->heading_deg, a->acq_samples, 1, now);
-            enter(a, B5R_CONFIRM, now);
-            return;
-        }
-        if (!obs) return;
-        float live = a->heading_deg + s.rotation_deg; /* running command, encoder */
-        /* v0.6.1: per-sensor arming. A sensor counts only after it has read
-         * below its line level for ACQ_CLEAR_US during this sweep. */
-        for (unsigned w = 0; w < 2; ++w) {
-            if (above & (1u << w)) a->sensor_clear_timing[w] = false;
-            else if (!a->sensor_clear_timing[w]) { a->sensor_clear_timing[w] = true; a->sensor_clear_since[w] = now; }
-            else if (now - a->sensor_clear_since[w] >= B5R_ACQ_CLEAR_US) a->armed_mask |= (uint8_t)(1u << w);
-        }
-        if (!(above & a->armed_mask) || fabsf(live) > B5R_ACQ_OPEN_DEG) {
-            a->evidence_timing = false;
-            return;
-        }
-        if (!a->evidence_timing) {
-            a->evidence_timing = true;
-            a->evidence_since = now;
-            a->acq_onset = live;
-            a->acq_samples = 0;
-        }
-        if (++a->acq_samples >= B5R_ACQ_MIN_SAMPLES &&
-            now - a->evidence_since >= B5R_ACQ_EVIDENCE_US)
-            halt(a, B5R_ACQUIRE_STOP, now);
-        return;
-    }
-    case B5R_ACQUIRE_STOP:
-        if (halted(a, s, now) <= 0) return;
-        a->search_centre = a->acq_onset;
-        a->line_mask = a->armed_mask;
-        event(a, B5V_ACQUIRED, a->acq_onset, a->heading_deg, a->acq_samples, 0, now);
         enter(a, B5R_CONFIRM, now);
         return;
     case B5R_SEARCH:
@@ -492,12 +434,28 @@ __attribute__((noinline)) static void rejoin(B5Automatic *a, uint64_t now, Motio
             enter(a, B5R_RESUME, now); return;
         }
         if (now - a->phase_since < B5R_CONFIRM_WAIT_US) return;
-        if (a->searches >= B5R_SEARCH_STEPS) { stop(a, no_line, now); return; }
+        if (a->searches >= B5R_SEARCH_STEPS) { stop(a, B5A_NO_LINE, now); return; }
         {
-            /* v0.6: about the acquisition heading, inside the sweep window. */
-            float target = a->search_centre + sign * search_deg[a->searches++];
-            if (sign * target > B5R_ACQ_PAST_DEG) target = sign * B5R_ACQ_PAST_DEG;
-            if (sign * target < -B5R_ACQ_OPEN_DEG) target = -sign * B5R_ACQ_OPEN_DEG;
+            if (0U == a->searches)
+            {
+                /* Compare contrast above each sensor's own floor level.
+                 * With no clear hint, look back toward the route first. */
+                int32_t left = (int32_t)a->line[0] - (int32_t)a->stripe.bg[0];
+                int32_t right = (int32_t)a->line[1] - (int32_t)a->stripe.bg[1];
+                int32_t difference = left - right;
+                if ((difference >= B5R_SEARCH_HINT_LEVEL) ||
+                    (difference <= -B5R_SEARCH_HINT_LEVEL))
+                {
+                    a->search_left_first = difference > 0;
+                }
+                else
+                {
+                    a->search_left_first = B5_SIDE_RIGHT == a->side;
+                }
+            }
+            bool turn_left = ((0U == a->searches) == a->search_left_first);
+            float target = turn_left ? B5R_SEARCH_OFFSET_DEG : -B5R_SEARCH_OFFSET_DEG;
+            ++a->searches;
             float goal = target - a->heading_deg;
             event(a, B5V_SEARCH_TURN, target, goal, a->searches, 0, now);
             if (fabsf(goal) < 1.0f) { enter(a, B5R_CONFIRM, now); return; }
@@ -552,7 +510,6 @@ void b5_auto_tick(B5Automatic *a, uint64_t now) {
             a->state = B5A_REJOIN;
             a->since = a->search_since = now;
             a->searches = a->search_id = 0;
-            a->search_centre = a->acq_onset = 0;
             enter(a, B5R_START, now);
             return;
         }
@@ -573,19 +530,21 @@ const char *b5_auto_name(unsigned state) {
 const char *b5_auto_reason_name(unsigned reason) {
     static const char *const names[] = {"OK", "SENSOR", "LEASE", "CANCELLED", "NO_PATH",
         "MOVE", "NO_LINE", "STALE", "NO_ENCODER_PROGRESS", "GEOMETRY_DONE",
-        "INSUFFICIENT_TURN_CLEARANCE", "NO_LINE_AFTER_FALLBACK_SWEEP"};
+        "INSUFFICIENT_TURN_CLEARANCE", "NO_LINE_AFTER_FALLBACK_SWEEP",
+        "NO_LINE_ON_ANGLED_RETURN"};
     return reason < sizeof(names)/sizeof(names[0]) ? names[reason] : "INVALID";
 }
 const char *b5_auto_event_name(unsigned code) {
     static const char *const names[] = {"NONE", "TAKEOVER", "PLAN", "HOLD_CLEARANCE", "LEG_END",
         "RETURN_START", "CANDIDATE", "REJECT", "STRIPE_FOUND", "POSITIONED", "RESTORED",
         "SEARCH_TURN", "CONFIRMED", "HANDBACK", "STOPPED", "GEOMETRY_HOLD", "ACQUIRE",
-        "ACQUIRED", "RETURN_FALLBACK"};
+        "ACQUIRED", "RETURN_FALLBACK", "MERGE_START", "MERGE_STRIPE", "MERGE_ALIGN",
+        "MISSION_RETRY", "RANGE_BATCH"};
     return code < sizeof(names)/sizeof(names[0]) ? names[code] : "INVALID";
 }
 const char *b5_auto_phase_name(unsigned phase) {
     static const char *const names[] = {"START", "RETURN", "RETURN_STOP", "ADVANCE",
         "RESTORE", "RESTORE_TURN", "CONFIRM", "SEARCH", "SEARCH_STOP", "RESUME", "ACQUIRE",
-        "ACQUIRE_STOP"};
+        "ACQUIRE_STOP", "MERGE_TURN", "MERGE_DRIVE", "MERGE_STOP", "MERGE_ALIGN"};
     return phase < sizeof(names)/sizeof(names[0]) ? names[phase] : "INVALID";
 }

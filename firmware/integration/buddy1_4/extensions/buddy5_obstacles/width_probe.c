@@ -177,18 +177,22 @@ static uint16_t median_three(const b5_ping_t p[3]) {
         }
     return v[1];
 }
-static bool valid_reference(const b5_ping_t p[3], uint16_t *median) {
+static bool valid_reference(const B5WidthProbe *t, uint16_t *median) {
+    const b5_ping_t *p = t->ping;
     uint16_t lo = UINT16_MAX, hi = 0;
     for (unsigned i = 0; i < 3; ++i) {
         if (p[i].cls != B5_PING_ECHO || p[i].why != B5_PING_WHY_OK ||
-            p[i].range_mm < B5WP_D0_MIN_MM || p[i].range_mm > B5WP_D0_MAX_MM)
+            p[i].range_mm > B5WP_D0_MAX_MM)
             return false;
         if (p[i].range_mm < lo) lo = (uint16_t)p[i].range_mm;
         if (p[i].range_mm > hi) hi = (uint16_t)p[i].range_mm;
     }
     if ((unsigned)(hi - lo) > 15u) return false;
     *median = median_three(p);
-    return true;
+#ifdef APP_RTOS_BUDDY5
+    if (t->allow_borderline_ref && width_ref_borderline(lo, *median, hi)) return true;
+#endif
+    return lo >= B5WP_D0_MIN_MM;
 }
 /* Nominal heading of the pose being sampled (trim and alignment target). */
 static float sample_target(const B5WidthProbe *t) {
@@ -252,6 +256,12 @@ static uint8_t push_record(B5WidthProbe *t, uint64_t now) {
         r.value[i] = t->ping[i].cls == B5_PING_ECHO ? (uint16_t)t->ping[i].range_mm :
             (uint16_t)(t->ping[i].width_us > UINT16_MAX ? UINT16_MAX : t->ping[i].width_us);
     }
+#ifdef APP_RTOS_BUDDY5
+    if (B5WP_UNKNOWN == r.evidence) {
+        t->terminal_record = r;
+        t->terminal_record_valid = true;
+    }
+#endif
     if (abs(r.servo_dd) > B5WP_SERVO_LIMIT_DD || abs(r.applied_dd) > B5WP_SERVO_LIMIT_DD)
         t->servo_in_range = false;
     if (t->est_in.n < B5WE_MAX_POINTS) {          /* display estimator input (no feedback) */
@@ -748,8 +758,9 @@ static bool retry_sample(B5WidthProbe *t, uint16_t expected, uint64_t now) {
     bool reference = t->sample_phase == B5WP_PH_REF;
 #ifdef APP_RTOS_BUDDY5
     bool retry_outlier = reference && width_ref_retry_outlier(t->ping);
-    bool retry_outward = (B5WP_PH_OUT == t->sample_phase) &&
-        width_out_retry_plausible(t->ping, expected);
+    bool retry_pose = (!reference) &&
+        width_pose_retry_plausible(t->ping, expected,
+                                    b5_wp_turn_front_gap((float)t->d0, t->net_y_mm));
 #endif
     B5WPSide *sd = &t->side[t->cur];
     bool returning = t->sample_phase == B5WP_PH_RET || t->sample_phase == B5WP_PH_LAD_RET;
@@ -758,7 +769,7 @@ static bool retry_sample(B5WidthProbe *t, uint16_t expected, uint64_t now) {
         b5_wp_classify(t->ping, expected) == B5WP_TRANSITION;
     bool short_fault = false, clean_in_window = true;
 #ifdef APP_RTOS_BUDDY5
-    if ((!boundary_transition) && (!retry_outward)) {
+    if ((!boundary_transition) && (!retry_pose)) {
 #else
     if (!boundary_transition) {
 #endif
@@ -816,14 +827,13 @@ static void sample_done(B5WidthProbe *t, uint64_t now) {
     uint16_t expected = b5_wp_expected_mm(t->d0, t->sample_heading_cdeg, mm10(t->net_y_mm));
     uint16_t reference = 0;
     uint8_t candidate = phase == B5WP_PH_REF ? B5WP_UNKNOWN : b5_wp_classify(t->ping, expected);
-    bool rejected = phase == B5WP_PH_REF ? !valid_reference(t->ping, &reference) :
+    bool rejected = phase == B5WP_PH_REF ? !valid_reference(t, &reference) :
                     candidate == B5WP_UNKNOWN;
     if ((rejected || candidate == B5WP_TRANSITION) &&
         retry_sample(t, phase == B5WP_PH_REF ? 0u : expected, now)) return;
     if (phase == B5WP_PH_REF) {
-        uint16_t d0 = 0;
-        t->ref_ok = valid_reference(t->ping, &d0);
-        t->d0 = t->ref_ok ? d0 : 0u;
+        t->ref_ok = !rejected;
+        t->d0 = t->ref_ok ? reference : 0u;
     }
     uint8_t v = push_record(t, now);
     float axis = t->last_axis_x;      /* identical to the record's axis_x */

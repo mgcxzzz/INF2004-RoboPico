@@ -27,7 +27,8 @@ enum
     SYM_TRACE_US = 125000,
     SYM_LOSS_US = 650000,
     SYM_LOSS_MM = 25,
-    SYM_MEMORY_US = 500000
+    SYM_MEMORY_US = 500000,
+    SYM_LINE_EVIDENCE_LEVEL = 400
 };
 typedef struct
 {
@@ -38,6 +39,14 @@ typedef struct
     int8_t recovery;
     bool white;
 } symmetric_tracker_t;
+
+/* Strong tape evidence at either reflectance spot. Bit 0 is the left spot. */
+static inline unsigned symmetric_line_mask (uint16_t left, uint16_t right)
+{
+    return ((left >= SYM_LINE_EVIDENCE_LEVEL) ? 1U : 0U) |
+           ((right >= SYM_LINE_EVIDENCE_LEVEL) ? 2U : 0U);
+}
+
 /* V11 adaptive forward speed. Level difference is reflectance error, not mm.
  * Piecewise interpolation keeps target changes <=1mm/s per error count:
  * |error|80:45/45,250:40/50,500:25/50,1000:0/45 (inner/outer).
@@ -124,7 +133,7 @@ symmetric_demand (symmetric_tracker_t * p_sample,
     int32_t error = (int32_t)demand.level[0] - demand.level[1];
     /* Only a clear, recent asymmetric observation may choose loss recovery. */
     if (((error >= 200) || (error <= -200)) &&
-        ((demand.level[0] >= 400) || (demand.level[1] >= 400)))
+        (0U != symmetric_line_mask(demand.level[0], demand.level[1])))
     {
         p_sample->direction = error > 0 ? 1 : -1;
         p_sample->direction_us = now;

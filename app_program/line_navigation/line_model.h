@@ -27,6 +27,9 @@
 #include "src/motion/ramp_profile.h"
 #include "src/barcode/barcode_record.h"
 #include "config/calibration_presets.h"
+#ifdef APP_RTOS_BUDDY5
+#include "../obstacle_navigation/b5_straight.h"
+#endif
 #ifdef APP_RTOS_IMU
 #include "../imu_navigation/imu_motion.h"
 #endif
@@ -77,6 +80,37 @@ typedef struct
     bool caster_assist_enabled;
     line_junction_diagnostic_t junction;
 } line_planner_t;
+
+#ifdef APP_RTOS_BUDDY5
+static inline void rl_buddy5_straight_sample (const line_planner_t * p_planner,
+                                              const circuit_input_t * p_input,
+                                              const analog_demand_t * p_demand,
+                                              b5_line_sample_t * p_out)
+{
+    const circuit_t * p_circuit = &p_planner->circuit;
+    const barcode_nav_t * p_nav = &p_planner->nav;
+    *p_out = (b5_line_sample_t){
+        .now_us = p_input->now,
+        .wheel_mm = {(float)p_input->wheel[0], (float)p_input->wheel[1]},
+        .phase = p_circuit->phase,
+        .decision = p_demand->decision,
+        .valid = true,
+        .busy = (p_circuit->busy) || (p_nav->busy),
+        .fault = p_circuit->fault,
+        .stop = p_demand->stop,
+        .line_lost = p_circuit->follower.core.white,
+#if defined(CIRCUIT_SWEEP_SEARCH) || defined(CIRCUIT_STATIONARY_SEARCH) ||     \
+    defined(LINE_STATIONARY_SEARCH)
+        .searching = p_circuit->follower.search.active,
+#endif
+        .junction_mark = ((p_circuit->candidate) || (p_nav->cross_candidate)) ||
+                         (p_nav->cross_ready),
+        /* The action and U-turn stage can remain populated after completion.
+         * Barcode navigation clears busy when it returns to line following. */
+        .route_turn = p_nav->busy,
+        .steering = p_planner->steering.active};
+}
+#endif
 
 /* Observation only: never modifies the planner's acceptance or motor targets.
  * White qualification reproduces the former <200, >10deg, 30ms condition.

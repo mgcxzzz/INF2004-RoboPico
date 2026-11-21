@@ -15,6 +15,8 @@
 #include "src/line_following/symmetric_logic.h"
 #include "src/line_following/line_search.h"
 #include "src/motion/dual_logic.h"
+#define APP_RTOS_BUDDY5 1
+#include "app_program/line_navigation/line_model.h"
 
 #define PI_F 3.14159265358979323846f
 #define DT_US 10000u
@@ -147,12 +149,12 @@ static void test_confirmed_bend_label_on_straight(void) {
     /* The same exit flag with encoder evidence of a curve blocks takeover. */
     b5_line_sample_t corner = sample_of(&s, 25);
     corner.now_us += DT_US;
-    corner.wheel_mm[0] -= 3.0f;
-    corner.wheel_mm[1] += 3.0f;
+    corner.wheel_mm[0] -= 1.0f;
+    corner.wheel_mm[1] += 1.0f;
     b5_straight_step(&s.gate, &corner);
     CHECK(s.gate.reason == B5S_CURVE && !s.gate.open);
     CHECK(s.gate.heading_cdeg < B5S_HEADING_MAX_CDEG);
-    puts("  bend exit on a straight qualifies; recent encoder curve blocks before 6 degrees");
+    puts("  bend exit on a straight qualifies; recent encoder curve blocks before the long-window limit");
 }
 
 /* Tight curve: the real bend monitor engages (entry, confirmed, exit). */
@@ -175,6 +177,7 @@ static void test_tight_curve(int dir) {
     CHECK(!open_in_curve);
     CHECK(first_bad == B5S_CURVE);
     CHECK(reopened >= B5S_WINDOW_MM - 30);
+    CHECK(reopened <= B5S_WINDOW_MM + 20);
     printf("  %s curve R=%.0f mm (bend assist engages): blocked from %s; reasons seen:", dir > 0 ? "left " : "right",
            r_mm, NAMES[first_bad]);
     for (unsigned i = 0; i < B5S_REASON_COUNT; ++i) if (s.seen & (1u << i)) printf(" %s", NAMES[i]);
@@ -184,7 +187,7 @@ static void test_tight_curve(int dir) {
 /* Gentle curve: below the bend-assist thresholds, so only the encoder
  * heading window can block it. (a) Reached from a closed gate (after a
  * junction, a stop or the start) it never opens; (b) entered from an open
- * straight it closes within the window's heading budget (6 deg x R) and
+ * straight it closes within the window's heading budget and
  * stays closed for the rest of the curve. */
 static void test_gentle_curve(int dir, float r_mm, bool expect_block) {
     sim_t s; sim_init(&s);
@@ -306,6 +309,53 @@ static void test_stale_and_misc(void) {
            (unsigned)(B5S_SAMPLE_MAX_US / 1000), (unsigned)(B5S_DWELL_US / 1000));
 }
 
+static void test_completed_barcode_turn_reopens_gate(void) {
+    const char routes[] = {'A', 'F', 'Z'};
+    const char actions[] = {'L', 'R', 'U'};
+    const line_calibration_t cal = successful_calibration();
+    for (unsigned route = 0; route < sizeof routes; ++route) {
+        line_planner_t planner = {0};
+        circuit_input_t input = {
+            .now = 1000000U, .adc = {3400, 3600}, .speed = {45, 45}};
+        b5_straight_t gate = {0};
+        rl_begin(&planner, &input, 180);
+        planner.circuit.phase = J_ACQUIRE;
+        planner.circuit.turn.phase = J_ACQUIRE;
+        planner.circuit.turn.phase_us = input.now;
+        planner.circuit.busy = planner.nav.busy = true;
+        planner.nav.action = routes[route];
+        planner.nav.executing_action = actions[route];
+        planner.nav.uturn.stage = route == 2U ? 4U : 0U;
+        b5_line_sample_t sample;
+        uint8_t reason = B5S_UNKNOWN;
+        double completion_path = 0;
+        bool completed = false;
+        for (unsigned tick = 0; tick < 400U && reason != B5S_STRAIGHT; ++tick) {
+            input.now += DT_US;
+            input.path += .45;
+            input.wheel[0] += .45;
+            input.wheel[1] += .45;
+            analog_demand_t demand = rl_follow(&planner, &cal, &input, .01f);
+            rl_buddy5_straight_sample(&planner, &input, &demand, &sample);
+            b5_straight_step(&gate, &sample);
+            reason = b5_straight_check(&gate, input.now);
+            if (planner.nav.busy) {
+                CHECK(sample.route_turn && reason == B5S_TURN);
+            } else if (!completed) {
+                completed = true;
+                completion_path = input.path;
+                CHECK(planner.circuit.completed && !sample.route_turn);
+                CHECK(planner.nav.action == routes[route]);
+                CHECK(planner.nav.executing_action == actions[route]);
+                CHECK(planner.nav.uturn.stage == (route == 2U ? 4U : 0U));
+            }
+        }
+        CHECK(completed && reason == B5S_STRAIGHT && gate.open);
+        CHECK(input.path - completion_path >= B5S_WINDOW_MM);
+    }
+    printf("  completed barcode turns reopen the gate after fresh straight travel\n");
+}
+
 int main(void) {
     test_straight_with_corrections();
     test_brief_bend_signals_on_a_straight();
@@ -314,11 +364,12 @@ int main(void) {
     test_tight_curve(-1);
     test_gentle_curve(+1, 500, true);
     test_gentle_curve(-1, 500, true);
-    test_gentle_curve(+1, 1200, true);
-    test_gentle_curve(-1, 1200, true);
-    test_gentle_curve(+1, 3000, false); /* documented limit: R > ~1.9 m reads as straight */
+    test_gentle_curve(+1, 1200, false);
+    test_gentle_curve(-1, 1200, false);
+    test_gentle_curve(+1, 3000, false);
     test_states();
     test_stale_and_misc();
+    test_completed_barcode_turn_reopens_gate();
     printf("%s: straight gate, %u checks, %u failure(s)\n", g_failures ? "FAIL" : "PASS", g_checks, g_failures);
     return g_failures ? 1 : 0;
 }

@@ -208,8 +208,8 @@ circuit_line_demand_motion (circuit_tracker_t * p_sample,
         p_sample->probe_since = now;
     }
     circuit_direction(p_sample, error, strongest, now);
-    bool centred = ((demand.level[0] >= 400) && (demand.level[1] >= 400)) &&
-                   (magnitude <= 80);
+    unsigned line_mask = symmetric_line_mask(demand.level[0], demand.level[1]);
+    bool centred = (3U == line_mask) && (magnitude <= 80);
     if (!centred)
     {
         p_sample->centre_timing = false;
@@ -485,8 +485,8 @@ circuit_line_demand_motion (circuit_tracker_t * p_sample,
     {
         demand.decision = SYM_RIGHT;
     }
-    if ((strongest >= 400) && (((error > 80) && (p_state->direction > 0)) ||
-                               ((error < -80) && (p_state->direction < 0))))
+    if ((0U != line_mask) && (((error > 80) && (p_state->direction > 0)) ||
+                              ((error < -80) && (p_state->direction < 0))))
     {
         int maximum = demand.target[0] > demand.target[1] ? demand.target[0]
                                                           : demand.target[1];

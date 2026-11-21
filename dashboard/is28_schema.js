@@ -601,12 +601,15 @@
   const B5A_STATE = ['IDLE', 'GUARD', 'CONFIRM', 'HALTING', 'SCAN', 'REFINE', 'PLAN', 'BYPASS', 'REJOIN',
                      'BLOCKED', 'FAULT', 'GEOMETRY_HOLD', 'DONE'];
   const B5A_REASON = ['OK', 'SENSOR', 'LEASE', 'CANCELLED', 'NO_PATH', 'MOVE', 'NO_LINE', 'STALE',
-    'NO_ENCODER_PROGRESS', 'GEOMETRY_DONE', 'INSUFFICIENT_TURN_CLEARANCE', 'NO_LINE_AFTER_FALLBACK_SWEEP'];
+    'NO_ENCODER_PROGRESS', 'GEOMETRY_DONE', 'INSUFFICIENT_TURN_CLEARANCE', 'NO_LINE_AFTER_FALLBACK_SWEEP',
+    'NO_LINE_ON_ANGLED_RETURN'];
   const B5R_PHASE = ['START', 'RETURN', 'RETURN_STOP', 'ADVANCE', 'RESTORE', 'RESTORE_TURN', 'CONFIRM',
-                     'SEARCH', 'SEARCH_STOP', 'RESUME', 'ACQUIRE', 'ACQUIRE_STOP'];
+                     'SEARCH', 'SEARCH_STOP', 'RESUME', 'ACQUIRE', 'ACQUIRE_STOP', 'MERGE_TURN',
+                     'MERGE_DRIVE', 'MERGE_STOP', 'MERGE_ALIGN'];
   const B5V_EVENT = ['NONE', 'TAKEOVER', 'PLAN', 'HOLD_CLEARANCE', 'LEG_END', 'RETURN_START', 'CANDIDATE',
     'REJECT', 'STRIPE_FOUND', 'POSITIONED', 'RESTORED', 'SEARCH_TURN', 'CONFIRMED', 'HANDBACK', 'STOPPED',
-    'GEOMETRY_HOLD', 'ACQUIRE', 'ACQUIRED', 'RETURN_FALLBACK'];
+    'GEOMETRY_HOLD', 'ACQUIRE', 'ACQUIRED', 'RETURN_FALLBACK', 'MERGE_START', 'MERGE_STRIPE', 'MERGE_ALIGN',
+    'MISSION_RETRY', 'RANGE_BATCH'];
   const B5_NONE16 = 0xffff;
   const B5_MAX_WIDTH_RECORDS = 255, B5_DIRECTION_RECORDS = 8;
   function b5mm100(v) { return v === B5_NONE16 ? null : v / 100; }
@@ -765,12 +768,28 @@
   }
   function decodeB5Event(p) {
     if ((p[5] & 15) !== 1) return { error: 'unsupported B5 event version ' + (p[5] & 15) };
-    return { kind: 'b5-event', version: 1, uptimeMs: u32(p, 0), geometryOnly: !!(p[5] & 16), code: p[6],
+    const e = { kind: 'b5-event', version: 1, uptimeMs: u32(p, 0), geometryOnly: !!(p[5] & 16), code: p[6],
       codeName: B5V_EVENT[p[6]] || '?', state: p[7], stateName: B5A_STATE[p[7]] || '?', phase: p[8],
       phaseName: B5R_PHASE[p[8]] || '?', reason: p[9], reasonName: B5A_REASON[p[9]] || '?', result: p[10],
       detail: p[11], searches: p[12], rejects: p[13], a: i16(p, 14) / 10, b: i16(p, 16) / 10,
       headingDeg: i16(p, 18) / 100, level: [u16(p, 20), u16(p, 22)], bg: [u16(p, 24), u16(p, 26)],
       eventSeq: u16(p, 28), overwritten: u16(p, 30) };
+    if (e.codeName === 'MISSION_RETRY') {
+      e.retryName = ['unknown', 'straight settling', 'stopped obstacle recheck', 'width gate', 'approach alignment'][e.detail] || 'unknown';
+      e.outcomeName = ['started', 'recovered', 'held'][e.result] || 'unknown';
+      e.phaseName = B5M_STAGE[e.phase] || '?';
+      e.reasonName = B5M_REASON[e.reason] || '?';
+    } else if (e.codeName === 'RANGE_BATCH') {
+      e.retryName = B5M_STAGE[e.detail] || '?';
+      e.outcomeName = ['retrying', 'accepted', 'held', 'accepted with range warning'][e.result] || 'unknown';
+      e.attempt = e.searches;
+      const classes = e.bg[1];
+      e.echoes = [e.level[0], e.level[1], e.bg[0]].map((mm, i) => {
+        const cls = ['echo', 'no return', 'fault'][(classes >> (2 * i)) & 3] || 'unknown';
+        return { cls, mm: cls === 'echo' ? mm : null };
+      });
+    }
+    return e;
   }
   function decodeB5Source15(p) {
     if (p.length < 6) return null;

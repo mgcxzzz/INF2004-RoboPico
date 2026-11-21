@@ -4,7 +4,7 @@
  * return leg, sensor-guided fourth turn, stationary confirmation, bounded
  * search and hand-back), with its stationary-scan side selector REMOVED.
  *
- * What changed from automatic_bypass.c/h v0.6.1 (all else is copied verbatim):
+ * RTOS changes from automatic_bypass.c/h v0.6.1:
  *  - GUARD/CONFIRM/HALTING/SCAN/REFINE/PLAN and the obstacle profiler are gone.
  *    The caller (b5_mission.c) supplies the side (from the direction probe or
  *    the labelled default) and the ACTUAL stopped forward range through
@@ -16,6 +16,8 @@
  *    target stay referenced to the approach (line) heading.
  *  - After a successful hand-back the state is B5A_DONE (appended) instead of
  *    re-arming the v0.6.1 guard; the mission owns re-arming.
+ *  - The v0.3.8 rejoin drives straight toward the line until both sensors
+ *    confirm a stripe or the return distance runs out.
  *  - The geometry-only image variant is not built.
  * Values of the retained enums are unchanged so B5 event decoders keep their
  * meaning. Pure coordinator API: no PWM, sensor I/O only through the port. */
@@ -33,22 +35,21 @@ enum { B5A_IDLE, B5A_GUARD, B5A_CONFIRM, B5A_HALTING, B5A_SCAN, B5A_REFINE,
 enum { B5A_OK, B5A_SENSOR, B5A_LEASE, B5A_CANCELLED, B5A_NO_PATH,
        B5A_MOVE, B5A_NO_LINE, B5A_STALE, B5A_STALL, B5A_GEOMETRY_DONE,
        B5A_CLEARANCE /* v0.4: first turn cannot keep the margin without reverse */,
-       B5A_FALLBACK_NO_LINE /* v0.6.1: no valid crossing, estimated-position sweep found no line */ };
+       B5A_FALLBACK_NO_LINE /* v0.6.1: no valid crossing, estimated-position sweep found no line */,
+       B5A_MERGE_NO_LINE };
 /* Return/acquisition sub-phases inside B5A_REJOIN (v0.5 detector). */
 enum { B5R_START, B5R_RETURN, B5R_RETURN_STOP, B5R_ADVANCE, B5R_RESTORE,
        B5R_RESTORE_TURN, B5R_CONFIRM, B5R_SEARCH, B5R_SEARCH_STOP, B5R_RESUME,
        /* v0.6 (appended so v0.5 phase numbers keep their meaning) */
-       B5R_ACQUIRE, B5R_ACQUIRE_STOP };
-/* v0.6 final turn onto the return line (unchanged; see the v0.6.1 header). */
-#define B5R_ACQ_OPEN_DEG     (20.0f)
-#define B5R_ACQ_PAST_DEG     (15.0f) /* = v0.5's largest search angle */
-#define B5R_ACQ_CLEAR_US     100000u
-#define B5R_ACQ_EVIDENCE_US  40000u
-#define B5R_ACQ_MIN_SAMPLES  3u
-#define B5R_SEARCH_STEPS 6U
-#define B5R_FALLBACK_TOL_MM   (60.0f)
-#define B5R_FALLBACK_MIN_SIN  (0.866f) /* |return heading| >= 60 deg */
-#define B5R_FALLBACK_LEVEL    (B5S_RISE_ABS)
+       B5R_ACQUIRE, B5R_ACQUIRE_STOP, B5R_MERGE_TURN, B5R_MERGE_DRIVE,
+       B5R_MERGE_STOP, B5R_MERGE_ALIGN };
+#define B5R_SEARCH_OFFSET_DEG (28.0f)
+#define B5R_CONFIRM_HEADING_DEG (30.0f) /* leaves room for turn settling */
+#define B5R_SEARCH_STEPS 2U
+#define B5R_SEARCH_HINT_LEVEL (60)
+#define B5R_REJOIN_LIMIT_US (35000000u)
+#define B5R_RETURN_ESTIMATE_TOL_MM (60.0f)
+#define B5R_RETURN_MIN_SIN (0.866f) /* |return heading| >= 60 deg */
 #define B5R_CONFIRM_US   150000u /* stationary stripe evidence before hand-back */
 #define B5R_CONFIRM_WAIT_US 400000u /* per pose, then the next bounded search turn */
 /* v0.4.1-tested route limits, carried explicitly (unchanged). */
@@ -70,7 +71,8 @@ enum { B5V_NONE, B5V_TAKEOVER, B5V_PLAN, B5V_HOLD_CLEARANCE, B5V_LEG_END,
        B5V_RESTORED, B5V_SEARCH_TURN, B5V_CONFIRMED, B5V_HANDBACK, B5V_STOPPED,
        B5V_GEOMETRY_HOLD,
        /* v0.6 */ B5V_ACQUIRE, B5V_ACQUIRED,
-       /* v0.6.1 */ B5V_FALLBACK };
+       /* v0.6.1 */ B5V_FALLBACK, B5V_MERGE_START, B5V_MERGE_STRIPE,
+       B5V_MERGE_ALIGN, B5V_MISSION_RETRY, B5V_RANGE_BATCH };
 typedef struct {
     uint32_t ms;
     int16_t a, b, heading_cdeg; /* a/b: event-specific, 0.1 mm or 0.1 deg */
@@ -105,7 +107,7 @@ typedef struct {
     float depth_mm;               /* planning obstacle depth (150) */
     B5RectPlan rect;
     B5Stripe stripe;
-    float heading_deg, stop_progress, advance_mm, last_rotation;
+    float heading_deg, stop_progress, return_scan_start_mm;
     unsigned phase, stripe_result;
     uint16_t seen_rejects;
     uint8_t seen_phase, legs_reported, last_handback;
@@ -114,15 +116,7 @@ typedef struct {
     uint16_t ev_seq, ev_dropped;
     uint64_t used_observation, evidence_since, phase_since;
     uint32_t observations;
-    float acq_onset, search_centre;
-    unsigned acq_samples;
-    float pivot_return_mm;
-    bool fallback;
-    uint8_t armed_mask;
-    uint8_t line_mask;
-    uint8_t handback_sensor_mask; /* 0 accepts either sensor as before */
-    uint64_t sensor_clear_since[2];
-    bool sensor_clear_timing[2];
+    bool search_left_first;
     /* rtos_buddy1_5 inputs, recorded for telemetry */
     uint8_t side;                    /* B5_SIDE_LEFT / B5_SIDE_RIGHT */
     uint16_t start_range_mm;         /* actual stopped forward range used */
@@ -134,7 +128,8 @@ void b5_auto_observe(B5Automatic *a, uint64_t now, uint16_t left, uint16_t right
  * the coordinator PAUSED and stopped. Returns false (and enters BLOCKED or
  * FAULT, stopped) when the plan or adoption is refused. */
 bool b5_auto_start(B5Automatic *a, uint32_t lease, unsigned side, unsigned range_mm,
-                   float heading0_deg, float lateral0_mm, uint64_t now);
+                   unsigned nearest_mm, unsigned farthest_mm, float heading0_deg,
+                   float lateral0_mm, uint64_t now);
 void b5_auto_tick(B5Automatic *a, uint64_t now);
 void b5_auto_cancel(B5Automatic *a, uint64_t now);
 const char *b5_auto_name(unsigned state);
@@ -144,4 +139,6 @@ const char *b5_auto_event_name(unsigned code);
 /* Oldest queued event (not removed) / remove it after a successful send. */
 bool b5_auto_peek_event(const B5Automatic *a, B5Event *out);
 void b5_auto_drop_event(B5Automatic *a);
+/* The RTOS mission and the bypass run in the same control task. */
+void b5_auto_queue_event(B5Automatic *a, B5Event *p_event);
 #endif

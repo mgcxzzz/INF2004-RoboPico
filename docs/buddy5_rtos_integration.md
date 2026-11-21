@@ -37,10 +37,10 @@ Folder `firmware/integration/buddy1_4/extensions/buddy5_obstacles/`.
 | File(s) | Source | Change |
 |---|---|---|
 | width_estimate.c/.h, width_probe_pack.h, b5_scan_pack.h | SDK width_long_probe v0.2 (UF2 71ae5473…) | none (byte-identical) |
-| width_probe.c/.h | SDK width_long_probe v0.2 | `B5WP_RUN_ARCHIVE` guards the write-only run-log copy `arch[]`. The RTOS profile omits that copy to save 3,172 B RAM. RTOS hooks permit one stationary resample at eligible REF (v0.2.15) and outward scan poses (v0.3.1) through the existing retry budget and original acceptance rules. |
+| width_probe.c/.h | SDK width_long_probe v0.2 | `B5WP_RUN_ARCHIVE` guards the write-only run-log copy `arch[]`. The RTOS profile omits that copy to save 3,172 B RAM. RTOS hooks permit one stationary resample at eligible REF (v0.2.15) and face-relative poses (v0.3.5) through the existing retry budget and original acceptance rules. The RTOS profile retains one terminal rejected D1 for republishing. |
 | edge_probe.c/.h, edge_probe_pack.h | SDK edge_probe v0.1.1 (working direction checkpoint, UF2 2f6070fa…4a89) | near allowance 25 mm (edge_scan v0.1.1 rule), BE/BF version 3; both overridable for the v0.1.1 host checks |
 | manual_bypass.c/.h, rect_route.c/.h, stripe_detect.c/.h, b5_event_pack.h | SDK automatic v0.6.1 (identical in the width v0.2 tree) | manual_bypass.h includes b5_compat.h |
-| automatic_bypass.c/.h | SDK automatic v0.6.1 (source tarball 655b8e0d…) | guard, stationary scan, profiler side selection and geometry-only variant removed; `b5_auto_start(side, actual range, heading0, lateral0)` replaces begin/scan/plan; DONE state after hand-back; every other function verbatim |
+| automatic_bypass.c/.h | SDK automatic v0.6.1 (source tarball 655b8e0d…) | guard, stationary scan, profiler side selection and geometry-only variant removed; `b5_auto_start(side, actual range, heading0, lateral0)` replaces begin/scan/plan; DONE state after hand-back; v0.3.8 searches straight toward the line up to 300 mm and aligns only after a two-sensor stripe crossing; v0.3.9 adds a bounded sweep up to 28° either side and allows either sensor to confirm rejoin |
 | sonar_async.c/.h, servo_slew.h, profile/* | SDK width v0.2 tree | none |
 | signed_continuous.h | RTOS v0.1 Buddy 5 adapter / SDK automatic | barr-c type names only |
 | b5_compat.h | new | aliases the SDK names (MotionStatus…) to the barr-c coordinator types |
@@ -76,10 +76,11 @@ Standard 1.0 and is in the mechanical/format check scope.
   decision unchanged (`testing/rtos_migration/buddy5/direction_near25_replay.py`); edge_scan v0.1.1
   ran five centred hardware runs with it (all complete, HOLD). The two earlier
   holds it addresses had echoes 16–18 mm short of the model.
-- **Default side.** Only a COMPLETE run with 8 records, no loss, all five
-  health flags, |final heading| ≤ 3° and equal known side states uses RIGHT,
-  labelled DEFAULT (E5 basis 2). Incomplete, faulted, contradictory or
-  unknown runs hold (basis 3). Width never overrides a hold.
+- **Default side in v0.3.10.** Buddy 5 uses the consolidated width scan.
+  A complete scan with valid reference, return and servo checks and no
+  lost records can choose LEFT or RIGHT from the edge evidence. If that
+  evidence gives no clear preference, it chooses RIGHT and reports DEFAULT
+  (E5 basis 2). Probe failures and skipped scans still hold.
 - **Ownership.** One lease from the takeover to `nav_resume_line`; the probes
   re-claim through `nav_request_takeover`, which returns the same lease while
   Buddy 5 is PAUSED. Buddy 3 never runs between the width and direction
@@ -157,17 +158,13 @@ leg) as a possible obstacle.
   U-turn in progress, the continuous steering's `active` and bend flags
   (dwell, candidate, confirmed, exiting), and the encoder wheel travel.
   Nothing in Buddy 3 is changed.
-- **Open** only after every frame of the last 200 mm of travel (and at
+- **Open** only after every frame of the last 60 mm of travel (and at
   least 300 ms) was ordinary straight following: phase `C_FOLLOW`, decision
-  24/25 (continuous steering) or straight/left/right/fast, no bend state,
-  no junction, turn, loss or recovery, and an encoder heading change of at
-  most 6° across the window. Small steering corrections on a straight are
-  allowed (sim: ±1.9° weave). The heading window catches gentle curves the
-  bend assist never flags: from a closed gate a curve tighter than about
-  R 1.9 m never opens it; entering such a curve from an open straight it
-  closes within about (6° + weave) × R of curve (52–56 mm at R 500,
-  89–166 mm at R 1200 in the host test). Curves gentler than ~1.9 m read as
-  straight.
+  24/25 (continuous steering) or straight/left/right/fast, no junction, turn,
+  loss or recovery, and an encoder heading change of at most 6° across the
+  window and 3° over roughly 30 mm of recent travel. The shorter history
+  lets a straight after a bend qualify sooner. The recent check still blocks
+  tight curve entry.
 - **Closed** reasons (E5 v4): settling, stale (> 50 ms without a Buddy 3
   frame), unavailable (provider not running, bend monitor inactive), bend
   entry, bend, bend exit, curve, junction, turn, line lost/recovery, other.
@@ -178,10 +175,19 @@ leg) as a possible obstacle.
   count; an echo from before the opening, from a curve or in flight across
   the opening never counts.
 - **Blocked close obstacle.** Three consecutive close echoes while the gate is
-  closed stop the robot and hold `NOT_STRAIGHT` (E5 reason 19, module reason
-  = the gate reason). Buddy 5 keeps the stopped robot; width, direction and
-  bypass do not run; operator Stop ends it as before. Stop, E-stop, sensor
-  faults, network loss and the re-arm rule are unchanged.
+  closed can stop the robot and hold `NOT_STRAIGHT` (E5 reason 19, module
+  reason = the gate reason). On a settling straight, Buddy 5 performs a
+  stationary recheck. A clean 270–330 mm batch with retained tape evidence
+  starts the normal width probe. v0.4.3 also admits one echo down to 260 mm
+  when the other two are in-window, all three agree within 15 mm, and the
+  nearest echo passes the turn clearance check. This reports a range warning
+  and enables the same check for that mission's fresh probe reference.
+  A clear batch allows hand-back, and an
+  inconclusive batch gets one stationary retry. During a left, right or
+  U-turn, Buddy 5 suspends
+  guard pings through line reacquisition and discards prior echoes. It resumes
+  guarding with fresh pings after the turn. Straight-through junctions use the
+  ordinary guard. Stop, E-stop and network supervision remain active.
 
 ## Width in the mission (long probe)
 

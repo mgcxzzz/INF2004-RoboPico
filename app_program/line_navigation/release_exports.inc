@@ -58,8 +58,8 @@ void rtos_line_release_info (uint8_t seq, uint8_t out[16])
     out[2] = seq;
     out[3] = 0xc2;
 #ifdef APP_RTOS_BUDDY5
-    out[4] = 0x30; /* v0.3.2; major low/minor high nibble */
-    out[5] = 0x32 | (calibration_valid(&character) ? 0x40 : 0);
+    out[4] = 0x40; /* v0.4.3; major low/minor high nibble */
+    out[5] = 0x33 | (calibration_valid(&character) ? 0x40 : 0);
 #else
     out[4] = 0x20; /* v0.2.12 */
     out[5] = 0x3c | (calibration_valid(&character) ? 0x40 : 0);

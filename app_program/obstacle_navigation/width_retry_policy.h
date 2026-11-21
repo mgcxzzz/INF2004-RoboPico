@@ -1,8 +1,6 @@
 /**
  * @file width_retry_policy.h
- * @brief RTOS policy for resampling suspect stationary width triplets.
- * @details The probe owns the stopped pose and retry budget. This policy
- * only authorizes resampling and provides no accepted width evidence.
+ * @brief RTOS policy for borderline references and stationary retries.
  */
 #ifndef WIDTH_RETRY_POLICY_H
 #define WIDTH_RETRY_POLICY_H
@@ -12,9 +10,21 @@
 enum
 {
     WIDTH_POSE_ECHOS = 3,
-    WIDTH_REF_AGREE_MM = 15,
-    WIDTH_OUT_NEAR_MARGIN_MM = 5
+    WIDTH_ECHO_AGREE_MM = 15,
+    WIDTH_REF_SHORT_MARGIN_MM = 10
 };
+
+/* Use a nominal-range median and check the initial turn with the nearest
+ * echo. The probe's 25 mm face margin covers the permitted 15 mm spread. */
+static inline bool width_ref_borderline (uint32_t near_mm, uint16_t median_mm,
+                                         uint32_t far_mm)
+{
+    return (near_mm < B5WP_D0_MIN_MM) &&
+           (near_mm >= B5WP_D0_MIN_MM - WIDTH_REF_SHORT_MARGIN_MM) &&
+           (median_mm >= B5WP_D0_MIN_MM) && (far_mm <= B5WP_D0_MAX_MM) &&
+           ((far_mm - near_mm) <= WIDTH_ECHO_AGREE_MM) &&
+           (b5_wp_turn_front_gap((float)near_mm, 0.0f) >= B5WP_FRONT_MARGIN_MM);
+}
 
 /* Two in-window echoes must agree. Only one clean echo just outside the
  * reference window may use this path. The new triplet must pass the normal
@@ -30,8 +40,8 @@ width_ref_retry_outlier (const b5_ping_t p_ping[WIDTH_POSE_ECHOS])
         uint32_t range = p_ping[index].range_mm;
         if ((B5_PING_ECHO != p_ping[index].cls) ||
             (B5_PING_WHY_OK != p_ping[index].why) ||
-            (range < B5WP_D0_MIN_MM - WIDTH_REF_AGREE_MM) ||
-            (range > B5WP_D0_MAX_MM + WIDTH_REF_AGREE_MM))
+            (range < B5WP_D0_MIN_MM - WIDTH_ECHO_AGREE_MM) ||
+            (range > B5WP_D0_MAX_MM + WIDTH_ECHO_AGREE_MM))
         {
             return false;
         }
@@ -43,20 +53,22 @@ width_ref_retry_outlier (const b5_ping_t p_ping[WIDTH_POSE_ECHOS])
         }
     }
     return (WIDTH_POSE_ECHOS - 1U == agreeing) &&
-           ((upper - lower) <= WIDTH_REF_AGREE_MM);
+           ((upper - lower) <= WIDTH_ECHO_AGREE_MM);
 }
 
-/* At an outward pose, a clean in-window echo can corroborate one missed
- * rise and/or one marginal early echo. Only a fresh triplet may be used. */
+/* An in-window echo plus a disagreeing short echo or missed rise allows a
+ * stationary recheck. Treat the shortest echo as moving the modelled face
+ * closer by its full range deficit for the clearance check. None of these
+ * readings can establish the edge or authorize a movement. */
 static inline bool
-width_out_retry_plausible (const b5_ping_t p_ping[WIDTH_POSE_ECHOS],
-                           uint16_t expected_mm)
+width_pose_retry_plausible (const b5_ping_t p_ping[WIDTH_POSE_ECHOS],
+                            uint16_t expected_mm, float turn_gap_mm)
 {
     int32_t lower = (int32_t)expected_mm - B5WP_NEAR_MM;
     uint32_t upper = (uint32_t)expected_mm + B5WP_FAR_MM;
     unsigned missed_rises = 0U;
-    unsigned early_echoes = 0U;
     unsigned in_window = 0U;
+    uint32_t nearest_mm = expected_mm;
     for (unsigned index = 0U; index < WIDTH_POSE_ECHOS; ++index)
     {
         const b5_ping_t * p_echo = &p_ping[index];
@@ -66,23 +78,25 @@ width_out_retry_plausible (const b5_ping_t p_ping[WIDTH_POSE_ECHOS],
             ++missed_rises;
         }
         else if ((B5_PING_ECHO != p_echo->cls) ||
-                 (B5_PING_WHY_OK != p_echo->why) ||
-                 (p_echo->range_mm > upper) ||
-                 ((int32_t)p_echo->range_mm < lower - WIDTH_OUT_NEAR_MARGIN_MM))
+                 (B5_PING_WHY_OK != p_echo->why) || (p_echo->range_mm > upper))
         {
             return false;
         }
-        else if ((int32_t)p_echo->range_mm < lower)
-        {
-            ++early_echoes;
-        }
         else
         {
-            ++in_window;
+            if ((int32_t)p_echo->range_mm >= lower)
+            {
+                ++in_window;
+            }
+            if (p_echo->range_mm < nearest_mm)
+            {
+                nearest_mm = p_echo->range_mm;
+            }
         }
     }
-    return (0U < in_window) && (missed_rises <= 1U) && (early_echoes <= 1U) &&
-           (0U < missed_rises + early_echoes);
+    float conservative_gap = turn_gap_mm - (float)(expected_mm - nearest_mm);
+    return (0U < in_window) && (in_window < WIDTH_POSE_ECHOS) &&
+           (missed_rises <= 1U) && (conservative_gap >= B5WP_FRONT_MARGIN_MM);
 }
 
 #endif

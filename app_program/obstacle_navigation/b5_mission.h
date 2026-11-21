@@ -19,7 +19,6 @@
 #include "extensions/buddy5_obstacles/automatic_bypass.h"
 #include "extensions/buddy5_obstacles/width_probe.h"
 #include "extensions/buddy5_obstacles/edge_probe.h"
-#include "src/line_following/line_logic.h"
 #include "b5_straight.h"
 #ifndef MOTION_STEERED_DRIVE
 #error "b5_mission needs the coordinator's lease-holder drive steering"
@@ -86,7 +85,7 @@ typedef enum
 {
     B5MI_DIR_NONE = 0, /* no direction result in this mission            */
     B5MI_DIR_EVIDENCE, /* probe decision LEFT/RIGHT                      */
-    B5MI_DIR_DEFAULT,  /* both corroborated edges indicate centred     */
+    B5MI_DIR_DEFAULT,  /* completed scan with no supported side         */
     B5MI_DIR_HELD      /* incomplete/unknown/unhealthy: no movement      */
 } b5mi_direction_basis_t;
 
@@ -100,9 +99,12 @@ enum
 /* Configuration, fixed at build time (see README for the evidence). */
 enum
 {
-    B5MI_CONFIRM_RANGE_MM = 330,   /* start qualifying ahead of the stop    */
-    B5MI_STRAIGHT_STOP_MM = 295,   /* take over after the qualified approach */
-    B5MI_CLOSE_HOLD_MM = 300,      /* gate closed or re-arming              */
+    B5MI_CONFIRM_RANGE_MM = 330, /* start qualifying ahead of the stop    */
+    B5MI_STRAIGHT_STOP_MM = 295, /* take over after the qualified approach */
+    B5MI_CLOSE_HOLD_MM = 300,    /* gate closed or re-arming              */
+    B5MI_GRACE_MIN_MM = 285,
+    B5MI_GRACE_US = 200000,
+    B5MI_GRACE_SPEED = 25,
     B5MI_TRIGGER_CONFIRM = 3,      /* v0.6.1 guard confirmation count         */
     B5MI_REARM_CLEAR_US = 1000000, /* clear this long before re-arming    */
     B5MI_APPROACH_TARGET_MM = 200, /* direction probe validated distance  */
@@ -112,20 +114,23 @@ enum
     B5MI_APPROACH_MAX_LEGS = 3,
     B5MI_APPROACH_SPEED = 20,        /* mm/s, API minimum                   */
     B5MI_APPROACH_NO_LINE_MM = 40,   /* travel without line evidence: halt */
+    B5MI_APPROACH_VERIFY_MM = 12,    /* initial travel with tape evidence   */
+    B5MI_APPROACH_START_LOSS_MM = 4, /* startup distance without tape     */
     B5MI_STEER_MAX_DECIDEG = 80,     /* +/-8 deg setpoint (coordinator cap) */
     B5MI_ALIGN_TRIM_MAX_CDEG = 1200, /* larger width residual: hold       */
     B5MI_ALIGN_SPEED = 20,
-    B5MI_ALIGN_STEPS = 4,           /* -4,+4,-6,+6 relative to entry      */
-    B5MI_ALIGN_HEADING_DEG = 6,      /* accepted heading relative to entry  */
-    B5MI_ALIGN_DRIFT_MM = 6,         /* start recentering above this drift  */
-    B5MI_ALIGN_RECENTER_MM = 30,     /* cap on the corrective drive        */
+    B5MI_ALIGN_STEPS = 6,           /* bounded stationary search poses    */
+    B5MI_ALIGN_HEADING_DEG = 6,     /* accepted heading relative to entry  */
+    B5MI_ALIGN_DRIFT_MM = 6,        /* start recentering above this drift  */
+    B5MI_ALIGN_RECENTER_MM = 30,    /* cap on the corrective drive        */
     B5MI_DIRECTION_MARGIN_MM = 5,   /* bracket must clear this uncertainty */
-    B5MI_DIRECTION_CENTRE_MM = 15,  /* bounds for a centred default        */
-    B5MI_LINE_LEVEL = 400,          /* coordinator hand-back level         */
     B5MI_EVIDENCE_US = 150000,      /* stationary line evidence            */
     B5MI_EVIDENCE_WAIT_US = 400000, /* per pose before the next search    */
     B5MI_RANGE_SPREAD_MM = 15,      /* fresh range triplet spread          */
     B5MI_RANGE_ATTEMPTS = 2,
+    B5MI_APPROACH_RANGE_ATTEMPTS = 3,
+    B5MI_RANGE_RETRY_US = 120000,
+    B5MI_WIDTH_RECHECK_MARGIN_MM = 15,
     B5MI_PING_TIMEOUT_US = 400000,
     B5MI_HALT_LIMIT_US = 3000000,
     B5MI_ALIGN_LIMIT_US = 30000000,
@@ -137,12 +142,15 @@ enum
 
 typedef struct
 {
-    uint16_t range_mm; /* median of three clean echoes                 */
-    uint8_t status;    /* 0 pending, 1 ok, 2 rejected                  */
+    uint16_t range_mm; /* median for the width gate, mean for approach */
+    uint16_t nearest_mm;
+    uint16_t farthest_mm;
+    uint8_t status; /* 0 pending, 1 ok, 2 rejected                  */
     uint8_t attempts;
     uint8_t npings;
     bool ping_active;
     uint64_t ping_since;
+    uint64_t retry_after_us;
     b5_ping_t ping[3];
 } b5mi_range_t;
 
@@ -169,12 +177,15 @@ typedef struct
     uint64_t sub_since;
     unsigned sub;
     /* Sonar watch (guard / approach). */
-    unsigned confirm;         /* fresh close echoes while the gate is open */
-    unsigned close_count;     /* consecutive close echoes, gate ignored    */
+    unsigned confirm;     /* fresh close echoes while the gate is open */
+    unsigned close_count; /* consecutive close echoes, gate ignored    */
+    uint64_t guard_grace_since;
+    uint16_t guard_grace_range_mm;
     uint64_t taken_requested; /* request time of the ping just taken      */
     /* Straight-only takeover gate (Buddy3 frames, same task). */
     b5_straight_t straight;
     uint8_t gate_reason; /* b5_straight_reason_t at the last guard step */
+    bool guard_rechecking;
     unsigned fault_run;
     bool ping_pending;
     uint64_t last_ping;
@@ -192,14 +203,17 @@ typedef struct
     float route_lateral_mm;  /* +LEFT, encoder model */
     float route_forward_mm;
     float recenter_mm;
+    float align_plane_mm; /* conservative face reference for alignment turns */
     unsigned align_steps;
+    bool align_for_bypass;
     float approach_last_line_mm;
     unsigned approach_legs;
     uint16_t approach_start_mm;
     bool halting_move;
-    /* Bounded line steering during the approach (Buddy3 edge law). */
-    bool steering; /* true in production; host tests may clear it */
-    analog_tracker_t steer_tracker;
+    bool approach_retried;
+    bool approach_line_lost;
+    /* Bounded line steering during the approach (Buddy3 symmetric law). */
+    bool steering;  /* true in production; host tests may clear it */
     float steer_mm; /* setpoint, right-minus-left wheel travel */
     uint64_t steer_us;
     int16_t steer_decideg;     /* last setpoint sent, 0.1 deg (+LEFT) */
@@ -216,6 +230,7 @@ typedef struct
     uint8_t width_end;
     bool width_attempted;
     bool width_started;
+    bool width_rechecked;
     uint8_t width_policy;       /* b5mi_width_policy_t */
     uint16_t width_gate_mm;     /* fresh range that decided the policy */
     uint8_t direction_side;     /* B5_SIDE_* actually used                 */
@@ -240,6 +255,8 @@ void b5_mission_observe (b5_mission_t * p_mission, uint64_t now, uint16_t left,
  * task, before b5_mission_tick). */
 void b5_mission_line (b5_mission_t * p_mission,
                       const b5_line_sample_t * p_sample);
+/* Motion task only. Preserve steering while limiting a settling retry. */
+void b5_mission_guard_limit (const b5_mission_t * p_mission, int16_t target[2]);
 /* One decision step, right after motion_update(). Bounded, nonblocking. */
 void b5_mission_tick (b5_mission_t * p_mission, uint64_t now);
 /* Stop/Pause/E-stop/network loss: cancel whichever module runs. */

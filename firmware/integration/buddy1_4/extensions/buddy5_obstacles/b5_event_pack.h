@@ -13,7 +13,11 @@
  * 20 u16 level L  22 u16 level R (0..1000)   24 u16 bg L  26 u16 bg R
  * 28 u16 event sequence       30 u16 events overwritten before sending
  * flags: bit0 geometry-only image.
- * Event meanings (A, B, detail, result) are tabulated in AUTOMATIC_V0_5.md. */
+ * Event meanings (A, B, detail, result) are tabulated in AUTOMATIC_V0_5.md.
+ * RTOS MISSION_RETRY uses phase and reason for the mission stage/reason.
+ * RANGE_BATCH uses offsets 20/22/24 for echo mm (zero on invalid echoes),
+ * offset 26 for three 2-bit ping classes, detail for the consuming stage,
+ * search for the attempt count, and result for retry/accepted/held. */
 #include <stdint.h>
 #include <string.h>
 #include "extensions/buddy5_obstacles/automatic_bypass.h"

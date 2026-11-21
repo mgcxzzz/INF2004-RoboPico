@@ -543,6 +543,10 @@ void bringup_control_task (INT code, void * p_exinf_value)
 #ifdef APP_RTOS_BUDDY5
             rtos_line_straight_sample(&optical, &straight_sample);
             straight_valid = true;
+            if (!straight_sample.route_turn)
+            {
+                rb5_guard_limit(optical.target);
+            }
 #endif
             rtos_line_feedback(&feedback, &optical);
             if (optical.stop)

@@ -63,6 +63,12 @@ bool b5_rect_plan(const b5_scan_t *scan, unsigned forward_range_mm, B5RectPlan *
 bool b5_rect_plan_ex(const b5_scan_t *scan, unsigned forward_range_mm, float depth_mm,
                      bool allow_reverse, B5RectPlan *out);
 
+/* Apply a stopped echo interval to an existing plan. The closest echo
+ * limits first-turn clearance, the farthest bounds the pass distance.
+ * Return false if the resulting route exceeds the coordinator limit. */
+bool b5_rect_apply_range_bounds(B5RectPlan *p_plan, unsigned nearest_mm,
+                                unsigned farthest_mm);
+
 /* ---- Return-line acquisition (both front reflectance sensors) ----
  * Normalised calibrated levels 0(white)..1000(black). Saved calibration is
  * only read. Evidence required, in order, within a bounded travel:

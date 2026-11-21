@@ -150,7 +150,7 @@ ifeq ($(APP),rtos_buddy1_4)
 EXE_FILE := robopico_buddy1_4_rtos_v0_2_12_caster_assist
 endif
 ifeq ($(APP),rtos_buddy1_5)
-EXE_FILE := robopico_buddy1_5_rtos_v0_3_2
+EXE_FILE := robopico_buddy1_5_rtos_v0_4_3
 endif
 endif
 endif

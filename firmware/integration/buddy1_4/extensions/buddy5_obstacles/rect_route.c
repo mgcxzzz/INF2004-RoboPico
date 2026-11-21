@@ -28,6 +28,25 @@ static float point_clear(unsigned range_mm, int angle_dd, float backoff, float r
     float x = rho * sinf(lo * DEG), y = B5R_SONAR_AHEAD_MM + rho * cosf(hi * DEG) + backoff;
     return sqrtf(x * x + y * y) - radius;
 }
+bool b5_rect_apply_range_bounds (B5RectPlan * p_plan, unsigned nearest_mm,
+                                 unsigned farthest_mm)
+{
+    float clearance_mm = point_clear(nearest_mm, 0, p_plan->backoff_mm,
+                                     p_plan->sweep_radius_mm);
+    float reach_mm = p_plan->sweep_radius_mm + B5R_MARGIN_MM;
+    float backoff_mm = ceilf(point_need(nearest_mm, 0, reach_mm));
+    p_plan->first_turn_clear_mm =
+        fminf(p_plan->first_turn_clear_mm, clearance_mm);
+    p_plan->reverse_needed_mm = fmaxf(p_plan->reverse_needed_mm, backoff_mm);
+    p_plan->turn_clearance_ok = p_plan->first_turn_clear_mm >= B5R_MARGIN_MM;
+    float extra_pass_mm =
+        fmaxf(0.0f, (float)farthest_mm - (float)p_plan->forward_range_mm);
+    p_plan->far_y_mm += extra_pass_mm;
+    p_plan->pass_y_mm += extra_pass_mm;
+    p_plan->forward_mm = ceilf(p_plan->pass_y_mm + p_plan->backoff_mm);
+    return p_plan->forward_mm <= 1000.0f;
+}
+
 bool b5_rect_plan(const b5_scan_t *scan, unsigned range, B5RectPlan *p) {
     return b5_rect_plan_ex(scan, range, B5R_OBST_DEPTH_MM, true, p);
 }

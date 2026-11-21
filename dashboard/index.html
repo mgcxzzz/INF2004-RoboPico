@@ -1,6 +1,6 @@
 <!doctype html>
 <!--
-  IS28 dashboard v0.2.13 with Buddy 5 obstacle mission telemetry.
+  IS28 dashboard v0.2.15 with Buddy 5 obstacle mission telemetry.
   One page for both firmware families on the same broker:
     - RTOS (micro T-Kernel) Buddy1/Buddy4 build: sources 1-8 plus release snapshots (source 15).
     - SDK v2.3 Buddy2/Buddy3 build (+ optional Buddy4 add-on): sources 1, 2, 4, 8, 9-14
@@ -15,7 +15,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>RoboPico Demo Console — v0.2.13</title>
+  <title>RoboPico Demo Console — v0.2.15</title>
 <script src="vendor/mqtt.min.js"></script>
 <script src="vendor/jszip.min.js"></script>
 <script src="is28_schema.js"></script>
@@ -119,7 +119,7 @@
 <body>
 <header>
   <div class="brandline">
-    <h1>RoboPico <span class="ver">Demo Console · v0.2.13</span></h1>
+    <h1>RoboPico <span class="ver">Demo Console · v0.2.15</span></h1>
     <span id="profilePill" class="pill muted">firmware: unknown</span>
   </div>
   <div class="connections">
@@ -175,14 +175,15 @@
         <div class="overview-detail"><span>Completed action</span><span id="overviewBarcodeCompleted">—</span></div>
         <div class="overview-note">Detection, decode, pending, executing and completion are separate states.</div>
       </section>
-      <section class="overview-card" aria-label="Live and accepted hump measurements">
+      <section class="overview-card" aria-label="Hump measurements and estimates">
         <div class="overview-heading"><h3>Hump &amp; ramp</h3><span id="overviewHumpTag" class="pill neutral">Unknown</span></div>
-        <div class="overview-primary"><span id="overviewHumpHighest">—</span> <span class="unit">highest accepted</span></div>
+        <div class="overview-primary"><span id="overviewHumpHighest">—</span> <span class="unit" id="overviewHumpLabel">highest accepted</span></div>
         <div class="overview-detail"><span>Live estimate</span><span id="overviewHumpLive">—</span></div>
         <div class="overview-detail"><span>Last accepted peak</span><span id="overviewHumpAccepted">—</span></div>
+        <div class="overview-detail" id="overviewHumpRejectedRow" hidden><span>Highest rejected peak seen</span><span id="overviewHumpRejected">—</span></div>
         <div class="overview-detail"><span>Accepted / rejected</span><span id="overviewHumpCount">—</span></div>
         <div class="overview-detail"><span>Ramp assistance</span><span id="overviewRampAssist">Not reported</span></div>
-        <div class="overview-note">A live wheel-height estimate is not an accepted hump result.</div>
+        <div class="overview-note" id="overviewHumpNote">The live estimate changes with wheel tilt.</div>
       </section>
       <section class="overview-card" aria-label="Obstacle rubric status">
         <div class="overview-heading"><h3>Obstacle &amp; avoidance</h3><span id="overviewB5Tag" class="pill neutral">No Buddy 5 status</span></div>
@@ -423,10 +424,11 @@
         </dl>
       </div>
       <div class="box accepted">
-        <h3>ACCEPTED completed ramp (Buddy 4 decision)</h3>
+        <h3>Completed hump measurements</h3>
         <dl>
           <dt>Last accepted peak</dt><dd id="imuHeight">no accepted hump</dd>
-          <dt>Highest this run</dt><dd id="imuHighest">no accepted hump</dd>
+          <dt>Highest accepted this run</dt><dd id="imuHighest">no accepted hump</dd>
+          <dt>Highest rejected peak seen</dt><dd id="imuRejectedPeak">—</dd>
           <dt>Humps / rejected</dt><dd id="imuHumps">–</dd>
         </dl>
       </div>
@@ -440,7 +442,7 @@
         </dl>
       </div>
     </div>
-    <p class="muted small">Live wheel height is the instantaneous right-minus-left difference reported with every source-2 frame; it is not a ramp result. The accepted peak is Buddy 4's height for a completed hump that passed its checks. Ramp height assumes the other drive wheel stays on flat ground. Measurement-quality checks never control the motors.</p>
+    <p class="muted small">Live wheel height is the instantaneous right-minus-left difference. An asterisk (*) marks a rejected estimate. Accepted heights passed Buddy 4’s measurement checks. Ramp height assumes one drive wheel stays on flat ground.</p>
     <canvas id="imuChart" aria-label="Live wheel-height difference and pitch chart"></canvas>
   </section>
 
@@ -539,7 +541,7 @@
 
 <script>
 'use strict';
-const DASHBOARD_VERSION = 'v0.2.13';
+const DASHBOARD_VERSION = 'v0.2.15';
 const $ = (id) => document.getElementById(id);
 const hasWindow = typeof window !== 'undefined';
 const SRC = IS28.SRC;
@@ -557,7 +559,7 @@ let lastImuStop=null,imuStopSeenAt=0,lastImuStopSeq=null,imuStopSignature=null;
 let mappingQueried = false, lastUptime = null;
 /* RTOS Buddy2/Buddy4 live state (tools/dashboard logic) */
 let lastImuAt = 0, lastImuSeq = null, imuAwaitingFresh = false, latestImuData = null;
-let lastAcceptedImuPeak = null, lastImuEventKey = null;
+let lastAcceptedImuPeak = null, highestRejectedImuPeak = null, lastImuEventKey = null;
 let lastMotionAt = 0, lastMotionSeq = null, motionAwaitingFresh = false;
 /* Per-group freshness for the other live panels */
 const GROUPS = {
@@ -1272,7 +1274,7 @@ function invalidateLive(reason) {
   lastMotionAt = 0; motionAwaitingFresh = lastMotionSeq !== null; overviewMotion=null; latestSdkMotion=null;
   overviewLine3=null; overviewLine3At=0; overviewLineEvent=null; overviewLineEventAt=0;
   clearMotion('waiting for fresh Buddy 2 telemetry after ' + reason);
-  lastImuAt = 0; imuAwaitingFresh = lastImuSeq !== null; lastAcceptedImuPeak = null;
+  lastImuAt = 0; imuAwaitingFresh = lastImuSeq !== null;
   clearImu('waiting for fresh Buddy 4 telemetry after ' + reason);
   lastImuStop=null; imuStopSeenAt=0; lastImuStopSeq=null; imuStopSignature=null;
   imuTripEvidence=null; imuTripReceivedAt=0;
@@ -1445,10 +1447,17 @@ function refreshDashboardOverview() {
 
   const imuFresh = !!(latestImuData && lastImuAt && t - lastImuAt <= 2000 && !imuAwaitingFresh);
   const liveHeightFresh = motionFresh && overviewMotion.source === 2 && overviewMotion.data.sideEstimateValid;
+  const showRejectedPeak = imuFresh && !latestImuData.humps && highestRejectedImuPeak !== null;
+  $('overviewHumpLabel').textContent = showRejectedPeak ? 'highest rejected seen' : 'highest accepted';
+  $('overviewHumpRejectedRow').hidden = !imuFresh || !latestImuData.rejected || showRejectedPeak;
+  $('overviewHumpNote').textContent = imuFresh && highestRejectedImuPeak !== null ?
+    '* Rejected height estimate.' : 'The live estimate changes with wheel tilt.';
   if (imuFresh) {
     const d = latestImuData;
     $('overviewHumpAccepted').textContent = lastAcceptedImuPeak === null ? 'No accepted peak reported' : `${lastAcceptedImuPeak} mm`;
-    $('overviewHumpHighest').textContent = d.humps ? `${d.highestMm} mm` : 'No accepted hump';
+    $('overviewHumpRejected').textContent = rejectedImuPeakText(d.rejected);
+    $('overviewHumpHighest').textContent = showRejectedPeak ? rejectedImuPeakText(d.rejected) :
+      d.humps ? `${d.highestMm} mm` : 'No accepted hump';
     $('overviewHumpCount').textContent = `${d.humps} accepted / ${d.rejected} rejected`;
     overviewPill('overviewHumpTag', 'Buddy 4 live', 'ok');
   } else {
@@ -1704,7 +1713,10 @@ function show(f) {
       mapPending = null;
       break;
     }
-    case 9: groupFresh('sdkMotion'); latestSdkRunId = d.runId; showMotion(d, f); break;
+    case 9:
+      if (latestSdkRunId !== null && latestSdkRunId !== d.runId)
+        clearImu('Waiting for Buddy 4 telemetry for this run');
+      groupFresh('sdkMotion'); latestSdkRunId = d.runId; showMotion(d, f); break;
     case 10: groupFresh('sdkLine'); showLineEvent(d, f); break;
     case 11: groupFresh('sdkNav'); showNavEvent(d, f); break;
     case 12: latestSdkRunId = d.runId;
@@ -1732,7 +1744,8 @@ function clearMotion(reason) {
 }
 function clearImu(reason) {
   latestImuData = null;
-  for (const id of ['imuState','imuValid','imuPitch','imuMotion','imuEvent','imuOdometry','imuHeight','imuHighest','imuHumps','imuShock','imuHealth','imuFault','s4'])
+  lastAcceptedImuPeak = highestRejectedImuPeak = lastImuEventKey = null;
+  for (const id of ['imuState','imuValid','imuPitch','imuMotion','imuEvent','imuOdometry','imuHeight','imuHighest','imuRejectedPeak','imuHumps','imuShock','imuHealth','imuFault','s4'])
     $(id).textContent = reason;
   $('imuAge').textContent = 'no frames since ' + reason.replace(/^waiting for fresh Buddy 4 telemetry after /, '');
 }
@@ -1771,11 +1784,18 @@ function showB2Motion(d) {
   }
   drawImuChart();
 }
+function rejectedImuPeakText(count) {
+  if (highestRejectedImuPeak !== null) return `${highestRejectedImuPeak} mm*`;
+  return count ? 'Peak event not received' : '—';
+}
 function showImu(f, d) {
   lastImuAt = now();
   latestImuData = d;
   if (!d.humps) lastAcceptedImuPeak = null;
   else if (d.event === 'status' || d.event === 'hump peak') lastAcceptedImuPeak = d.heightMm;
+  if (!d.rejected) highestRejectedImuPeak = null;
+  else if (d.event === 'hump rejected' && d.heightMm > 0)
+    highestRejectedImuPeak = Math.max(highestRejectedImuPeak ?? 0, d.heightMm);
   $('s4').textContent = summary(f);
   $('imuState').textContent = d.stateName;
   $('imuValid').textContent = d.valid ? 'valid (calibrated)' : 'not valid';
@@ -1785,6 +1805,7 @@ function showImu(f, d) {
   $('imuOdometry').textContent = d.odometry ? 'available' : 'unavailable';
   $('imuHeight').textContent = lastAcceptedImuPeak === null ? 'no accepted peak received' : `${lastAcceptedImuPeak} mm`;
   $('imuHighest').textContent = d.humps ? `${d.highestMm} mm` : 'no accepted hump';
+  $('imuRejectedPeak').textContent = rejectedImuPeakText(d.rejected);
   $('imuHumps').textContent = `${d.humps} / ${d.rejected}`;
   $('imuShock').textContent = `${d.shockMg} mg / ${d.shockNotifyMs} ms (${d.shocks} impacts)`;
   $('imuHealth').textContent = `${d.i2cErrors} / ${d.framesMissed}`;
@@ -1894,7 +1915,12 @@ function receiveB5(d, f) {
   } else if (d.kind === 'b5-event') {
     b5.events.push(`${d.codeName}${d.code === 4 ? ` ${d.a}` : ''}`);
     if (b5.events.length > 8) b5.events.shift();
-    if (['PLAN', 'HANDBACK', 'STOPPED', 'HOLD_CLEARANCE', 'ACQUIRED', 'RETURN_FALLBACK'].includes(d.codeName))
+    if (d.codeName === 'MISSION_RETRY') {
+      addEvent(`Buddy 5 ${d.retryName} · ${d.outcomeName}${d.reason ? ` · ${d.reasonName}` : ''}`, d, 'b5-event', f);
+    } else if (d.codeName === 'RANGE_BATCH') {
+      const echoes = d.echoes.map(e => e.mm === null ? e.cls : `${e.mm} mm`).join(' / ');
+      addEvent(`Buddy 5 ${d.retryName} range batch ${d.attempt} · ${d.outcomeName} · ${echoes}`, d, 'b5-event', f);
+    } else if (['PLAN', 'HANDBACK', 'STOPPED', 'HOLD_CLEARANCE', 'ACQUIRED', 'RETURN_FALLBACK'].includes(d.codeName))
       addEvent(`Buddy 5 bypass event ${d.codeName} (state ${d.stateName}, reason ${d.reasonName})`, d, 'b5-event', f);
   } else if (d.kind === 'b5-width-result') {
     addEvent(`Buddy 5 width ${b5Fmt(d.displayMm, 2)} mm · ${d.basisName} (${d.label}) · run ${d.run} ${d.endName}`, d, 'b5-width', f);
@@ -1950,9 +1976,13 @@ function renderB5() {
   $('b5Servo').textContent = `${s.servoRequestedDeg}° / ${s.servoAppliedDeg}°${s.servoSettled ? ' settled' : ' moving'} (applied PWM command, not a measured horn angle)`;
   const directionFromWidth = s.directionAttempted && s.directionEnd === 1 &&
     s.widthEnd === 1 && s.directionProduced === 0;
-  $('b5Direction').textContent = !s.directionAttempted
-    ? (s.basis === 3 ? 'HELD · no side available' : 'not probed in this mission')
-    : `${prefix}${s.basis === 1 ? `${s.sideName.toUpperCase()} from ${directionFromWidth ? 'width scan' : 'probe evidence'}` : s.basis === 2 ? `${s.sideName.toUpperCase()} — DEFAULT side (${directionFromWidth ? 'centred width scan' : 'healthy probe, no preference'})` : s.basis === 3 ? (directionFromWidth ? 'HELD · width scan did not establish a side' : `HELD — no side (${s.directionEndName})`) : 'pending'} · ${s.decisionName}`;
+  if (s.basis === 2) {
+    $('b5Direction').textContent = `${prefix}${s.sideName.toUpperCase()} · DEFAULT side (${directionFromWidth ? 'width scan gave no clear preference' : 'healthy probe, no preference'})`;
+  } else {
+    $('b5Direction').textContent = !s.directionAttempted
+      ? (s.basis === 3 ? 'HELD · no side available' : 'not probed in this mission')
+      : `${prefix}${s.basis === 1 ? `${s.sideName.toUpperCase()} from ${directionFromWidth ? 'width scan' : 'probe evidence'}` : s.basis === 3 ? (directionFromWidth ? 'HELD · width scan did not establish a side' : `HELD — no side (${s.directionEndName})`) : 'pending'} · ${s.decisionName}`;
+  }
   $('b5Sides').textContent = s.directionAttempted ? `${s.stateLName} / ${s.stateRName} · end ${s.directionEndName}` : '–';
   const wr = b5.tracker.widthRun(), res = wr && wr.result;
   $('b5WidthPolicy').textContent = s.widthPolicy === null ? 'n/a (v0.1 status layout)'

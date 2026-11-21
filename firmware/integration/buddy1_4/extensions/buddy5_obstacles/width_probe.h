@@ -244,12 +244,17 @@ typedef struct {
     float net_x_mm, net_y_mm, turn_back_deg;
     B5WPSide side[2];
     bool ref_ok, mid_ok, final_ref_ok, servo_in_range;
+    bool allow_borderline_ref;   /* RTOS mission already warned on a short echo */
     float last_axis_x;              /* axis x of the most recent record */
     float min_front_gap;
     float width_lo, width_hi;
     uint8_t width_result;
     B5WPRec rec[B5WP_QUEUE_CAP];
     uint16_t rec_head, rec_count, rec_index, lost;
+#ifdef APP_RTOS_BUDDY5
+    B5WPRec terminal_record; /* retained rejected triplet after FIFO drains */
+    bool terminal_record_valid;
+#endif
     B5WPSummary summary;
     bool summary_pending;
     /* width_calibrated_probe v0.1: display estimate, never used by motion */

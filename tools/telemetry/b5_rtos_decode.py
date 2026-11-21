@@ -67,7 +67,8 @@ DEC = ['HOLD', 'LEFT', 'RIGHT']
 EPS = ['UNKNOWN', 'OPEN', 'CROSSED', 'REMAINS']
 EV = ['NONE', 'TAKEOVER', 'PLAN', 'HOLD_CLEARANCE', 'LEG_END', 'RETURN_START', 'CANDIDATE', 'REJECT',
       'STRIPE_FOUND', 'POSITIONED', 'RESTORED', 'SEARCH_TURN', 'CONFIRMED', 'HANDBACK', 'STOPPED',
-      'GEOMETRY_HOLD', 'ACQUIRE', 'ACQUIRED', 'RETURN_FALLBACK']
+      'GEOMETRY_HOLD', 'ACQUIRE', 'ACQUIRED', 'RETURN_FALLBACK', 'MERGE_START', 'MERGE_STRIPE', 'MERGE_ALIGN',
+      'MISSION_RETRY', 'RANGE_BATCH']
 # (payload length, marker) -> {version: protocol}
 WIDTH_VERSIONS = {(56, 0xD1): {10: 'long', 4: 'legacy'}, (58, 0xD2): {10: 'long', 4: 'legacy'},
                   (58, 0xD3): {3: 'long', 1: 'legacy'}, (32, 0xD4): {3: 'long', 1: 'legacy'},
@@ -184,7 +185,15 @@ def decode(frame):
                 'end': name(WEND[:9], p[8]), 'decision': name(DEC, p[9]), 'left': name(EPS, p[10]),
                 'right': name(EPS, p[11]), 'records': u16(p, 12)}
     if n == 32 and m == 0xB5:
-        return {'kind': 'event', 'code': name(EV, p[6]), 'seq': u16(p, 28), 'overwritten': u16(p, 30)}
+        event = {'kind': 'event', 'code': name(EV, p[6]), 'seq': u16(p, 28), 'overwritten': u16(p, 30)}
+        if event['code'] == 'MISSION_RETRY':
+            event.update(retry=p[11], outcome=p[10], stage=p[8], reason=p[9])
+        elif event['code'] == 'RANGE_BATCH':
+            classes = u16(p, 26)
+            event.update(target_stage=p[11], outcome=p[10], attempt=p[12],
+                         echo_classes=[(classes >> (2 * i)) & 3 for i in range(3)],
+                         echo_mm=[u16(p, 20), u16(p, 22), u16(p, 24)])
+        return event
     return None
 
 
