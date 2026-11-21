@@ -1,25 +1,14 @@
-# System — test log
+# System test results
 
-Tests of the complete product against its requirements, run on the final hardware set-up. Run the full set before every demo and before hand-in.
+Use the [Tribunal 2 case table](../TRIBUNAL_2.md#physical-test-cases) for the
+setup, pass criteria and evidence required for each case.
 
-See `testing/README.md` for how to run tests and record results.
+| Capture | Firmware | Cases | Evidence |
+| --- | --- | --- | --- |
+| 21 November 2026, run 4 | v0.4.2 | T2-01 to T2-07, T2-09 and T2-10, scoped to the behaviours listed in the run record | [Observed results, event excerpt and clip times](../evidence/tribunal2/run-4/README.md) |
+| 21 November 2026, release verification | v0.4.3 | Automated cases including motion ownership, range warning and handback | [Release verification](../evidence/tribunal2/v0.4.3/README.md) |
+| Earlier robot and bench trials | See each capture | See recorded scope | [Evidence archive](../evidence/README.md) |
 
-## Test cases
-
-Define a test here before running it. Test IDs never change.
-
-| ID | What is tested | Requirement / interface | Method | Steps / how | Expected result |
-|---|---|---|---|---|---|
-| SYS-01 | e.g. device reports a reading over WiFi every 10 s | REQ-? | manual | 1. Power on. 2. Watch the dashboard for 2 minutes. | a reading appears every 10 s ± 1 s |
-| SYS-02 | | | manual | 1. … 2. … | |
-
-*Method:* **auto** = `TEST_CHECK` in code, result printed on the console;
-**manual** = a person observes the result (LED, scope, meter, phone app…).
-
-## Results
-
-Add a new row for every run. Never edit or delete old rows.
-
-| Date | Test ID | Commit | Tester | Result | Log / evidence | Notes |
-|---|---|---|---|---|---|---|
-| YYYY-MM-DD | SYS-01 | `abc1234` | | PASS / FAIL | `logs/YYYY-MM-DD_….txt` | |
+On-mat confirmation for the v0.4.3 release, a straight-through barcode
+action and the pickup stop remain separate checks. Record measured clearance,
+reference dimensions and trial counts for numerical targets.

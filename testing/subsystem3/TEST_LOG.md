@@ -1,24 +1,8 @@
-# Subsystem 3 — test log
+# Buddy 3 — line following and barcode routing
 
-**Subsystem:** Consumer (example)  ·  **Student ID:** <student ID>  ·  **Code:** `app_program/subsystem3/`
-
-See `testing/README.md` for how to run tests and record results.
-
-## Test cases
-
-Define a test here before running it. Test IDs never change.
-
-| ID | What is tested | Requirement / interface | Method | Steps / how | Expected result |
-|---|---|---|---|---|---|
-| S3-U01 | statistics self-consistent (min ≤ max, 0..100) | | auto | `subsystem3_test.c` | `[TEST] S3-U01 PASS` |
-
-*Method:* **auto** = `TEST_CHECK` in code, result printed on the console;
-**manual** = a person observes the result (LED, scope, meter, phone app…).
-
-## Results
-
-Add a new row for every run. Never edit or delete old rows.
-
-| Date | Test ID | Commit | Tester | Result | Log / evidence | Notes |
-|---|---|---|---|---|---|---|
-| YYYY-MM-DD | S3-U01 | `abc1234` | | PASS / FAIL | `logs/YYYY-MM-DD_….txt` | |
+- Automated checks cover line representation (`test_line_model`), stationary
+  line recovery (`test_line_stationary_search`), barcode acceptance
+  (`test_rtos_barcode`), and junction qualification (`test_junction_sensor`).
+- Hardware procedures are T2-02, T2-03 and T2-04 in the [case table](../TRIBUNAL_2.md).
+  The [team circuit run](../evidence/tribunal2/run-4/README.md) shows tracking,
+  barcode decoding and completion of right, U-turn and left.

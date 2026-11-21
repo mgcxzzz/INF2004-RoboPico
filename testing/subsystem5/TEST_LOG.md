@@ -1,25 +1,10 @@
-# Subsystem 5 — test log
+# Buddy 5 — obstacle detection, width and bypass
 
-**Subsystem:** <name>  ·  **Student ID:** <student ID>  ·  **Code:** `app_program/subsystem5/`
-
-See `testing/README.md` for how to run tests and record results.
-
-## Test cases
-
-Define a test here before running it. Test IDs never change.
-
-| ID | What is tested | Requirement / interface | Method | Steps / how | Expected result |
-|---|---|---|---|---|---|
-| S5-U01 | example: runs in a task context | | auto | `subsystem5_test.c` | `[TEST] S5-U01 PASS` |
-| S5-U02 | | | manual | 1. … 2. … | |
-
-*Method:* **auto** = `TEST_CHECK` in code, result printed on the console;
-**manual** = a person observes the result (LED, scope, meter, phone app…).
-
-## Results
-
-Add a new row for every run. Never edit or delete old rows.
-
-| Date | Test ID | Commit | Tester | Result | Log / evidence | Notes |
-|---|---|---|---|---|---|---|
-| YYYY-MM-DD | S5-U01 | `abc1234` | | PASS / FAIL | `logs/YYYY-MM-DD_….txt` | |
+- `test_b5_straight_gate` checks heading qualification and route-turn handling.
+  `test_b5_mission` checks detection, stopped ranging, lease ownership, width
+  probing, bypass and rejoin. It includes the v0.4.3 borderline range replay.
+- Hardware procedures are T2-06 and T2-07 in the [case table](../TRIBUNAL_2.md).
+  The [team circuit run](../evidence/tribunal2/run-4/README.md) captures
+  detection, a width estimate and return to the original line. The
+  [v0.4.3 record](../evidence/tribunal2/v0.4.3/README.md) records the replay
+  separately from the physical run.

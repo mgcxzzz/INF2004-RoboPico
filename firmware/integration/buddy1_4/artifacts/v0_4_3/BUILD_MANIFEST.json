@@ -1,0 +1,23 @@
+{
+  "version": "0.4.3",
+  "dashboard": "0.2.15",
+  "source_commit": "8aa5f2cd876dea356fa6829caf8969a0232c40ec",
+  "build_profile": {
+    "APP": "rtos_buddy1_5",
+    "SMP": 1,
+    "CONSOLE": "usb_cdc",
+    "WIFI": "cyw43",
+    "NET": "lwip",
+    "MQTT": 1,
+    "CRASH_REPORT": 0,
+    "TEST": 0
+  },
+  "toolchain": "GNU Arm GCC 14.2.1",
+  "pico_sdk_commit": "a1438dff1d38bd9c65dbd693f0e5db4b9ae91779",
+  "files_sha256": {
+    "robopico_buddy1_5_rtos_v0_4_3.uf2": "3d03cc8bc2cf45c9bbc6032b06af95e17abb5cf0d56b8b2de0884c6644655a2e",
+    "robopico_buddy1_5_rtos_v0_4_3_test_bundle.zip": "3d568ca89fbc312ac5b25bc7e497a6dd42e4ceab7957236d6d635ae20cb38ce9"
+  },
+  "uf2_rebuild_matches": true,
+  "validation": "55 production C programs, Python helper checks, 28 dashboard tests and exact firmware telemetry warning replay passed. Physical run 4 used v0.4.2."
+}

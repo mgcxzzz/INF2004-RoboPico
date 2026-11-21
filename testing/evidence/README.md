@@ -1,5 +1,8 @@
 # Evidence index
 
+For Tribunal 2, see the [team circuit run](tribunal2/run-4/README.md) and
+[v0.4.3 release verification](tribunal2/v0.4.3/README.md).
+
 Historical evidence is copied byte-for-byte from the pinned commits below. It is not hardware acceptance of the newly restructured build. `current/` is reserved for this build’s own checks and later robot runs.
 
 | File | Evidence | Why retained |

@@ -1,25 +1,8 @@
-# Subsystem 4 — test log
+# Buddy 4 — IMU, hump measurement and pickup stop
 
-**Subsystem:** Monitor (example)  ·  **Student ID:** <student ID>  ·  **Code:** `app_program/subsystem4/`
-
-See `testing/README.md` for how to run tests and record results.
-
-## Test cases
-
-Define a test here before running it. Test IDs never change.
-
-| ID | What is tested | Requirement / interface | Method | Steps / how | Expected result |
-|---|---|---|---|---|---|
-| S4-U01 | message buffer max line = S4_SUMMARY_MAX | IF-03 | auto | `subsystem4_test.c` | `[TEST] S4-U01 PASS` |
-| S4-U02 | LED pauses and resumes every 6 reports | IF-05 | manual | 1. Flash normal image. 2. Watch LED and console ~20 s. | console shows "LED task paused"/"resumed"; LED stops/starts |
-
-*Method:* **auto** = `TEST_CHECK` in code, result printed on the console;
-**manual** = a person observes the result (LED, scope, meter, phone app…).
-
-## Results
-
-Add a new row for every run. Never edit or delete old rows.
-
-| Date | Test ID | Commit | Tester | Result | Log / evidence | Notes |
-|---|---|---|---|---|---|---|
-| YYYY-MM-DD | S4-U01 | `abc1234` | | PASS / FAIL | `logs/YYYY-MM-DD_….txt` | |
+- Automated checks cover IMU acquisition (`test_imu_service_rtos`),
+  hump and ramp integration (`test_rtos_ramp`, `test_rtos_ramp_bridge`),
+  and pickup safety and telemetry (`test_imu_lift_guard`, `test_imu_lift_packet`).
+- Hardware procedures are T2-05 and T2-08 in the [case table](../TRIBUNAL_2.md).
+  The [team circuit run](../evidence/tribunal2/run-4/README.md) covers hump
+  measurement. Earlier bench tests are in the [Buddy 4 ledger](../evidence/buddy4/standalone/TEST_LOG.md).

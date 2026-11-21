@@ -1,7 +1,21 @@
 # Build RoboPico RTOS
 
-For the v0.3.1 candidate on `halt-testing`, follow its
-[build and check instructions](../firmware/integration/buddy1_4/artifacts/v0_3_1_halt_testing/README.md#build-and-check).
+## Tribunal 2 v0.4.3
+
+Use the [download and build manifest](../firmware/integration/buddy1_4/artifacts/v0_4_3/).
+Check out the manifest's source commit. Use Arm GNU GCC 14.2.1 and the pinned
+Pico SDK commit with its TinyUSB, CYW43 and lwIP dependencies. Set
+`PICO_SDK_PATH`, then run from `build_make/`:
+
+```bash
+make -j8 APP=rtos_buddy1_5 SMP=1 CONSOLE=usb_cdc WIFI=cyw43 NET=lwip MQTT=1 CRASH_REPORT=0 TEST=0
+```
+
+On the project Windows host, run
+`bash tools/rtos_migration/build_release.sh APP=rtos_buddy1_5` from the root.
+Compare the resulting `robopico_buddy1_5_rtos_v0_4_3.uf2` with the published
+SHA-256. See [release verification](../testing/evidence/tribunal2/v0.4.3/README.md)
+and the [test index](../testing/README.md).
 
 ## Archived v0.2.13 release
 

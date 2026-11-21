@@ -1,0 +1,22 @@
+{
+  "archive": "SuccessRun.zip",
+  "archive_sha256": "9a5e02285f0efb7d4f28ecf25c6570ed2a65f6dc3ca896d67569918b0d47df62",
+  "scope": "Curated evidence per run record, through completion of the left turn.",
+  "runId": 4,
+  "release": "0.4.2",
+  "dashboard": "v0.2.14",
+  "profile": "Baseline 45 mm/s",
+  "mapping": "N straight; Q U-turn; A left; Z right",
+  "start_ack_utc": "2026-11-21T09:39:09.949Z",
+  "first_encoder_movement_utc": "2026-11-21T09:39:12.346Z",
+  "capture": {
+    "live_capture_scope": "page session (all retained rows)",
+    "stored_rows": [
+      640,
+      640,
+      806,
+      120
+    ],
+    "complete": true
+  }
+}

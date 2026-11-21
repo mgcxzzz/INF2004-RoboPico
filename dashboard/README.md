@@ -1,4 +1,4 @@
-# RoboPico RTOS dashboard v0.2.13
+# RoboPico RTOS dashboard v0.2.15
 
 The dashboard displays the current firmware release metadata and the source-15 C9
 IMU lift/overturn safety snapshot. C9 is sent once per second, including when
@@ -8,7 +8,7 @@ operating-state report. A stale C9 reason is not presented as a current trip,
 and the dashboard never resets or restarts the car automatically.
 
 Use the full release bundle and hard-refresh the page after updating. Start
-with [the combined setup and test guide](../docs/buddy1_5_v0_2_13.md).
+with [the v0.4.3 firmware and dashboard bundle](../firmware/integration/buddy1_4/artifacts/v0_4_3/).
 
 Run `python tools/dashboard/run_dashboard.py` from repository root or double-click
 Start dashboard.cmd. The helper serves this folder, starts a local Mosquitto

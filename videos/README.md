@@ -34,8 +34,13 @@ put its link in the *Log / evidence* column of that test's row in
 
 ## Video index
 
-Newest at the bottom. Never delete a row.
+The [21 November team circuit run](../testing/evidence/tribunal2/run-4/README.md)
+contains the source timestamps and matching log events. The clips below use
+v0.4.2 and are ready for the team to share as unlisted videos.
 
-| Date | Subsystem | Test ID / demo | Commit | Student ID | Link | Notes |
-|---|---|---|---|---|---|---|
-| YYYY-MM-DD | S1 | S1-U03 | `abc1234` | | <https://youtu.be/...> | LED blinks at 2 Hz |
+| Clip | Test cases | Unlisted link |
+| --- | --- | --- |
+| `01-line-follow-and-barcode.mp4` | T2-02, T2-03 | Pending |
+| `02-hump-crossing.mp4` | T2-05 | Pending |
+| `03-obstacle-bypass-and-rejoin.mp4` | T2-06, T2-07 | Pending |
+| `04-barcode-junction-actions.mp4` | T2-04 | Pending |

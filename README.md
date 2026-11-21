@@ -1,17 +1,14 @@
-# RoboPico Buddy 1–5 RTOS integration
+# RoboPico Buddy 1–5 RTOS
 
-`halt-testing` contains the **v0.3.1 obstacle-probe candidate** for Buddy 5.
-It retains the staged stop from v0.3.0 and allows one stationary retry when
-an angled outward sonar scan contains the marginal echoes seen in testing.
-The new scan must pass the original distance checks. The retry passed host
-simulation and is ready for a run on the robot.
+The team selected **v0.4.3** for Tribunal 2. It runs on the Pico W under
+micro T-Kernel SMP with Demo Console v0.2.15. The release applies a warning
+and continues for a corroborated borderline obstacle range after a turn.
 
-- [v0.3.1 UF2, test steps, and source pointers](firmware/integration/buddy1_4/artifacts/v0_3_1_halt_testing/)
-- [v0.3.0 stopping-distance candidate](firmware/integration/buddy1_4/artifacts/v0_3_0_halt_testing/)
-- [Compatible v0.2.13 dashboard bundle](firmware/integration/buddy1_4/artifacts/v0_2_13_combined/)
+- [v0.4.3 firmware and full dashboard bundle](firmware/integration/buddy1_4/artifacts/v0_4_3/)
+- [Tribunal 2 requirements, cases and results](testing/)
+- [Build instructions](docs/build.md)
 - [Dashboard setup, powerbank operation and logs](docs/setup.md)
 - [Dashboard overview](dashboard/README.md)
-- [Build profile and focused checks](firmware/integration/buddy1_4/artifacts/v0_3_1_halt_testing/README.md#build-and-check)
 
 ## What the combined firmware does
 
@@ -37,7 +34,7 @@ the dashboard capture and stored rows.
 
 - [System architecture](docs/architecture.md) and [shared APIs](docs/interfaces.md)
 - [Buddy 5 mission stages and telemetry](app_program/obstacle_navigation/README.md)
-- [Validation status](firmware/integration/buddy1_4/STATUS.md)
+- [Release verification and hardware evidence](testing/)
 - [RoboPico C Standard](CODING_STANDARD.md) and [documented exceptions](docs/coding_exceptions.md)
 - [Release archive and rollback image](firmware/integration/buddy1_4/artifacts/README.md)
 - [Historical SDK reference](firmware/integration/buddy1_4/SDK_REFERENCE.md)

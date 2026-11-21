@@ -1,0 +1,22 @@
+case,received_at_utc,pico_uptime_ms,kind,message
+T2-01,2026-11-21T09:39:09.916Z,,command,Command sent: START (id 54)
+T2-01,2026-11-21T09:39:09.949Z,,ack,ACK START id 54: accepted · state byte Ready
+T2-02,2026-11-21T09:39:12.148Z,239336,drive-state,"Drive state: normal tracking, recovery phase 0, sweep 0"
+T2-03,2026-11-21T09:39:21.891Z,249096,sdk-nav,Coordinator decoded · mode Auto · owner Buddy 3 · Z Right · revision 1 ·  · generation 25 · fault 0x0 · detail 191
+T2-02,2026-11-21T09:39:30.247Z,257433,drive-state,"Drive state: bend confirmed, recovery phase 0, sweep 0"
+T2-05,2026-11-21T09:40:24.433Z,,b4,Buddy 4 hump start · state Hump · height field 0 mm · highest accepted 0 mm · humps 0 / rejected 0 · impacts 0 · fault 0
+T2-05,2026-11-21T09:40:27.325Z,,b4,Buddy 4 hump peak · state Tracking · height field 12 mm · highest accepted 12 mm · humps 1 / rejected 0 · impacts 0 · fault 0
+T2-06,2026-11-21T09:40:44.884Z,332159,b5-status,Buddy 5 stage: halting
+T2-06,2026-11-21T09:40:45.110Z,332441,b5-event,Buddy 5 width probe range batch 1 · accepted · 287 mm / 276 mm / 283 mm
+T2-06,2026-11-21T09:41:27.931Z,375168,b5-width,Buddy 5 width 138.70 mm · CALIBRATED_RANGE_RISE (estimate (calibrated range rise)) · run 1 COMPLETE
+T2-07,2026-11-21T09:41:31.632Z,378960,b5-status,Buddy 5 stage: bypass
+T2-07,2026-11-21T09:42:22.937Z,430210,b5-event,"Buddy 5 bypass event HANDBACK (state REJOIN, reason OK)"
+T2-04,2026-11-21T09:42:26.807Z,433955,sdk-nav,Coordinator dispatch · mode Auto · owner Buddy 3 · Z Right · revision 1 ·  · generation 125 · fault 0x0 · detail 0
+T2-04,2026-11-21T09:42:32.143Z,439358,sdk-nav,Coordinator completed · mode Auto · owner Buddy 3 · Z Right · revision 1 ·  · generation 125 · fault 0x0 · detail 0
+T2-03,2026-11-21T09:42:41.645Z,448799,sdk-nav,Coordinator decoded · mode Auto · owner Buddy 3 · Q U-turn · revision 1 ·  · generation 125 · fault 0x0 · detail 191
+T2-05,2026-11-21T09:43:40.435Z,,b4,Buddy 4 hump peak · state Tracking · height field 16 mm · highest accepted 16 mm · humps 2 / rejected 0 · impacts 0 · fault 0
+T2-04,2026-11-21T09:43:46.597Z,513769,sdk-nav,Coordinator dispatch · mode Auto · owner Buddy 3 · Q U-turn · revision 1 ·  · generation 125 · fault 0x0 · detail 0
+T2-04,2026-11-21T09:43:54.522Z,521710,sdk-nav,Coordinator completed · mode Auto · owner Buddy 3 · Q U-turn · revision 1 ·  · generation 125 · fault 0x0 · detail 0
+T2-03,2026-11-21T09:45:07.376Z,594592,sdk-nav,Coordinator decoded · mode Auto · owner Buddy 3 · A Left · revision 1 ·  · generation 125 · fault 0x0 · detail 190
+T2-04,2026-11-21T09:45:16.503Z,603649,sdk-nav,Coordinator dispatch · mode Auto · owner Buddy 3 · A Left · revision 1 ·  · generation 125 · fault 0x0 · detail 0
+T2-04,2026-11-21T09:45:22.221Z,609401,sdk-nav,Coordinator completed · mode Auto · owner Buddy 3 · A Left · revision 1 ·  · generation 125 · fault 0x0 · detail 0
