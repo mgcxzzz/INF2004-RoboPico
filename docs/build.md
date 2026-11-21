@@ -2,7 +2,7 @@
 
 ## Current release — v0.4.3
 
-Use the [download and build manifest](../firmware/integration/buddy1_4/artifacts/v0_4_3/).
+Use the [download and build manifest](../firmware/releases/v0.4.3/).
 Check out the manifest's source commit. Use Arm GNU GCC 14.2.1 and the pinned
 Pico SDK commit with its TinyUSB, CYW43 and lwIP dependencies. Set
 `PICO_SDK_PATH`, then run from `build_make/`:
@@ -19,8 +19,8 @@ and the [test index](../testing/README.md).
 
 ## Archived v0.2.13 release
 
-If you are flashing the robot, start with the
-[verified UF2 and dashboard bundle](../firmware/integration/buddy1_4/artifacts/v0_2_13_combined/).
+For the v0.2.13 reference build, see the
+[archived UF2 and dashboard bundle](../firmware/integration/buddy1_4/artifacts/v0_2_13_combined/).
 The manifest records the Arm compiler and Pico SDK revision. Populate that
 SDK's USB, Wi-Fi and lwIP submodules before rebuilding.
 

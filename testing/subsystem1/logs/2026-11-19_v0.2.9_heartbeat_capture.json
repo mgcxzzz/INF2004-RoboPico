@@ -1,0 +1,123 @@
+{
+  "sources": {
+    "2026-11-19_15-22-40_summary.json": "a415e66738f57323ce4cb02da008f53769e910b6bdc34d42b229105d9352d827",
+    "2026-11-19_15-22-40_mqtt.csv": "2902ca9bdd89fec8f97ed0eaf4a11a1e6219e8dc575b0ea9a2da05bcf81f3308"
+  },
+  "firmware": "0.2.9",
+  "run_ids": [
+    3,
+    4
+  ],
+  "last_release_wall_s": 203.014887,
+  "all_mqtt_frames": 3467,
+  "heartbeat_count": 186,
+  "max_gap_s": 15.667822,
+  "heartbeat_gaps_over_2s": [
+    {
+      "previous_s": 2.007351,
+      "next_s": 7.548838,
+      "gap_s": 5.541487
+    },
+    {
+      "previous_s": 7.555234,
+      "next_s": 9.837016,
+      "gap_s": 2.281782
+    },
+    {
+      "previous_s": 10.055909,
+      "next_s": 14.350158,
+      "gap_s": 4.294249
+    },
+    {
+      "previous_s": 17.282564,
+      "next_s": 19.707584,
+      "gap_s": 2.42502
+    },
+    {
+      "previous_s": 19.707641,
+      "next_s": 22.170193,
+      "gap_s": 2.462552
+    },
+    {
+      "previous_s": 29.651327,
+      "next_s": 32.927174,
+      "gap_s": 3.275847
+    },
+    {
+      "previous_s": 38.759412,
+      "next_s": 40.925476,
+      "gap_s": 2.166064
+    },
+    {
+      "previous_s": 45.34456,
+      "next_s": 53.009333,
+      "gap_s": 7.664773
+    },
+    {
+      "previous_s": 53.430994,
+      "next_s": 56.780819,
+      "gap_s": 3.349825
+    },
+    {
+      "previous_s": 59.536308,
+      "next_s": 74.100948,
+      "gap_s": 14.56464
+    },
+    {
+      "previous_s": 74.119127,
+      "next_s": 89.786949,
+      "gap_s": 15.667822
+    },
+    {
+      "previous_s": 90.572232,
+      "next_s": 92.844899,
+      "gap_s": 2.272667
+    },
+    {
+      "previous_s": 101.829324,
+      "next_s": 104.523114,
+      "gap_s": 2.69379
+    },
+    {
+      "previous_s": 105.117523,
+      "next_s": 113.78091,
+      "gap_s": 8.663387
+    },
+    {
+      "previous_s": 122.994609,
+      "next_s": 129.900417,
+      "gap_s": 6.905808
+    },
+    {
+      "previous_s": 141.685061,
+      "next_s": 148.140564,
+      "gap_s": 6.455503
+    },
+    {
+      "previous_s": 148.140564,
+      "next_s": 152.48106,
+      "gap_s": 4.340496
+    },
+    {
+      "previous_s": 155.152775,
+      "next_s": 157.493192,
+      "gap_s": 2.340417
+    },
+    {
+      "previous_s": 162.337704,
+      "next_s": 165.051796,
+      "gap_s": 2.714092
+    },
+    {
+      "previous_s": 173.83496,
+      "next_s": 175.977656,
+      "gap_s": 2.142696
+    },
+    {
+      "previous_s": 185.103554,
+      "next_s": 187.881842,
+      "gap_s": 2.778288
+    }
+  ],
+  "interpretation": "Interrupted capture. Receiver timing confirms heartbeat gaps while the physical link-stop cause remains unresolved."
+}

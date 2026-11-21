@@ -1,10 +1,14 @@
-# Set up RoboPico Buddy 1–5 RTOS v0.2.13
+# Set up RoboPico Buddy 1–5
+
+For **v0.4.3**, download the [release ZIP](../firmware/releases/v0.4.3/robopico-v0.4.3-buddy1-5-bundle.zip), extract it and open `START_HERE.md`. The [release directory](../firmware/releases/v0.4.3/) also provides the standalone UF2, manifest and checksums.
+
+## v0.2.13 reference procedure
 
 Download and extract the [full bundle](../firmware/integration/buddy1_4/artifacts/v0_2_13_combined/).
 Use [the first hardware test guide](buddy1_5_v0_2_13.md) for obstacle placement
 and expected results.
 
-## Flash and connect
+### Flash and connect
 
 1. Install Python 3.10+ and Mosquitto on the laptop. Close the older dashboard
    launcher. With motion stopped, hold BOOTSEL while plugging in the Pico W.

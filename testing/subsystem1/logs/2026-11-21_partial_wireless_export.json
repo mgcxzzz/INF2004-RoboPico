@@ -1,0 +1,28 @@
+{
+  "archive": "robopico_run_4_2026-11-21-07-05-45_PARTIAL.zip",
+  "sha256": "3ce4379e8fd5729ec4906b7cc1749b8118d2471506306bfd1d71a68e2f86985a",
+  "run_id": 4,
+  "complete": false,
+  "capture_result": "GET_LOG request rejected: rejected: busy (check fault, clocks, network supervision and transfer readiness).",
+  "firmware": "0.3.12",
+  "stored": [
+    {
+      "dataset": 0,
+      "complete": true,
+      "rowsReceived": 640,
+      "message": ""
+    },
+    {
+      "dataset": 1,
+      "complete": false,
+      "rowsReceived": 170,
+      "message": "GET_LOG request rejected: rejected: busy (check fault, clocks, network supervision and transfer readiness)."
+    }
+  ],
+  "retained_dashboard_csvs": [
+    "dashboard/motion.csv",
+    "dashboard/buddy4.csv",
+    "dashboard/events.csv",
+    "dashboard/frames.csv"
+  ]
+}

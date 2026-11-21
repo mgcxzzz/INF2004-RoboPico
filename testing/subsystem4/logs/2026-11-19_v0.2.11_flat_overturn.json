@@ -1,0 +1,10 @@
+{
+  "source": "events_2026-11-19-08-37-33.csv",
+  "source_sha256": "3527ead13a5d2e359c9a5bb12f2c901d2ba3c2c4d5c75e2bad3144ad8736ab9b",
+  "firmware": "0.2.11",
+  "run": 4,
+  "received_at": "2026-11-19T08:36:07.886Z",
+  "event": "Overturn stop · run 4 · trigger 2 · trip uptime 394881 ms · IMU sample fresh",
+  "operator_observation": "The car was traveling on a straight and stayed flat before stopping.",
+  "scope": "No synchronized video. The reported latch establishes what the controller classified, and vehicle posture comes from the operator observation."
+}

@@ -1,0 +1,62 @@
+{
+  "source": "motion_2026-11-19-07-49-53.csv",
+  "source_sha256": "30ab08e08a00fa8d9ff319dd9f990d5c8d78e7e95f7933eb57e66e29740e7c59",
+  "firmware": "0.2.9",
+  "run": 5,
+  "selection": "Consecutive retained active rows, both wheel speeds within 1 mm/s of zero, at least one forward target at 20 mm/s or more, window of at least 200 ms.",
+  "windows": [
+    {
+      "start_run_ms": 128425,
+      "last_run_ms": 141348,
+      "first_target_mm_s": [
+        9,
+        43
+      ],
+      "first_pwm": [
+        94,
+        315
+      ],
+      "samples": 231
+    },
+    {
+      "start_run_ms": 161535,
+      "last_run_ms": 161855,
+      "first_target_mm_s": [
+        42,
+        0
+      ],
+      "first_pwm": [
+        282,
+        0
+      ],
+      "samples": 7
+    },
+    {
+      "start_run_ms": 170912,
+      "last_run_ms": 175288,
+      "first_target_mm_s": [
+        42,
+        1
+      ],
+      "first_pwm": [
+        279,
+        3
+      ],
+      "samples": 79
+    },
+    {
+      "start_run_ms": 187033,
+      "last_run_ms": 189503,
+      "first_target_mm_s": [
+        43,
+        11
+      ],
+      "first_pwm": [
+        253,
+        149
+      ],
+      "samples": 26
+    }
+  ],
+  "observation": "Operator reported manually freeing the caster at mat seams. The times of those interventions were unrecorded."
+}

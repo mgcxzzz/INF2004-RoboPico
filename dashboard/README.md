@@ -8,7 +8,7 @@ operating-state report. A stale C9 reason is not presented as a current trip,
 and the dashboard never resets or restarts the car automatically.
 
 Use the full release bundle and hard-refresh the page after updating. Start
-with [the v0.4.3 firmware and dashboard bundle](../firmware/integration/buddy1_4/artifacts/v0_4_3/).
+with [the v0.4.3 firmware and dashboard bundle](../firmware/releases/v0.4.3/).
 
 Run `python tools/dashboard/run_dashboard.py` from repository root or double-click
 Start dashboard.cmd. The helper serves this folder, starts a local Mosquitto

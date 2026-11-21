@@ -1,0 +1,40 @@
+{
+  "firmware": "main Buddy1-4 RTOS v0.2.0",
+  "run": 2,
+  "integrity": {
+    "controller_rows": 640,
+    "controller_binary_bytes": 35840,
+    "navigation_rows": 47,
+    "binary_csv_core_fields_match": true,
+    "controller_sequences_contiguous": true
+  },
+  "stop": {
+    "elapsed_ms": 29189,
+    "reason": 9,
+    "reason_name": "encoder",
+    "control_flags": 76,
+    "fault_mask": 64,
+    "phase": 4,
+    "mapped_letter": "Z",
+    "mapped_action": "U-turn",
+    "angle_encoder_deg": 140.2
+  },
+  "final_window": {
+    "heartbeat_count": 31,
+    "heartbeat_max_arrival_gap_s": 1.2760000000000105,
+    "heartbeat_median_arrival_gap_s": 1.019500000000022,
+    "runtime_delta": {
+      "reads": 1509,
+      "failed": 0,
+      "lateGaps": 0,
+      "fifoOverruns": 0,
+      "fifoBudget": 0,
+      "controlCount": 3019,
+      "controlLate": 0
+    },
+    "runtime_elapsed_s": 30.178,
+    "controller_dt_min_us": 7929,
+    "controller_dt_max_us": 12187,
+    "controller_max_cost_us": 7775
+  }
+}

@@ -1,13 +1,12 @@
-# RoboPico RTOS integration
+# Shared RoboPico integration source
 
-This directory contains the shared feature modules for Buddy 1–5
-**v0.2.13** on `barr-c-combined`. The combined build uses
-`APP=rtos_buddy1_5`. The existing directory name is used by the build and its
-shared API includes.
+Both Buddy 1–4 and Buddy 1–5 builds use this source tree. The current combined release is [v0.4.3](../../releases/v0.4.3/).
 
-- [Download the combined UF2 and dashboard](artifacts/v0_2_13_combined/)
+The combined build selects `APP=rtos_buddy1_5`. Build files and shared API includes reference the existing source path.
+
+- [Current v0.4.3 UF2 and dashboard](../../releases/v0.4.3/)
 - [Setup and powerbank operation](../../../docs/setup.md)
-- [Combined test procedure](../../../docs/buddy1_5_v0_2_13.md) and [validation status](STATUS.md)
+- [Current test ledgers](../../../testing/README.md) and [v0.2.13 validation history](STATUS.md)
 - [Build instructions](../../../docs/build.md) and [offline tests](../../../docs/testing.md)
 - [Architecture](../../../docs/architecture.md) and [public interfaces](include/interfaces/)
 - [Buddy 5 mission](../../../app_program/obstacle_navigation/README.md)

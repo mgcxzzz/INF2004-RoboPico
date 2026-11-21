@@ -4,7 +4,9 @@ The selected RoboPico release is **v0.4.3**. It runs on the Pico W under
 micro T-Kernel SMP with Demo Console v0.2.15. The release applies a warning
 and continues for a corroborated borderline obstacle range after a turn.
 
-- [v0.4.3 firmware and full dashboard bundle](firmware/integration/buddy1_4/artifacts/v0_4_3/)
+- [Download v0.4.3 UF2](firmware/releases/v0.4.3/robopico-v0.4.3-buddy1-5.uf2)
+- [Download v0.4.3 full bundle with dashboard (ZIP)](firmware/releases/v0.4.3/robopico-v0.4.3-buddy1-5-bundle.zip)
+- [Firmware releases, checksums and source layout](firmware/)
 - [Test cases, results and logs](testing/)
 - [Project requirements](docs/requirements.md)
 - [Build instructions](docs/build.md)

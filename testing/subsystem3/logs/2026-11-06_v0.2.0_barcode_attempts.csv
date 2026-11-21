@@ -1,0 +1,10 @@
+latest_run_id,groups,received_at,code,decoded,applied,reverse,bars,reasonName,baseAdc,minNarrowRise,unitMm,spanMm
+3,1,2026-11-06T05:54:51.498Z,Y,True,True,False,15,ok,168,32,3,140.9
+3,2,2026-11-06T05:55:06.414Z,Z,True,True,True,15,ok,172,34,2.98,140
+3,3,2026-11-06T05:55:24.075Z,F,True,True,True,15,ok,172,37,2.96,139.3
+4,1,2026-11-06T05:56:24.395Z,Y,True,True,False,15,ok,168,33,3.04,143.3
+4,2,2026-11-06T05:56:37.077Z,Z,True,True,False,15,ok,170,33,3,141.2
+4,3,2026-11-06T05:56:57.153Z,?,False,False,False,14,too few bars,172,0,0,135.8
+5,1,2026-11-06T05:58:11.779Z,Z,True,True,True,15,ok,170,30,2.96,139.5
+5,2,2026-11-06T05:58:30.020Z,Y,True,True,False,15,ok,167,33,2.96,139.2
+5,3,2026-11-06T05:58:50.278Z,?,False,False,False,6,too few bars,177,0,0,36.2

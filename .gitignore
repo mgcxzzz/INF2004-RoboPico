@@ -67,7 +67,7 @@ dashboard_session/
 !/firmware/integration/buddy1_4/artifacts/v0_2_11_caster_assist/robopico_buddy1_4_rtos_v0_2_11_caster_assist.uf2
 !/firmware/integration/buddy1_4/artifacts/v0_2_12_caster_assist/robopico_buddy1_4_rtos_v0_2_12_caster_assist.uf2
 !/firmware/integration/buddy1_4/artifacts/v0_2_13_combined/robopico_buddy1_5_rtos_v0_2_13.uf2
-!/firmware/integration/buddy1_4/artifacts/v0_4_3/robopico_buddy1_5_rtos_v0_4_3.uf2
+!/firmware/releases/v0.4.3/robopico-v0.4.3-buddy1-5.uf2
 !/firmware/integration/buddy1_4/artifacts/v0_3_0_halt_testing/robopico_buddy1_5_rtos_v0_3_0.uf2
 
 !/firmware/integration/buddy1_4/artifacts/v0_3_1_halt_testing/robopico_buddy1_5_rtos_v0_3_1.uf2

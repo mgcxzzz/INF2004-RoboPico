@@ -1,6 +1,6 @@
 # Testing
 
-Each `TEST_LOG.md` contains test definitions and dated results. Its `logs/`
+The layout follows the [course project template](https://github.com/sirfonzie/INF2004_ProjectTemplate/tree/main/testing). Each `TEST_LOG.md` contains test definitions and dated results. Its `logs/`
 directory holds the saved output for those results. Use the
 [project requirements](../docs/requirements.md) to look up the FR and NFR IDs.
 
@@ -13,6 +13,16 @@ directory holds the saved output for those results. Use the
 [Final circuit run and video timestamps](system/logs/2026-11-21_run_4/README.md) ·
 [v0.4.3 verification](integration/logs/2026-11-21_v0.4.3/README.md) ·
 [Earlier evidence](evidence/README.md) · [Video links](../videos/README.md)
+
+## Development evidence
+
+The numbered ledgers include selected bench runs, on-car failures, and retests from earlier firmware. The result rows link to saved extracts or to the original branch at an immutable commit. Capture extracts retain the source filenames and SHA-256 hashes where available. Related subsystem ledgers can cite the same circuit capture.
+
+- [Buddy 1 standalone test ledger](https://github.com/mgcxzzz/INF2004-RoboPico/blob/b09403074939f45cf4d7c11b7606148f6c2a4e73/testing/subsystem1/TEST_LOG.md)
+- [Buddy 2 motor development evidence](https://github.com/mgcxzzz/INF2004-RoboPico/tree/99d1f503d7989f1282c9e0162b9d6183ab3459d9/testing) and [saved wheel-response traces](evidence/buddy2/hardware/)
+- [Buddy 3 standalone test ledger](https://github.com/mgcxzzz/INF2004-RoboPico/blob/74e0c5c6568a484f7f56ecbf235dc8244c9bf8cf/testing/subsystem3/TEST_LOG.md)
+- [Buddy 4 standalone IMU ledger](evidence/buddy4/standalone/TEST_LOG.md) and [RTOS migration runs](evidence/rtos_buddy1_4/step5_v0_1_5/)
+- [Buddy 5 standalone test ledger](https://github.com/mgcxzzz/INF2004-RoboPico/blob/128d25456f1857e8508ddbfe5e5558f5cdfe12a2/testing/subsystem5/TEST_LOG.md) and [integrated obstacle captures](subsystem5/logs/2026-11-20_to_21_obstacle_capture_index.csv)
 
 ## Run the tests
 
