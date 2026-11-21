@@ -36,14 +36,14 @@ the final v0.4.3 stopped-range tweak and dashboard warning were checked by
 | Date | Test ID | Commit | Tester | Result | Log / evidence | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
 | 2026-11-21 | SYS-10 | v0.4.2 (manifest) | IS28 team | PASS (functional) | [Events](logs/2026-11-21_run_4/events.csv) | Start ID 54 accepted. First encoder movement appeared about 2.4 s after ACK receipt. |
-| 2026-11-21 | SYS-12 | v0.4.2 (manifest) | IS28 team | PASS | [Circuit video timestamps](logs/2026-11-21_run_4/README.md#recording-and-log-sync) | Straight tracking and a bend visible in the recording. |
-| 2026-11-21 | SYS-13 | v0.4.2 (manifest) | IS28 team | PASS (examples) | [Events and clips](logs/2026-11-21_run_4/README.md) | Coordinator accepted Z, Q and A. |
-| 2026-11-21 | SYS-14 | v0.4.2 (manifest) | IS28 team | PASS | [Events and clips](logs/2026-11-21_run_4/README.md) | Right, U-turn and left completed; the video shows the outgoing paths. |
-| 2026-11-21 | SYS-16 | v0.4.2 (manifest) | IS28 team | PASS (functional) | [Hump events and clip](logs/2026-11-21_run_4/README.md) | 12 mm and 16 mm accepted. One crossing is shown; no calibrated reference height recorded. |
-| 2026-11-21 | SYS-17 | v0.4.2 (manifest) | IS28 team | PASS | [Obstacle events and clip](logs/2026-11-21_run_4/README.md) | Trigger reported at 284 mm. The recorded first obstacle was detected before contact. |
-| 2026-11-21 | SYS-18 | v0.4.2 (manifest) | IS28 team | PASS (reporting) | [Width event](logs/2026-11-21_run_4/events.csv) | Estimate reported as 138.7 mm; the trace missed one record. Accuracy needs a reference width. |
-| 2026-11-21 | SYS-19 | v0.4.2 (manifest) | IS28 team | PASS | [Bypass events and clip](logs/2026-11-21_run_4/README.md) | Robot cleared the first obstacle and rejoined. Handback recorded. |
-| 2026-11-21 | SYS-20 | v0.4.2 (manifest) | IS28 team | PASS (functional) | [MQTT receipt summary](logs/2026-11-21_run_4/mqtt.txt) | 16,749 telemetry frames and 370 heartbeats received in the evidence window; largest observed gap 1.218 s. |
+| 2026-11-21 | SYS-12 | v0.4.2 (manifest) | IS28 team | PASS | [Events and timestamps](logs/2026-11-21_run_4/README.md#recording-and-log-sync) · [Line following](https://youtu.be/DSKYzSl4pN8) | Straight tracking and a bend visible in the recording. |
+| 2026-11-21 | SYS-13 | v0.4.2 (manifest) | IS28 team | PASS (examples) | [Decode events](logs/2026-11-21_run_4/README.md) · [Barcode scans](https://youtu.be/gGe0tv3TXEg) | Coordinator accepted Z, Q and A. |
+| 2026-11-21 | SYS-14 | v0.4.2 (manifest) | IS28 team | PASS | [Turn events](logs/2026-11-21_run_4/README.md) · [Right](https://youtu.be/u8M4bE7olWs) · [U-turn](https://youtu.be/aMheU_oI-9U) · [Left](https://youtu.be/lvsAOKSMIwc) | Right, U-turn and left completed; the video shows the outgoing paths. |
+| 2026-11-21 | SYS-16 | v0.4.2 (manifest) | IS28 team | PASS (functional) | [Hump events](logs/2026-11-21_run_4/README.md) · [Both crossings](https://youtu.be/LSbH6W17-fk) | 12 mm and 16 mm accepted. Both crossings are shown. Reference height was unmeasured. |
+| 2026-11-21 | SYS-17 | v0.4.2 (manifest) | IS28 team | PASS | [Obstacle events](logs/2026-11-21_run_4/README.md) · [Approach and stop](https://youtu.be/0P49ioC_46U) | Trigger reported at 284 mm. The recorded first obstacle was detected before contact. |
+| 2026-11-21 | SYS-18 | v0.4.2 (manifest) | IS28 team | PASS (reporting) | [Width event](logs/2026-11-21_run_4/events.csv) · [Width probe](https://youtu.be/0P49ioC_46U) | Estimate reported as 138.7 mm; the trace missed one record. Accuracy needs a reference width. |
+| 2026-11-21 | SYS-19 | v0.4.2 (manifest) | IS28 team | PASS | [Bypass events](logs/2026-11-21_run_4/README.md) · [Bypass and rejoin](https://youtu.be/0P49ioC_46U) | Robot cleared the first obstacle and rejoined. Handback recorded. |
+| 2026-11-21 | SYS-20 | v0.4.2 (manifest) | IS28 team | PASS (functional) | [MQTT receipt summary](logs/2026-11-21_run_4/mqtt.txt) · [Live dashboard](https://youtu.be/v_6Jqraz99s) | 16,749 telemetry frames and 370 heartbeats received in the evidence window; largest observed gap 1.218 s. |
 | 2026-11-21 | SYS-22 | v0.4.2 (manifest) | IS28 team | PASS | [Capture record](logs/2026-11-21_run_4/capture.json) | The export contains the four completed stored datasets and page-session history. |
 
 Cases without a dated result above remain open on the final setup. Earlier
