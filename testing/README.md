@@ -5,8 +5,8 @@ and nine non-functional requirements to procedures, pass criteria and evidence.
 
 | What to review | Where |
 | --- | --- |
-| Team circuit run on v0.4.2 | [Run 4 results and synchronized clips](evidence/tribunal2/run-4/README.md) |
-| v0.4.3 submission firmware | [Verification record](evidence/tribunal2/v0.4.3/README.md) |
+| Final circuit evidence for v0.4.3 | [Run 4 results and synchronized clips](evidence/tribunal2/run-4/README.md) |
+| v0.4.3 range tweak and build checks | [Release verification](evidence/tribunal2/v0.4.3/README.md) |
 | Integration and system cases | [Integration checks](integration/TEST_LOG.md) · [Physical system results](system/TEST_LOG.md) |
 | Subsystem cases | [Buddy 1](subsystem1/TEST_LOG.md) · [Buddy 2](subsystem2/TEST_LOG.md) · [Buddy 3](subsystem3/TEST_LOG.md) · [Buddy 4](subsystem4/TEST_LOG.md) · [Buddy 5](subsystem5/TEST_LOG.md) |
 | Earlier tests and raw evidence | [Evidence archive and provenance](evidence/README.md) |

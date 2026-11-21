@@ -4,6 +4,11 @@ Recorded by the IS28 team on 21 November 2026. Firmware **v0.4.2**, Demo
 Console **v0.2.14**, Baseline **45 mm/s**. Mapping was N straight, Q U-turn,
 A left and Z right. The demo evidence ends with the completed left turn.
 
+Run 4 serves as the final circuit verification for the behaviours listed below.
+The submission firmware, v0.4.3, adds a small adjustment to the stopped sonar
+range check and its warning. The change was verified by firmware replay and
+dashboard decoding. See the [release verification](../v0.4.3/README.md).
+
 [Selected dashboard events](events.csv) · [Source archive identity](capture.json) ·
 [Tribunal 2 test cases](../../../TRIBUNAL_2.md)
 
@@ -20,8 +25,7 @@ A left and Z right. The demo evidence ends with the completed left turn.
 
 These are functional observations from one circuit run. The formal repeatability,
 accuracy and timing targets have their own cases. Straight-through barcode
-execution, pickup and inversion, and the latest firmware smoke test need
-separate hardware evidence.
+execution and pickup and inversion are outside this run's scope.
 
 ## Recording and log sync
 

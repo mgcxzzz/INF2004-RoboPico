@@ -12,9 +12,9 @@ Record the exact Git commit, build profile (`APP=rtos_buddy1_5` for the
 combined robot), UF2 SHA-256 and dashboard version in the test results. Run
 from that commit with a host C compiler and Node.js. Build the firmware using
 the [RTOS build instructions](../docs/build.md) for the selected release.
-See the [v0.4.3 release verification](evidence/tribunal2/v0.4.3/README.md)
-and the [synchronized v0.4.2 hardware run](evidence/tribunal2/run-4/README.md)
-for results and recording timestamps.
+The final v0.4.3 verification uses [Run 4 as circuit evidence](evidence/tribunal2/run-4/README.md)
+for the demonstrated functions and the [release checks](evidence/tribunal2/v0.4.3/README.md)
+for the small change to the stopped sonar range check.
 
 ```sh
 python tools/rtos_migration/run_tests.py
