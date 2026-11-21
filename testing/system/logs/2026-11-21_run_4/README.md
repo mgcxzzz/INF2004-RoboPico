@@ -42,8 +42,7 @@ The camera track starts at approximately 17:39:12 Singapore time and the dashboa
 | 04 · Z right turn | 3:09–3:25 | 3:10–3:26 | Right completed 17:42:32.143 |
 | 05 · Q U-turn | 4:30–4:47 | 4:31–4:48 | U-turn completed 17:43:54.522 |
 | 06 · A left turn | 5:56–6:11 | 5:57–6:12 | Left completed 17:45:22.221 |
-| 07 · Obstacle trigger, probe and width | 1:31–1:41, 2:09–2:25 | 1:32–1:42, 2:10–2:26 | Trigger 17:40:44.884, width 17:41:27.931 |
-| 07 · Bypass and line rejoin | 2:50–3:13 | 2:51–3:14 | Handback 17:42:22.937 |
+| 07 · Continuous obstacle approach, width scan, bypass and line rejoin | 1:28–3:14 | 1:29–3:15 | Trigger 17:40:44.884, width 17:41:27.931, bypass started 17:41:31.632, handback 17:42:22.937 |
 | 08 · Live dashboard overview | | 0:16–0:33, 3:11–3:23, 4:25–4:41 | Motion, MQTT heartbeat, right-turn completion and accepted height |
 
 See the [video index](../../../../videos/README.md) for filenames and unlisted links.

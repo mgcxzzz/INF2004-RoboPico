@@ -6,7 +6,7 @@ the line. List **every** video in the table at the bottom of this page.
 
 ## What to record
 
-- **Short:** 15–60 seconds. One test or one feature per video.
+- **Length:** Aim for 15–60 seconds. Use a continuous clip when the test needs the full sequence.
 - **Say what it is.** Show or say the test ID (e.g. `SYS-14`) or
   the demo name at the start.
 - **Show the commit.** Before recording, run `git rev-parse --short HEAD` and
@@ -44,7 +44,7 @@ The [Run 4 record](../testing/system/logs/2026-11-21_run_4/README.md#recording-a
 | `04-right-turn.mp4` · 0:16 | Z, right turn and outgoing tape | SYS-14 | [Watch clip 04](https://youtu.be/u8M4bE7olWs) |
 | `05-u-turn.mp4` · 0:17 | Q, U-turn and outgoing tape | SYS-14 | [Watch clip 05](https://youtu.be/aMheU_oI-9U) |
 | `06-left-turn.mp4` · 0:15 | A, left turn and outgoing tape | SYS-14 | [Watch clip 06](https://youtu.be/lvsAOKSMIwc) |
-| `07-obstacle-detection-bypass-and-rejoin.mp4` · 0:49 | Stationary scan, width estimate, bypass and handback | SYS-17, SYS-18, SYS-19 | [Watch clip 07](https://youtu.be/0P49ioC_46U) |
+| `07-full-obstacle-detection-bypass-and-rejoin.mp4` · 1:46 | Continuous approach, stop, width scan, full bypass and handback | SYS-17, SYS-18, SYS-19 | [Watch clip 07](https://youtu.be/jYbEuhxsAzg) |
 | `08-dashboard-live-telemetry.mp4` · 0:45 | Live MQTT and motion feedback, obstacle handback, junction actions and accepted height | SYS-20 | [Watch clip 08](https://youtu.be/v_6Jqraz99s) |
 
 Firmware **v0.4.2**, Demo Console **v0.2.14**. The mapping included **N → straight**. The captured evidence contains Z, Q and A, and no N decode. See the [v0.4.3 verification record](../testing/integration/logs/2026-11-21_v0.4.3/README.md) for the release replay.
