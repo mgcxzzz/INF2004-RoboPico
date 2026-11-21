@@ -1,0 +1,30 @@
+{
+  "scope": "Final Buddy 1 firmware five-minute run; dashboard full-window verdict and independent native heartbeat check",
+  "expectedFirmwareSha256": "d27c36e9751898f870a9cdaec482ce76da97e49094209c0d89bc0497df3714ce",
+  "dashboard": {
+    "durationS": 300,
+    "complete": true,
+    "received": 300,
+    "missing": 0,
+    "maxGapS": 1.155,
+    "gapsOver2S": 0,
+    "deliveryPass": true,
+    "heartbeatPass": true
+  },
+  "native": {
+    "alignment": "Window aligned to second-resolution exported start time and closest match to all 299 exported internal heartbeat gaps; native internal gaps checked, exact dashboard boundary milliseconds unavailable",
+    "firstEpochS": 1793110387.950312,
+    "lastEpochS": 1793110686.947634,
+    "received": 300,
+    "missing": 0,
+    "firstSeq": 149,
+    "lastSeq": 192,
+    "maxInternalGapS": 1.1554310321807861,
+    "internalGapsOver2S": 0,
+    "allOperational": true,
+    "allRunning": false,
+    "maximumBrowserNativeGapDifferenceS": 0.00123812675476076,
+    "stateObserved": "Ready throughout this window; Running is optional for this standalone heartbeat baseline"
+  },
+  "limitations": "WiFi source only. Sequence-gap delivery estimate, not independent sender audit. Actual Wi-Fi outage and track-distance/integrated-load tests remain unverified. A separate live lost-readback test followed this measurement."
+}

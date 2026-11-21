@@ -1,6 +1,6 @@
 # Buddy 5 obstacle algorithms
 
-The v0.2.13 combined `APP=rtos_buddy1_5` build links the obstacle algorithms
+The [v0.4.3 combined release](../../../../releases/v0.4.3/) links these obstacle algorithms in `APP=rtos_buddy1_5`
 in this directory through the [RTOS obstacle adapter](../../../../../app_program/obstacle_navigation/README.md).
 The adapter services sonar and servo, coordinates mission stages, and invokes
 the shared navigation lease and motion APIs.

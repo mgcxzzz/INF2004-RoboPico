@@ -1,16 +1,10 @@
-# Buddy 5 RTOS integration (APP=rtos_buddy1_5)
+# RTOS obstacle navigation · Buddy 5
 
-Experimental candidate on the v0.2.12 release. **Not physically validated.**
-`APP=rtos_buddy1_4` is byte-identical to a clean v0.2.12 build (same
-compiler). It keeps the v0.2 integration (width failures hold, line-steered
-300→200 mm approach under the Buddy 5 lease) and replaces the short width
-probe with the SDK `width_long_probe` v0.2.
+Buddy 5 is active in [RoboPico v0.4.3](../../firmware/releases/v0.4.3/) with `APP=rtos_buddy1_5`. It uses a servo-mounted ultrasonic sensor, acquires a coordinator lease to stop and probe, estimates obstacle width, selects a side, and performs a bounded bypass and line rejoin. Buddy 3 resumes ordinary line following after hand-back.
 
-The Buddy1–4 release keeps its tasks, coordinator, line follower, barcode
-route, ramp assistance, saved Wi-Fi and IR calibration. This folder adds the
-Buddy 5 adapter and mission; the obstacle algorithms are ported SDK modules in
-`firmware/integration/buddy1_4/extensions/buddy5_obstacles/` (provenance in
-[docs/buddy5_rtos_integration.md](../../docs/buddy5_rtos_integration.md)).
+`b5_mission.c` stages the mission in the motion task. `b5_straight.c` checks takeover eligibility. `obstacle_service.c` and `board_obstacle.c` serve sonar, servo and copied telemetry. The [shared algorithm modules](../../firmware/integration/buddy1_4/extensions/buddy5_obstacles/) supply probing and bypass logic.
+
+The [circuit evidence](../../testing/system/logs/2026-11-21_run_4/README.md) shows detection, reported width, bypass and rejoin on v0.4.2. The v0.4.3 stopped-range warning was checked with [release replay and dashboard tests](../../testing/integration/logs/2026-11-21_v0.4.3/README.md).
 
 ## Sequence (one Buddy 5 lease from the takeover to the hand-back)
 
@@ -22,7 +16,7 @@ Buddy 5 adapter and mission; the obstacle algorithms are ported SDK modules in
    the full window and 3° across roughly 30 mm of recent travel. The optical
    bend-assistance labels remain visible in the line telemetry.
    Takeover also requires three consecutive clean echoes
-   ≤ 330 mm from pings requested after the gate opened. The v0.3.0 candidate
+   ≤ 330 mm from pings requested after the gate opened. The mission
    counts those echoes early, then requests the stop on a qualifying echo
    ≤ 295 mm. Losing the gate discards the count. Three echoes ≤ 300 mm while the
    gate is closed normally stop the robot and hold `NOT_STRAIGHT`. During an
@@ -53,7 +47,7 @@ Buddy 5 adapter and mission; the obstacle algorithms are ported SDK modules in
      Its REF rule, clearance-limited diagonal per side (20 mm steps, 220 mm
      ceiling, 12 steps, ±46° servo, first-FAR stop, retrace, stationary retry,
      return corroboration), D1–D5 telemetry and the rule-2 on-Pico estimate
-     still apply. The RTOS candidate can use the existing single stationary
+     still apply. The mission can use the existing single stationary
      retry if two in-window reference echoes agree within 15 mm and the third
      clean echo is within 15 mm of the reference window. The replacement must
      pass the original REF limits. At each remaining scan pose, v0.3.6
@@ -141,7 +135,7 @@ edge observations and the fixed route margins. The display is the raw edge midpo
 | Context | Core / priority | Buddy 5 work |
 |---|---|---|
 | IO_IRQ_BANK0 (board_port.c) | core1 IRQ | GP17 ECHO edge timestamps (`rb5_echo_isr`) |
-| Motion task (control.c) | core1 / 14 | Line observation and one mission step right after `motion_update()`; the private signed wheel controller committed through the existing `motion_commit()` |
+| Motion task (control.c) | core1 / 14 | Line observation and one mission step right after `motion_update()`; signed wheel demands through the shared wheel controller and `motion_commit()` |
 | Buddy 5 task (`rb5_task`) | core1 / 20 | Servo slew, TRIG/ECHO transaction, copied telemetry, `o` report |
 | Kernel Wi-Fi | core0 / 4 | Unchanged lwIP/MQTT owner; Buddy 5 only copies frames into the bounded TX queue (TMO_POL) |
 

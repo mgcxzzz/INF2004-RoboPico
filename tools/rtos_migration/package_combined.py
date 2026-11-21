@@ -24,11 +24,10 @@ def bundle_inputs():
     tracked = {ROOT / path for path in common.command("git", "ls-files").splitlines()}
     paths = set(collect_sources())
     for folder in ("firmware/integration/buddy1_4/extensions/buddy5_obstacles",
-                   "tools/coding_standard", "tools/provisioning", "tools/telemetry", ".github"):
+                   "tools/coding_standard", "tools/provisioning", "tools/telemetry",
+                   "firmware/windows", ".github"):
         paths.update(path for path in (ROOT / folder).rglob("*") if path.is_file())
-    for name in ("BUNDLE_README.md", "CODING_STANDARD.md", "Start dashboard.cmd", "Configure WiFi.cmd",
-                 "Run offline tests.cmd"):
-        paths.add(ROOT / name)
+    paths.add(ROOT / "CODING_STANDARD.md")
     return sorted(paths & tracked)
 
 

@@ -1,10 +1,12 @@
-# Application-to-kernel network bridge
+# RTOS application network bridge · Buddy 1
 
-The combined v0.2.13 profile uses `APP=rtos_buddy1_5` with network-supervised
-powerbank operation and stopped wireless logs. See [setup](../../docs/setup.md)
-and [architecture](../../docs/architecture.md).
+In the [v0.4.3 combined build](../../firmware/releases/v0.4.3/), the core 0 application bridge exchanges copied messages with the kernel Wi-Fi service. The kernel service owns CYW43, lwIP and MQTT. The bridge validates incoming command envelopes, sends accepted requests to the owning task, and publishes acknowledgements, heartbeat, navigation, motion and subsystem telemetry over bounded queues.
 
-## Migration checkpoints
+The safety path supervises network service independently of dashboard presence. Reconnect restores reporting and drive requires a new Start. The dashboard can apply and read back the barcode map, request drive mode or IR calibration while stopped, and collect the available stopped datasets. Live history and stored downloads have distinct retention limits.
+
+See the [dashboard](../../dashboard/README.md), [shared transport](../../firmware/integration/buddy1_4/src/network/) and [Buddy 1 tests](../../testing/subsystem1/TEST_LOG.md).
+
+## Migration checkpoints and implementation notes
 
 **Step4 update:** `APP=rtos_barcode_wifi` uses the same connected command and
 safety foundation, adding the Buddy3 ADC-owner decoder adapter. Live mapping

@@ -1,5 +1,8 @@
 # Set up the provisional Buddy1–4 package
 
+The original Windows bundle has launchers at its root. A source checkout or rebuilt source bundle keeps them in `firmware/windows/`.
+For the standalone SDK image, use the USB serial provisioning helper in `tools/provisioning/`.
+
 **Buddy5 obstacle avoidance is not integrated. This newly restructured image still needs physical acceptance.** Keep the known-working combinedv0.5 image available during comparison. A published build is not a claim of new physical testing.
 
 ## Install and flash

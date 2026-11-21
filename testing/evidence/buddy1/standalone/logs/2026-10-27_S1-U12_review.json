@@ -1,0 +1,60 @@
+{
+  "scope": "User-triggered dashboard-to-Pico-to-dashboard Ping acknowledgements",
+  "samples": 10,
+  "minMs": 45,
+  "maxMs": 169,
+  "meanMs": 86.2,
+  "allUnder500": true,
+  "trials": [
+    {
+      "id": 137,
+      "latencyMs": 85,
+      "line": "9:33:00 PM  is28/ack  ← PING id 137: accepted in 85 ms, state unknown"
+    },
+    {
+      "id": 138,
+      "latencyMs": 86,
+      "line": "9:33:01 PM  is28/ack  ← PING id 138: accepted in 86 ms, state unknown"
+    },
+    {
+      "id": 139,
+      "latencyMs": 62,
+      "line": "9:33:01 PM  is28/ack  ← PING id 139: accepted in 62 ms, state unknown"
+    },
+    {
+      "id": 140,
+      "latencyMs": 169,
+      "line": "9:33:02 PM  is28/ack  ← PING id 140: accepted in 169 ms, state unknown"
+    },
+    {
+      "id": 141,
+      "latencyMs": 63,
+      "line": "9:33:03 PM  is28/ack  ← PING id 141: accepted in 63 ms, state unknown"
+    },
+    {
+      "id": 142,
+      "latencyMs": 61,
+      "line": "9:33:04 PM  is28/ack  ← PING id 142: accepted in 61 ms, state unknown"
+    },
+    {
+      "id": 143,
+      "latencyMs": 45,
+      "line": "9:33:04 PM  is28/ack  ← PING id 143: accepted in 45 ms, state unknown"
+    },
+    {
+      "id": 144,
+      "latencyMs": 116,
+      "line": "9:33:05 PM  is28/ack  ← PING id 144: accepted in 116 ms, state unknown"
+    },
+    {
+      "id": 145,
+      "latencyMs": 55,
+      "line": "9:33:06 PM  is28/ack  ← PING id 145: accepted in 55 ms, state unknown"
+    },
+    {
+      "id": 146,
+      "latencyMs": 120,
+      "line": "9:33:07 PM  is28/ack  ← PING id 146: accepted in 120 ms, state unknown"
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 # Telemetry and stored diagnostics
 
-The combined v0.2.13 build uses the micro T-Kernel profile. Active task/ownership
+The [v0.4.3 combined release](../../../../releases/v0.4.3/) uses the micro T-Kernel profile. Active task/ownership
 adapters: [app_program/network_bridge](../../../../../app_program/network_bridge/README.md).
 See [RTOS architecture](../../../../../docs/architecture.md) and
 [current setup](../../../../../docs/setup.md). The shared logic below remains;

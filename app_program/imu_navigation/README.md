@@ -1,3 +1,9 @@
+# RTOS IMU, hump measurement and pickup stop · Buddy 4
+
+In the [v0.4.3 combined build](../../firmware/releases/v0.4.3/), Buddy 4 owns the I2C1 IMU on core 0. The acquisition task services the accelerometer FIFO at a nominal 50 Hz. It estimates the difference in wheel heights for a one-wheel hump and reports candidate, rejected and accepted results. The ramp bridge may request an expiring bounded assist through the coordinator.
+
+See the [shared estimator and IMU service](../../firmware/integration/buddy1_4/src/imu/), [Buddy 4 tests](../../testing/subsystem4/TEST_LOG.md) and [recorded hump crossings](../../testing/system/logs/2026-11-21_run_4/README.md).
+
 ## IMU lift/overturn safety
 
 The production IMU FIFO additionally feeds an independent integer lift guard,
@@ -8,15 +14,7 @@ the Buddy 4 motion API/coordinator. It never writes PWM from acquisition or MQTT
 A qualified event is sticky; fresh upright evidence plus explicit Reset is required.
 Old Impact enum values remain compatible, but production collision classification
 is disabled; transient high dynamics still invalidate terrain measurements.
-See the [combined hardware guide](../../docs/buddy1_5_v0_2_13.md) for pickup
-stop checks during obstacle motion.
-The sections below describe the retained terrain/height baseline.
-
-# Buddy4 IMU and ramp assistance on micro T-Kernel
-
-The combined v0.2.13 profile uses `APP=rtos_buddy1_5` with network-supervised
-powerbank operation and stopped wireless logs. See [setup](../../docs/setup.md)
-and [architecture](../../docs/architecture.md).
+For pickup test procedures see the [system ledger](../../testing/system/TEST_LOG.md). The notes below document the retained terrain and height estimator.
 
 ## Migration checkpoints
 

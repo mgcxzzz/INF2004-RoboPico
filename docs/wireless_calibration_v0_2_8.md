@@ -1,9 +1,6 @@
 # Buddy 1–4 RTOS v0.2.8: wireless front IR calibration
 
-Branch **barr-c-cleanup**; provisional hardware-test candidate. Main remains
-v0.2.6. Buddy 5 is not integrated. This adds wireless calibration to the v0.2.7
-Barr-style cleanup candidate. It does not change steering, turn geometry,
-line-reacquisition thresholds, barcode decoding, IMU/ramp rules or RTOS priorities.
+This guide records the v0.2.8 introduction of wireless front IR calibration. For the current matched firmware and dashboard, see the [v0.4.3 release](../firmware/releases/v0.4.3/) and [calibration overview](calibration.md).
 
 ## Install and operate
 

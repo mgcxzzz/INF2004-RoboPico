@@ -1,16 +1,12 @@
-# RTOS line-navigation boundary
+# RTOS line navigation and front IR · Buddy 3
 
-RTOS v0.2.2 introduced production-only bend assistance and bounded stationary
-line recovery, plus a 7 mm junction minimum. Archived default/SDK builds retain
-the previous behaviour unless explicitly opted in. The historical descriptions
-below are supplemented by [the v0.2.2 test guide](../../docs/drive_refinements_v0_2_2.md).
+In the [v0.4.3 combined build](../../firmware/releases/v0.4.3/), the motor/ADC task samples GP26 and GP28 for the line and GP27 for [barcode routing](../barcode_navigation/). `board_line.c` owns the ADC register boundary. `line_service.c` applies saved calibration, supplies the line controller with fresh normalized inputs, and submits ordinary AUTO demand through the coordinator.
 
+The [shared tracker](../../firmware/integration/buddy1_4/src/line_following/) steers through bends and uses bounded stationary search when tape is lost. Baseline is 45 mm/s. Change drive mode while stopped. Front IR calibration can be captured via the dashboard and applied in RAM or saved to flash. The owner serves frozen stopped run data through the bounded [network bridge](../network_bridge/).
 
-The combined v0.2.13 profile uses `APP=rtos_buddy1_5` with network-supervised
-powerbank operation and stopped wireless logs. See [setup](../../docs/setup.md)
-and [architecture](../../docs/architecture.md).
+See [calibration](../../docs/calibration.md) and the [Buddy 3 tests](../../testing/subsystem3/TEST_LOG.md).
 
-## Migration checkpoints
+## Migration checkpoints and implementation notes
 
 This folder ports the SDK integration's profile 1 execution boundary. It does
 not replace the reference tracker, Continuous V2 steering, PI controllers,
@@ -157,7 +153,7 @@ front sensors, exact 100 Hz cadence/cost on the car, sharpest bend tracking,
 side-cross qualification and outgoing-line reacquisition after each turn.
 
 
-## Wireless front IR calibration (v0.2.8 candidate)
+## Wireless front IR calibration
 
 `wireless_calibration.h` owns the bounded staged state machine and explicit CC/28
 wire codec. `wireless_calibration.inc` adapts it to the control owner: 32 existing

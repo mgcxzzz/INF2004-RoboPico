@@ -18,7 +18,7 @@ dashboard decoding. See the [release verification](../../../integration/logs/202
 | --- | --- |
 | SYS-10, SYS-12 | Start ID 54 was accepted and the car followed the straight and bends. The video shows the early tracking section. |
 | SYS-13, SYS-14 | The coordinator accepted Z, Q and A and recorded the associated right, U-turn and left as completed. The footage shows each outgoing path. |
-| SYS-16 | Buddy 4 accepted 12 mm and later 16 mm, with zero recorded rejections in run 4. The first crossing is visible. A reference height measurement is needed for an accuracy result. |
+| SYS-16 | Buddy 4 accepted 12 mm and later 16 mm, with zero recorded rejections in run 4. Both crossings are visible. A reference height measurement is needed for an accuracy result. |
 | SYS-17, SYS-18 | Buddy 5 detected the box at 284 mm and reported a 138.7 mm width estimate. The width trace lacked one record. Ground-truth width was not recorded. |
 | SYS-19 | The footage shows the robot go around the box and resume travel on its original line. The coordinator logged `HANDBACK` to line following. |
 | SYS-20, SYS-22 | The dashboard received live MQTT and the run ZIP contains all four stored datasets. The retained live history spans the demo. The ZIP includes earlier dashboard activity and reports overwritten older live rows. |
@@ -29,23 +29,21 @@ execution and pickup and inversion are outside this run's scope.
 
 ## Recording and log sync
 
-The dashboard recorder starts during the Ready countdown. At video 0:01.00
-it displays Pico uptime 239364 ms, received at 17:39:12.170 Singapore time.
-The first nonzero encoder speed was received at 17:39:12.346, corresponding
-to dashboard video time about 0:01.1. The 12 mm hump, obstacle handback and
-three junction turns provide additional sync points. The in/out points
-below are source timestamps with lead-in and tail around each action.
+The camera track starts at approximately 17:39:12 Singapore time and the dashboard recording starts one second earlier. At dashboard time 0:01 it displays Pico uptime 239364 ms, received at 17:39:12.170. The first nonzero encoder speed was received at 17:39:12.346. Barcode, hump and junction events provide additional points of comparison.
 
-| Evidence | Robot camera source | Dashboard source | Key log time (Singapore) |
+| Clip and evidence | Robot camera source | Dashboard source | Matching log time (Singapore) |
 | --- | --- | --- | --- |
-| Line following and Z detection | 0:00–0:39 | 0:00–0:34 | Z accepted 17:39:21.891, bend confirmed 17:39:30.247 |
-| First hump | 1:04–1:20 | 1:12–1:21 | 12 mm accepted 17:40:27.325 |
-| Obstacle detection and width | 1:28–1:37, 2:15–2:33 | 1:32–1:38, 2:15–2:21 | Trigger 17:40:44.884, width 17:41:27.931 |
-| Obstacle bypass and rejoin | 2:50–3:13 | 3:08–3:14 | Handback 17:42:22.937 |
-| Z right | 3:10–3:23 | 3:14–3:23 | Right completed 17:42:32.143 |
-| Q U-turn | 4:31–4:45 | 4:34–4:46 | U-turn completed 17:43:54.522 |
-| A left | 5:52–6:11 | 5:55–6:12 | Left completed 17:45:22.221 |
+| 01 · Successive bends and S-shaped section | 3:32–4:06 | 3:33–4:07 | Selected motion feedback during continuous tracking |
+| 02 · Z decode and right queued | 0:05–0:17 | 0:06–0:18 | Z decoded 17:39:21.891 |
+| 02 · Q decode and U-turn queued | 3:20–3:35 | 3:21–3:36 | Q decoded 17:42:41.645 |
+| 02 · A decode and left queued | 5:48–6:02 | 5:49–6:03 | A decoded 17:45:07.376 |
+| 03 · First hump crossing | 1:07–1:20 | 1:08–1:21 | 12 mm accepted 17:40:27.325 |
+| 03 · Second hump crossing | 4:17–4:33 | 4:18–4:34 | 16 mm accepted 17:43:40.435 |
+| 04 · Z right turn | 3:09–3:25 | 3:10–3:26 | Right completed 17:42:32.143 |
+| 05 · Q U-turn | 4:30–4:47 | 4:31–4:48 | U-turn completed 17:43:54.522 |
+| 06 · A left turn | 5:56–6:11 | 5:57–6:12 | Left completed 17:45:22.221 |
+| 07 · Obstacle trigger, probe and width | 1:31–1:41, 2:09–2:25 | 1:32–1:42, 2:10–2:26 | Trigger 17:40:44.884, width 17:41:27.931 |
+| 07 · Bypass and line rejoin | 2:50–3:13 | 2:51–3:14 | Handback 17:42:22.937 |
+| 08 · Live dashboard overview | | 0:16–0:33, 3:11–3:23, 4:25–4:41 | Motion, MQTT heartbeat, right-turn completion and accepted height |
 
-The local evidence clips use the robot camera. The obstacle and turn clips
-join the time ranges above and label each cut. See the [video index](../../../../videos/README.md)
-for the clip names and sharing guidance.
+See the [video index](../../../../videos/README.md) for filenames and unlisted links.

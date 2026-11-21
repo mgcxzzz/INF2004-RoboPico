@@ -1,6 +1,6 @@
 # Buddy 1–4 RTOS v0.2.8 wireless-calibration candidate
 
-Branch **barr-c-cleanup**. Hardware acceptance pending; main remains v0.2.6.
+Archived v0.2.8 wireless calibration candidate. The current combined downloads are in the [v0.4.3 release directory](../../../../releases/v0.4.3/).
 Buddy 5 is not integrated.
 
 - [Complete bundle](robopico_buddy1_4_rtos_v0_2_8_wireless_calibration_bundle.zip): use this for the matching dashboard wizard.

@@ -5,9 +5,9 @@ See the [calibration and persistence rules](../firmware/integration/buddy1_4/con
 To capture: stop/settle; put both front sensors over white and press w; place left over black and press l; place right over black and press r; press h to inspect validity/spans, then k to save. Do not hold a motor-start button. Barcode GP27 acquisition is automatic and independent. c restores the original low-height preset; it does not load the tilted-front capture. Export the current run before changing calibration. After changing the mechanical mounting, record the gap/angle and calibration with the run.
 
 
-## Wireless calibration (v0.2.8 candidate)
+## Wireless calibration
 
-The `barr-c-cleanup` branch adds **Diagnostics → Front IR calibration**. Read
+On v0.4.3, open **Diagnostics → Front IR calibration**. Read
 [the instructions](wireless_calibration_v0_2_8.md) before testing. Capture white,
 left black and right black while completely stopped, then explicitly choose RAM
 application or verified flash saving. Capturing alone does not change active

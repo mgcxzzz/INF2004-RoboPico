@@ -10,8 +10,9 @@ and the dashboard never resets or restarts the car automatically.
 Use the full release bundle and hard-refresh the page after updating. Start
 with [the v0.4.3 firmware and dashboard bundle](../firmware/releases/v0.4.3/).
 
-Run `python tools/dashboard/run_dashboard.py` from repository root or double-click
-Start dashboard.cmd. The helper serves this folder, starts a local Mosquitto
+In a checkout, run `python tools/dashboard/run_dashboard.py` from the root or
+open [Start dashboard.cmd](../firmware/windows/Start%20dashboard.cmd). In the
+published ZIP, use the launcher from its extracted root. The helper serves this folder, starts a local Mosquitto
 broker if available, and keeps its broker log under dashboard_session/. Existing
 listeners are checked, not silently replaced. Install Mosquitto separately.
 

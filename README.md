@@ -12,6 +12,7 @@ and continues for a corroborated borderline obstacle range after a turn.
 - [Build instructions](docs/build.md)
 - [Dashboard setup, powerbank operation and logs](docs/setup.md)
 - [Dashboard overview](dashboard/README.md)
+- [Team, components and ownership](TEAM.md)
 
 ## What the combined firmware does
 

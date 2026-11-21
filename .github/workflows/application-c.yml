@@ -2,7 +2,7 @@ name: Application C standard
 
 on:
   push:
-    branches: [main, barr-c-cleanup, barr-c-combined]
+    branches: [main]
   pull_request:
 
 jobs:

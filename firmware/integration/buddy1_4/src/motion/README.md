@@ -16,7 +16,7 @@ guards, physical420 cap and slew still apply. Buddy4 ramp modifiers compose with
 this controller through the same output owner. See the
 [release guide and hardware checks](../../../../../docs/demo_console_v0_2_5.md).
 
-The combined v0.2.13 build uses the micro T-Kernel profile. Active task/ownership
+The [v0.4.3 combined release](../../../../releases/v0.4.3/) uses the micro T-Kernel profile. Active task/ownership
 adapters: [app_program/rtos_bringup](../../../../../app_program/rtos_bringup/README.md).
 See [RTOS architecture](../../../../../docs/architecture.md) and
 [current setup](../../../../../docs/setup.md). The shared logic below remains;
@@ -24,7 +24,7 @@ references to the standalone SDK harness describe the historical adapter.
 
 RTOS v0.2.12 adds a bounded early PWM assist in low-speed sharp corrections.
 The [v0.2.12 test guide](../../../../../docs/caster_assist_v0_2_12.md) describes
-its limits. In v0.2.13 the Buddy 5 signed adapter invokes the same continuous
+its limits. The Buddy 5 signed adapter invokes the same continuous
 wheel controller with private per-wheel state and the shared output commit.
 
 ## Ordinary control

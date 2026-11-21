@@ -1,0 +1,13 @@
+{
+  "scope": "Buddy 1-only native subscriber comparison; dashboard start marker has one-second precision",
+  "startSGT": "2026-10-27 21:18:16 +0800",
+  "durationS": 300,
+  "received": 300,
+  "sequenceMissing": 0,
+  "maxGapS": 1.124804973602295,
+  "gapsOver2S": 0,
+  "firstArrivalAfterStartS": 0.6179850101470947,
+  "lastArrivalBeforeEndS": 0.4516260623931885,
+  "allOperational": true,
+  "baselineNativeMaxGapS": 2.6454811096191406
+}

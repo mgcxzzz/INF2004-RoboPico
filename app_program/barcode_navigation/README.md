@@ -1,16 +1,12 @@
-# Buddy3 RTOS barcode adapter
+# RTOS barcode decoding and junction routing · Buddy 3
 
-RTOS v0.2.2 introduced production-only bend assistance and bounded stationary
-line recovery, plus a 7 mm junction minimum. Archived default/SDK builds retain
-the previous behaviour unless explicitly opted in. The historical descriptions
-below are supplemented by [the v0.2.2 test guide](../../docs/drive_refinements_v0_2_2.md).
+In the [v0.4.3 combined build](../../firmware/releases/v0.4.3/), the front ADC owner feeds the GP27 barcode signal and encoder travel to the analog and peak readers. `barcode_runtime.inc` runs the adapter in the owning task. `barcode_model.h` connects the readers to the shared controller. `junction_sensor.h` qualifies the crossing stripe and captures diagnostics.
 
+A verified mapped letter queues Straight, Left, Right or U-turn for the next qualified junction. Stripe qualification uses a 7–30 mm black crossing and at least 4 mm of white before and after. The coordinator publishes decoded, dispatched and completed states separately. The turn controller requires tape evidence to reacquire the outgoing line. Front IR calibration applies to the left/right line sensors. The barcode channel keeps its own acquisition path.
 
-The combined v0.2.13 profile uses `APP=rtos_buddy1_5` with network-supervised
-powerbank operation and stopped wireless logs. See [setup](../../docs/setup.md)
-and [architecture](../../docs/architecture.md).
+See [shared decoder algorithms](../../firmware/integration/buddy1_4/src/barcode/), [Buddy 3 tests](../../testing/subsystem3/TEST_LOG.md) and [recorded scans and turns](../../testing/system/logs/2026-11-21_run_4/README.md).
 
-## Migration checkpoints
+## Migration checkpoints and implementation notes
 
 The experimental Step 4 checkpoint adapts the SDK reference to the already tested
 Step3B motion foundation. IMU/ramp and Buddy5 are not active in this image.

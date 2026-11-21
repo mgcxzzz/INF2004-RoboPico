@@ -34,13 +34,17 @@ put its link in the *Log / evidence* column of that test's row in
 
 ## Video index
 
-The [21 November team circuit run](../testing/system/logs/2026-11-21_run_4/README.md)
-contains the source timestamps and matching log events. The clips below use
-v0.4.2 and are ready for the team to share as unlisted videos.
+The [Run 4 record](../testing/system/logs/2026-11-21_run_4/README.md#recording-and-log-sync) lists source ranges and matching events. The robot footage and screen recording are synchronized to about one second. The first seven clips show the relevant live cards beside the robot. Clip 08 shows the wider dashboard.
 
-| Clip | Test cases | Unlisted link |
-| --- | --- | --- |
-| `01-line-follow-and-barcode.mp4` | SYS-12, SYS-13 | Pending |
-| `02-hump-crossing.mp4` | SYS-16 | Pending |
-| `03-obstacle-bypass-and-rejoin.mp4` | SYS-17, SYS-18, SYS-19 | Pending |
-| `04-barcode-junction-actions.mp4` | SYS-14 | Pending |
+| Clip | What it shows | Test cases | Unlisted link |
+| --- | --- | --- | --- |
+| `01-line-following-and-bends.mp4` · 0:34 | Continuous travel through successive bends, line state and live wheel speed | SYS-12 | Pending |
+| `02-barcode-scans-z-q-a.mp4` · 0:41 | All three recorded decodes with their queued actions | SYS-13 | Pending |
+| `03-two-hump-crossings.mp4` · 0:29 | Both physical crossings, with accepted peaks of 12 mm and 16 mm | SYS-16 | Pending |
+| `04-right-turn.mp4` · 0:16 | Z, right turn and outgoing tape | SYS-14 | Pending |
+| `05-u-turn.mp4` · 0:17 | Q, U-turn and outgoing tape | SYS-14 | Pending |
+| `06-left-turn.mp4` · 0:15 | A, left turn and outgoing tape | SYS-14 | Pending |
+| `07-obstacle-detection-bypass-and-rejoin.mp4` · 0:49 | Stationary scan, width estimate, bypass and handback | SYS-17, SYS-18, SYS-19 | Pending |
+| `08-dashboard-live-telemetry.mp4` · 0:45 | Live MQTT and motion feedback, obstacle handback, junction actions and accepted height | SYS-20 | Pending |
+
+Firmware **v0.4.2**, Demo Console **v0.2.14**. The mapping included **N → straight**. The captured evidence contains Z, Q and A, and no N decode. See the [v0.4.3 verification record](../testing/integration/logs/2026-11-21_v0.4.3/README.md) for the release replay.

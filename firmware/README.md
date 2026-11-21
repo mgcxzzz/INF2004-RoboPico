@@ -7,6 +7,7 @@
 - [Flash-ready UF2](releases/v0.4.3/robopico-v0.4.3-buddy1-5.uf2)
 - [Full ZIP with firmware and dashboard](releases/v0.4.3/robopico-v0.4.3-buddy1-5-bundle.zip)
 - [Release notes, build manifest and checksums](releases/v0.4.3/)
+- [Windows launchers in a checkout](windows/)
 - [Setup](../docs/setup.md) and [rebuild instructions](../docs/build.md)
 
 ## Source and release layout
@@ -19,3 +20,5 @@
 | `APP=rtos_buddy1_5` | Current combined build profile. |
 | `APP=rtos_buddy1_4` | Four-Buddy build profile retained for comparison and rollback. |
 | [Archived packages](integration/buddy1_4/artifacts/) and [migration checkpoints](migration/micro_tkernel/) | Versioned development, RTOS bring-up and test history. Paths and file names identify the original builds. |
+
+[Development branch audit](../docs/repository-history.md) records where the earlier Git history lives.

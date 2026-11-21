@@ -23,6 +23,7 @@ def source_files():
     for folder in [
         PROJECT,
         REPO / "dashboard",
+        REPO / "firmware/windows",
         REPO / "tools/dashboard",
         REPO / "tools/provisioning",
         REPO / "tools/telemetry",
@@ -47,10 +48,6 @@ def source_files():
             yield p
     for n in [
         "README.md",
-        "BUNDLE_README.md",
-        "Start dashboard.cmd",
-        "Configure WiFi.cmd",
-        "Run offline tests.cmd",
         ".gitignore",
         ".gitattributes",
         ".clang-format",

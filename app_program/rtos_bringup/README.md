@@ -1,12 +1,10 @@
-# RTOS bring-up and motor safety
+# RTOS startup, motion and safety · Buddy 2
 
-The combined v0.2.13 profile uses `APP=rtos_buddy1_5` with network-supervised
-powerbank operation and stopped wireless logs. See [setup](../../docs/setup.md)
-and [architecture](../../docs/architecture.md).
+This is the application entry point and board port for the [v0.4.3 combined build](../../firmware/releases/v0.4.3/). `app_main.c` starts the application tasks and connects them to micro T-Kernel. `control.c` owns the motion loop, run gates, countdown, Stop and Reset. `board_port.c` handles motor GPIO/PWM, encoder interrupts and buttons. It also timestamps Buddy 5 echo edges.
 
-The combined motion task commits the coordinator-approved demand. The GPIO
-IRQ also timestamps Buddy 5 sonar echo edges on GP17. See the
-[obstacle adapter](../obstacle_navigation/README.md) for mission ownership.
+The 100 Hz motor task drains encoder deltas, consumes fresh ADC and coordinator requests, updates the shared wheel controller and commits the normal PWM pair. The Safety task can reduce output or stop it. IMU trips, operator Stop, E-stop and network supervision enter the shared stop path. Motors start off, and a run requires an explicit Start.
+
+See [active task ownership and priorities](../../docs/architecture.md), [motion control](../../firmware/integration/buddy1_4/src/motion/) and the [Buddy 2 test ledger](../../testing/subsystem2/TEST_LOG.md).
 
 ## Historical Step 1 motor bring-up
 

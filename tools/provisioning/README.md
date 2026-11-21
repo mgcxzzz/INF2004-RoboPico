@@ -1,7 +1,6 @@
 # Historical SDK runtime Wi-Fi setup
 
-For v0.2.13 RTOS, use the [combined setup guide](../../docs/setup.md) and the
-BOOTSEL network helper. The SDK USB-serial helper is
+For the current RTOS release, use the [combined setup guide](../../docs/setup.md) and the [BOOTSEL network launcher](../../firmware/windows/Configure%20WiFi.cmd). The SDK USB-serial helper is
 `python tools/provisioning/provision_wifi.py`. It prompts locally for SSID,
 hidden password and the laptop broker's LAN IPv4, then waits for an explicit
 firmware confirmation. Numeric Windows port 4 is normalized to COM4. Full

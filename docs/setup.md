@@ -2,6 +2,8 @@
 
 For **v0.4.3**, download the [release ZIP](../firmware/releases/v0.4.3/robopico-v0.4.3-buddy1-5-bundle.zip), extract it and open `START_HERE.md`. The [release directory](../firmware/releases/v0.4.3/) also provides the standalone UF2, manifest and checksums.
 
+For a source checkout, the [Windows launchers](../firmware/windows/) are under `firmware/windows/`. Open the dashboard at `http://localhost:8765`, connect to the laptop broker at `ws://localhost:9001`, and verify **Car online** and **v0.4.3**. Flash the UF2 in BOOTSEL mode when updating firmware. Run the Wi-Fi launcher only when the network or broker address needs to change.
+
 ## v0.2.13 reference procedure
 
 Download and extract the [full bundle](../firmware/integration/buddy1_4/artifacts/v0_2_13_combined/).

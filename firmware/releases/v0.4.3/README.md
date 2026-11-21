@@ -7,7 +7,7 @@
 
 Flash the UF2 in BOOTSEL mode. Use the bundled dashboard for the new range
 warning. The bundle includes the Windows launchers and macOS instructions.
-Confirm the dashboard reports v0.4.3 and the car is ready before starting.
+Open `START_HERE.md` after extraction. Confirm the dashboard reports v0.4.3 and the car is ready before starting. The [source checkout launchers](../../windows/) are under `firmware/windows/`.
 
 The release accepts a corroborated slightly short echo after straight settling.
 The robot completes its stationary scan and continues the bypass when the

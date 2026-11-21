@@ -1,6 +1,6 @@
 # Historical SDK application lifecycle and scheduling
 
-The combined v0.2.13 build uses the micro T-Kernel profile. Active task/ownership
+The [v0.4.3 combined release](../../../../releases/v0.4.3/) uses the micro T-Kernel profile. Active task/ownership
 adapters: [app_program/rtos_bringup](../../../../../app_program/rtos_bringup/README.md).
 See [RTOS architecture](../../../../../docs/architecture.md) and
 [current setup](../../../../../docs/setup.md). The rest of this page documents the standalone SDK harness.
