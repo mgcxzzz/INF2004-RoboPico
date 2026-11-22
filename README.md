@@ -1,43 +1,40 @@
-# RoboPico Buddy 1–5 RTOS
+# RoboPico
 
-The selected RoboPico release is **v0.4.3**. It runs on the Pico W under
-micro T-Kernel SMP with Demo Console v0.2.15. The release applies a warning
-and continues for a corroborated borderline obstacle range after a turn.
+**Team IS28 · Pico W · micro T-Kernel SMP**
 
-- [Download v0.4.3 UF2](firmware/releases/v0.4.3/robopico-v0.4.3-buddy1-5.uf2)
-- [Download v0.4.3 full bundle with dashboard (ZIP)](firmware/releases/v0.4.3/robopico-v0.4.3-buddy1-5-bundle.zip)
-- [Firmware releases, checksums and source layout](firmware/)
-- [Test cases, results and logs](testing/)
-- [Project requirements](docs/requirements.md)
-- [Build instructions](docs/build.md)
-- [Dashboard setup, powerbank operation and logs](docs/setup.md)
-- [Dashboard overview](dashboard/README.md)
-- [Team, components and ownership](TEAM.md)
+RoboPico is an autonomous course robot that follows tape, reads barcodes to
+choose junction turns, estimates hump height with an IMU, and uses sonar to
+bypass obstacles and rejoin the line. Its web dashboard displays live motion
+and sensor data over MQTT and collects run logs.
 
-## What the combined firmware does
+**Firmware v0.4.3 · Demo Console v0.2.15**
+
+[Download the full bundle (ZIP)](firmware/releases/v0.4.3/robopico-v0.4.3-buddy1-5-bundle.zip) ·
+[Download the firmware (UF2)](firmware/releases/v0.4.3/robopico-v0.4.3-buddy1-5.uf2) ·
+[Release notes and checksums](firmware/releases/v0.4.3/)
+
+## Explore the project
+
+| What you’re looking for | Where to find it |
+| --- | --- |
+| Demo and results | [Demo videos](videos/) · [Circuit test](testing/system/logs/2026-11-21_run_4/README.md) · [Test cases, results and logs](testing/) |
+| Setup and build | [Setup and operation](docs/setup.md) · [Dashboard guide](dashboard/README.md) · [Build guide](docs/build.md) |
+| Design and interfaces | [Project requirements](docs/requirements.md) · [System architecture](docs/architecture.md) · [Shared APIs](docs/interfaces.md) |
+| Source and verification | [Firmware layout](firmware/) · [v0.4.3 verification](testing/integration/logs/2026-11-21_v0.4.3/README.md) · [C coding standard](CODING_STANDARD.md) · [Documented exceptions](docs/coding_exceptions.md) |
+| Team | [Team roster, components and ownership](TEAM.md) |
+
+## The five subsystems
 
 | Buddy | Responsibility |
 | --- | --- |
-| 1 | Wi-Fi/MQTT, dashboard commands, telemetry and wireless log downloads |
-| 2 | Wheel encoders, speed control, motor output and motion safety |
-| 3 | Line following and recovery, barcode decoding, mapped junction turns |
-| 4 | IMU, hump height measurement, ramp assistance and pickup stop |
-| 5 | Sonar detection, width probing, direction selection, obstacle bypass and line rejoin |
+| 1 · [Networking](app_program/network_bridge/) | Wi-Fi and MQTT, dashboard commands, live telemetry and wireless log downloads |
+| 2 · [Motion and safety](app_program/rtos_bringup/) | Wheel encoders, speed control, motor output and motion safety |
+| 3 · [Line and barcode navigation](app_program/line_navigation/) | Tape following and recovery, [barcode decoding](app_program/barcode_navigation/) and mapped junction turns |
+| 4 · [IMU and ramp assistance](app_program/imu_navigation/) | Hump height estimation, ramp assistance and pickup stop |
+| 5 · [Obstacle navigation](app_program/obstacle_navigation/README.md) | Sonar detection, width estimation, bypass side selection and line rejoin |
 
-Buddy 5 takes a coordinator lease when sonar confirms an obstacle on a
-qualified straight. Its finite moves use the shared motion executor. Buddy 3
-resumes line following after the coordinator accepts the hand-back. The
-dashboard shows obstacle progress in **Obstacle & avoidance** and detailed
-evidence in **Diagnostics → Buddy 5 obstacle mission**.
+The shared motion coordinator arbitrates requests. One task writes normal
+motor output, and the safety path can cut drive independently.
 
-For a first run, use **Baseline · 45 mm/s**. Start from the dashboard after
-the car is online and ready, then use **Download run ZIP** after Stop to save
-the dashboard capture and stored rows.
-
-## Design and evidence
-
-- [System architecture](docs/architecture.md) and [shared APIs](docs/interfaces.md)
-- [Buddy 5 mission stages and telemetry](app_program/obstacle_navigation/README.md)
-- [RoboPico C Standard](CODING_STANDARD.md) and [documented exceptions](docs/coding_exceptions.md)
-- [Release archive and rollback image](firmware/integration/buddy1_4/artifacts/README.md)
-- [Historical SDK reference](firmware/integration/buddy1_4/SDK_REFERENCE.md)
+[Archived releases and rollback image](firmware/integration/buddy1_4/artifacts/README.md) ·
+[Historical SDK reference](firmware/integration/buddy1_4/SDK_REFERENCE.md)
